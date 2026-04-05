@@ -282,7 +282,7 @@ const Listings = () => {
                 <p className="text-muted-foreground mb-4 text-sm">
                   Còn {filteredListings.length - GUEST_VISIBLE_ITEMS} tài sản khác. Đăng nhập để xem tất cả.
                 </p>
-                <Button onClick={openAuthDialog}>
+                <Button onClick={() => openAuthDialog()}>
                   <LogIn className="mr-2 h-4 w-4" /> Đăng nhập / Đăng ký
                 </Button>
               </div>

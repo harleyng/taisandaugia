@@ -10,6 +10,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useAuctionListings, getSessionStatus } from "@/hooks/useAuctionListings";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
+import { useAssetActions } from "@/hooks/useAssetActions";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatAddress } from "@/utils/formatters";
 import { useSearchParams, Link } from "react-router-dom";
@@ -52,6 +53,7 @@ const Listings = () => {
 
   const { data: listings, isLoading } = useAuctionListings();
   const { openAuthDialog } = useAuthDialog();
+  const { savedIds, toggleSave } = useAssetActions();
   const [session, setSession] = useState<any>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -245,25 +247,27 @@ const Listings = () => {
                   items.push(<CtaCard key="cta" />);
                 }
 
-                items.push(
-                  <AuctionCard
-                    key={listing.id}
-                    id={listing.id}
-                    imageUrl={listing.image_url}
-                    title={listing.title}
-                    address={formatAddress(listing.address) || "Chưa cập nhật"}
-                    startingPrice={listing.price}
-                    stepPrice={ca.bid_step ?? ca.step_price}
-                    depositAmount={ca.deposit_amount}
-                    auctionDate={ca.auction_date ?? ca.auction_time}
-                    registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
-                    sessionStatus={listing._sessionStatus}
-                    categorySlug={listing.property_type_slug}
-                    viewMode="grid"
-                    winPrice={ca.win_price ?? ca.winning_price}
-                    orgName={ca.org_name}
-                  />
-                );
+                  items.push(
+                    <AuctionCard
+                      key={listing.id}
+                      id={listing.id}
+                      imageUrl={listing.image_url}
+                      title={listing.title}
+                      address={formatAddress(listing.address) || "Chưa cập nhật"}
+                      startingPrice={listing.price}
+                      stepPrice={ca.bid_step ?? ca.step_price}
+                      depositAmount={ca.deposit_amount}
+                      auctionDate={ca.auction_date ?? ca.auction_time}
+                      registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
+                      sessionStatus={listing._sessionStatus}
+                      categorySlug={listing.property_type_slug}
+                      viewMode="grid"
+                      winPrice={ca.win_price ?? ca.winning_price}
+                      orgName={ca.org_name}
+                      isSaved={savedIds.has(listing.id)}
+                      onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
+                    />
+                  );
 
                 return items;
               })}

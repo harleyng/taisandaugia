@@ -1,67 +1,131 @@
 
 
-## Plan: Đổi UX bộ lọc — Quick filters trên top + Dialog lọc nâng cao
+## Implementation Plan: "Quan tâm" & "Nhận thông tin" Feature
 
-### Tổng quan
-Thay layout sidebar filter bên trái bằng:
-1. **Quick filter bar** nằm ngang phía trên danh sách (dạng chips/dropdowns): Loại tài sản, Địa điểm, Khoảng giá, Trạng thái
-2. **Nút "Lọc"** mở **Dialog lọc nâng cao** chứa tất cả bộ lọc chi tiết (bao gồm cả các filter mới đã plan trước: thời gian công bố, tiền đặt trước, danh mục pháp lý, địa điểm 2 cấp, toggle sáp nhập)
-3. **Bỏ sidebar trái** — content chiếm full width
-4. Trên mobile: quick filter bar scroll ngang, nút "Lọc" luôn hiển thị
+### Summary
+Add two independent user actions (save/bookmark and follow/subscribe) for auction assets, with auth-gated interactions, optimistic UI, and a dedicated saved-assets page.
 
-### Layout mới
+---
 
-```text
-┌─────────────────────────────────────────────────┐
-│ Header                                          │
-├─────────────────────────────────────────────────┤
-│ Tiêu đề + số kết quả                           │
-│                                                 │
-│ [🔍 Tìm kiếm...] [Lọc ①] [Loại ▾] [Địa điểm ▾] [Giá ▾] [Trạng thái ▾] │ Sắp xếp ▾ │
-│                                                 │
-│ ┌────┐ ┌────┐ ┌────┐                           │
-│ │Card│ │Card│ │Card│  (full width grid)         │
-│ └────┘ └────┘ └────┘                           │
-└─────────────────────────────────────────────────┘
+### 1. Database: New Table `user_asset_actions`
+
+Create one table storing both action types per user+listing:
+
+```sql
+CREATE TABLE public.user_asset_actions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  listing_id uuid NOT NULL,
+  is_saved boolean NOT NULL DEFAULT false,
+  is_following boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(user_id, listing_id)
+);
+
+ALTER TABLE public.user_asset_actions ENABLE ROW LEVEL SECURITY;
+
+-- Users can read their own actions
+CREATE POLICY "Users can view own actions" ON public.user_asset_actions
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- Users can insert their own actions  
+CREATE POLICY "Users can insert own actions" ON public.user_asset_actions
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own actions
+CREATE POLICY "Users can update own actions" ON public.user_asset_actions
+  FOR UPDATE TO authenticated USING (auth.uid() = user_id);
+
+-- Users can delete their own actions
+CREATE POLICY "Users can delete own actions" ON public.user_asset_actions
+  FOR DELETE TO authenticated USING (auth.uid() = user_id);
 ```
 
-### Files cần sửa/tạo
+---
 
-**1. Tạo `src/components/AuctionQuickFilters.tsx`** — Quick filter bar
-- Thanh ngang gồm:
-  - Input tìm kiếm (compact)
-  - Nút **"Lọc"** với badge đếm số filter active → mở Dialog
-  - Dropdowns nhanh: Loại tài sản, Địa điểm (Tỉnh/TP), Khoảng giá, Trạng thái — mỗi cái dùng Popover + nội dung tương ứng
-- Khi chọn filter nhanh, cập nhật state ngay lập tức
+### 2. Auth Context: Add Pending Action Support
 
-**2. Tạo `src/components/AuctionFilterDialog.tsx`** — Dialog lọc nâng cao
-- Dialog full (Sheet trên mobile) chứa tất cả bộ lọc:
-  - Loại tài sản (tree với children)
-  - Trạng thái phiên
-  - Địa điểm đấu giá 2 cấp (Tỉnh → Quận) + toggle "Địa chỉ sau sáp nhập"
-  - Giá khởi điểm (Min–Max inputs)
-  - Tiền đặt trước (Min–Max inputs)
-  - Thời gian công bố (Date range)
-  - Danh mục pháp lý (Thi hành án, Nợ xấu, Thanh lý, Phá sản, Khác)
-- Footer: nút "Áp dụng" + "Xóa bộ lọc"
+**File: `src/contexts/AuthDialogContext.tsx`**
 
-**3. Cập nhật `AuctionFilters` interface** (`AuctionFilterSidebar.tsx` hoặc tách ra file riêng)
-- Mở rộng interface thêm: `district`, `priceMin`, `priceMax`, `depositMin`, `depositMax`, `publishDateFrom`, `publishDateTo`, `legalCategory`, `useMergedAddress`
+Extend the context to support a `pendingAction` callback. When the user clicks a protected action while logged out, the callback is stored. After successful auth, it executes automatically.
 
-**4. Sửa `src/pages/Listings.tsx`**
-- Bỏ 2-column layout (bỏ sidebar trái)
-- Thay `AuctionFilterSidebar` bằng `AuctionQuickFilters` nằm trên grid
-- Content grid chiếm full width
-- Cập nhật filter logic cho các field mới
+---
 
-**5. Giữ hoặc xóa `AuctionFilterSidebar.tsx`**
-- Xóa file cũ (hoặc giữ lại nhưng không import nữa)
+### 3. New Hook: `useAssetActions`
 
-### Chi tiết kỹ thuật
-- Quick filter dropdowns: dùng shadcn `Popover` — click chip mở popover nhỏ chứa options
-- Filter dialog: dùng shadcn `Dialog` (desktop) / `Sheet` (mobile)
-- Badge count: đếm số filter đang active, hiển thị trên nút "Lọc"
-- Sticky bar: quick filters sticky top khi scroll
-- Date picker: shadcn Calendar + Popover
-- Number inputs: Input type="number" với placeholder "Từ" / "Đến"
+**File: `src/hooks/useAssetActions.tsx`**
+
+A custom hook providing:
+- `savedIds` / `followingIds` sets (bulk-fetched on mount for logged-in users)
+- `toggleSave(listingId)` — upserts `is_saved`, shows toast
+- `toggleFollow(listingId)` — upserts `is_following`, shows toast
+- Optimistic state updates
+- Auth check: if not logged in, stores pending action and opens auth dialog
+
+---
+
+### 4. Listing Page: Bookmark Icon on AuctionCard
+
+**File: `src/components/AuctionCard.tsx`**
+
+- Add a bookmark icon button (top-right of image or bottom of card) for the default grid variant
+- Accept `isSaved` and `onToggleSave` props
+- Show filled/outlined bookmark icon based on state
+- `stopPropagation` on click to prevent navigation
+
+**File: `src/pages/Listings.tsx`**
+
+- Use `useAssetActions` hook
+- Pass `isSaved` and `onToggleSave` to each `AuctionCard`
+
+---
+
+### 5. Detail Page: Both Actions
+
+**File: `src/components/auction/AuctionQuickInfo.tsx`**
+
+- Add two buttons below existing content: "Quan tâm" (bookmark icon) and "Nhận thông tin" (bell icon)
+- Each shows active/inactive state with helper text
+- Uses `useAssetActions` for toggle logic
+
+---
+
+### 6. Saved Assets Page
+
+**File: `src/pages/portal/BrokerSavedAssets.tsx`** (new)
+
+- Tab/filter bar: Tất cả | Chỉ Quan tâm | Đang nhận thông tin | Cả hai
+- Lists assets using `AuctionCard` with badges showing saved/following status
+- Toggle actions directly from this page
+- Fetch from `user_asset_actions` joined with `listings`
+
+**File: `src/components/portal/BrokerSidebar.tsx`** — Add menu item "Tài sản quan tâm" with Bookmark icon
+
+**File: `src/App.tsx`** — Add route `/broker/saved-assets`
+
+---
+
+### 7. Auth Dialog: Execute Pending Action
+
+**File: `src/components/auth/AuthDialog.tsx`**
+
+- After successful login/signup, call `pendingAction` from context if present, then clear it
+
+---
+
+### Files Modified
+| File | Change |
+|---|---|
+| `src/contexts/AuthDialogContext.tsx` | Add `pendingAction` support |
+| `src/hooks/useAssetActions.tsx` | New hook |
+| `src/components/AuctionCard.tsx` | Add bookmark icon + props |
+| `src/pages/Listings.tsx` | Wire up `useAssetActions` |
+| `src/components/auction/AuctionQuickInfo.tsx` | Add both action buttons |
+| `src/pages/AuctionDetail.tsx` | Pass actions to QuickInfo |
+| `src/pages/portal/BrokerSavedAssets.tsx` | New page |
+| `src/components/portal/BrokerSidebar.tsx` | Add nav item |
+| `src/App.tsx` | Add route |
+| `src/components/auth/AuthDialog.tsx` | Execute pending action on auth success |
+| Migration | New `user_asset_actions` table |
 

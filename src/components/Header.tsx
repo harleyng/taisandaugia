@@ -147,7 +147,7 @@ export const Header = () => {
 
           <>
               
-              <Button onClick={openAuthDialog} className="hidden sm:inline-flex bg-foreground hover:bg-foreground/90 text-background">
+              <Button onClick={() => openAuthDialog()} className="hidden sm:inline-flex bg-foreground hover:bg-foreground/90 text-background">
                 <User className="mr-2 h-4 w-4" />Đăng nhập
               </Button>
             </>
@@ -222,7 +222,7 @@ export const Header = () => {
                   </> :
 
                 <div className="pt-4 space-y-2">
-                    <Button onClick={openAuthDialog} className="w-full bg-primary hover:bg-primary-hover text-primary-foreground justify-start"><User className="mr-2 h-5 w-5" />Đăng nhập</Button>
+                    <Button onClick={() => openAuthDialog()} className="w-full bg-primary hover:bg-primary-hover text-primary-foreground justify-start"><User className="mr-2 h-5 w-5" />Đăng nhập</Button>
                     <Link to="#" className="flex items-center justify-center gap-2 text-sm font-medium text-foreground hover:text-primary py-2">Tải ứng dụng</Link>
                   </div>
                 }

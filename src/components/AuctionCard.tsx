@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock } from "lucide-react";
+import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Bookmark } from "lucide-react";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatPrice, formatDate } from "@/utils/formatters";
 
@@ -216,6 +216,15 @@ export function AuctionCard({
         <Badge className={`absolute top-2 left-2 text-xs ${status.className}`}>
           {status.label}
         </Badge>
+        {onToggleSave && (
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSave(e); }}
+            className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${isSaved ? "bg-primary text-primary-foreground" : "bg-background/80 text-muted-foreground hover:text-foreground backdrop-blur-sm"}`}
+            title={isSaved ? "Bỏ quan tâm" : "Quan tâm"}
+          >
+            <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
+          </button>
+        )}
       </div>
       <div className="p-3 md:p-4 flex flex-col flex-1">
         <h3 className="font-bold text-sm md:text-base text-foreground leading-snug mb-0.5 line-clamp-1 group-hover:text-primary transition-colors">

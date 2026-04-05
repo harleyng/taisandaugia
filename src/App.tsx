@@ -29,6 +29,7 @@ import BrokerMarketing from "./pages/portal/BrokerMarketing";
 import BrokerOrganization from "./pages/portal/BrokerOrganization";
 import BrokerOrganizations from "./pages/portal/BrokerOrganizations";
 import BrokerProfile from "./pages/portal/BrokerProfile";
+import BrokerSavedAssets from "./pages/portal/BrokerSavedAssets";
 import CreateOrganization from "./pages/portal/CreateOrganization";
 import InviteMember from "./pages/portal/InviteMember";
 import OrganizationInvites from "./pages/portal/OrganizationInvites";
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="organization/invite" element={<InviteMember />} />
               <Route path="organization/invites" element={<OrganizationInvites />} />
               <Route path="profile" element={<BrokerProfile />} />
+              <Route path="saved-assets" element={<BrokerSavedAssets />} />
             </Route>
           </Route>
           

@@ -1,4 +1,4 @@
-import { Home, Building, Users, Megaphone, Building2, User, ArrowLeft } from "lucide-react";
+import { Home, Building, Users, Megaphone, Building2, User, ArrowLeft, Bookmark } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +18,7 @@ import { UserMenu } from "@/components/UserMenu";
 const menuItems = [
   { title: "Dashboard", path: "/broker/dashboard", icon: Home, description: "Tổng quan" },
   { title: "Hồ sơ cá nhân", path: "/broker/profile", icon: User, description: "Xác thực và quản lý" },
+  { title: "Tài sản quan tâm", path: "/broker/saved-assets", icon: Bookmark, description: "Đã lưu & theo dõi" },
   { title: "Quản lý tin đăng", path: "/broker/properties", icon: Building, description: "CRUD và kiểm soát" },
   { title: "Quản lý khách hàng", path: "/broker/customers", icon: Users, description: "CRM" },
   { title: "Marketing", path: "/broker/marketing", icon: Megaphone, description: "Chiến dịch" },

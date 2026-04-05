@@ -14,7 +14,7 @@ type Step = "identifier" | "login" | "register-email" | "register-phone-otp" | "
 type InputMode = "email" | "phone";
 
 export const AuthDialog = () => {
-  const { isOpen, closeAuthDialog } = useAuthDialog();
+  const { isOpen, closeAuthDialog, executePendingAction } = useAuthDialog();
   const { toast } = useToast();
 
   const [step, setStep] = useState<Step>("identifier");
@@ -82,6 +82,7 @@ export const AuthDialog = () => {
       if (error) throw error;
       toast({ title: "Đăng nhập thành công!" });
       closeAuthDialog();
+      setTimeout(() => executePendingAction(), 100);
     } catch (err: any) {
       toast({ title: "Đăng nhập thất bại", description: err.message, variant: "destructive" });
     } finally {
@@ -111,6 +112,7 @@ export const AuthDialog = () => {
         description: "Vui lòng kiểm tra email để xác thực tài khoản.",
       });
       closeAuthDialog();
+      setTimeout(() => executePendingAction(), 100);
     } catch (err: any) {
       toast({ title: "Đăng ký thất bại", description: err.message, variant: "destructive" });
     } finally {

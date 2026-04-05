@@ -1,12 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Banknote, Clock, TrendingUp, Loader2 } from "lucide-react";
+import { Banknote, Clock, TrendingUp, Loader2, Bookmark, Bell } from "lucide-react";
 import { formatPrice } from "@/utils/formatters";
 import { useState, useEffect } from "react";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
+import { useAssetActions } from "@/hooks/useAssetActions";
 
 interface AuctionQuickInfoProps {
   price: number;
@@ -50,13 +51,10 @@ function useCountdown(targetDate: string | null) {
 export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing }: AuctionQuickInfoProps) => {
   const status = getSessionStatus(listing);
   const { openAuthDialog } = useAuthDialog();
-  const [session, setSession] = useState<any>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, []);
+  const { savedIds, followingIds, toggleSave, toggleFollow, session } = useAssetActions();
+  const listingId = listing.id;
+  const isSaved = savedIds.has(listingId);
+  const isFollowing = followingIds.has(listingId);
   const config = statusConfig[status];
 
   // For registration_open: countdown to registration deadline
@@ -132,6 +130,30 @@ export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing }:
           </Button>
         </div>
       )}
+
+      {/* Quan tâm & Nhận thông tin */}
+      <div className="h-px bg-border" />
+      <div className="space-y-3">
+        <Button
+          variant={isSaved ? "default" : "outline"}
+          className="w-full justify-start gap-2"
+          onClick={() => toggleSave(listingId)}
+        >
+          <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
+          {isSaved ? "Đã quan tâm" : "Quan tâm"}
+        </Button>
+        <p className="text-xs text-muted-foreground ml-1">Lưu tài sản để xem lại sau</p>
+
+        <Button
+          variant={isFollowing ? "default" : "outline"}
+          className={`w-full justify-start gap-2 ${isFollowing ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
+          onClick={() => toggleFollow(listingId)}
+        >
+          <Bell className={`h-4 w-4 ${isFollowing ? "fill-current" : ""}`} />
+          {isFollowing ? "Đang nhận thông tin" : "Nhận thông tin"}
+        </Button>
+        <p className="text-xs text-muted-foreground ml-1">Nhận cập nhật khi tài sản có thay đổi</p>
+      </div>
 
       {/* upcoming (past registration, before auction): similar to ongoing but different text */}
       {status === "upcoming" && (

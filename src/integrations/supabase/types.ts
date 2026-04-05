@@ -410,6 +410,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_asset_actions: {
+        Row: {
+          created_at: string
+          id: string
+          is_following: boolean
+          is_saved: boolean
+          listing_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_following?: boolean
+          is_saved?: boolean
+          listing_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_following?: boolean
+          is_saved?: boolean
+          listing_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

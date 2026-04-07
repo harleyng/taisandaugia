@@ -142,6 +142,32 @@ const AuctionDetail = () => {
             {/* Section 4: File đính kèm */}
             <AuctionAttachments listing={listing} />
 
+            {/* Quan tâm & Nhận thông tin */}
+            <Card className="p-5 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant={savedIds.has(listing.id) ? "default" : "outline"}
+                  className="flex-1 justify-center gap-2"
+                  onClick={() => toggleSave(listing.id)}
+                >
+                  <Bookmark className={`h-4 w-4 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
+                  {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm"}
+                </Button>
+                <Button
+                  variant={followingIds.has(listing.id) ? "default" : "outline"}
+                  className={`flex-1 justify-center gap-2 ${followingIds.has(listing.id) ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
+                  onClick={() => toggleFollow(listing.id)}
+                >
+                  <Bell className={`h-4 w-4 ${followingIds.has(listing.id) ? "fill-current" : ""}`} />
+                  {followingIds.has(listing.id) ? "Đang nhận thông tin" : "Nhận thông tin"}
+                </Button>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-1 sm:gap-4">
+                <p className="text-xs text-muted-foreground">Quan tâm: lưu tài sản để xem lại sau</p>
+                <p className="text-xs text-muted-foreground">Nhận thông tin: nhận cập nhật khi có thay đổi</p>
+              </div>
+            </Card>
+
           </div>
 
           {/* RIGHT COLUMN — Sticky Sidebar */}

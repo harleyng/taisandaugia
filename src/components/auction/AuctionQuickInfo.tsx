@@ -51,7 +51,6 @@ export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing }:
   const status = getSessionStatus(listing);
   const { openAuthDialog } = useAuthDialog();
   const config = statusConfig[status];
-  const config = statusConfig[status];
 
   // For registration_open: countdown to registration deadline
   // For upcoming: no countdown (just show "sắp diễn ra" message)
@@ -120,7 +119,7 @@ export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing }:
           <Button
             className="w-full h-12 text-base font-semibold"
             size="lg"
-            onClick={() => { if (!session) { openAuthDialog(); return; } /* proceed */ }}
+            onClick={() => { openAuthDialog(); }}
           >
             Đăng ký tham gia
           </Button>

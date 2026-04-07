@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bookmark, Bell, MapPin, ChevronRight } from "lucide-react";
+import { Heart, Bell, MapPin, ChevronRight } from "lucide-react";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";
 import { AuctionInfoTable } from "@/components/auction/AuctionInfoTable";
@@ -150,7 +150,7 @@ const AuctionDetail = () => {
                   className="flex-1 justify-center gap-2"
                   onClick={() => toggleSave(listing.id)}
                 >
-                  <Bookmark className={`h-4 w-4 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
+                  <Heart className={`h-4 w-4 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
                   {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm"}
                 </Button>
                 <Button

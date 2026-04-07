@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionCard } from "@/components/AuctionCard";
+import { useAssetActions } from "@/hooks/useAssetActions";
 import auctionBg from "@/assets/auction-bg.png";
 
 const getCountdown = (auctionTime: string): string | null => {

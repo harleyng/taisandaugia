@@ -20,6 +20,7 @@ import { formatAddress } from "@/utils/formatters";
 const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { savedIds, followingIds, toggleSave, toggleFollow } = useAssetActions();
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

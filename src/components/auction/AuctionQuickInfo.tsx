@@ -131,29 +131,6 @@ export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing }:
         </div>
       )}
 
-      {/* Quan tâm & Nhận thông tin */}
-      <div className="h-px bg-border" />
-      <div className="space-y-3">
-        <Button
-          variant={isSaved ? "default" : "outline"}
-          className="w-full justify-start gap-2"
-          onClick={() => toggleSave(listingId)}
-        >
-          <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
-          {isSaved ? "Đã quan tâm" : "Quan tâm"}
-        </Button>
-        <p className="text-xs text-muted-foreground ml-1">Lưu tài sản để xem lại sau</p>
-
-        <Button
-          variant={isFollowing ? "default" : "outline"}
-          className={`w-full justify-start gap-2 ${isFollowing ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
-          onClick={() => toggleFollow(listingId)}
-        >
-          <Bell className={`h-4 w-4 ${isFollowing ? "fill-current" : ""}`} />
-          {isFollowing ? "Đang nhận thông tin" : "Nhận thông tin"}
-        </Button>
-        <p className="text-xs text-muted-foreground ml-1">Nhận cập nhật khi tài sản có thay đổi</p>
-      </div>
 
       {/* upcoming (past registration, before auction): similar to ongoing but different text */}
       {status === "upcoming" && (

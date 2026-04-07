@@ -22,6 +22,7 @@ const getShortLocation = (address: any): string => {
 };
 
 export const AuctionSection = () => {
+  const { savedIds, toggleSave } = useAssetActions();
   const { data: auctions = [], isLoading } = useQuery({
     queryKey: ["upcoming-auctions"],
     queryFn: async () => {

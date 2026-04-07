@@ -98,6 +98,8 @@ export const AuctionSection = () => {
                   variant="featured"
                   countdown={countdown}
                   orgName={orgName}
+                  isSaved={savedIds.has(item.id)}
+                  onToggleSave={() => toggleSave(item.id)}
                 />
               );
             })}

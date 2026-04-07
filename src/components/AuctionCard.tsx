@@ -146,6 +146,15 @@ export function AuctionCard({
           <Badge className={`absolute top-3 left-3 text-xs ${status.className}`}>
             {status.label}
           </Badge>
+          {onToggleSave && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSave(e); }}
+              className={`absolute top-3 ${countdown ? 'right-[calc(0.75rem+80px)]' : 'right-3'} p-1.5 rounded-full transition-colors ${isSaved ? "bg-primary text-primary-foreground" : "bg-background/80 text-muted-foreground hover:text-foreground backdrop-blur-sm"}`}
+              title={isSaved ? "Bỏ quan tâm" : "Quan tâm"}
+            >
+              <Heart className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
+            </button>
+          )}
           {countdown && (
             <Badge className="absolute top-3 right-3 bg-slate-800/80 hover:bg-slate-800/80 text-white border-0 text-xs font-medium backdrop-blur-sm flex items-center gap-1.5">
               <Hourglass className="h-3 w-3" strokeWidth={1.5} />

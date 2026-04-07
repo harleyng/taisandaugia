@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Bookmark } from "lucide-react";
+import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Heart } from "lucide-react";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatPrice, formatDate } from "@/utils/formatters";
 
@@ -222,7 +222,7 @@ export function AuctionCard({
             className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${isSaved ? "bg-primary text-primary-foreground" : "bg-background/80 text-muted-foreground hover:text-foreground backdrop-blur-sm"}`}
             title={isSaved ? "Bỏ quan tâm" : "Quan tâm"}
           >
-            <Bookmark className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
+            <Heart className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
           </button>
         )}
       </div>

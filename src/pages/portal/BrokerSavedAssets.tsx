@@ -6,7 +6,7 @@ import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { formatAddress } from "@/utils/formatters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bookmark, Bell, Loader2, Heart } from "lucide-react";
+import { Heart, Bell, Loader2 } from "lucide-react";
 
 type FilterTab = "all" | "saved" | "following" | "both";
 
@@ -81,7 +81,7 @@ const BrokerSavedAssets = () => {
         <div className="text-center py-12 bg-card rounded-lg border border-border">
           <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold text-foreground mb-2">Chưa có tài sản nào</h3>
-          <p className="text-muted-foreground">Bấm biểu tượng bookmark trên trang danh sách để lưu tài sản</p>
+          <p className="text-muted-foreground">Bấm biểu tượng tim trên trang danh sách để lưu tài sản</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -98,7 +98,7 @@ const BrokerSavedAssets = () => {
                       className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/80"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
                     >
-                      <Bookmark className="h-3 w-3 mr-1 fill-current" />
+                      <Heart className="h-3 w-3 mr-1 fill-current" />
                       Quan tâm
                     </Badge>
                   )}

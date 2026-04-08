@@ -157,6 +157,7 @@ export const AuthDialog = () => {
       if (error) throw error;
       toast({ title: "Đăng ký thành công!" });
       closeAuthDialog();
+      setTimeout(() => executePendingAction(), 100);
     } catch (err: any) {
       toast({ title: "Đăng ký thất bại", description: err.message, variant: "destructive" });
     } finally {

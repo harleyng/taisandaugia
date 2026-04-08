@@ -193,14 +193,14 @@ export const AuthDialog = () => {
         <DialogHeader>
           <DialogTitle className="text-xl">
             {step === "identifier" && "Đăng nhập / Đăng ký"}
-            {step === "login" && "Đăng nhập"}
+            {(step === "login" || step === "login-phone") && "Đăng nhập"}
             {step === "register-email" && "Tạo tài khoản mới"}
             {step === "register-phone-otp" && "Xác thực OTP"}
             {step === "register-phone-password" && "Tạo mật khẩu"}
           </DialogTitle>
           <DialogDescription>
             {step === "identifier" && "Nhập email hoặc số điện thoại để tiếp tục"}
-            {step === "login" && `Đăng nhập với ${identifier}`}
+            {(step === "login" || step === "login-phone") && `Đăng nhập với ${identifier}`}
             {step === "register-email" && `Tạo tài khoản cho ${identifier}`}
             {step === "register-phone-otp" && `Nhập mã OTP đã gửi đến ${identifier}`}
             {step === "register-phone-password" && "Tạo mật khẩu cho tài khoản của bạn"}

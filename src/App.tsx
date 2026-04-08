@@ -56,14 +56,16 @@ const App = () => (
           {/* Auth */}
           <Route path="/auth" element={<Auth />} />
           
-          {/* Broker Portal - All authenticated users can access */}
+          {/* Saved Assets - marketplace layout */}
+          <Route path="/saved-assets" element={<ProtectedRoute />}>
+            <Route index element={<SavedAssetsPage />} />
+          </Route>
+
+          {/* Broker Portal - temporarily hidden, keep routes for future */}
           <Route element={<ProtectedRoute />}>
-            {/* Standalone pages without layout */}
             <Route path="/broker/properties/new" element={<SubmitListing />} />
             <Route path="/broker/properties/:id/edit" element={<SubmitListing />} />
             <Route path="/broker/properties/:id" element={<BrokerPropertyDetail />} />
-            
-            {/* Pages with sidebar layout */}
             <Route path="/broker" element={<BrokerLayout />}>
               <Route index element={<Navigate to="/broker/dashboard" replace />} />
               <Route path="dashboard" element={<BrokerDashboard />} />
@@ -76,7 +78,7 @@ const App = () => (
               <Route path="organization/invite" element={<InviteMember />} />
               <Route path="organization/invites" element={<OrganizationInvites />} />
               <Route path="profile" element={<BrokerProfile />} />
-              <Route path="saved-assets" element={<BrokerSavedAssets />} />
+              <Route path="saved-assets" element={<Navigate to="/saved-assets" replace />} />
             </Route>
           </Route>
           

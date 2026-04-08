@@ -111,7 +111,7 @@ export const Header = () => {
         <div className="flex items-center gap-4">
           {session ?
           <>
-              <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={() => navigate("/broker/saved-assets")}>
+              <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={() => navigate("/saved-assets")}>
                 <Heart className="h-5 w-5" />
               </Button>
               <Button variant="ghost" size="icon" className="hidden sm:inline-flex relative">

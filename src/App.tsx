@@ -30,6 +30,7 @@ import BrokerOrganization from "./pages/portal/BrokerOrganization";
 import BrokerOrganizations from "./pages/portal/BrokerOrganizations";
 import BrokerProfile from "./pages/portal/BrokerProfile";
 import BrokerSavedAssets from "./pages/portal/BrokerSavedAssets";
+import SavedAssetsPage from "./pages/SavedAssetsPage";
 import CreateOrganization from "./pages/portal/CreateOrganization";
 import InviteMember from "./pages/portal/InviteMember";
 import OrganizationInvites from "./pages/portal/OrganizationInvites";

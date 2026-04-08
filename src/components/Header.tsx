@@ -204,18 +204,10 @@ export const Header = () => {
 
                 {session ?
                 <>
-                    {!isAdmin &&
-                  <div className="py-4 border-b">
-                        <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Broker Portal</h3>
-                        <Link to="/broker/dashboard" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"><Home className="h-5 w-5" />Dashboard</Link>
-                        <Link to="/broker/profile" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"><User className="h-5 w-5" />Hồ sơ cá nhân</Link>
-                        <Link to="/broker/properties" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"><Building className="h-5 w-5" />Quản lý tin đăng</Link>
-                        <Link to="/broker/customers" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"><Users className="h-5 w-5" />Quản lý khách hàng</Link>
-                        <Link to="/broker/marketing" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"><Megaphone className="h-5 w-5" />Marketing</Link>
-                        <Link to="/broker/organization" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"><Building2 className="h-5 w-5" />Tổ chức</Link>
-                        <Link to="/broker/properties/new" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg transition-colors mt-3"><PlusCircle className="h-5 w-5" />Đăng tin</Link>
+                    <div className="py-4 border-b">
+                        <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Tài khoản</h3>
+                        <Link to="/saved-assets" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"><Heart className="h-5 w-5" />Tài sản quan tâm</Link>
                       </div>
-                  }
                     <div className="pt-4 space-y-2">
                       <Button onClick={handleLogout} variant="outline" className="w-full justify-start"><LogOut className="mr-2 h-5 w-5" />Đăng xuất</Button>
                     </div>

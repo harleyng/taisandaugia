@@ -10,7 +10,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Mail, Phone, Loader2 } from "lucide-react";
 
-type Step = "identifier" | "login" | "register-email" | "register-phone-otp" | "register-phone-password";
+type Step = "identifier" | "login" | "login-phone" | "register-email" | "register-phone-otp" | "register-phone-password";
 type InputMode = "email" | "phone";
 
 export const AuthDialog = () => {
@@ -60,9 +60,15 @@ export const AuthDialog = () => {
         if (error) throw error;
         setStep(data ? "login" : "register-email");
       } else {
-        // For phone, we can't easily check existence without phone auth config
-        // Default to register flow with OTP
-        setStep("register-phone-otp");
+        // Check if phone account already exists
+        const fakeEmail = `${trimmed.replace(/\s/g, "")}@phone.local`;
+        const { data: exists, error: phoneErr } = await supabase.rpc("check_email_exists", { _email: fakeEmail });
+        if (phoneErr) throw phoneErr;
+        if (exists) {
+          setStep("login-phone");
+        } else {
+          setStep("register-phone-otp");
+        }
       }
     } catch (err: any) {
       toast({ title: "Lỗi kiểm tra tài khoản", description: err.message, variant: "destructive" });
@@ -75,8 +81,11 @@ export const AuthDialog = () => {
     if (!password) return;
     setLoading(true);
     try {
+      const loginEmail = inputMode === "phone"
+        ? `${identifier.trim().replace(/\s/g, "")}@phone.local`
+        : identifier.trim();
       const { error } = await supabase.auth.signInWithPassword({
-        email: identifier.trim(),
+        email: loginEmail,
         password,
       });
       if (error) throw error;
@@ -148,6 +157,7 @@ export const AuthDialog = () => {
       if (error) throw error;
       toast({ title: "Đăng ký thành công!" });
       closeAuthDialog();
+      setTimeout(() => executePendingAction(), 100);
     } catch (err: any) {
       toast({ title: "Đăng ký thất bại", description: err.message, variant: "destructive" });
     } finally {
@@ -183,14 +193,14 @@ export const AuthDialog = () => {
         <DialogHeader>
           <DialogTitle className="text-xl">
             {step === "identifier" && "Đăng nhập / Đăng ký"}
-            {step === "login" && "Đăng nhập"}
+            {(step === "login" || step === "login-phone") && "Đăng nhập"}
             {step === "register-email" && "Tạo tài khoản mới"}
             {step === "register-phone-otp" && "Xác thực OTP"}
             {step === "register-phone-password" && "Tạo mật khẩu"}
           </DialogTitle>
           <DialogDescription>
             {step === "identifier" && "Nhập email hoặc số điện thoại để tiếp tục"}
-            {step === "login" && `Đăng nhập với ${identifier}`}
+            {(step === "login" || step === "login-phone") && `Đăng nhập với ${identifier}`}
             {step === "register-email" && `Tạo tài khoản cho ${identifier}`}
             {step === "register-phone-otp" && `Nhập mã OTP đã gửi đến ${identifier}`}
             {step === "register-phone-password" && "Tạo mật khẩu cho tài khoản của bạn"}
@@ -242,8 +252,8 @@ export const AuthDialog = () => {
             </>
           )}
 
-          {/* Step 2a: Login */}
-          {step === "login" && (
+          {/* Step 2a: Login (email or phone) */}
+          {(step === "login" || step === "login-phone") && (
             <>
               <Button variant="ghost" size="sm" className="gap-1 -ml-2 mb-2" onClick={goBack}>
                 <ArrowLeft className="h-4 w-4" /> Quay lại

@@ -10,7 +10,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Mail, Phone, Loader2 } from "lucide-react";
 
-type Step = "identifier" | "login" | "register-email" | "register-phone-otp" | "register-phone-password";
+type Step = "identifier" | "login" | "login-phone" | "register-email" | "register-phone-otp" | "register-phone-password";
 type InputMode = "email" | "phone";
 
 export const AuthDialog = () => {

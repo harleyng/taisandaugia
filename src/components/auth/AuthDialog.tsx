@@ -81,8 +81,11 @@ export const AuthDialog = () => {
     if (!password) return;
     setLoading(true);
     try {
+      const loginEmail = inputMode === "phone"
+        ? `${identifier.trim().replace(/\s/g, "")}@phone.local`
+        : identifier.trim();
       const { error } = await supabase.auth.signInWithPassword({
-        email: identifier.trim(),
+        email: loginEmail,
         password,
       });
       if (error) throw error;

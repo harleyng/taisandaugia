@@ -252,8 +252,8 @@ export const AuthDialog = () => {
             </>
           )}
 
-          {/* Step 2a: Login */}
-          {step === "login" && (
+          {/* Step 2a: Login (email or phone) */}
+          {(step === "login" || step === "login-phone") && (
             <>
               <Button variant="ghost" size="sm" className="gap-1 -ml-2 mb-2" onClick={goBack}>
                 <ArrowLeft className="h-4 w-4" /> Quay lại

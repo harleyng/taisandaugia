@@ -60,9 +60,15 @@ export const AuthDialog = () => {
         if (error) throw error;
         setStep(data ? "login" : "register-email");
       } else {
-        // For phone, we can't easily check existence without phone auth config
-        // Default to register flow with OTP
-        setStep("register-phone-otp");
+        // Check if phone account already exists
+        const fakeEmail = `${trimmed.replace(/\s/g, "")}@phone.local`;
+        const { data: exists, error: phoneErr } = await supabase.rpc("check_email_exists", { _email: fakeEmail });
+        if (phoneErr) throw phoneErr;
+        if (exists) {
+          setStep("login-phone");
+        } else {
+          setStep("register-phone-otp");
+        }
       }
     } catch (err: any) {
       toast({ title: "Lỗi kiểm tra tài khoản", description: err.message, variant: "destructive" });

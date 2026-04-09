@@ -3,8 +3,20 @@ import { Menu, User, Heart, PlusCircle, LogOut, ChevronDown, Home, LayoutGrid, U
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +44,9 @@ export const Header = () => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => setSession(session));
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
 
@@ -45,18 +59,29 @@ export const Header = () => {
   const transparent = isHomePage && !scrolled;
 
   return (
-    <header className={`${isHomePage ? 'fixed' : 'relative'} top-0 z-50 w-full transition-all duration-300 ${transparent ? 'bg-transparent border-transparent' : 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border'}`}>
+    <header
+      className={`${isHomePage ? "fixed" : "relative"} top-0 z-50 w-full transition-all duration-300 ${transparent ? "bg-transparent border-transparent" : "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border"}`}
+    >
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link to="/" className={`flex items-center transition-colors ${transparent ? 'text-white' : 'text-foreground'}`}>
-            <img src={logo} alt="Asset Auction - tàisảnđấugiá" className={`h-8 md:h-9 object-contain transition-all duration-300 ${transparent ? 'brightness-0 invert' : ''}`} />
+          <Link
+            to="/"
+            className={`flex items-center transition-colors ${transparent ? "text-white" : "text-foreground"}`}
+          >
+            <img
+              src={logo}
+              alt="Asset Auction - tàisảnđấugiá"
+              className={`h-8 md:h-9 object-contain transition-all duration-300 ${transparent ? "brightness-0 invert" : ""}`}
+            />
           </Link>
 
           {/* Desktop Mega Menu */}
           <NavigationMenu className="hidden md:flex">
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger className={`gap-1.5 ${transparent ? 'bg-transparent text-white/90 hover:text-white hover:bg-white/10 data-[state=open]:bg-white/10' : ''}`}>
+                <NavigationMenuTrigger
+                  className={`gap-1.5 ${transparent ? "bg-transparent text-white/90 hover:text-white hover:bg-white/10 data-[state=open]:bg-white/10" : ""}`}
+                >
                   <LayoutGrid className="h-4 w-4" />
                   Danh mục
                 </NavigationMenuTrigger>
@@ -66,14 +91,20 @@ export const Header = () => {
                       const Icon = cat.icon;
                       return (
                         <div key={cat.slug}>
-                          <Link to={`/listings?category=${cat.slug}`} className="flex items-center gap-2 mb-3 font-semibold text-sm text-foreground hover:text-primary transition-colors">
+                          <Link
+                            to={`/listings?category=${cat.slug}`}
+                            className="flex items-center gap-2 mb-3 font-semibold text-sm text-foreground hover:text-primary transition-colors"
+                          >
                             <Icon className="h-4 w-4 text-primary" />
                             {cat.name}
                           </Link>
                           <ul className="space-y-1.5">
                             {cat.children.map((child) => (
                               <li key={child.slug}>
-                                <Link to={`/listings?category=${cat.slug}&sub=${child.slug}`} className="block text-sm text-muted-foreground hover:text-primary transition-colors py-0.5">
+                                <Link
+                                  to={`/listings?category=${cat.slug}&sub=${child.slug}`}
+                                  className="block text-sm text-muted-foreground hover:text-primary transition-colors py-0.5"
+                                >
                                   {child.name}
                                 </Link>
                               </li>
@@ -92,7 +123,7 @@ export const Header = () => {
         <div className="flex items-center gap-4">
           {session ? (
             <>
-              <Button variant="ghost" size="icon" className={`hidden sm:inline-flex ${transparent ? 'text-white/90 hover:text-white hover:bg-white/10' : ''}`} onClick={() => navigate("/saved-assets")}>
+              {/*} <Button variant="ghost" size="icon" className={`hidden sm:inline-flex ${transparent ? 'text-white/90 hover:text-white hover:bg-white/10' : ''}`} onClick={() => navigate("/saved-assets")}>
                 <Heart className="h-5 w-5" />
               </Button>
               <DropdownMenu>
@@ -115,13 +146,17 @@ export const Header = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {/* <Button onClick={() => navigate("/broker/properties/new")} className="hidden sm:inline-flex bg-primary hover:bg-primary-hover text-primary-foreground"> */}
+                <Button onClick={() => navigate("/broker/properties/new")} className="hidden sm:inline-flex bg-primary hover:bg-primary-hover text-primary-foreground"> 
                 <PlusCircle className="mr-2 h-4 w-4" />Đăng tin
-              </Button>
+              </Button> */}
             </>
           ) : (
-            <Button onClick={() => openAuthDialog()} className="hidden sm:inline-flex bg-foreground hover:bg-foreground/90 text-background">
-              <User className="mr-2 h-4 w-4" />Đăng nhập
+            <Button
+              onClick={() => openAuthDialog()}
+              className="hidden sm:inline-flex bg-foreground hover:bg-foreground/90 text-background"
+            >
+              <User className="mr-2 h-4 w-4" />
+              Đăng nhập
             </Button>
           )}
 
@@ -136,8 +171,12 @@ export const Header = () => {
               <nav className="flex flex-col gap-2 mt-8">
                 <div className="pb-4 border-b">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Trang chủ</h3>
-                  <Link to="/" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors">
-                    <Home className="h-5 w-5" />Trang chủ
+                  <Link
+                    to="/"
+                    className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                  >
+                    <Home className="h-5 w-5" />
+                    Trang chủ
                   </Link>
                 </div>
 
@@ -158,7 +197,11 @@ export const Header = () => {
                           <AccordionContent className="pb-1">
                             <div className="ml-11 space-y-0.5">
                               {cat.children.map((child) => (
-                                <Link key={child.slug} to={`/listings?category=${cat.slug}&sub=${child.slug}`} className="block px-3 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-muted rounded-md transition-colors">
+                                <Link
+                                  key={child.slug}
+                                  to={`/listings?category=${cat.slug}&sub=${child.slug}`}
+                                  className="block px-3 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-muted rounded-md transition-colors"
+                                >
                                   {child.name}
                                 </Link>
                               ))}
@@ -174,23 +217,36 @@ export const Header = () => {
                   <>
                     <div className="py-4 border-b">
                       <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Tài khoản</h3>
-                      <Link to="/profile" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors">
-                        <UserCircle className="h-5 w-5" />Hồ sơ cá nhân
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <UserCircle className="h-5 w-5" />
+                        Hồ sơ cá nhân
                       </Link>
-                      <Link to="/saved-assets" className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors">
-                        <Heart className="h-5 w-5" />Tài sản quan tâm
+                      <Link
+                        to="/saved-assets"
+                        className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <Heart className="h-5 w-5" />
+                        Tài sản quan tâm
                       </Link>
                     </div>
                     <div className="pt-4 space-y-2">
                       <Button onClick={handleLogout} variant="outline" className="w-full justify-start">
-                        <LogOut className="mr-2 h-5 w-5" />Đăng xuất
+                        <LogOut className="mr-2 h-5 w-5" />
+                        Đăng xuất
                       </Button>
                     </div>
                   </>
                 ) : (
                   <div className="pt-4 space-y-2">
-                    <Button onClick={() => openAuthDialog()} className="w-full bg-primary hover:bg-primary-hover text-primary-foreground justify-start">
-                      <User className="mr-2 h-5 w-5" />Đăng nhập
+                    <Button
+                      onClick={() => openAuthDialog()}
+                      className="w-full bg-primary hover:bg-primary-hover text-primary-foreground justify-start"
+                    >
+                      <User className="mr-2 h-5 w-5" />
+                      Đăng nhập
                     </Button>
                   </div>
                 )}

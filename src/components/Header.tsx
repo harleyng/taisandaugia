@@ -123,30 +123,43 @@ export const Header = () => {
         <div className="flex items-center gap-4">
           {session ? (
             <>
-              {/*} <Button variant="ghost" size="icon" className={`hidden sm:inline-flex ${transparent ? 'text-white/90 hover:text-white hover:bg-white/10' : ''}`} onClick={() => navigate("/saved-assets")}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`hidden sm:inline-flex ${transparent ? "text-white/90 hover:text-white hover:bg-white/10" : ""}`}
+                onClick={() => navigate("/saved-assets")}
+              >
                 <Heart className="h-5 w-5" />
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className={`hidden sm:inline-flex gap-2 ${transparent ? 'text-white/90 hover:text-white hover:bg-white/10' : ''}`}>
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">U</div>
+                  <Button
+                    variant="ghost"
+                    className={`hidden sm:inline-flex gap-2 ${transparent ? "text-white/90 hover:text-white hover:bg-white/10" : ""}`}
+                  >
+                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
+                      U
+                    </div>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <UserCircle className="mr-2 h-4 w-4" />Hồ sơ cá nhân
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Hồ sơ cá nhân
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/saved-assets")}>
-                    <Heart className="mr-2 h-4 w-4" />Tài sản quan tâm
+                    <Heart className="mr-2 h-4 w-4" />
+                    Tài sản quan tâm
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />Đăng xuất
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Đăng xuất
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-                <Button onClick={() => navigate("/broker/properties/new")} className="hidden sm:inline-flex bg-primary hover:bg-primary-hover text-primary-foreground"> 
+              {/*<Button onClick={() => navigate("/broker/properties/new")} className="hidden sm:inline-flex bg-primary hover:bg-primary-hover text-primary-foreground"> 
                 <PlusCircle className="mr-2 h-4 w-4" />Đăng tin
               </Button> */}
             </>

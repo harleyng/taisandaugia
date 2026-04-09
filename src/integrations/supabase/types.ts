@@ -358,6 +358,7 @@ export type Database = {
           id: string
           kyc_status: Database["public"]["Enums"]["kyc_status"]
           name: string | null
+          notifications_enabled: boolean
           rejection_reason: string | null
           updated_at: string
         }
@@ -368,6 +369,7 @@ export type Database = {
           id: string
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           name?: string | null
+          notifications_enabled?: boolean
           rejection_reason?: string | null
           updated_at?: string
         }
@@ -378,6 +380,7 @@ export type Database = {
           id?: string
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           name?: string | null
+          notifications_enabled?: boolean
           rejection_reason?: string | null
           updated_at?: string
         }

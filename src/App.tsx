@@ -31,6 +31,7 @@ import BrokerOrganizations from "./pages/portal/BrokerOrganizations";
 import BrokerProfile from "./pages/portal/BrokerProfile";
 import BrokerSavedAssets from "./pages/portal/BrokerSavedAssets";
 import SavedAssetsPage from "./pages/SavedAssetsPage";
+import ProfilePage from "./pages/ProfilePage";
 import CreateOrganization from "./pages/portal/CreateOrganization";
 import InviteMember from "./pages/portal/InviteMember";
 import OrganizationInvites from "./pages/portal/OrganizationInvites";
@@ -57,9 +58,12 @@ const App = () => (
           {/* Auth */}
           <Route path="/auth" element={<Auth />} />
           
-          {/* Saved Assets - marketplace layout */}
+          {/* Saved Assets & Profile - marketplace layout */}
           <Route path="/saved-assets" element={<ProtectedRoute />}>
             <Route index element={<SavedAssetsPage />} />
+          </Route>
+          <Route path="/profile" element={<ProtectedRoute />}>
+            <Route index element={<ProfilePage />} />
           </Route>
 
           {/* Broker Portal - temporarily hidden, keep routes for future */}

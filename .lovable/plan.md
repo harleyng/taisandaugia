@@ -1,131 +1,91 @@
 
 
-## Implementation Plan: "Quan tâm" & "Nhận thông tin" Feature
+## Plan: Gộp "Nhận thông tin" vào "Quan tâm" + Popup thông báo + Trang Profile
 
-### Summary
-Add two independent user actions (save/bookmark and follow/subscribe) for auction assets, with auth-gated interactions, optimistic UI, and a dedicated saved-assets page.
+### Tóm tắt
+1. Bỏ tính năng "Nhận thông tin" (follow) riêng biệt — chỉ giữ lại "Quan tâm" (save)
+2. Lần đầu bấm Quan tâm → hiện popup mời bật thông báo
+3. Trang Tài sản quan tâm: banner CTA bật thông báo nếu chưa bật
+4. Trang Profile mới: tên, avatar, đổi mật khẩu, đăng xuất, setting thông báo
 
 ---
 
-### 1. Database: New Table `user_asset_actions`
+### 1. Database Migration
 
-Create one table storing both action types per user+listing:
+Thêm cột `notifications_enabled` vào bảng `profiles`:
 
 ```sql
-CREATE TABLE public.user_asset_actions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  listing_id uuid NOT NULL,
-  is_saved boolean NOT NULL DEFAULT false,
-  is_following boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(user_id, listing_id)
-);
-
-ALTER TABLE public.user_asset_actions ENABLE ROW LEVEL SECURITY;
-
--- Users can read their own actions
-CREATE POLICY "Users can view own actions" ON public.user_asset_actions
-  FOR SELECT TO authenticated USING (auth.uid() = user_id);
-
--- Users can insert their own actions  
-CREATE POLICY "Users can insert own actions" ON public.user_asset_actions
-  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-
--- Users can update their own actions
-CREATE POLICY "Users can update own actions" ON public.user_asset_actions
-  FOR UPDATE TO authenticated USING (auth.uid() = user_id);
-
--- Users can delete their own actions
-CREATE POLICY "Users can delete own actions" ON public.user_asset_actions
-  FOR DELETE TO authenticated USING (auth.uid() = user_id);
+ALTER TABLE public.profiles ADD COLUMN notifications_enabled boolean NOT NULL DEFAULT false;
 ```
 
----
+Không cần xóa cột `is_following` khỏi `user_asset_actions` (giữ backward compatibility), chỉ bỏ sử dụng trong code.
 
-### 2. Auth Context: Add Pending Action Support
+### 2. Sửa `useAssetActions` hook
 
-**File: `src/contexts/AuthDialogContext.tsx`**
+- Xóa toàn bộ logic `followingIds`, `toggleFollow`, `toggleFollowInner`
+- Chỉ export `savedIds`, `toggleSave`, `session`
+- Thêm state `isFirstSave` — sau khi save thành công lần đầu trong session, trigger callback `onFirstSave`
+- Return thêm `isFirstSave` flag
 
-Extend the context to support a `pendingAction` callback. When the user clicks a protected action while logged out, the callback is stored. After successful auth, it executes automatically.
+### 3. Tạo `useNotificationSettings` hook
 
----
+- Fetch `notifications_enabled` từ `profiles`
+- Hàm `toggleNotifications(val)` để update
+- Dùng ở popup, banner, và trang profile
 
-### 3. New Hook: `useAssetActions`
+### 4. Tạo component `NotificationPromptDialog`
 
-**File: `src/hooks/useAssetActions.tsx`**
+- Dialog hiện sau lần đầu bấm Quan tâm
+- Nội dung: "Bạn muốn nhận thông báo khi có cập nhật về tài sản quan tâm?"
+- 2 nút: "Bật thông báo" (primary) và "Để sau"
+- Lưu vào localStorage `notification_prompt_shown` để không hiện lại
 
-A custom hook providing:
-- `savedIds` / `followingIds` sets (bulk-fetched on mount for logged-in users)
-- `toggleSave(listingId)` — upserts `is_saved`, shows toast
-- `toggleFollow(listingId)` — upserts `is_following`, shows toast
-- Optimistic state updates
-- Auth check: if not logged in, stores pending action and opens auth dialog
+### 5. Sửa trang Saved Assets (`BrokerSavedAssets.tsx`)
 
----
+- Xóa tabs filter (all/saved/following/both) — chỉ hiện danh sách quan tâm
+- Xóa badge "Nhận TT" trên card
+- Thêm banner CTA ở đầu trang nếu `notifications_enabled === false`:
+  - Bên trái: illustration (Bell icon lớn) + title + description
+  - Bên phải: Button "Bật thông báo"
+  - Click → update `notifications_enabled = true`
 
-### 4. Listing Page: Bookmark Icon on AuctionCard
+### 6. Tạo trang Profile mới (`/profile`)
 
-**File: `src/components/AuctionCard.tsx`**
+- Route mới `/profile` trong `App.tsx` (protected, marketplace layout)
+- Trang `ProfilePage.tsx` wrap với Header/Footer
+- Nội dung:
+  - **Avatar**: hiện initials hoặc ảnh, nút "Thay ảnh" (upload lên storage bucket `listing-images`)
+  - **Tên**: editable field, save vào `profiles.name`
+  - **Đổi mật khẩu**: form old password + new password, dùng `supabase.auth.updateUser`
+  - **Thông báo**: switch bật/tắt `notifications_enabled`
+  - **Đăng xuất**: button
 
-- Add a bookmark icon button (top-right of image or bottom of card) for the default grid variant
-- Accept `isSaved` and `onToggleSave` props
-- Show filled/outlined bookmark icon based on state
-- `stopPropagation` on click to prevent navigation
+### 7. Cập nhật Header
 
-**File: `src/pages/Listings.tsx`**
+- Dropdown menu thêm mục "Hồ sơ cá nhân" → navigate `/profile`
+- Mobile menu thêm link Profile
+- Xóa mọi reference đến follow/bell trong dropdown
 
-- Use `useAssetActions` hook
-- Pass `isSaved` and `onToggleSave` to each `AuctionCard`
+### 8. Cleanup các file liên quan
 
----
+- `AuctionDetail.tsx`: xóa nút "Nhận thông tin", chỉ giữ "Quan tâm"
+- `AuctionCard.tsx`: xóa props/logic follow
+- `Index.tsx` / `Listings.tsx`: xóa truyền `toggleFollow`
 
-### 5. Detail Page: Both Actions
+### Files sẽ sửa/tạo
 
-**File: `src/components/auction/AuctionQuickInfo.tsx`**
-
-- Add two buttons below existing content: "Quan tâm" (bookmark icon) and "Nhận thông tin" (bell icon)
-- Each shows active/inactive state with helper text
-- Uses `useAssetActions` for toggle logic
-
----
-
-### 6. Saved Assets Page
-
-**File: `src/pages/portal/BrokerSavedAssets.tsx`** (new)
-
-- Tab/filter bar: Tất cả | Chỉ Quan tâm | Đang nhận thông tin | Cả hai
-- Lists assets using `AuctionCard` with badges showing saved/following status
-- Toggle actions directly from this page
-- Fetch from `user_asset_actions` joined with `listings`
-
-**File: `src/components/portal/BrokerSidebar.tsx`** — Add menu item "Tài sản quan tâm" with Bookmark icon
-
-**File: `src/App.tsx`** — Add route `/broker/saved-assets`
-
----
-
-### 7. Auth Dialog: Execute Pending Action
-
-**File: `src/components/auth/AuthDialog.tsx`**
-
-- After successful login/signup, call `pendingAction` from context if present, then clear it
-
----
-
-### Files Modified
-| File | Change |
+| File | Action |
 |---|---|
-| `src/contexts/AuthDialogContext.tsx` | Add `pendingAction` support |
-| `src/hooks/useAssetActions.tsx` | New hook |
-| `src/components/AuctionCard.tsx` | Add bookmark icon + props |
-| `src/pages/Listings.tsx` | Wire up `useAssetActions` |
-| `src/components/auction/AuctionQuickInfo.tsx` | Add both action buttons |
-| `src/pages/AuctionDetail.tsx` | Pass actions to QuickInfo |
-| `src/pages/portal/BrokerSavedAssets.tsx` | New page |
-| `src/components/portal/BrokerSidebar.tsx` | Add nav item |
-| `src/App.tsx` | Add route |
-| `src/components/auth/AuthDialog.tsx` | Execute pending action on auth success |
-| Migration | New `user_asset_actions` table |
+| Migration | Thêm `notifications_enabled` vào profiles |
+| `src/hooks/useAssetActions.tsx` | Xóa follow logic |
+| `src/hooks/useNotificationSettings.tsx` | **Tạo mới** |
+| `src/components/NotificationPromptDialog.tsx` | **Tạo mới** |
+| `src/pages/ProfilePage.tsx` | **Tạo mới** |
+| `src/pages/portal/BrokerSavedAssets.tsx` | Xóa tabs/follow, thêm banner |
+| `src/pages/AuctionDetail.tsx` | Xóa nút follow |
+| `src/components/AuctionCard.tsx` | Cleanup follow props |
+| `src/components/Header.tsx` | Thêm Profile link, xóa bell icon |
+| `src/App.tsx` | Thêm route `/profile` |
+| `src/pages/Index.tsx` | Cleanup follow |
+| `src/pages/Listings.tsx` | Cleanup follow |
 

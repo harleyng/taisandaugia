@@ -1,32 +1,21 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAssetActions } from "@/hooks/useAssetActions";
+import { useNotificationSettings } from "@/hooks/useNotificationSettings";
 import { AuctionCard } from "@/components/AuctionCard";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { formatAddress } from "@/utils/formatters";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Heart, Bell, Loader2 } from "lucide-react";
 
-type FilterTab = "all" | "saved" | "following" | "both";
-
-const TABS: { value: FilterTab; label: string }[] = [
-  { value: "all", label: "Tất cả" },
-  { value: "saved", label: "Chỉ Quan tâm" },
-  { value: "following", label: "Đang nhận thông tin" },
-  { value: "both", label: "Cả hai" },
-];
-
 const BrokerSavedAssets = () => {
-  const { savedIds, followingIds, toggleSave, toggleFollow, session } = useAssetActions();
+  const { savedIds, toggleSave, session } = useAssetActions();
+  const { notificationsEnabled, toggleNotifications } = useNotificationSettings();
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<FilterTab>("all");
-
-  const allIds = new Set([...savedIds, ...followingIds]);
 
   useEffect(() => {
-    if (!session || allIds.size === 0) {
+    if (!session || savedIds.size === 0) {
       setListings([]);
       setLoading(false);
       return;
@@ -36,48 +25,44 @@ const BrokerSavedAssets = () => {
       const { data } = await supabase
         .from("listings")
         .select("*")
-        .in("id", Array.from(allIds));
+        .in("id", Array.from(savedIds));
       setListings(data || []);
       setLoading(false);
     };
     fetchListings();
-  }, [session, savedIds.size, followingIds.size]);
-
-  const filtered = listings.filter((l) => {
-    const isSaved = savedIds.has(l.id);
-    const isFollowing = followingIds.has(l.id);
-    if (tab === "saved") return isSaved && !isFollowing;
-    if (tab === "following") return isFollowing && !isSaved;
-    if (tab === "both") return isSaved && isFollowing;
-    return true;
-  });
+  }, [session, savedIds.size]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Tài sản quan tâm</h1>
-        <p className="text-muted-foreground mt-1">Quản lý tài sản đã lưu và đang theo dõi</p>
+        <p className="text-muted-foreground mt-1">Quản lý tài sản đã lưu</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 flex-wrap">
-        {TABS.map((t) => (
-          <Button
-            key={t.value}
-            variant={tab === t.value ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTab(t.value)}
-          >
-            {t.label}
+      {/* Notification banner */}
+      {!notificationsEnabled && savedIds.size > 0 && (
+        <div className="rounded-lg border border-border bg-card p-4 md:p-6 flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Bell className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">Nhận thông báo cập nhật</h3>
+              <p className="text-sm text-muted-foreground">Bật thông báo để nhận tin mới nhất về lịch đấu giá, giá khởi điểm và trạng thái phiên của tài sản bạn quan tâm.</p>
+            </div>
+          </div>
+          <Button onClick={() => toggleNotifications(true)} className="shrink-0">
+            <Bell className="mr-2 h-4 w-4" />
+            Bật thông báo
           </Button>
-        ))}
-      </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : listings.length === 0 ? (
         <div className="text-center py-12 bg-card rounded-lg border border-border">
           <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold text-foreground mb-2">Chưa có tài sản nào</h3>
@@ -85,52 +70,28 @@ const BrokerSavedAssets = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((listing) => {
+          {listings.map((listing) => {
             const ca = listing.custom_attributes || {};
-            const isSaved = savedIds.has(listing.id);
-            const isFollowing = followingIds.has(listing.id);
             return (
-              <div key={listing.id} className="relative">
-                {/* Status badges */}
-                <div className="absolute top-2 right-2 z-10 flex gap-1">
-                  {isSaved && (
-                    <Badge
-                      className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/80"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
-                    >
-                      <Heart className="h-3 w-3 mr-1 fill-current" />
-                      Quan tâm
-                    </Badge>
-                  )}
-                  {isFollowing && (
-                    <Badge
-                      className="bg-amber-500 text-white cursor-pointer hover:bg-amber-600"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(listing.id); }}
-                    >
-                      <Bell className="h-3 w-3 mr-1 fill-current" />
-                      Nhận TT
-                    </Badge>
-                  )}
-                </div>
-                <AuctionCard
-                  id={listing.id}
-                  imageUrl={listing.image_url}
-                  title={listing.title}
-                  address={formatAddress(listing.address) || "Chưa cập nhật"}
-                  startingPrice={listing.price}
-                  stepPrice={ca.bid_step ?? ca.step_price}
-                  depositAmount={ca.deposit_amount}
-                  auctionDate={ca.auction_date ?? ca.auction_time}
-                  registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
-                  sessionStatus={getSessionStatus(listing)}
-                  categorySlug={listing.property_type_slug}
-                  viewMode="grid"
-                  winPrice={ca.win_price ?? ca.winning_price}
-                  orgName={ca.org_name}
-                  isSaved={isSaved}
-                  onToggleSave={() => toggleSave(listing.id)}
-                />
-              </div>
+              <AuctionCard
+                key={listing.id}
+                id={listing.id}
+                imageUrl={listing.image_url}
+                title={listing.title}
+                address={formatAddress(listing.address) || "Chưa cập nhật"}
+                startingPrice={listing.price}
+                stepPrice={ca.bid_step ?? ca.step_price}
+                depositAmount={ca.deposit_amount}
+                auctionDate={ca.auction_date ?? ca.auction_time}
+                registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
+                sessionStatus={getSessionStatus(listing)}
+                categorySlug={listing.property_type_slug}
+                viewMode="grid"
+                winPrice={ca.win_price ?? ca.winning_price}
+                orgName={ca.org_name}
+                isSaved={savedIds.has(listing.id)}
+                onToggleSave={() => toggleSave(listing.id)}
+              />
             );
           })}
         </div>

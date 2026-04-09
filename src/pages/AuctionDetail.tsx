@@ -6,8 +6,9 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, Bell, MapPin, ChevronRight } from "lucide-react";
+import { Heart, MapPin, ChevronRight } from "lucide-react";
 import { useAssetActions } from "@/hooks/useAssetActions";
+import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";
 import { AuctionInfoTable } from "@/components/auction/AuctionInfoTable";
 import { AuctionOrganizerInfo } from "@/components/auction/AuctionOrganizerInfo";
@@ -20,7 +21,7 @@ import { formatAddress } from "@/utils/formatters";
 const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { savedIds, followingIds, toggleSave, toggleFollow } = useAssetActions();
+  const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +93,7 @@ const AuctionDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <NotificationPromptDialog open={showNotificationPrompt} onClose={dismissNotificationPrompt} />
 
       <div className="container mx-auto px-4 py-4 md:py-6">
         {/* Breadcrumb */}
@@ -142,30 +144,17 @@ const AuctionDetail = () => {
             {/* Section 4: File đính kèm */}
             <AuctionAttachments listing={listing} />
 
-            {/* Quan tâm & Nhận thông tin */}
-            <Card className="p-5 space-y-3">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant={savedIds.has(listing.id) ? "default" : "outline"}
-                  className="flex-1 justify-center gap-2"
-                  onClick={() => toggleSave(listing.id)}
-                >
-                  <Heart className={`h-4 w-4 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
-                  {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm"}
-                </Button>
-                <Button
-                  variant={followingIds.has(listing.id) ? "default" : "outline"}
-                  className={`flex-1 justify-center gap-2 ${followingIds.has(listing.id) ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
-                  onClick={() => toggleFollow(listing.id)}
-                >
-                  <Bell className={`h-4 w-4 ${followingIds.has(listing.id) ? "fill-current" : ""}`} />
-                  {followingIds.has(listing.id) ? "Đang nhận thông tin" : "Nhận thông tin"}
-                </Button>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-1 sm:gap-4">
-                <p className="text-xs text-muted-foreground">Quan tâm: lưu tài sản để xem lại sau</p>
-                <p className="text-xs text-muted-foreground">Nhận thông tin: nhận cập nhật khi có thay đổi</p>
-              </div>
+            {/* Quan tâm */}
+            <Card className="p-5">
+              <Button
+                variant={savedIds.has(listing.id) ? "default" : "outline"}
+                className="w-full justify-center gap-2"
+                onClick={() => toggleSave(listing.id)}
+              >
+                <Heart className={`h-4 w-4 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
+                {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm tài sản này"}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2 text-center">Lưu tài sản để xem lại sau và nhận thông báo cập nhật</p>
             </Card>
 
           </div>

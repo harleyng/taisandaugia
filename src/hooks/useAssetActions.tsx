@@ -82,7 +82,6 @@ export function useAssetActions() {
 
   const toggleSaveInner = useCallback(async (listingId: string, newVal?: boolean) => {
     const val = newVal ?? !savedIds.has(listingId);
-    const wasEmpty = savedIds.size === 0;
 
     setSavedIds((prev) => {
       const next = new Set(prev);
@@ -95,7 +94,6 @@ export function useAssetActions() {
 
     if (
       val &&
-      wasEmpty &&
       typeof window !== "undefined" &&
       localStorage.getItem(NOTIFICATION_PROMPT_SHOWN_KEY) !== "1"
     ) {

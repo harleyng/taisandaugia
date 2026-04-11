@@ -95,7 +95,6 @@ export function useAssetActions() {
 
     if (
       val &&
-      wasEmpty &&
       typeof window !== "undefined" &&
       localStorage.getItem(NOTIFICATION_PROMPT_SHOWN_KEY) !== "1"
     ) {

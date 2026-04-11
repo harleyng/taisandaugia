@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useNotificationSettings } from "@/hooks/useNotificationSettings";
 import { AuctionCard } from "@/components/AuctionCard";
+import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { formatAddress } from "@/utils/formatters";
 import { Button } from "@/components/ui/button";
 import { Heart, Bell, Loader2 } from "lucide-react";
 
 const BrokerSavedAssets = () => {
-  const { savedIds, toggleSave, session } = useAssetActions();
+  const { savedIds, toggleSave, session, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
   const { notificationsEnabled, toggleNotifications } = useNotificationSettings();
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +21,7 @@ const BrokerSavedAssets = () => {
       setLoading(false);
       return;
     }
+
     const fetchListings = async () => {
       setLoading(true);
       const { data } = await supabase
@@ -29,17 +31,19 @@ const BrokerSavedAssets = () => {
       setListings(data || []);
       setLoading(false);
     };
+
     fetchListings();
   }, [session, savedIds.size]);
 
   return (
     <div className="space-y-6">
+      <NotificationPromptDialog open={showNotificationPrompt} onClose={dismissNotificationPrompt} />
+
       <div>
         <h1 className="text-2xl font-bold text-foreground">Tài sản quan tâm</h1>
         <p className="text-muted-foreground mt-1">Quản lý tài sản đã lưu</p>
       </div>
 
-      {/* Notification banner */}
       {!notificationsEnabled && savedIds.size > 0 && (
         <div className="rounded-lg border border-border bg-card p-4 md:p-6 flex flex-col sm:flex-row items-center gap-4">
           <div className="flex items-center gap-4 flex-1">

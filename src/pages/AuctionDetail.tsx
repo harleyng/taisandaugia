@@ -145,17 +145,18 @@ const AuctionDetail = () => {
             <AuctionAttachments listing={listing} />
 
             {/* Quan tâm */}
-            <Card className="p-5">
+            <div className="flex items-center gap-3">
               <Button
                 variant={savedIds.has(listing.id) ? "default" : "outline"}
-                className="w-full justify-center gap-2"
+                size="sm"
+                className="gap-1.5"
                 onClick={() => toggleSave(listing.id)}
               >
-                <Heart className={`h-4 w-4 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
-                {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm tài sản này"}
+                <Heart className={`h-3.5 w-3.5 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
+                {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm"}
               </Button>
-              <p className="text-xs text-muted-foreground mt-2 text-center">Lưu tài sản để xem lại sau và nhận thông báo cập nhật</p>
-            </Card>
+              <span className="text-xs text-muted-foreground">Lưu để xem lại sau và nhận thông báo</span>
+            </div>
 
           </div>
 

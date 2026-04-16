@@ -268,6 +268,7 @@ const Listings = () => {
                       viewMode="grid"
                       winPrice={ca.win_price ?? ca.winning_price}
                       orgName={ca.org_name}
+                      orgId={(listing as any).auction_org_id}
                       isSaved={savedIds.has(listing.id)}
                       onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
                       saveCount={saveCounts.get(listing.id) || 0}

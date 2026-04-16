@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import SavedAssetsPage from "./pages/SavedAssetsPage";
 import ProfilePage from "./pages/ProfilePage";
 import PWAInstall from "./pages/PWAInstall";
+import CompanyDetail from "./pages/CompanyDetail";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,9 @@ const App = () => (
           </Route>
           <Route path="/profile" element={<ProtectedRoute />}>
             <Route index element={<ProfilePage />} />
+          </Route>
+          <Route path="/auction-org/:id" element={<ProtectedRoute />}>
+            <Route index element={<CompanyDetail />} />
           </Route>
           
           {/* 404 Catch-all */}

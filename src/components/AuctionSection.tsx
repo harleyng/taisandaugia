@@ -104,6 +104,7 @@ export const AuctionSection = () => {
                   variant="featured"
                   countdown={countdown}
                   orgName={orgName}
+                  orgId={item.auction_org_id}
                   isSaved={savedIds.has(item.id)}
                   onToggleSave={() => toggleSave(item.id)}
                   saveCount={saveCounts.get(item.id) || 0}

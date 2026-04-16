@@ -16,6 +16,7 @@ export interface AuctionListing {
   custom_attributes: any;
   views_count: number | null;
   auction_org_id: string | null;
+  asset_owner_id: string | null;
 }
 
 export function getSessionStatus(listing: AuctionListing): AuctionSessionStatus {

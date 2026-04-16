@@ -176,6 +176,17 @@ const AuctionDetail = () => {
                           {[ca.asset_owner_name, ca.asset_owner_address].filter(Boolean).join(" - ")}
                         </span>
                       </p>
+                      {listing.asset_owner_id && (
+                        <Link
+                          to={`/asset-owner/${listing.asset_owner_id}`}
+                          className="flex items-center justify-between w-full px-4 py-3 rounded-lg bg-gradient-to-r from-accent to-accent/80 text-accent-foreground hover:from-accent/90 hover:to-accent/70 transition-all group mt-2"
+                        >
+                          <span className="text-sm font-semibold">
+                            Khám phá tài sản từ chủ sở hữu này
+                          </span>
+                          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                      )}
                     </>
                   )}
                 </CollapsibleContent>

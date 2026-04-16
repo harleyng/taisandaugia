@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink, Eye } from "lucide-react";
+import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink, Eye, Search } from "lucide-react";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";

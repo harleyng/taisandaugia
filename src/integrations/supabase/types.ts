@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      auction_organizations: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       listing_contacts: {
         Row: {
           contact_info: Json
@@ -54,6 +84,7 @@ export type Database = {
           apartment_floor_info: string | null
           area: number
           attributes: Json | null
+          auction_org_id: string | null
           balcony_direction: string | null
           building_name: string | null
           ceiling_height: number | null
@@ -104,6 +135,7 @@ export type Database = {
           apartment_floor_info?: string | null
           area: number
           attributes?: Json | null
+          auction_org_id?: string | null
           balcony_direction?: string | null
           building_name?: string | null
           ceiling_height?: number | null
@@ -154,6 +186,7 @@ export type Database = {
           apartment_floor_info?: string | null
           area?: number
           attributes?: Json | null
+          auction_org_id?: string | null
           balcony_direction?: string | null
           building_name?: string | null
           ceiling_height?: number | null
@@ -198,6 +231,13 @@ export type Database = {
           views_count?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "listings_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "listings_organization_id_fkey"
             columns: ["organization_id"]

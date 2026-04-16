@@ -28,6 +28,7 @@ export interface AuctionCardProps {
   isSaved?: boolean;
   onToggleSave?: (e: React.MouseEvent) => void;
   saveCount?: number;
+  viewsCount?: number;
 }
 
 const STATUS_CONFIG: Record<AuctionSessionStatus, { label: string; className: string }> = {
@@ -63,7 +64,7 @@ export function AuctionCard({
   id, imageUrl, title, address, startingPrice, priceUnit = "TOTAL",
   stepPrice, depositAmount, auctionDate, registrationDeadline, sessionStatus, categorySlug,
   subCategorySlug, viewMode = "grid", variant = "default",
-  countdown, orgName, winPrice, isSaved, onToggleSave, saveCount,
+  countdown, orgName, winPrice, isSaved, onToggleSave, saveCount, viewsCount,
 }: AuctionCardProps) {
   const status = STATUS_CONFIG[sessionStatus];
 

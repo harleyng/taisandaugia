@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Heart } from "lucide-react";
+import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Heart, Eye } from "lucide-react";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatPrice, formatDate } from "@/utils/formatters";
 

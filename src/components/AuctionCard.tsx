@@ -166,16 +166,6 @@ export function AuctionCard({
         </div>
 
         <div className="p-4 flex flex-col flex-1">
-          {orgName && (
-            <div className="flex items-center gap-2 mb-2">
-              <img
-                src={`https://ui-avatars.com/api/?name=${orgInitials}&background=1e40af&color=fff&size=48&bold=true`}
-                alt={orgName}
-                className="h-5 w-5 rounded-full flex-shrink-0"
-              />
-              <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
-            </div>
-          )}
           <h3 className="font-bold text-sm md:text-base text-foreground leading-snug mb-1">
             {title}
           </h3>
@@ -195,21 +185,28 @@ export function AuctionCard({
              </div>
            )}
 
+          <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+            <span className="inline-flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              {viewsCount ?? 0}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Heart className="h-3 w-3 fill-current text-rose-400" />
+              {saveCount ?? 0}
+            </span>
+          </div>
+
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border">
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              {viewsCount != null && viewsCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Eye className="h-3 w-3" />
-                  {viewsCount}
-                </span>
-              )}
-              {saveCount != null && saveCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Heart className="h-3 w-3 fill-current text-rose-400" />
-                  {saveCount}
-                </span>
-              )}
-            </div>
+            {orgName ? (
+              <div className="flex items-center gap-2">
+                <img
+                  src={`https://ui-avatars.com/api/?name=${getOrgInitials(orgName)}&background=1e40af&color=fff&size=48&bold=true`}
+                  alt={orgName}
+                  className="h-5 w-5 rounded-full flex-shrink-0"
+                />
+                <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
+              </div>
+            ) : <div />}
             <span className="inline-flex items-center justify-center h-8 text-xs px-3 rounded-md border border-border font-medium">
               CHI TIẾT
             </span>
@@ -256,16 +253,6 @@ export function AuctionCard({
         )}
       </div>
       <div className="p-3 md:p-4 flex flex-col flex-1">
-        {orgName && (
-          <div className="flex items-center gap-2 mb-1.5">
-            <img
-              src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
-              alt={orgName}
-              className="h-5 w-5 rounded-full flex-shrink-0"
-            />
-            <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
-          </div>
-        )}
         <h3 className="font-bold text-sm md:text-base text-foreground leading-snug mb-0.5 line-clamp-1 group-hover:text-primary transition-colors">
           {title}
         </h3>
@@ -300,20 +287,25 @@ export function AuctionCard({
             )}
           </div>
 
-          {((viewsCount != null && viewsCount > 0) || (saveCount != null && saveCount > 0)) && (
-            <div className="flex items-center gap-3 text-xs text-muted-foreground pt-3 border-t border-border">
-              {viewsCount != null && viewsCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Eye className="h-3 w-3" />
-                  {viewsCount}
-                </span>
-              )}
-              {saveCount != null && saveCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Heart className="h-3 w-3 fill-current text-rose-400" />
-                  {saveCount}
-                </span>
-              )}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+            <span className="inline-flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              {viewsCount ?? 0}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Heart className="h-3 w-3 fill-current text-rose-400" />
+              {saveCount ?? 0}
+            </span>
+          </div>
+
+          {orgName && (
+            <div className="flex items-center gap-2 pt-3 border-t border-border">
+              <img
+                src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
+                alt={orgName}
+                className="h-5 w-5 rounded-full flex-shrink-0"
+              />
+              <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
             </div>
           )}
         </div>

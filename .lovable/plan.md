@@ -1,91 +1,46 @@
 
 
-## Plan: Gộp "Nhận thông tin" vào "Quan tâm" + Popup thông báo + Trang Profile
+## Plan: Redesign trang chi tiết đấu giá
 
-### Tóm tắt
-1. Bỏ tính năng "Nhận thông tin" (follow) riêng biệt — chỉ giữ lại "Quan tâm" (save)
-2. Lần đầu bấm Quan tâm → hiện popup mời bật thông báo
-3. Trang Tài sản quan tâm: banner CTA bật thông báo nếu chưa bật
-4. Trang Profile mới: tên, avatar, đổi mật khẩu, đăng xuất, setting thông báo
+Hai thay đổi chính: (1) tạo component hàng giá ngang đặt lên đầu cột trái, (2) cập nhật layout AuctionDetail theo reference — mô tả collapsible, nút quan tâm full-width, section nguồn.
 
----
+### 1. Tạo test data đầy đủ
 
-### 1. Database Migration
+Insert 1 listing vào DB với tất cả custom_attributes: `deposit_amount`, `bid_step`, `document_fee`, `winning_price`, `org_name`, `org_address`, `org_phone`, `org_email`, `auction_location`, `document_sale_start/end`, `asset_viewing_start/end`, `auction_time`, `registration_deadline`, `asset_owner_name`, `asset_owner_address`, `attachments`, `source_urls`, `quantity`, `notes`.
 
-Thêm cột `notifications_enabled` vào bảng `profiles`:
+### 2. Tạo `src/components/auction/AuctionPriceRow.tsx`
 
-```sql
-ALTER TABLE public.profiles ADD COLUMN notifications_enabled boolean NOT NULL DEFAULT false;
-```
+Card chứa grid 5 ô ngang (responsive 2-3 cột trên mobile):
+- **Khởi điểm** (`price`)
+- **Đặt trước** (`ca.deposit_amount`)
+- **Hồ sơ** (`ca.document_fee`)
+- **Bước giá** (`ca.bid_step ?? ca.step_price`)
+- **Giá trúng** (`ca.winning_price ?? ca.win_price`) — hiển thị "–" nếu chưa có
 
-Không cần xóa cột `is_following` khỏi `user_asset_actions` (giữ backward compatibility), chỉ bỏ sử dụng trong code.
+Mỗi ô: label `text-xs text-muted-foreground` + value `text-sm font-bold`. Dùng `formatPrice` từ utils. Các ô phân cách bằng border-right (trừ ô cuối).
 
-### 2. Sửa `useAssetActions` hook
+### 3. Cập nhật `src/pages/AuctionDetail.tsx`
 
-- Xóa toàn bộ logic `followingIds`, `toggleFollow`, `toggleFollowInner`
-- Chỉ export `savedIds`, `toggleSave`, `session`
-- Thêm state `isFirstSave` — sau khi save thành công lần đầu trong session, trigger callback `onFirstSave`
-- Return thêm `isFirstSave` flag
+Thay thế cột trái hiện tại bằng thứ tự mới:
 
-### 3. Tạo `useNotificationSettings` hook
+1. **AuctionPriceRow** (mới) — hàng giá ngang
+2. **Thông tin việc đấu giá** — Card với `Collapsible` (mặc định mở), chứa:
+   - Tiêu đề tài sản (listing.title con)
+   - Mô tả (description)
+   - Metadata inline: Số lượng (`ca.quantity`), Loại BĐS (`property_types.name`), Nơi có tài sản (address), Ghi chú (`ca.notes`)
+   - Chủ tài sản (giữ nguyên logic hiện tại)
+   - Chevron toggle để đóng/mở
+3. **AuctionOrganizerInfo** — giữ nguyên
+4. **AuctionScheduleInfo** — giữ nguyên
+5. **AuctionAttachments** — giữ nguyên
+6. **Nút "Quan tâm tài sản"** — full-width centered, `variant="outline"`, icon Heart
+7. **Nguồn** — nếu có `ca.source_urls` (array), hiển thị danh sách link
 
-- Fetch `notifications_enabled` từ `profiles`
-- Hàm `toggleNotifications(val)` để update
-- Dùng ở popup, banner, và trang profile
+### Files thay đổi
 
-### 4. Tạo component `NotificationPromptDialog`
-
-- Dialog hiện sau lần đầu bấm Quan tâm
-- Nội dung: "Bạn muốn nhận thông báo khi có cập nhật về tài sản quan tâm?"
-- 2 nút: "Bật thông báo" (primary) và "Để sau"
-- Lưu vào localStorage `notification_prompt_shown` để không hiện lại
-
-### 5. Sửa trang Saved Assets (`BrokerSavedAssets.tsx`)
-
-- Xóa tabs filter (all/saved/following/both) — chỉ hiện danh sách quan tâm
-- Xóa badge "Nhận TT" trên card
-- Thêm banner CTA ở đầu trang nếu `notifications_enabled === false`:
-  - Bên trái: illustration (Bell icon lớn) + title + description
-  - Bên phải: Button "Bật thông báo"
-  - Click → update `notifications_enabled = true`
-
-### 6. Tạo trang Profile mới (`/profile`)
-
-- Route mới `/profile` trong `App.tsx` (protected, marketplace layout)
-- Trang `ProfilePage.tsx` wrap với Header/Footer
-- Nội dung:
-  - **Avatar**: hiện initials hoặc ảnh, nút "Thay ảnh" (upload lên storage bucket `listing-images`)
-  - **Tên**: editable field, save vào `profiles.name`
-  - **Đổi mật khẩu**: form old password + new password, dùng `supabase.auth.updateUser`
-  - **Thông báo**: switch bật/tắt `notifications_enabled`
-  - **Đăng xuất**: button
-
-### 7. Cập nhật Header
-
-- Dropdown menu thêm mục "Hồ sơ cá nhân" → navigate `/profile`
-- Mobile menu thêm link Profile
-- Xóa mọi reference đến follow/bell trong dropdown
-
-### 8. Cleanup các file liên quan
-
-- `AuctionDetail.tsx`: xóa nút "Nhận thông tin", chỉ giữ "Quan tâm"
-- `AuctionCard.tsx`: xóa props/logic follow
-- `Index.tsx` / `Listings.tsx`: xóa truyền `toggleFollow`
-
-### Files sẽ sửa/tạo
-
-| File | Action |
-|---|---|
-| Migration | Thêm `notifications_enabled` vào profiles |
-| `src/hooks/useAssetActions.tsx` | Xóa follow logic |
-| `src/hooks/useNotificationSettings.tsx` | **Tạo mới** |
-| `src/components/NotificationPromptDialog.tsx` | **Tạo mới** |
-| `src/pages/ProfilePage.tsx` | **Tạo mới** |
-| `src/pages/portal/BrokerSavedAssets.tsx` | Xóa tabs/follow, thêm banner |
-| `src/pages/AuctionDetail.tsx` | Xóa nút follow |
-| `src/components/AuctionCard.tsx` | Cleanup follow props |
-| `src/components/Header.tsx` | Thêm Profile link, xóa bell icon |
-| `src/App.tsx` | Thêm route `/profile` |
-| `src/pages/Index.tsx` | Cleanup follow |
-| `src/pages/Listings.tsx` | Cleanup follow |
+| File | Hành động |
+|------|-----------|
+| `src/components/auction/AuctionPriceRow.tsx` | Tạo mới |
+| `src/pages/AuctionDetail.tsx` | Refactor layout cột trái |
+| Database | Insert 1 listing test data đầy đủ |
 

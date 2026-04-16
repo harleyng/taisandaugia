@@ -13,6 +13,7 @@ interface AuctionQuickInfoProps {
   area: number;
   customAttributes: Record<string, any>;
   listing: any;
+  saveCount?: number;
 }
 
 const statusConfig = {
@@ -47,7 +48,7 @@ function useCountdown(targetDate: string | null) {
   return timeLeft;
 }
 
-export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing }: AuctionQuickInfoProps) => {
+export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing, saveCount }: AuctionQuickInfoProps) => {
   const status = getSessionStatus(listing);
   const { openAuthDialog } = useAuthDialog();
   const config = statusConfig[status];
@@ -67,8 +68,16 @@ export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing }:
 
   return (
     <Card className="p-5 space-y-5">
-      {/* Status */}
-      <Badge className={config.className}>{config.label}</Badge>
+      {/* Status + save count */}
+      <div className="flex items-center justify-between">
+        <Badge className={config.className}>{config.label}</Badge>
+        {saveCount != null && saveCount > 0 && (
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Heart className="h-4 w-4 fill-current text-rose-400" />
+            <span className="font-medium">{saveCount} người quan tâm</span>
+          </span>
+        )}
+      </div>
 
       {/* Giá khởi điểm */}
       <div>

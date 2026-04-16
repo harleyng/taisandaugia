@@ -14,6 +14,7 @@ export interface AuctionListing {
   area: number;
   created_at: string;
   custom_attributes: any;
+  views_count: number | null;
 }
 
 export function getSessionStatus(listing: AuctionListing): AuctionSessionStatus {

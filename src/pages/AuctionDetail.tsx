@@ -6,17 +6,18 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, MapPin, ChevronRight } from "lucide-react";
+import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";
-import { AuctionInfoTable } from "@/components/auction/AuctionInfoTable";
+import { AuctionPriceRow } from "@/components/auction/AuctionPriceRow";
 import { AuctionOrganizerInfo } from "@/components/auction/AuctionOrganizerInfo";
 import { AuctionScheduleInfo } from "@/components/auction/AuctionScheduleInfo";
 import { AuctionAttachments } from "@/components/auction/AuctionAttachments";
 import { AuctionSimilarAssets } from "@/components/auction/AuctionSimilarAssets";
 import { Link } from "react-router-dom";
 import { formatAddress } from "@/utils/formatters";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -25,6 +26,7 @@ const AuctionDetail = () => {
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [infoOpen, setInfoOpen] = useState(true);
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -89,6 +91,7 @@ const AuctionDetail = () => {
 
   const addressText = formatAddress(listing.address || {});
   const ca = listing.custom_attributes || {};
+  const sourceUrls: string[] = ca.source_urls || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,7 +108,7 @@ const AuctionDetail = () => {
           <span className="text-foreground font-medium truncate max-w-[300px]">{listing.title}</span>
         </nav>
 
-        {/* Title + Address */}
+        {/* Title */}
         <div className="mb-6">
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground leading-tight">
             {listing.title}
@@ -114,50 +117,108 @@ const AuctionDetail = () => {
 
         {/* 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* LEFT COLUMN — Info Table */}
+          {/* LEFT COLUMN */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Section 1: Mô tả tài sản */}
-            <Card className="p-5 space-y-4">
-              <h3 className="text-lg font-bold text-foreground">Mô tả tài sản</h3>
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
-                {listing.description || "Chưa có mô tả"}
-              </p>
-              {(ca.asset_owner_name || ca.asset_owner_address) && (
-                <>
-                  <div className="h-px bg-border" />
-                  <p className="text-sm text-muted-foreground">
-                    <span className="text-muted-foreground">Chủ tài sản:</span>{" "}
-                    <span className="text-foreground font-medium">
-                      {[ca.asset_owner_name, ca.asset_owner_address].filter(Boolean).join(" - ")}
-                    </span>
-                  </p>
-                </>
-              )}
-            </Card>
+            {/* 1. Price Row */}
+            <AuctionPriceRow price={listing.price} customAttributes={ca} />
 
-            {/* Section 2: Đơn vị tổ chức & Địa điểm */}
+            {/* 2. Thông tin việc đấu giá — Collapsible */}
+            <Collapsible open={infoOpen} onOpenChange={setInfoOpen}>
+              <Card className="p-5 space-y-4">
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center justify-between w-full text-left">
+                    <h3 className="text-lg font-bold text-foreground">Thông tin tài sản đấu giá</h3>
+                    {infoOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4">
+                  {/* Description */}
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                    {listing.description || "Chưa có mô tả"}
+                  </p>
+
+                  {/* Metadata */}
+                  <div className="space-y-2 text-sm">
+                    {ca.quantity && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground min-w-[120px]">Số lượng:</span>
+                        <span className="text-foreground font-medium">{ca.quantity}</span>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <span className="text-muted-foreground min-w-[120px]">Loại BĐS:</span>
+                      <span className="text-foreground font-medium">{listing.property_types?.name || "BĐS"}</span>
+                    </div>
+                    {addressText && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground min-w-[120px]">Nơi có tài sản:</span>
+                        <span className="text-foreground font-medium">{addressText}</span>
+                      </div>
+                    )}
+                    {ca.notes && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground min-w-[120px]">Ghi chú:</span>
+                        <span className="text-foreground font-medium">{ca.notes}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Asset owner */}
+                  {(ca.asset_owner_name || ca.asset_owner_address) && (
+                    <>
+                      <div className="h-px bg-border" />
+                      <p className="text-sm text-muted-foreground">
+                        <span>Chủ tài sản:</span>{" "}
+                        <span className="text-foreground font-medium">
+                          {[ca.asset_owner_name, ca.asset_owner_address].filter(Boolean).join(" - ")}
+                        </span>
+                      </p>
+                    </>
+                  )}
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            {/* 3. Organizer */}
             <AuctionOrganizerInfo listing={listing} />
 
-            {/* Section 3: Lịch trình đấu giá */}
+            {/* 4. Schedule */}
             <AuctionScheduleInfo listing={listing} />
 
-            {/* Section 4: File đính kèm */}
+            {/* 5. Attachments */}
             <AuctionAttachments listing={listing} />
 
-            {/* Quan tâm */}
-            <div className="flex items-center gap-3">
-              <Button
-                variant={savedIds.has(listing.id) ? "default" : "outline"}
-                size="sm"
-                className="gap-1.5"
-                onClick={() => toggleSave(listing.id)}
-              >
-                <Heart className={`h-3.5 w-3.5 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
-                {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm"}
-              </Button>
-              <span className="text-xs text-muted-foreground">Lưu để xem lại sau và nhận thông báo</span>
-            </div>
+            {/* 6. Save button — full width */}
+            <Button
+              variant={savedIds.has(listing.id) ? "default" : "outline"}
+              className="w-full gap-2"
+              onClick={() => toggleSave(listing.id)}
+            >
+              <Heart className={`h-4 w-4 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
+              {savedIds.has(listing.id) ? "Đã quan tâm tài sản" : "Quan tâm tài sản"}
+            </Button>
 
+            {/* 7. Sources */}
+            {sourceUrls.length > 0 && (
+              <Card className="p-5 space-y-3">
+                <h3 className="text-lg font-bold text-foreground">Nguồn</h3>
+                <ul className="space-y-2">
+                  {sourceUrls.map((url, i) => (
+                    <li key={i}>
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        {url}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
           </div>
 
           {/* RIGHT COLUMN — Sticky Sidebar */}

@@ -16,6 +16,7 @@ import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatAddress } from "@/utils/formatters";
 import { useSearchParams, Link } from "react-router-dom";
 import { type AuctionFilters, defaultAuctionFilters } from "@/types/auction-filters.types";
+import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 
 type SortMode = "newest" | "price-asc" | "price-desc";
 
@@ -53,6 +54,7 @@ const Listings = () => {
   const initialCategory = searchParams.get("category") || searchParams.get("sub") || "";
 
   const { data: listings, isLoading } = useAuctionListings();
+  const saveCounts = useListingSaveCounts((listings || []).map((l) => l.id));
   const { openAuthDialog } = useAuthDialog();
   const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
   const [session, setSession] = useState<any>(null);
@@ -268,6 +270,7 @@ const Listings = () => {
                       orgName={ca.org_name}
                       isSaved={savedIds.has(listing.id)}
                       onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
+                      saveCount={saveCounts.get(listing.id) || 0}
                     />
                   );
 

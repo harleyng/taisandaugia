@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_owners: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       auction_organizations: {
         Row: {
           address: string | null
@@ -83,6 +104,7 @@ export type Database = {
           alley_width: number | null
           apartment_floor_info: string | null
           area: number
+          asset_owner_id: string | null
           attributes: Json | null
           auction_org_id: string | null
           balcony_direction: string | null
@@ -134,6 +156,7 @@ export type Database = {
           alley_width?: number | null
           apartment_floor_info?: string | null
           area: number
+          asset_owner_id?: string | null
           attributes?: Json | null
           auction_org_id?: string | null
           balcony_direction?: string | null
@@ -185,6 +208,7 @@ export type Database = {
           alley_width?: number | null
           apartment_floor_info?: string | null
           area?: number
+          asset_owner_id?: string | null
           attributes?: Json | null
           auction_org_id?: string | null
           balcony_direction?: string | null
@@ -231,6 +255,13 @@ export type Database = {
           views_count?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "listings_asset_owner_id_fkey"
+            columns: ["asset_owner_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owners"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "listings_auction_org_id_fkey"
             columns: ["auction_org_id"]

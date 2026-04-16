@@ -97,8 +97,8 @@ const Index = () => {
       {/* Completed Auctions */}
       <CompletedAuctions />
 
-      {/* Support Tools */}
-      <SupportTools />
+
+
 
       {/* News Section */}
       <NewsSection />

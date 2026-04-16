@@ -16,7 +16,7 @@ import { LocationMap } from "@/components/listings/LocationMap";
 import {
   Maximize, MapPin, Building2, Scale, Compass, Home, FileText, ArrowLeft, ImageOff,
 } from "lucide-react";
-import { PURPOSES } from "@/constants/listing.constants";
+
 import { formatPrice, formatDate, formatAddress } from "@/utils/formatters";
 
 const ListingDetail = () => {

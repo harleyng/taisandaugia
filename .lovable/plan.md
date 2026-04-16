@@ -1,29 +1,61 @@
 
 
-## Plan: Ẩn giá sau đăng nhập cho Hồ sơ, Bước giá, Giá trúng
+## Plan: Hiển thị số lượt quan tâm trên card và trang detail
 
-### Mô tả
-Trong `AuctionPriceRow`, 3 field **Hồ sơ**, **Bước giá**, **Giá trúng** sẽ bị ẩn khi chưa đăng nhập — hiện icon Eye thay vì số liệu. Click vào Eye mở popup đăng nhập (dùng `useAuthDialog`). Sau khi đăng nhập, hiện số liệu thật. Nếu field không có dữ liệu (null/undefined) thì luôn hiện "–" bất kể trạng thái đăng nhập.
+### Cách tiếp cận
 
-### Thay đổi
+Tạo một database function đếm số lượt save cho mỗi listing (tránh query N+1), rồi hiển thị trên 3 nơi: card homepage, card listings, và trang detail.
 
-**File: `src/components/auction/AuctionPriceRow.tsx`**
+### 1. Tạo database function `get_listing_save_counts`
 
-1. Import `useAuthDialog` từ `AuthDialogContext`, `supabase` client, `useState`/`useEffect` từ React, icon `Eye` từ lucide-react.
-2. Thêm state `session` — lắng nghe `onAuthStateChange` để biết user đã đăng nhập chưa.
-3. Mỗi cell trong mảng `cells` thêm thuộc tính `gated: boolean` và `rawValue` (giá trị gốc trước format):
-   - Khởi điểm: `gated: false`
-   - Đặt trước: `gated: false`
-   - Hồ sơ: `gated: true`, rawValue = `ca.document_fee`
-   - Bước giá: `gated: true`, rawValue = `bidStep`
-   - Giá trúng: `gated: true`, rawValue = `winPrice`
-4. Logic hiển thị cho mỗi cell:
-   - Nếu `rawValue == null` → luôn hiện "–"
-   - Nếu `gated && !session` → hiện icon `Eye` (clickable, gọi `openAuthDialog()`)
-   - Còn lại → hiện giá trị đã format
-5. `PriceCell` nhận thêm prop `onClick` và `isHidden` để render Eye icon hoặc giá trị.
+```sql
+CREATE OR REPLACE FUNCTION public.get_listing_save_counts(listing_ids uuid[])
+RETURNS TABLE(listing_id uuid, save_count bigint)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+  SELECT ua.listing_id, COUNT(*) as save_count
+  FROM user_asset_actions ua
+  WHERE ua.listing_id = ANY(listing_ids) AND ua.is_saved = true
+  GROUP BY ua.listing_id
+$$;
+```
 
-### Không thay đổi
-- Không thay đổi DB, không thay đổi file khác.
-- Layout, responsive grid, border giữ nguyên.
+### 2. Hook: `useListingSaveCounts`
+
+Tạo `src/hooks/useListingSaveCounts.tsx` — nhận array listing IDs, gọi RPC `get_listing_save_counts`, trả về `Map<string, number>`. Cache kết quả, refetch khi savedIds thay đổi.
+
+### 3. Cập nhật `AuctionCard`
+
+- Thêm prop `saveCount?: number`
+- Hiển thị icon Heart + số lượt (ví dụ `❤ 6`) ở góc dưới card, bên cạnh orgName hoặc ở footer card
+- Chỉ hiện khi `saveCount > 0`
+
+### 4. Cập nhật trang Homepage (`AuctionSection`, `FeaturedProjects`)
+
+- Gọi `useListingSaveCounts` với danh sách listing IDs
+- Truyền `saveCount` xuống `AuctionCard`
+
+### 5. Cập nhật trang Listings
+
+- Gọi `useListingSaveCounts` trong `Listings.tsx`
+- Truyền `saveCount` xuống mỗi `AuctionCard`
+
+### 6. Cập nhật trang Detail (`AuctionDetail.tsx`)
+
+- Query đếm save count cho listing hiện tại: `SELECT COUNT(*) FROM user_asset_actions WHERE listing_id = id AND is_saved = true`
+- Hiển thị "X người quan tâm" ở phần `AuctionQuickInfo` sidebar, dưới status badge
+
+### Files thay đổi
+
+| File | Hành động |
+|------|-----------|
+| Database | Tạo function `get_listing_save_counts` |
+| `src/hooks/useListingSaveCounts.tsx` | Tạo mới |
+| `src/components/AuctionCard.tsx` | Thêm prop + hiển thị save count |
+| `src/components/AuctionSection.tsx` | Gọi hook, truyền count |
+| `src/components/FeaturedProjects.tsx` | Gọi hook, truyền count |
+| `src/pages/Listings.tsx` | Gọi hook, truyền count |
+| `src/pages/AuctionDetail.tsx` | Query + hiển thị count |
+| `src/components/auction/AuctionQuickInfo.tsx` | Nhận + hiển thị count |
 

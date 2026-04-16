@@ -89,7 +89,6 @@ const AuctionDetail = () => {
     );
   }
 
-  const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
 
   if (!listing) return null;
 

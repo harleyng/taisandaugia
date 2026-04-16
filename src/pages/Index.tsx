@@ -149,8 +149,8 @@ const Index = () => {
               <Button
                 size="lg"
                 className="bg-background text-foreground hover:bg-background/90 shadow-lg shadow-black/20"
-                onClick={() => navigate("/broker/properties/new")}>
-                Liên hệ hợp tác
+                onClick={() => navigate("/listings")}>
+                Khám phá tài sản
                 <ArrowRight className="ml-2 h-4 w-4" strokeWidth={1.5} />
               </Button>
             </div>

@@ -40,10 +40,10 @@ function matchesCategory(listingSlug: string, filterSlug: string): boolean {
 const CtaCard = () => (
   <div className="rounded-lg bg-gradient-to-br from-primary to-primary/80 p-5 flex flex-col items-center justify-center text-center text-primary-foreground h-full min-h-[280px]">
     <Megaphone className="h-10 w-10 mb-3 opacity-90" />
-    <h3 className="font-bold text-lg mb-1">Đăng tin ngay</h3>
-    <p className="text-sm opacity-90 mb-4">Ký gửi tài sản đấu giá để tiếp cận hàng nghìn nhà đầu tư</p>
+    <h3 className="font-bold text-lg mb-1">Liên hệ hợp tác</h3>
+    <p className="text-sm opacity-90 mb-4">Hợp tác đăng tài sản đấu giá để tiếp cận hàng nghìn nhà đầu tư</p>
     <Button asChild variant="secondary" size="sm">
-      <Link to="/submit-listing">Bắt đầu</Link>
+      <Link to="/listings">Xem thêm</Link>
     </Button>
   </div>
 );

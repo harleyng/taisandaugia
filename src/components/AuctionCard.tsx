@@ -197,9 +197,17 @@ export function AuctionCard({
                 </>
               )}
             </div>
-            <span className="inline-flex items-center justify-center h-8 text-xs px-3 rounded-md border border-border font-medium">
-              CHI TIẾT
-            </span>
+            <div className="flex items-center gap-2">
+              {saveCount != null && saveCount > 0 && (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Heart className="h-3 w-3 fill-current text-rose-400" />
+                  {saveCount}
+                </span>
+              )}
+              <span className="inline-flex items-center justify-center h-8 text-xs px-3 rounded-md border border-border font-medium">
+                CHI TIẾT
+              </span>
+            </div>
           </div>
         </div>
       </Link>
@@ -278,14 +286,24 @@ export function AuctionCard({
           </div>
 
 
-          {orgName && (
+          {(orgName || (saveCount != null && saveCount > 0)) && (
             <div className="flex items-center gap-2 pt-3 border-t border-border">
-              <img
-                src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
-                alt={orgName}
-                className="h-6 w-6 rounded-full flex-shrink-0"
-              />
-              <span className="text-xs font-medium text-foreground">{orgName}</span>
+              {orgName && (
+                <>
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
+                    alt={orgName}
+                    className="h-6 w-6 rounded-full flex-shrink-0"
+                  />
+                  <span className="text-xs font-medium text-foreground">{orgName}</span>
+                </>
+              )}
+              {saveCount != null && saveCount > 0 && (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground ml-auto">
+                  <Heart className="h-3 w-3 fill-current text-rose-400" />
+                  {saveCount}
+                </span>
+              )}
             </div>
           )}
         </div>

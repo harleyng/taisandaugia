@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, Compass } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,8 +79,8 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
       {/* CTA */}
       {auctionOrgId && (
         <Link to={`/auction-org/${auctionOrgId}`}>
-          <Button variant="secondary" className="w-full justify-start gap-2 hover:bg-secondary/80 hover:shadow-md transition-all group">
-            <Building2 className="w-4 h-4" />
+          <Button variant="outline" className="w-full justify-start gap-2 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group">
+            <Compass className="w-4 h-4" />
             <span className="flex-1 text-left">Khám phá tài sản từ đơn vị này</span>
             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Button>

@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink, Eye } from "lucide-react";
+import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink, Eye, Search } from "lucide-react";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";
@@ -190,8 +190,8 @@ const AuctionDetail = () => {
                       </p>
                       {listing.asset_owner_id && (
                         <Link to={`/asset-owner/${listing.asset_owner_id}`} className="mt-2">
-                          <Button variant="secondary" className="w-full justify-start gap-2 hover:bg-secondary/80 hover:shadow-md transition-all group">
-                            <Eye className="w-4 h-4" />
+                          <Button variant="outline" className="w-full justify-start gap-2 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group">
+                            <Search className="w-4 h-4" />
                             <span className="flex-1 text-left">Tìm hiểu lịch sử đăng tin đấu giá</span>
                             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </Button>

@@ -24,6 +24,7 @@ export interface AuctionCardProps {
   variant?: "default" | "featured";
   countdown?: string | null;
   orgName?: string;
+  orgId?: string;
   winPrice?: number;
   isSaved?: boolean;
   onToggleSave?: (e: React.MouseEvent) => void;
@@ -64,7 +65,7 @@ export function AuctionCard({
   id, imageUrl, title, address, startingPrice, priceUnit = "TOTAL",
   stepPrice, depositAmount, auctionDate, registrationDeadline, sessionStatus, categorySlug,
   subCategorySlug, viewMode = "grid", variant = "default",
-  countdown, orgName, winPrice, isSaved, onToggleSave, saveCount, viewsCount,
+  countdown, orgName, orgId, winPrice, isSaved, onToggleSave, saveCount, viewsCount,
 }: AuctionCardProps) {
   const status = STATUS_CONFIG[sessionStatus];
 
@@ -198,14 +199,29 @@ export function AuctionCard({
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border">
             {orgName ? (
-              <div className="flex items-center gap-2">
-                <img
-                  src={`https://ui-avatars.com/api/?name=${getOrgInitials(orgName)}&background=1e40af&color=fff&size=48&bold=true`}
-                  alt={orgName}
-                  className="h-5 w-5 rounded-full flex-shrink-0"
-                />
-                <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
-              </div>
+              orgId ? (
+                <Link
+                  to={`/auction-org/${orgId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${getOrgInitials(orgName)}&background=1e40af&color=fff&size=48&bold=true`}
+                    alt={orgName}
+                    className="h-5 w-5 rounded-full flex-shrink-0"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground line-clamp-1 hover:text-primary transition-colors">{orgName}</span>
+                </Link>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${getOrgInitials(orgName)}&background=1e40af&color=fff&size=48&bold=true`}
+                    alt={orgName}
+                    className="h-5 w-5 rounded-full flex-shrink-0"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
+                </div>
+              )
             ) : <div />}
             <span className="inline-flex items-center justify-center h-8 text-xs px-3 rounded-md border border-border font-medium">
               CHI TIẾT
@@ -300,12 +316,29 @@ export function AuctionCard({
 
           {orgName && (
             <div className="flex items-center gap-2 pt-3 border-t border-border">
-              <img
-                src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
-                alt={orgName}
-                className="h-5 w-5 rounded-full flex-shrink-0"
-              />
-              <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
+              {orgId ? (
+                <Link
+                  to={`/auction-org/${orgId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
+                    alt={orgName}
+                    className="h-5 w-5 rounded-full flex-shrink-0"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground line-clamp-1 hover:text-primary transition-colors">{orgName}</span>
+                </Link>
+              ) : (
+                <>
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
+                    alt={orgName}
+                    className="h-5 w-5 rounded-full flex-shrink-0"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
+                </>
+              )}
             </div>
           )}
         </div>

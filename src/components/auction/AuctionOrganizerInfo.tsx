@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
-import { Building2, MapPin, Phone, Mail } from "lucide-react";
+import { Building2, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface AuctionOrganizerInfoProps {
   listing: any;
@@ -7,6 +8,7 @@ interface AuctionOrganizerInfoProps {
 
 export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => {
   const ca = listing.custom_attributes || {};
+  const auctionOrgId = listing.auction_org_id;
   
   const hasOrgInfo = ca.org_name || ca.org_address || ca.org_phone || ca.org_email || ca.auction_location;
   
@@ -14,14 +16,13 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
 
   return (
     <Card className="p-5 space-y-4">
-      {/* Header với icon */}
+      {/* Header */}
       <div className="flex items-center gap-2">
         <Building2 className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-bold text-foreground">Đơn vị tổ chức đấu giá</h3>
       </div>
 
       <div className="space-y-3">
-        {/* Đơn vị đấu giá */}
         {ca.org_name && (
           <div className="flex items-start gap-2">
             <span className="text-sm text-muted-foreground shrink-0 w-[100px]">Đơn vị đấu giá:</span>
@@ -32,7 +33,6 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
           </div>
         )}
 
-        {/* Thông tin liên hệ */}
         {(ca.org_phone || ca.org_email) && (
           <div className="flex items-start gap-2">
             <span className="text-sm text-muted-foreground shrink-0 w-[100px]">Thông tin liên hệ:</span>
@@ -44,7 +44,6 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
           </div>
         )}
 
-        {/* Địa điểm đấu giá */}
         {(ca.auction_location || ca.org_address) && (
           <div className="flex items-start gap-2">
             <span className="text-sm text-muted-foreground shrink-0 w-[100px]">Địa điểm đấu giá:</span>
@@ -52,6 +51,19 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
           </div>
         )}
       </div>
+
+      {/* CTA */}
+      {auctionOrgId && (
+        <Link
+          to={`/auction-org/${auctionOrgId}`}
+          className="flex items-center justify-between w-full px-4 py-3 rounded-lg bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 transition-all group"
+        >
+          <span className="text-sm font-semibold">
+            Xem tất cả tài sản của {ca.org_name || "tổ chức này"}
+          </span>
+          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </Link>
+      )}
     </Card>
   );
 };

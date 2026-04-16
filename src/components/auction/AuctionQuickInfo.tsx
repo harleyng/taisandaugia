@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, TrendingUp, Loader2 } from "lucide-react";
+import { Clock, TrendingUp, Loader2, Heart } from "lucide-react";
 import { formatPrice } from "@/utils/formatters";
 import { useState, useEffect } from "react";
 import { getSessionStatus } from "@/hooks/useAuctionListings";

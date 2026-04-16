@@ -110,7 +110,7 @@ const ListingDetail = () => {
   const address = listing.address || {};
   const addressText = formatAddress(address);
   const propertyTypeName = listing.property_types?.name || "BĐS";
-  const purposeLabel = listing.purpose === "FOR_SALE" ? PURPOSES.FOR_SALE : PURPOSES.FOR_RENT;
+  const purposeLabel = listing.purpose === "FOR_SALE" ? "Bán" : "Cho thuê";
   const coordinates = listing.coordinates || {};
   const customAttributes = listing.custom_attributes || {};
   const hasImage = !!listing.image_url;

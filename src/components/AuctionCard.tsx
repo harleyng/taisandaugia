@@ -185,22 +185,16 @@ export function AuctionCard({
              </div>
            )}
 
-          {((viewsCount != null && viewsCount > 0) || (saveCount != null && saveCount > 0)) && (
-            <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
-              {viewsCount != null && viewsCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Eye className="h-3 w-3" />
-                  {viewsCount}
-                </span>
-              )}
-              {saveCount != null && saveCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Heart className="h-3 w-3 fill-current text-rose-400" />
-                  {saveCount}
-                </span>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+            <span className="inline-flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              {viewsCount ?? 0}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Heart className="h-3 w-3 fill-current text-rose-400" />
+              {saveCount ?? 0}
+            </span>
+          </div>
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border">
             {orgName ? (
@@ -293,22 +287,16 @@ export function AuctionCard({
             )}
           </div>
 
-          {((viewsCount != null && viewsCount > 0) || (saveCount != null && saveCount > 0)) && (
-            <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
-              {viewsCount != null && viewsCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Eye className="h-3 w-3" />
-                  {viewsCount}
-                </span>
-              )}
-              {saveCount != null && saveCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Heart className="h-3 w-3 fill-current text-rose-400" />
-                  {saveCount}
-                </span>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+            <span className="inline-flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              {viewsCount ?? 0}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Heart className="h-3 w-3 fill-current text-rose-400" />
+              {saveCount ?? 0}
+            </span>
+          </div>
 
           {orgName && (
             <div className="flex items-center gap-2 pt-3 border-t border-border">

@@ -166,6 +166,16 @@ export function AuctionCard({
         </div>
 
         <div className="p-4 flex flex-col flex-1">
+          {orgName && (
+            <div className="flex items-center gap-2 mb-2">
+              <img
+                src={`https://ui-avatars.com/api/?name=${orgInitials}&background=1e40af&color=fff&size=48&bold=true`}
+                alt={orgName}
+                className="h-5 w-5 rounded-full flex-shrink-0"
+              />
+              <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
+            </div>
+          )}
           <h3 className="font-bold text-sm md:text-base text-foreground leading-snug mb-1">
             {title}
           </h3>
@@ -186,29 +196,23 @@ export function AuctionCard({
            )}
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border">
-            <div className="flex items-center gap-2">
-              {orgName && (
-                <>
-                  <img
-                    src={`https://ui-avatars.com/api/?name=${orgInitials}&background=1e40af&color=fff&size=48&bold=true`}
-                    alt={orgName}
-                    className="h-6 w-6 rounded-full flex-shrink-0"
-                  />
-                  <span className="text-xs font-medium text-foreground">{orgName}</span>
-                </>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {viewsCount != null && viewsCount > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  {viewsCount}
+                </span>
               )}
-            </div>
-            <div className="flex items-center gap-2">
               {saveCount != null && saveCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
                   <Heart className="h-3 w-3 fill-current text-rose-400" />
                   {saveCount}
                 </span>
               )}
-              <span className="inline-flex items-center justify-center h-8 text-xs px-3 rounded-md border border-border font-medium">
-                CHI TIẾT
-              </span>
             </div>
+            <span className="inline-flex items-center justify-center h-8 text-xs px-3 rounded-md border border-border font-medium">
+              CHI TIẾT
+            </span>
           </div>
         </div>
       </Link>

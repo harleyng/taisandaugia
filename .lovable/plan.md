@@ -1,66 +1,47 @@
 
 
-## Plan: Bảng tổ chức đấu giá riêng + CTA trên trang detail
+## Plan: Trang chi tiết chủ tài sản (Asset Owner Detail)
 
-### 1. Tạo bảng `auction_organizations`
+Tương tự trang Company Detail, tạo trang `/asset-owner/:id` hiển thị thông tin chủ tài sản và danh sách tài sản của họ.
 
-Bảng riêng cho tổ chức đấu giá (không dùng bảng `organizations` hiện tại vốn dành cho broker):
+### 1. Tạo bảng `asset_owners`
 
 ```sql
-CREATE TABLE public.auction_organizations (
+CREATE TABLE public.asset_owners (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL UNIQUE,
   address text,
-  phone text,
-  email text,
-  logo_url text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE auction_organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE asset_owners ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can view asset owners" ON asset_owners FOR SELECT TO public USING (true);
 
--- Ai cũng xem được
-CREATE POLICY "Public can view auction organizations"
-  ON auction_organizations FOR SELECT TO public USING (true);
-
--- Thêm cột reference vào listings
-ALTER TABLE listings ADD COLUMN auction_org_id uuid REFERENCES auction_organizations(id);
+-- FK trên listings
+ALTER TABLE listings ADD COLUMN asset_owner_id uuid REFERENCES asset_owners(id);
 ```
 
-### 2. Migrate dữ liệu từ `custom_attributes`
+Migrate dữ liệu từ `custom_attributes` (`asset_owner_name`, `asset_owner_address`) vào bảng mới và cập nhật `asset_owner_id`.
 
-Chạy migration INSERT từ distinct `org_name` trong `custom_attributes` → bảng mới, rồi UPDATE `listings.auction_org_id` tương ứng.
+### 2. Tạo route `/asset-owner/:id` (protected)
 
-### 3. Tạo route `/auction-org/:id` (protected)
-
-Trong `App.tsx` thêm route protected, tạo page `CompanyDetail.tsx`:
-- Header: avatar + tên công ty + địa chỉ + SĐT/email
+Thêm route trong `App.tsx`, tạo page `src/pages/AssetOwnerDetail.tsx`:
+- Header: avatar + tên chủ tài sản + địa chỉ
 - 3 stat cards: Tổng tài sản, Đấu giá thành công, Tỷ lệ thành công
-- Quick search: tìm theo tên, lọc trạng thái
+- Search + filter trạng thái
 - Grid `AuctionCard`
 
-### 4. CTA thu hút trên trang detail
+### 3. CTA trên trang AuctionDetail
 
-Trong `AuctionOrganizerInfo.tsx`, thêm một CTA button nổi bật:
-- Gradient background, icon `ArrowRight`
-- Text: "Xem tất cả tài sản của [tên công ty] →"
-- Link đến `/auction-org/:id`
-- Yêu cầu đăng nhập (dùng `useAuthDialog` nếu chưa login)
+Trong phần asset owner (dòng 170-179 của `AuctionDetail.tsx`), thêm CTA nổi bật: **"Khám phá tài sản từ chủ sở hữu này"** — link đến `/asset-owner/:id`, yêu cầu đăng nhập.
 
-### 5. Link trên AuctionCard footer
-
-Tên công ty ở footer card cũng clickable → `/auction-org/:id`.
-
-### Files thay đổi
+### 4. Files thay đổi
 
 | File | Hành động |
 |------|-----------|
 | Migration SQL | Tạo bảng + migrate data |
-| `src/pages/CompanyDetail.tsx` | Tạo mới |
-| `src/components/auction/AuctionOrganizerInfo.tsx` | Thêm CTA link |
-| `src/components/AuctionCard.tsx` | Link org name, thêm prop `orgId` |
-| `src/components/AuctionSection.tsx` | Truyền `orgId` |
-| `src/pages/Listings.tsx` | Truyền `orgId` |
-| `src/App.tsx` | Thêm route |
-| `src/hooks/useAuctionListings.tsx` | Select `auction_org_id` |
+| `src/pages/AssetOwnerDetail.tsx` | Tạo mới |
+| `src/App.tsx` | Thêm route protected |
+| `src/pages/AuctionDetail.tsx` | Thêm CTA link đến asset owner page |
+| `src/hooks/useAuctionListings.tsx` | Thêm `asset_owner_id` vào interface |
 

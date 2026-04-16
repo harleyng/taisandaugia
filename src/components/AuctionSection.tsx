@@ -107,6 +107,7 @@ export const AuctionSection = () => {
                   isSaved={savedIds.has(item.id)}
                   onToggleSave={() => toggleSave(item.id)}
                   saveCount={saveCounts.get(item.id) || 0}
+                  viewsCount={item.views_count || 0}
                 />
               );
             })}

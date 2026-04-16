@@ -5,7 +5,7 @@ import { AuctionSection } from "@/components/AuctionSection";
 import { CompletedAuctions } from "@/components/CompletedAuctions";
 import { FeaturedProjects } from "@/components/FeaturedProjects";
 import { PopularAreas } from "@/components/PopularAreas";
-import { SupportTools } from "@/components/SupportTools";
+
 import { NewsSection } from "@/components/NewsSection";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Building2, Home, LandPlot, MapPin, Building, Landmark } from "lucide-react";

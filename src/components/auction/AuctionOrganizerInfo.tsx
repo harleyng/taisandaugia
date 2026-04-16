@@ -110,12 +110,15 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
       {/* Contact + location */}
       <div className="space-y-2">
         {(orgPhone || orgEmail) && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-foreground">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-foreground">
             {orgPhone && (
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
                 <span>{orgPhone}</span>
               </div>
+            )}
+            {orgPhone && orgEmail && (
+              <span aria-hidden="true" className="text-muted-foreground">•</span>
             )}
             {orgEmail && (
               <div className="flex items-center gap-2 min-w-0">

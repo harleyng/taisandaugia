@@ -176,6 +176,12 @@ export function AuctionCard({
              </span>
              <span className="text-xs text-muted-foreground ml-1.5">khởi điểm</span>
            </div>
+           {(depositAmount != null || stepPrice != null) && (
+             <div className="flex gap-3 text-xs text-muted-foreground mb-2">
+               {depositAmount != null && <span>Đặt trước: {formatPrice(depositAmount, "TOTAL")}</span>}
+               {stepPrice != null && <span>Bước giá: {formatPrice(stepPrice, "TOTAL")}</span>}
+             </div>
+           )}
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border">
             <div className="flex items-center gap-2">

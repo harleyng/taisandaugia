@@ -18,6 +18,7 @@ import { AuctionSimilarAssets } from "@/components/auction/AuctionSimilarAssets"
 import { Link } from "react-router-dom";
 import { formatAddress } from "@/utils/formatters";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -86,6 +87,8 @@ const AuctionDetail = () => {
       </div>
     );
   }
+
+  const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
 
   if (!listing) return null;
 
@@ -229,6 +232,7 @@ const AuctionDetail = () => {
                 area={listing.area}
                 customAttributes={ca}
                 listing={listing}
+                saveCount={saveCounts.get(listing.id) || 0}
               />
             </div>
           </div>

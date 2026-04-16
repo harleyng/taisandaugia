@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AuctionCard } from "@/components/AuctionCard";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
+import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import auctionBg from "@/assets/auction-bg.png";
 
 const getCountdown = (auctionTime: string): string | null => {
@@ -37,6 +38,8 @@ export const AuctionSection = () => {
       return data || [];
     },
   });
+
+  const saveCounts = useListingSaveCounts(auctions.map((a) => a.id));
 
   if (!isLoading && auctions.length === 0) return null;
 
@@ -103,6 +106,7 @@ export const AuctionSection = () => {
                   orgName={orgName}
                   isSaved={savedIds.has(item.id)}
                   onToggleSave={() => toggleSave(item.id)}
+                  saveCount={saveCounts.get(item.id) || 0}
                 />
               );
             })}

@@ -189,14 +189,12 @@ const AuctionDetail = () => {
                         </span>
                       </p>
                       {listing.asset_owner_id && (
-                        <Link
-                          to={`/asset-owner/${listing.asset_owner_id}`}
-                          className="flex items-center justify-between w-full px-4 py-3 rounded-lg bg-gradient-to-r from-accent to-accent/80 text-accent-foreground hover:from-accent/90 hover:to-accent/70 transition-all group mt-2"
-                        >
-                          <span className="text-sm font-semibold">
-                            Khám phá tài sản từ chủ sở hữu này
-                          </span>
-                          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        <Link to={`/asset-owner/${listing.asset_owner_id}`} className="mt-2">
+                          <Button variant="secondary" className="w-full justify-start gap-2 hover:bg-secondary/80 hover:shadow-md transition-all group">
+                            <Eye className="w-4 h-4" />
+                            <span className="flex-1 text-left">Tìm hiểu lịch sử đăng tin đấu giá</span>
+                            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </Button>
                         </Link>
                       )}
                     </>

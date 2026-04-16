@@ -113,9 +113,20 @@ const AuctionDetail = () => {
 
         {/* Title */}
         <div className="mb-6">
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-            {listing.title}
-          </h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground leading-tight flex-1">
+              {listing.title}
+            </h1>
+            {listing.asset_owner_id && (
+              <Link to={`/asset-owner/${listing.asset_owner_id}`} className="shrink-0">
+                <Button variant="outline" size="sm" className="gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group">
+                  <Search className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Lịch sử đấu giá</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            )}
+          </div>
           <div className="flex items-center gap-3 mt-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
               <Eye className="h-4 w-4" />
@@ -188,15 +199,6 @@ const AuctionDetail = () => {
                           {[ca.asset_owner_name, ca.asset_owner_address].filter(Boolean).join(" - ")}
                         </span>
                       </p>
-                      {listing.asset_owner_id && (
-                        <Link to={`/asset-owner/${listing.asset_owner_id}`} className="mt-2">
-                          <Button variant="outline" className="w-full justify-start gap-2 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group">
-                            <Search className="w-4 h-4" />
-                            <span className="flex-1 text-left">Tìm hiểu lịch sử đăng tin đấu giá</span>
-                            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                          </Button>
-                        </Link>
-                      )}
                     </>
                   )}
                 </CollapsibleContent>

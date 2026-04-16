@@ -28,6 +28,7 @@ const AuctionDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(true);
+  const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
 
   useEffect(() => {
     const fetchListing = async () => {

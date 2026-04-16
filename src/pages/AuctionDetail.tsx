@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink, Eye } from "lucide-react";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";
@@ -116,6 +116,18 @@ const AuctionDetail = () => {
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground leading-tight">
             {listing.title}
           </h1>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+              <Eye className="h-4 w-4" />
+              <span className="font-medium">{listing.views_count || 0}</span>
+              <span>lượt xem</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+              <Heart className="h-4 w-4 fill-current text-rose-400" />
+              <span className="font-medium">{saveCounts.get(listing.id) || 0}</span>
+              <span>quan tâm</span>
+            </span>
+          </div>
         </div>
 
         {/* 2-Column Layout */}

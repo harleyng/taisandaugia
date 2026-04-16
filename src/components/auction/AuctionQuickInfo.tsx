@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, TrendingUp, Loader2, Heart } from "lucide-react";
+import { Clock, TrendingUp, Loader2, Heart, Eye } from "lucide-react";
 import { formatPrice } from "@/utils/formatters";
 import { useState, useEffect } from "react";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
@@ -71,12 +71,20 @@ export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing, s
       {/* Status + save count */}
       <div className="flex items-center justify-between">
         <Badge className={config.className}>{config.label}</Badge>
-        {saveCount != null && saveCount > 0 && (
-          <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Heart className="h-4 w-4 fill-current text-rose-400" />
-            <span className="font-medium">{saveCount} người quan tâm</span>
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {listing.views_count != null && listing.views_count > 0 && (
+            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+              <Eye className="h-4 w-4" />
+              <span className="font-medium">{listing.views_count}</span>
+            </span>
+          )}
+          {saveCount != null && saveCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+              <Heart className="h-4 w-4 fill-current text-rose-400" />
+              <span className="font-medium">{saveCount}</span>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Giá khởi điểm */}

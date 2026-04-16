@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Heart } from "lucide-react";
+import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Heart, Eye } from "lucide-react";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatPrice, formatDate } from "@/utils/formatters";
 
@@ -28,6 +28,7 @@ export interface AuctionCardProps {
   isSaved?: boolean;
   onToggleSave?: (e: React.MouseEvent) => void;
   saveCount?: number;
+  viewsCount?: number;
 }
 
 const STATUS_CONFIG: Record<AuctionSessionStatus, { label: string; className: string }> = {
@@ -63,7 +64,7 @@ export function AuctionCard({
   id, imageUrl, title, address, startingPrice, priceUnit = "TOTAL",
   stepPrice, depositAmount, auctionDate, registrationDeadline, sessionStatus, categorySlug,
   subCategorySlug, viewMode = "grid", variant = "default",
-  countdown, orgName, winPrice, isSaved, onToggleSave, saveCount,
+  countdown, orgName, winPrice, isSaved, onToggleSave, saveCount, viewsCount,
 }: AuctionCardProps) {
   const status = STATUS_CONFIG[sessionStatus];
 
@@ -165,6 +166,16 @@ export function AuctionCard({
         </div>
 
         <div className="p-4 flex flex-col flex-1">
+          {orgName && (
+            <div className="flex items-center gap-2 mb-2">
+              <img
+                src={`https://ui-avatars.com/api/?name=${orgInitials}&background=1e40af&color=fff&size=48&bold=true`}
+                alt={orgName}
+                className="h-5 w-5 rounded-full flex-shrink-0"
+              />
+              <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
+            </div>
+          )}
           <h3 className="font-bold text-sm md:text-base text-foreground leading-snug mb-1">
             {title}
           </h3>
@@ -185,29 +196,23 @@ export function AuctionCard({
            )}
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border">
-            <div className="flex items-center gap-2">
-              {orgName && (
-                <>
-                  <img
-                    src={`https://ui-avatars.com/api/?name=${orgInitials}&background=1e40af&color=fff&size=48&bold=true`}
-                    alt={orgName}
-                    className="h-6 w-6 rounded-full flex-shrink-0"
-                  />
-                  <span className="text-xs font-medium text-foreground">{orgName}</span>
-                </>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {viewsCount != null && viewsCount > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  {viewsCount}
+                </span>
               )}
-            </div>
-            <div className="flex items-center gap-2">
               {saveCount != null && saveCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
                   <Heart className="h-3 w-3 fill-current text-rose-400" />
                   {saveCount}
                 </span>
               )}
-              <span className="inline-flex items-center justify-center h-8 text-xs px-3 rounded-md border border-border font-medium">
-                CHI TIẾT
-              </span>
             </div>
+            <span className="inline-flex items-center justify-center h-8 text-xs px-3 rounded-md border border-border font-medium">
+              CHI TIẾT
+            </span>
           </div>
         </div>
       </Link>
@@ -251,6 +256,16 @@ export function AuctionCard({
         )}
       </div>
       <div className="p-3 md:p-4 flex flex-col flex-1">
+        {orgName && (
+          <div className="flex items-center gap-2 mb-1.5">
+            <img
+              src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
+              alt={orgName}
+              className="h-5 w-5 rounded-full flex-shrink-0"
+            />
+            <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
+          </div>
+        )}
         <h3 className="font-bold text-sm md:text-base text-foreground leading-snug mb-0.5 line-clamp-1 group-hover:text-primary transition-colors">
           {title}
         </h3>
@@ -285,21 +300,16 @@ export function AuctionCard({
             )}
           </div>
 
-
-          {(orgName || (saveCount != null && saveCount > 0)) && (
-            <div className="flex items-center gap-2 pt-3 border-t border-border">
-              {orgName && (
-                <>
-                  <img
-                    src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
-                    alt={orgName}
-                    className="h-6 w-6 rounded-full flex-shrink-0"
-                  />
-                  <span className="text-xs font-medium text-foreground">{orgName}</span>
-                </>
+          {((viewsCount != null && viewsCount > 0) || (saveCount != null && saveCount > 0)) && (
+            <div className="flex items-center gap-3 text-xs text-muted-foreground pt-3 border-t border-border">
+              {viewsCount != null && viewsCount > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  {viewsCount}
+                </span>
               )}
               {saveCount != null && saveCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground ml-auto">
+                <span className="inline-flex items-center gap-1">
                   <Heart className="h-3 w-3 fill-current text-rose-400" />
                   {saveCount}
                 </span>

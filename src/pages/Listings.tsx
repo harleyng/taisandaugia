@@ -271,6 +271,7 @@ const Listings = () => {
                       isSaved={savedIds.has(listing.id)}
                       onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
                       saveCount={saveCounts.get(listing.id) || 0}
+                      viewsCount={listing.views_count || 0}
                     />
                   );
 

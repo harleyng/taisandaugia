@@ -1,46 +1,29 @@
 
 
-## Plan: Redesign trang chi tiết đấu giá
+## Plan: Ẩn giá sau đăng nhập cho Hồ sơ, Bước giá, Giá trúng
 
-Hai thay đổi chính: (1) tạo component hàng giá ngang đặt lên đầu cột trái, (2) cập nhật layout AuctionDetail theo reference — mô tả collapsible, nút quan tâm full-width, section nguồn.
+### Mô tả
+Trong `AuctionPriceRow`, 3 field **Hồ sơ**, **Bước giá**, **Giá trúng** sẽ bị ẩn khi chưa đăng nhập — hiện icon Eye thay vì số liệu. Click vào Eye mở popup đăng nhập (dùng `useAuthDialog`). Sau khi đăng nhập, hiện số liệu thật. Nếu field không có dữ liệu (null/undefined) thì luôn hiện "–" bất kể trạng thái đăng nhập.
 
-### 1. Tạo test data đầy đủ
+### Thay đổi
 
-Insert 1 listing vào DB với tất cả custom_attributes: `deposit_amount`, `bid_step`, `document_fee`, `winning_price`, `org_name`, `org_address`, `org_phone`, `org_email`, `auction_location`, `document_sale_start/end`, `asset_viewing_start/end`, `auction_time`, `registration_deadline`, `asset_owner_name`, `asset_owner_address`, `attachments`, `source_urls`, `quantity`, `notes`.
+**File: `src/components/auction/AuctionPriceRow.tsx`**
 
-### 2. Tạo `src/components/auction/AuctionPriceRow.tsx`
+1. Import `useAuthDialog` từ `AuthDialogContext`, `supabase` client, `useState`/`useEffect` từ React, icon `Eye` từ lucide-react.
+2. Thêm state `session` — lắng nghe `onAuthStateChange` để biết user đã đăng nhập chưa.
+3. Mỗi cell trong mảng `cells` thêm thuộc tính `gated: boolean` và `rawValue` (giá trị gốc trước format):
+   - Khởi điểm: `gated: false`
+   - Đặt trước: `gated: false`
+   - Hồ sơ: `gated: true`, rawValue = `ca.document_fee`
+   - Bước giá: `gated: true`, rawValue = `bidStep`
+   - Giá trúng: `gated: true`, rawValue = `winPrice`
+4. Logic hiển thị cho mỗi cell:
+   - Nếu `rawValue == null` → luôn hiện "–"
+   - Nếu `gated && !session` → hiện icon `Eye` (clickable, gọi `openAuthDialog()`)
+   - Còn lại → hiện giá trị đã format
+5. `PriceCell` nhận thêm prop `onClick` và `isHidden` để render Eye icon hoặc giá trị.
 
-Card chứa grid 5 ô ngang (responsive 2-3 cột trên mobile):
-- **Khởi điểm** (`price`)
-- **Đặt trước** (`ca.deposit_amount`)
-- **Hồ sơ** (`ca.document_fee`)
-- **Bước giá** (`ca.bid_step ?? ca.step_price`)
-- **Giá trúng** (`ca.winning_price ?? ca.win_price`) — hiển thị "–" nếu chưa có
-
-Mỗi ô: label `text-xs text-muted-foreground` + value `text-sm font-bold`. Dùng `formatPrice` từ utils. Các ô phân cách bằng border-right (trừ ô cuối).
-
-### 3. Cập nhật `src/pages/AuctionDetail.tsx`
-
-Thay thế cột trái hiện tại bằng thứ tự mới:
-
-1. **AuctionPriceRow** (mới) — hàng giá ngang
-2. **Thông tin việc đấu giá** — Card với `Collapsible` (mặc định mở), chứa:
-   - Tiêu đề tài sản (listing.title con)
-   - Mô tả (description)
-   - Metadata inline: Số lượng (`ca.quantity`), Loại BĐS (`property_types.name`), Nơi có tài sản (address), Ghi chú (`ca.notes`)
-   - Chủ tài sản (giữ nguyên logic hiện tại)
-   - Chevron toggle để đóng/mở
-3. **AuctionOrganizerInfo** — giữ nguyên
-4. **AuctionScheduleInfo** — giữ nguyên
-5. **AuctionAttachments** — giữ nguyên
-6. **Nút "Quan tâm tài sản"** — full-width centered, `variant="outline"`, icon Heart
-7. **Nguồn** — nếu có `ca.source_urls` (array), hiển thị danh sách link
-
-### Files thay đổi
-
-| File | Hành động |
-|------|-----------|
-| `src/components/auction/AuctionPriceRow.tsx` | Tạo mới |
-| `src/pages/AuctionDetail.tsx` | Refactor layout cột trái |
-| Database | Insert 1 listing test data đầy đủ |
+### Không thay đổi
+- Không thay đổi DB, không thay đổi file khác.
+- Layout, responsive grid, border giữ nguyên.
 

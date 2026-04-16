@@ -478,6 +478,13 @@ export type Database = {
     }
     Functions: {
       check_email_exists: { Args: { _email: string }; Returns: boolean }
+      get_listing_save_counts: {
+        Args: { listing_ids: string[] }
+        Returns: {
+          listing_id: string
+          save_count: number
+        }[]
+      }
       get_user_email: { Args: { _user_id: string }; Returns: string }
       has_org_role: {
         Args: { _org_id: string; _role_names: string[]; _user_id: string }

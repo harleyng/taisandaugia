@@ -98,10 +98,7 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
                   <span aria-hidden="true">•</span>
                   <span className="inline-flex items-center gap-1">
                     <BarChart3 className="w-3.5 h-3.5 text-primary" />
-                    <span className="font-semibold text-foreground">{stats.total}</span> phiên
-                    <span aria-hidden="true">•</span>
-                    <span className="font-semibold text-foreground">{stats.success}</span> thành công
-                    <span className="text-primary font-semibold">({stats.rate}%)</span>
+                    <span className="font-semibold text-foreground">{stats.total}</span> phiên đấu giá
                   </span>
                 </>
               )}

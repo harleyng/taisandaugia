@@ -5,7 +5,7 @@ import { AuctionSection } from "@/components/AuctionSection";
 import { CompletedAuctions } from "@/components/CompletedAuctions";
 import { FeaturedProjects } from "@/components/FeaturedProjects";
 import { PopularAreas } from "@/components/PopularAreas";
-import { SupportTools } from "@/components/SupportTools";
+
 import { NewsSection } from "@/components/NewsSection";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Building2, Home, LandPlot, MapPin, Building, Landmark } from "lucide-react";
@@ -97,8 +97,8 @@ const Index = () => {
       {/* Completed Auctions */}
       <CompletedAuctions />
 
-      {/* Support Tools */}
-      <SupportTools />
+
+
 
       {/* News Section */}
       <NewsSection />
@@ -149,8 +149,8 @@ const Index = () => {
               <Button
                 size="lg"
                 className="bg-background text-foreground hover:bg-background/90 shadow-lg shadow-black/20"
-                onClick={() => navigate("/broker/properties/new")}>
-                Liên hệ hợp tác
+                onClick={() => navigate("/listings")}>
+                Khám phá tài sản
                 <ArrowRight className="ml-2 h-4 w-4" strokeWidth={1.5} />
               </Button>
             </div>

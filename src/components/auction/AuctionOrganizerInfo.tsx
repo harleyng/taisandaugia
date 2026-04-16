@@ -78,7 +78,7 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
         <h3 className="text-lg font-bold text-foreground">Đơn vị tổ chức đấu giá</h3>
       </div>
 
-      {/* Logo + Name + Description */}
+      {/* Logo + Name + Description + Stats */}
       {orgName && (
         <div className="flex items-start gap-3">
           <img
@@ -91,21 +91,22 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
           />
           <div className="min-w-0 flex-1">
             <p className="text-base font-semibold text-foreground leading-snug">{orgName}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Hoạt động từ {operatingSince}</p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs text-muted-foreground">
+              <span>Hoạt động từ {operatingSince}</span>
+              {auctionOrgId && stats && stats.total > 0 && (
+                <>
+                  <span aria-hidden="true">•</span>
+                  <span className="inline-flex items-center gap-1">
+                    <BarChart3 className="w-3.5 h-3.5 text-primary" />
+                    <span className="font-semibold text-foreground">{stats.total}</span> phiên
+                    <span aria-hidden="true">•</span>
+                    <span className="font-semibold text-foreground">{stats.success}</span> thành công
+                    <span className="text-primary font-semibold">({stats.rate}%)</span>
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Stats row */}
-      {auctionOrgId && stats && stats.total > 0 && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
-          <BarChart3 className="w-4 h-4 text-primary shrink-0" />
-          <span className="text-foreground">
-            <span className="font-semibold">{stats.total}</span> phiên đấu giá
-            <span className="text-muted-foreground"> • </span>
-            <span className="font-semibold">{stats.success}</span> thành công
-            <span className="text-primary font-semibold"> ({stats.rate}%)</span>
-          </span>
         </div>
       )}
 

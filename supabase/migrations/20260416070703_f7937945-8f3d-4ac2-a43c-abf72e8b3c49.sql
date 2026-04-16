@@ -1,0 +1,1 @@
+UPDATE listings SET views_count = floor(random() * 500 + 50)::int WHERE status IN ('ACTIVE', 'SOLD_RENTED');

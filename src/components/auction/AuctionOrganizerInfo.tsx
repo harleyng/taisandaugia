@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, ChevronRight, Compass } from "lucide-react";
+import { Building2, ChevronRight, BarChart3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,24 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
     enabled: !!auctionOrgId,
   });
 
+  // Fetch auction stats for this org
+  const { data: stats } = useQuery({
+    queryKey: ["auction-org-stats", auctionOrgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("listings")
+        .select("status")
+        .eq("auction_org_id", auctionOrgId)
+        .in("status", ["ACTIVE", "SOLD_RENTED"]);
+      if (error) throw error;
+      const total = data?.length || 0;
+      const success = data?.filter((l) => l.status === "SOLD_RENTED").length || 0;
+      const rate = total > 0 ? Math.round((success / total) * 100) : 0;
+      return { total, success, rate };
+    },
+    enabled: !!auctionOrgId,
+  });
+
   // Merge: prefer DB data, fallback to custom_attributes
   const orgName = orgData?.name || ca.org_name;
   const orgAddress = orgData?.address || ca.org_address;
@@ -46,17 +64,35 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
         <h3 className="text-lg font-bold text-foreground">Đơn vị tổ chức đấu giá</h3>
       </div>
 
-      <div className="space-y-3">
-        {orgName && (
-          <div className="flex items-start gap-2">
-            <span className="text-sm text-muted-foreground shrink-0 w-[100px]">Đơn vị đấu giá:</span>
-            <span className="text-sm text-foreground">
-              {orgName}
-              {orgAddress && ` - ${orgAddress}`}
+      {orgName && (
+        <p className="text-sm text-foreground font-medium">
+          {orgName}
+          {orgAddress && <span className="text-muted-foreground font-normal"> - {orgAddress}</span>}
+        </p>
+      )}
+
+      {/* Stats + CTA row */}
+      {auctionOrgId && stats && stats.total > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <div className="flex items-center gap-2 text-sm">
+            <BarChart3 className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-foreground">
+              <span className="font-semibold">{stats.total}</span> phiên đấu giá
+              <span className="text-muted-foreground"> • </span>
+              <span className="font-semibold">{stats.success}</span> thành công
+              <span className="text-primary font-semibold"> ({stats.rate}%)</span>
             </span>
           </div>
-        )}
+          <Link to={`/auction-org/${auctionOrgId}`} className="shrink-0">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group">
+              <span>Xem lịch sử đấu giá</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
+        </div>
+      )}
 
+      <div className="space-y-3">
         {(orgPhone || orgEmail) && (
           <div className="flex items-start gap-2">
             <span className="text-sm text-muted-foreground shrink-0 w-[100px]">Thông tin liên hệ:</span>
@@ -75,17 +111,6 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
           </div>
         )}
       </div>
-
-      {/* CTA */}
-      {auctionOrgId && (
-        <Link to={`/auction-org/${auctionOrgId}`}>
-          <Button variant="outline" className="w-full justify-start gap-2 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group">
-            <Compass className="w-4 h-4" />
-            <span className="flex-1 text-left">Khám phá tài sản từ đơn vị này</span>
-            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </Button>
-        </Link>
-      )}
     </Card>
   );
 };

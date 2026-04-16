@@ -1,61 +1,66 @@
 
 
-## Plan: Hiển thị số lượt quan tâm trên card và trang detail
+## Plan: Bảng tổ chức đấu giá riêng + CTA trên trang detail
 
-### Cách tiếp cận
+### 1. Tạo bảng `auction_organizations`
 
-Tạo một database function đếm số lượt save cho mỗi listing (tránh query N+1), rồi hiển thị trên 3 nơi: card homepage, card listings, và trang detail.
-
-### 1. Tạo database function `get_listing_save_counts`
+Bảng riêng cho tổ chức đấu giá (không dùng bảng `organizations` hiện tại vốn dành cho broker):
 
 ```sql
-CREATE OR REPLACE FUNCTION public.get_listing_save_counts(listing_ids uuid[])
-RETURNS TABLE(listing_id uuid, save_count bigint)
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = 'public'
-AS $$
-  SELECT ua.listing_id, COUNT(*) as save_count
-  FROM user_asset_actions ua
-  WHERE ua.listing_id = ANY(listing_ids) AND ua.is_saved = true
-  GROUP BY ua.listing_id
-$$;
+CREATE TABLE public.auction_organizations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  address text,
+  phone text,
+  email text,
+  logo_url text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE auction_organizations ENABLE ROW LEVEL SECURITY;
+
+-- Ai cũng xem được
+CREATE POLICY "Public can view auction organizations"
+  ON auction_organizations FOR SELECT TO public USING (true);
+
+-- Thêm cột reference vào listings
+ALTER TABLE listings ADD COLUMN auction_org_id uuid REFERENCES auction_organizations(id);
 ```
 
-### 2. Hook: `useListingSaveCounts`
+### 2. Migrate dữ liệu từ `custom_attributes`
 
-Tạo `src/hooks/useListingSaveCounts.tsx` — nhận array listing IDs, gọi RPC `get_listing_save_counts`, trả về `Map<string, number>`. Cache kết quả, refetch khi savedIds thay đổi.
+Chạy migration INSERT từ distinct `org_name` trong `custom_attributes` → bảng mới, rồi UPDATE `listings.auction_org_id` tương ứng.
 
-### 3. Cập nhật `AuctionCard`
+### 3. Tạo route `/auction-org/:id` (protected)
 
-- Thêm prop `saveCount?: number`
-- Hiển thị icon Heart + số lượt (ví dụ `❤ 6`) ở góc dưới card, bên cạnh orgName hoặc ở footer card
-- Chỉ hiện khi `saveCount > 0`
+Trong `App.tsx` thêm route protected, tạo page `CompanyDetail.tsx`:
+- Header: avatar + tên công ty + địa chỉ + SĐT/email
+- 3 stat cards: Tổng tài sản, Đấu giá thành công, Tỷ lệ thành công
+- Quick search: tìm theo tên, lọc trạng thái
+- Grid `AuctionCard`
 
-### 4. Cập nhật trang Homepage (`AuctionSection`, `FeaturedProjects`)
+### 4. CTA thu hút trên trang detail
 
-- Gọi `useListingSaveCounts` với danh sách listing IDs
-- Truyền `saveCount` xuống `AuctionCard`
+Trong `AuctionOrganizerInfo.tsx`, thêm một CTA button nổi bật:
+- Gradient background, icon `ArrowRight`
+- Text: "Xem tất cả tài sản của [tên công ty] →"
+- Link đến `/auction-org/:id`
+- Yêu cầu đăng nhập (dùng `useAuthDialog` nếu chưa login)
 
-### 5. Cập nhật trang Listings
+### 5. Link trên AuctionCard footer
 
-- Gọi `useListingSaveCounts` trong `Listings.tsx`
-- Truyền `saveCount` xuống mỗi `AuctionCard`
-
-### 6. Cập nhật trang Detail (`AuctionDetail.tsx`)
-
-- Query đếm save count cho listing hiện tại: `SELECT COUNT(*) FROM user_asset_actions WHERE listing_id = id AND is_saved = true`
-- Hiển thị "X người quan tâm" ở phần `AuctionQuickInfo` sidebar, dưới status badge
+Tên công ty ở footer card cũng clickable → `/auction-org/:id`.
 
 ### Files thay đổi
 
 | File | Hành động |
 |------|-----------|
-| Database | Tạo function `get_listing_save_counts` |
-| `src/hooks/useListingSaveCounts.tsx` | Tạo mới |
-| `src/components/AuctionCard.tsx` | Thêm prop + hiển thị save count |
-| `src/components/AuctionSection.tsx` | Gọi hook, truyền count |
-| `src/components/FeaturedProjects.tsx` | Gọi hook, truyền count |
-| `src/pages/Listings.tsx` | Gọi hook, truyền count |
-| `src/pages/AuctionDetail.tsx` | Query + hiển thị count |
-| `src/components/auction/AuctionQuickInfo.tsx` | Nhận + hiển thị count |
+| Migration SQL | Tạo bảng + migrate data |
+| `src/pages/CompanyDetail.tsx` | Tạo mới |
+| `src/components/auction/AuctionOrganizerInfo.tsx` | Thêm CTA link |
+| `src/components/AuctionCard.tsx` | Link org name, thêm prop `orgId` |
+| `src/components/AuctionSection.tsx` | Truyền `orgId` |
+| `src/pages/Listings.tsx` | Truyền `orgId` |
+| `src/App.tsx` | Thêm route |
+| `src/hooks/useAuctionListings.tsx` | Select `auction_org_id` |
 

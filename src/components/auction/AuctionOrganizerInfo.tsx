@@ -59,7 +59,7 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
           className="flex items-center justify-between w-full px-4 py-3 rounded-lg bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 transition-all group"
         >
           <span className="text-sm font-semibold">
-            Xem tất cả tài sản của {ca.org_name || "tổ chức này"}
+            Khám phá tài sản từ đơn vị này
           </span>
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </Link>

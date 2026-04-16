@@ -55,7 +55,7 @@ const SavedAssetsPage = () => {
             <Bell className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
               <span>Bật thông báo để nhận cập nhật về tài sản bạn quan tâm</span>
-              <Button size="sm" variant="outline" onClick={toggleNotifications}>
+              <Button size="sm" variant="outline" onClick={() => toggleNotifications(true)}>
                 Bật thông báo
               </Button>
             </AlertDescription>

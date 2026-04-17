@@ -20,6 +20,11 @@ import { formatAddress } from "@/utils/formatters";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
+import { useCredits } from "@/hooks/useCredits";
+import { usePaywall } from "@/contexts/PaywallContext";
+import { LockedBlur } from "@/components/paywall/LockedBlur";
+import { useCompanyViewTracker } from "@/hooks/useCompanyViewTracker";
+import { Sparkles, X } from "lucide-react";
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -31,6 +36,10 @@ const AuctionDetail = () => {
   const [infoOpen, setInfoOpen] = useState(true);
   const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
   const guardedNavigate = useAuthGuardedNavigate();
+  const { assetUnlocked } = useCredits();
+  const { openAssetPaywall, openCompanyPaywall } = usePaywall();
+  const { shouldNudge, dismiss } = useCompanyViewTracker(listing?.auction_org_id, listing?.id);
+  const isUnlocked = listing ? assetUnlocked(listing.id) : false;
   const ownerClick = listing?.asset_owner_id
     ? guardedNavigate(`/asset-owner/${listing.asset_owner_id}`)
     : undefined;
@@ -115,6 +124,36 @@ const AuctionDetail = () => {
           <ChevronRight className="w-3.5 h-3.5" />
           <span className="text-foreground font-medium truncate max-w-[300px]">{listing.title}</span>
         </nav>
+
+        {/* Nudge: viewing many assets from same org */}
+        {shouldNudge && listing.auction_org_id && (
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                Bạn đang xem nhiều tài sản từ cùng một nguồn
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Mở hồ sơ đơn vị đấu giá để xem đầy đủ danh sách tài sản.
+              </p>
+              <Button
+                size="sm"
+                variant="default"
+                className="mt-2"
+                onClick={() => openCompanyPaywall(listing.auction_org_id)}
+              >
+                Xem các gói mở khóa
+              </Button>
+            </div>
+            <button
+              onClick={dismiss}
+              className="text-muted-foreground hover:text-foreground p-1 -m-1"
+              aria-label="Đóng"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Title */}
         <div className="mb-6">
@@ -214,13 +253,63 @@ const AuctionDetail = () => {
             </Collapsible>
 
             {/* 3. Organizer */}
-            <AuctionOrganizerInfo listing={listing} />
+            <AuctionOrganizerInfo listing={listing} isUnlocked={isUnlocked} onLockedClick={() => openAssetPaywall(listing.id)} />
 
-            {/* 4. Schedule */}
-            <AuctionScheduleInfo listing={listing} />
+            {/* 4. Schedule (locked) */}
+            {isUnlocked ? (
+              <AuctionScheduleInfo listing={listing} />
+            ) : (
+              <LockedBlur
+                ctaLabel="Mở khóa tài sản – 59 credit"
+                teaser="Xem thông tin chi tiết để đánh giá tài sản"
+                futureNote="Lịch trình chi tiết, tài liệu và liên hệ đơn vị tổ chức."
+                onUnlockClick={() => openAssetPaywall(listing.id)}
+              >
+                <AuctionScheduleInfo listing={listing} />
+              </LockedBlur>
+            )}
 
-            {/* 5. Attachments */}
-            <AuctionAttachments listing={listing} />
+            {/* 5. Attachments (locked) */}
+            {isUnlocked ? (
+              <AuctionAttachments listing={listing} />
+            ) : (
+              <LockedBlur
+                ctaLabel="Mở khóa tài sản – 59 credit"
+                teaser="Tải về hồ sơ và tài liệu đính kèm"
+                onUnlockClick={() => openAssetPaywall(listing.id)}
+              >
+                <Card className="p-5 space-y-3">
+                  <h3 className="text-lg font-bold text-foreground">File đính kèm</h3>
+                  <div className="h-12 bg-muted rounded" />
+                  <div className="h-12 bg-muted rounded" />
+                </Card>
+              </LockedBlur>
+            )}
+
+            {/* 5b. Future insight placeholder — only shown when locked */}
+            {!isUnlocked && (
+              <Card className="p-5 border-dashed">
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold text-foreground">Phân tích & insight</h3>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Dữ liệu sẽ được cập nhật và phân tích sâu hơn trong thời gian tới. Mở khóa để truy cập các thông tin nâng cao khi được cập nhật.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => openAssetPaywall(listing.id)}
+                    >
+                      Mở khóa – 59 credit
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             {/* 6. Save button — full width */}
             <Button

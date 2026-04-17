@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, PlusCircle, LogOut, ChevronDown, Home, LayoutGrid, UserCircle } from "lucide-react";
+import { Menu, User, Heart, PlusCircle, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Sparkles } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -24,6 +25,8 @@ import { useState, useEffect } from "react";
 import { Session } from "@supabase/supabase-js";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
+import { useCredits } from "@/hooks/useCredits";
+import { addCredits as addCreditsImpl } from "@/lib/mockCredits";
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -41,6 +44,7 @@ export const Header = () => {
 
   const { toast } = useToast();
   const [session, setSession] = useState<Session | null>(null);
+  const { balance } = useCredits();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -120,9 +124,21 @@ export const Header = () => {
           </NavigationMenu>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           {session ? (
             <>
+              <button
+                onClick={() => navigate("/buy-credits")}
+                className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  transparent
+                    ? "bg-white/15 text-white hover:bg-white/25"
+                    : "bg-primary/10 text-primary hover:bg-primary/20"
+                }`}
+                title="Mua credit"
+              >
+                <Coins className="h-3.5 w-3.5" />
+                {balance} credit
+              </button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -143,7 +159,19 @@ export const Header = () => {
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-60">
+                  <DropdownMenuLabel className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground font-normal">Số dư</span>
+                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                      <Coins className="h-3.5 w-3.5 text-primary" />
+                      {balance} credit
+                    </span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => navigate("/buy-credits")}>
+                    <Coins className="mr-2 h-4 w-4 text-primary" />
+                    Mua credit
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate("/profile")}>
                     <UserCircle className="mr-2 h-4 w-4" />
                     Hồ sơ cá nhân
@@ -153,15 +181,23 @@ export const Header = () => {
                     Tài sản quan tâm
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      addCreditsImpl(500);
+                      toast({ title: "Dev: +500 credit", description: "Chỉ dùng để thử nghiệm." });
+                    }}
+                    className="text-xs text-muted-foreground"
+                  >
+                    <Sparkles className="mr-2 h-3.5 w-3.5" />
+                    Dev: +500 credit
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Đăng xuất
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {/*<Button onClick={() => navigate("/broker/properties/new")} className="hidden sm:inline-flex bg-primary hover:bg-primary-hover text-primary-foreground"> 
-                <PlusCircle className="mr-2 h-4 w-4" />Đăng tin
-              </Button> */}
             </>
           ) : (
             <Button
@@ -230,6 +266,20 @@ export const Header = () => {
                   <>
                     <div className="py-4 border-b">
                       <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Tài khoản</h3>
+                      <div className="flex items-center justify-between px-3 py-2.5 mb-1 rounded-lg bg-primary/5">
+                        <span className="text-sm text-muted-foreground">Số dư</span>
+                        <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                          <Coins className="h-4 w-4 text-primary" />
+                          {balance} credit
+                        </span>
+                      </div>
+                      <Link
+                        to="/buy-credits"
+                        className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <Coins className="h-5 w-5 text-primary" />
+                        Mua credit
+                      </Link>
                       <Link
                         to="/profile"
                         className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
@@ -244,6 +294,16 @@ export const Header = () => {
                         <Heart className="h-5 w-5" />
                         Tài sản quan tâm
                       </Link>
+                      <button
+                        onClick={() => {
+                          addCreditsImpl(500);
+                          toast({ title: "Dev: +500 credit" });
+                        }}
+                        className="w-full text-left flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Dev: +500 credit
+                      </button>
                     </div>
                     <div className="pt-4 space-y-2">
                       <Button onClick={handleLogout} variant="outline" className="w-full justify-start">

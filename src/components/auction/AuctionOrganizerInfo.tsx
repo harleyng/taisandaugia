@@ -7,9 +7,11 @@ import logoAuctionOrg from "@/assets/logo-auction-org.png";
 
 interface AuctionOrganizerInfoProps {
   listing: any;
+  isUnlocked?: boolean;
+  onLockedClick?: () => void;
 }
 
-export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => {
+export const AuctionOrganizerInfo = ({ listing, isUnlocked = true, onLockedClick }: AuctionOrganizerInfoProps) => {
   const guardedNavigate = useAuthGuardedNavigate();
   const ca = listing.custom_attributes || {};
   const auctionOrgId = listing.auction_org_id;
@@ -144,13 +146,35 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
           {contactLine && (
             <div className="flex gap-3">
               <span className="text-muted-foreground shrink-0 w-28">Thông tin liên hệ:</span>
-              <span className="text-foreground">{contactLine}</span>
+              {isUnlocked ? (
+                <span className="text-foreground">{contactLine}</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onLockedClick}
+                  className="text-foreground inline-flex items-center gap-1.5 group"
+                >
+                  <span className="blur-sm select-none">{contactLine}</span>
+                  <span className="text-xs text-primary font-medium group-hover:underline">🔒 Mở khóa</span>
+                </button>
+              )}
             </div>
           )}
           {locationText && (
             <div className="flex gap-3">
               <span className="text-muted-foreground shrink-0 w-28">Địa điểm đấu giá:</span>
-              <span className="text-foreground">{locationText}</span>
+              {isUnlocked ? (
+                <span className="text-foreground">{locationText}</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onLockedClick}
+                  className="text-foreground inline-flex items-center gap-1.5 group text-left"
+                >
+                  <span className="blur-sm select-none line-clamp-1">{locationText}</span>
+                  <span className="text-xs text-primary font-medium group-hover:underline shrink-0">🔒</span>
+                </button>
+              )}
             </div>
           )}
         </div>

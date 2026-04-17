@@ -59,7 +59,9 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
   const isClickable = !!auctionOrgId;
 
   const handleClick = isClickable
-    ? guardedNavigate(`/auction-org/${auctionOrgId}`)
+    ? guardedNavigate(`/auction-org/${auctionOrgId}`, {
+        state: { fromListing: { id: listing.id, title: listing.title } },
+      })
     : undefined;
 
   const contactLine = [orgPhone, orgEmail].filter(Boolean).join("  -  ");

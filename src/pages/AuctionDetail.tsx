@@ -36,6 +36,10 @@ const AuctionDetail = () => {
   const [infoOpen, setInfoOpen] = useState(true);
   const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
   const guardedNavigate = useAuthGuardedNavigate();
+  const { assetUnlocked } = useCredits();
+  const { openAssetPaywall, openCompanyPaywall } = usePaywall();
+  const { shouldNudge, dismiss } = useCompanyViewTracker(listing?.auction_org_id, listing?.id);
+  const isUnlocked = listing ? assetUnlocked(listing.id) : false;
   const ownerClick = listing?.asset_owner_id
     ? guardedNavigate(`/asset-owner/${listing.asset_owner_id}`)
     : undefined;

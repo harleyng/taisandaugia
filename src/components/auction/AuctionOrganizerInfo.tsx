@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Building2, ChevronRight, BarChart3, Phone, Mail, MapPin } from "lucide-react";
+import { Building2, ChevronRight, BarChart3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
@@ -51,8 +51,6 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
   const orgEmail = orgData?.email || ca.org_email;
   const orgLogo = orgData?.logo_url || logoAuctionOrg;
   const auctionLocation = ca.auction_location;
-  // Mock "operating since" — fallback to a sensible default
-  const operatingSince = ca.org_operating_since || "2015";
 
   const hasOrgInfo = orgName || orgAddress || orgPhone || orgEmail || auctionLocation;
 

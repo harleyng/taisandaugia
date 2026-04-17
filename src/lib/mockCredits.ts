@@ -47,21 +47,31 @@ const defaultState: MockState = {
   purchases: [],
 };
 
+let cached: MockState | null = null;
+
 const read = (): MockState => {
   if (typeof window === "undefined") return defaultState;
+  if (cached) return cached;
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return defaultState;
-    return { ...defaultState, ...JSON.parse(raw) };
+    cached = raw ? { ...defaultState, ...JSON.parse(raw) } : defaultState;
   } catch {
-    return defaultState;
+    cached = defaultState;
   }
+  return cached;
 };
 
 const write = (s: MockState) => {
+  cached = s;
   localStorage.setItem(KEY, JSON.stringify(s));
   window.dispatchEvent(new CustomEvent(EVT));
 };
+
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === KEY) cached = null;
+  });
+}
 
 export const subscribe = (cb: () => void) => {
   const handler = () => cb();

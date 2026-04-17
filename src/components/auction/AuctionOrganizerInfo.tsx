@@ -3,6 +3,7 @@ import { Building2, ChevronRight, BarChart3, Phone, Mail, MapPin } from "lucide-
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import logoAuctionOrg from "@/assets/logo-auction-org.png";
 
 interface AuctionOrganizerInfoProps {
@@ -11,6 +12,7 @@ interface AuctionOrganizerInfoProps {
 
 export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => {
   const navigate = useNavigate();
+  const { openAuthDialog } = useAuthDialog();
   const ca = listing.custom_attributes || {};
   const auctionOrgId = listing.auction_org_id;
 
@@ -60,8 +62,15 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
 
   const isClickable = !!auctionOrgId;
 
-  const handleClick = () => {
-    if (isClickable) navigate(`/auction-org/${auctionOrgId}`);
+  const handleClick = async () => {
+    if (!isClickable) return;
+    const target = `/auction-org/${auctionOrgId}`;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      navigate(target);
+    } else {
+      openAuthDialog(() => navigate(target));
+    }
   };
 
   return (

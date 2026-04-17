@@ -10,8 +10,7 @@ interface AuctionOrganizerInfoProps {
 }
 
 export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => {
-  const navigate = useNavigate();
-  const { openAuthDialog } = useAuthDialog();
+  const guardedNavigate = useAuthGuardedNavigate();
   const ca = listing.custom_attributes || {};
   const auctionOrgId = listing.auction_org_id;
 
@@ -61,16 +60,9 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
 
   const isClickable = !!auctionOrgId;
 
-  const handleClick = async () => {
-    if (!isClickable) return;
-    const target = `/auction-org/${auctionOrgId}`;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      navigate(target);
-    } else {
-      openAuthDialog(() => navigate(target));
-    }
-  };
+  const handleClick = isClickable
+    ? guardedNavigate(`/auction-org/${auctionOrgId}`)
+    : undefined;
 
   return (
     <Card

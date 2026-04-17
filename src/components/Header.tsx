@@ -266,6 +266,20 @@ export const Header = () => {
                   <>
                     <div className="py-4 border-b">
                       <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Tài khoản</h3>
+                      <div className="flex items-center justify-between px-3 py-2.5 mb-1 rounded-lg bg-primary/5">
+                        <span className="text-sm text-muted-foreground">Số dư</span>
+                        <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                          <Coins className="h-4 w-4 text-primary" />
+                          {balance} credit
+                        </span>
+                      </div>
+                      <Link
+                        to="/buy-credits"
+                        className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <Coins className="h-5 w-5 text-primary" />
+                        Mua credit
+                      </Link>
                       <Link
                         to="/profile"
                         className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
@@ -280,6 +294,16 @@ export const Header = () => {
                         <Heart className="h-5 w-5" />
                         Tài sản quan tâm
                       </Link>
+                      <button
+                        onClick={() => {
+                          addCreditsImpl(500);
+                          toast({ title: "Dev: +500 credit" });
+                        }}
+                        className="w-full text-left flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Dev: +500 credit
+                      </button>
                     </div>
                     <div className="pt-4 space-y-2">
                       <Button onClick={handleLogout} variant="outline" className="w-full justify-start">

@@ -46,12 +46,8 @@ const App = () => (
           <Route path="/profile" element={<ProtectedRoute />}>
             <Route index element={<ProfilePage />} />
           </Route>
-          <Route path="/auction-org/:id" element={<ProtectedRoute />}>
-            <Route index element={<CompanyDetail />} />
-          </Route>
-          <Route path="/asset-owner/:id" element={<ProtectedRoute />}>
-            <Route index element={<AssetOwnerDetail />} />
-          </Route>
+          <Route path="/auction-org/:id" element={<CompanyDetail />} />
+          <Route path="/asset-owner/:id" element={<AssetOwnerDetail />} />
           
           {/* 404 Catch-all */}
           <Route path="*" element={<NotFound />} />

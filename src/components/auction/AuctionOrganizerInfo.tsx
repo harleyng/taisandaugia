@@ -1,8 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Building2, ChevronRight, BarChart3, Phone, Mail, MapPin } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
 import logoAuctionOrg from "@/assets/logo-auction-org.png";
 
 interface AuctionOrganizerInfoProps {
@@ -10,7 +10,7 @@ interface AuctionOrganizerInfoProps {
 }
 
 export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => {
-  const navigate = useNavigate();
+  const guardedNavigate = useAuthGuardedNavigate();
   const ca = listing.custom_attributes || {};
   const auctionOrgId = listing.auction_org_id;
 
@@ -60,9 +60,9 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
 
   const isClickable = !!auctionOrgId;
 
-  const handleClick = () => {
-    if (isClickable) navigate(`/auction-org/${auctionOrgId}`);
-  };
+  const handleClick = isClickable
+    ? guardedNavigate(`/auction-org/${auctionOrgId}`)
+    : undefined;
 
   return (
     <Card

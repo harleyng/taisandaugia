@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Heart, Eye } from "lucide-react";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatPrice, formatDate } from "@/utils/formatters";
+import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
 
 export type AuctionSessionStatus = "registration_open" | "upcoming" | "ongoing" | "ended";
 
@@ -68,6 +69,8 @@ export function AuctionCard({
   countdown, orgName, orgId, winPrice, isSaved, onToggleSave, saveCount, viewsCount,
 }: AuctionCardProps) {
   const status = STATUS_CONFIG[sessionStatus];
+  const guardedNavigate = useAuthGuardedNavigate();
+  const orgClick = orgId ? guardedNavigate(`/auction-org/${orgId}`) : undefined;
 
   const formattedDate = auctionDate
     ? new Date(auctionDate).toLocaleString("vi-VN", {
@@ -200,10 +203,10 @@ export function AuctionCard({
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border">
             {orgName ? (
               orgId ? (
-                <Link
-                  to={`/auction-org/${orgId}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                <button
+                  type="button"
+                  onClick={orgClick}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
                 >
                   <img
                     src={`https://ui-avatars.com/api/?name=${getOrgInitials(orgName)}&background=1e40af&color=fff&size=48&bold=true`}
@@ -211,7 +214,7 @@ export function AuctionCard({
                     className="h-5 w-5 rounded-full flex-shrink-0"
                   />
                   <span className="text-xs font-medium text-muted-foreground line-clamp-1 hover:text-primary transition-colors">{orgName}</span>
-                </Link>
+                </button>
               ) : (
                 <div className="flex items-center gap-2">
                   <img
@@ -317,10 +320,10 @@ export function AuctionCard({
           {orgName && (
             <div className="flex items-center gap-2 pt-3 border-t border-border">
               {orgId ? (
-                <Link
-                  to={`/auction-org/${orgId}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                <button
+                  type="button"
+                  onClick={orgClick}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
                 >
                   <img
                     src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
@@ -328,7 +331,7 @@ export function AuctionCard({
                     className="h-5 w-5 rounded-full flex-shrink-0"
                   />
                   <span className="text-xs font-medium text-muted-foreground line-clamp-1 hover:text-primary transition-colors">{orgName}</span>
-                </Link>
+                </button>
               ) : (
                 <>
                   <img

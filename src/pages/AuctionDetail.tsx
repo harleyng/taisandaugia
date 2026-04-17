@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import { formatAddress } from "@/utils/formatters";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
+import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -29,6 +30,10 @@ const AuctionDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(true);
   const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
+  const guardedNavigate = useAuthGuardedNavigate();
+  const ownerClick = listing?.asset_owner_id
+    ? guardedNavigate(`/asset-owner/${listing.asset_owner_id}`)
+    : undefined;
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -118,13 +123,16 @@ const AuctionDetail = () => {
               {listing.title}
             </h1>
             {listing.asset_owner_id && (
-              <Link to={`/asset-owner/${listing.asset_owner_id}`} className="shrink-0">
-                <Button variant="outline" size="sm" className="gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group">
-                  <Search className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Lịch sử đấu giá</span>
-                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
+              <Button
+                onClick={ownerClick}
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Lịch sử đấu giá</span>
+                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </Button>
             )}
           </div>
           <div className="flex items-center gap-3 mt-2">

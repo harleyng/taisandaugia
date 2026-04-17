@@ -122,7 +122,7 @@ const AuctionDetail = () => {
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground leading-tight flex-1">
               {listing.title}
             </h1>
-            {listing.asset_owner_id && (
+            {false && listing.asset_owner_id && (
               <Button
                 onClick={ownerClick}
                 variant="outline"

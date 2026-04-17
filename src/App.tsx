@@ -17,6 +17,9 @@ import ProfilePage from "./pages/ProfilePage";
 import PWAInstall from "./pages/PWAInstall";
 import CompanyDetail from "./pages/CompanyDetail";
 import AssetOwnerDetail from "./pages/AssetOwnerDetail";
+import BuyCredits from "./pages/BuyCredits";
+import PaymentResult from "./pages/PaymentResult";
+import { PaywallProvider } from "@/contexts/PaywallContext";
 
 const queryClient = new QueryClient();
 
@@ -28,30 +31,36 @@ const App = () => (
       <Sonner />
       <AuthDialog />
       <BrowserRouter>
-        <Routes>
-          {/* Public Marketplace */}
-          <Route path="/" element={<Index />} />
-          <Route path="/listings" element={<Listings />} />
-          <Route path="/listings/:id" element={<ListingDetail />} />
-          <Route path="/auctions/:id" element={<AuctionDetail />} />
-          <Route path="/install" element={<PWAInstall />} />
-          
-          {/* Auth */}
-          <Route path="/auth" element={<Auth />} />
-          
-          {/* Protected: Saved Assets & Profile */}
-          <Route path="/saved-assets" element={<ProtectedRoute />}>
-            <Route index element={<SavedAssetsPage />} />
-          </Route>
-          <Route path="/profile" element={<ProtectedRoute />}>
-            <Route index element={<ProfilePage />} />
-          </Route>
-          <Route path="/auction-org/:id" element={<CompanyDetail />} />
-          <Route path="/asset-owner/:id" element={<AssetOwnerDetail />} />
-          
-          {/* 404 Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <PaywallProvider>
+          <Routes>
+            {/* Public Marketplace */}
+            <Route path="/" element={<Index />} />
+            <Route path="/listings" element={<Listings />} />
+            <Route path="/listings/:id" element={<ListingDetail />} />
+            <Route path="/auctions/:id" element={<AuctionDetail />} />
+            <Route path="/install" element={<PWAInstall />} />
+
+            {/* Credits */}
+            <Route path="/buy-credits" element={<BuyCredits />} />
+            <Route path="/payment-result" element={<PaymentResult />} />
+
+            {/* Auth */}
+            <Route path="/auth" element={<Auth />} />
+
+            {/* Protected: Saved Assets & Profile */}
+            <Route path="/saved-assets" element={<ProtectedRoute />}>
+              <Route index element={<SavedAssetsPage />} />
+            </Route>
+            <Route path="/profile" element={<ProtectedRoute />}>
+              <Route index element={<ProfilePage />} />
+            </Route>
+            <Route path="/auction-org/:id" element={<CompanyDetail />} />
+            <Route path="/asset-owner/:id" element={<AssetOwnerDetail />} />
+
+            {/* 404 Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </PaywallProvider>
       </BrowserRouter>
       </AuthDialogProvider>
     </TooltipProvider>

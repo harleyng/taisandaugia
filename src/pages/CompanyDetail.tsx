@@ -144,7 +144,19 @@ const CompanyDetail = () => {
                   className="w-16 h-16 rounded-xl flex-shrink-0 object-cover"
                 />
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-xl md:text-2xl font-bold text-foreground mb-1">{org.name}</h1>
+                  <h1 className="text-xl md:text-2xl font-bold text-foreground mb-1.5">{org.name}</h1>
+                  {(() => {
+                    const orgTypeLabels: Record<number, string> = {
+                      0: "Trung tâm đấu giá",
+                      1: "Doanh nghiệp đấu giá",
+                      2: "Công ty đấu giá",
+                      11: "Chi nhánh công ty đấu giá",
+                    };
+                    const label = (org as any).org_type != null ? orgTypeLabels[(org as any).org_type as number] : null;
+                    return label ? (
+                      <Badge variant="secondary" className="mb-2 font-medium">{label}</Badge>
+                    ) : null;
+                  })()}
                   {org.address && (
                     <p className="text-sm text-muted-foreground flex items-center gap-1.5 mb-2">
                       <MapPin className="w-3.5 h-3.5 flex-shrink-0" />

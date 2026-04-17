@@ -118,13 +118,17 @@ const AuctionDetail = () => {
               {listing.title}
             </h1>
             {listing.asset_owner_id && (
-              <Link to={`/asset-owner/${listing.asset_owner_id}`} className="shrink-0">
-                <Button variant="outline" size="sm" className="gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group">
+              <button
+                type="button"
+                onClick={ownerClick}
+                className="shrink-0"
+              >
+                <Button asChild={false} variant="outline" size="sm" className="gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group">
                   <Search className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Lịch sử đấu giá</span>
                   <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </Button>
-              </Link>
+              </button>
             )}
           </div>
           <div className="flex items-center gap-3 mt-2">

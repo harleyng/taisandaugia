@@ -20,6 +20,11 @@ import { formatAddress } from "@/utils/formatters";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
+import { useCredits } from "@/hooks/useCredits";
+import { usePaywall } from "@/contexts/PaywallContext";
+import { LockedBlur } from "@/components/paywall/LockedBlur";
+import { useCompanyViewTracker } from "@/hooks/useCompanyViewTracker";
+import { Sparkles, X } from "lucide-react";
 
 const AuctionDetail = () => {
   const { id } = useParams();

@@ -1,9 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Building2, ChevronRight, BarChart3, Phone, Mail, MapPin } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuthDialog } from "@/contexts/AuthDialogContext";
+import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
 import logoAuctionOrg from "@/assets/logo-auction-org.png";
 
 interface AuctionOrganizerInfoProps {

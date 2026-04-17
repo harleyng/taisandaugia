@@ -1,47 +1,43 @@
+## Plan: Hệ thống Credit + Khoá nội dung + Trang mua Credit (mock)
 
+Kết hợp toàn bộ: lock UI/paywall (đã đề xuất ở plan trước) + trang mua credit với 4 gói. KHÔNG tích hợp thanh toán thật — dùng mock + dev helper để chạy thông flow end-to-end. Sau này swap mock sang VNPay/Stripe chỉ cần đổi 1 hook.
 
-## Plan: Trang chi tiết chủ tài sản (Asset Owner Detail)
+---
 
-Tương tự trang Company Detail, tạo trang `/asset-owner/:id` hiển thị thông tin chủ tài sản và danh sách tài sản của họ.
+### 1. Lớp state credit (mock, persist localStorage)
 
-### 1. Tạo bảng `asset_owners`
+- `src/lib/mockCredits.ts`: balance, asset unlocks, company unlocks (kèm `expires_at`), purchase history. Emit event để các hook re-render.
+- `src/hooks/useCredits.tsx`: `balance`, `assetUnlocked(id)`, `companyAccess(orgId)` → `{tier, expiresAt, isUnlocked}`, `unlockAsset(id)`, `unlockCompany(orgId, tier)`, `addCredits(amount, packageKey)`.
+- Hằng số: `ASSET_COST = 59`. Tiers công ty: `7d=99`, `30d=299`, `1y=1990` credit.
+- Gói mua: Starter `69k→69`, Popular `179k→190` (highlight), Value `299k→330`, Pro `499k→600`.
 
-```sql
-CREATE TABLE public.asset_owners (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL UNIQUE,
-  address text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+### 2. Trang mua credit + kết quả
 
-ALTER TABLE asset_owners ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public can view asset owners" ON asset_owners FOR SELECT TO public USING (true);
+- `src/pages/BuyCredits.tsx` (`/buy-credits`):
+  - Header: "Mua credit" + "Số dư hiện tại: X credit"
+  - 4 card gói dùng 4 ảnh minh hoạ (xu tăng dần) 
+  - Card Popular có badge "Phổ biến" + viền nổi bật
+  - CTA "Mua ngay" → mock: minh hoạ luồng thanh toand bằng VNPay -> click thanh toán -> loading → cộng credit → điều hướng `/payment-result?status=success&package=...&return=...`
+  - Hỗ trợ `?return=/auctions/abc&unlock=asset:abc` để auto-unlock + redirect sau khi mua
+- `src/pages/PaymentResult.tsx` (`/payment-result`):
+  - Success: "Thanh toán thành công" + "+X credit đã được cộng". Nếu có `unlock` param → tự động `unlockAsset/unlockCompany` rồi CTA "Tiếp tục" về `return` URL
+  - Failed: "Thanh toán thất bại" + "Thử lại"
+- 4 ảnh minh hoạ generate sẵn vào `src/assets/credits/` (coin pile tăng dần, có badge "Ảnh minh hoạ")
 
--- FK trên listings
-ALTER TABLE listings ADD COLUMN asset_owner_id uuid REFERENCES asset_owners(id);
-```
+### 3. Paywall components (dùng chung)
 
-Migrate dữ liệu từ `custom_attributes` (`asset_owner_name`, `asset_owner_address`) vào bảng mới và cập nhật `asset_owner_id`.
+- `src/components/paywall/LockedBlur.tsx`: wrap children, blur + chặn click, overlay icon khoá + teaser + CTA
+- `src/components/paywall/AssetPaywallDialog.tsx`: balance, "Mở khoá tài sản – 59 credit", note tương lai. Đủ → "Dùng credit để mở"; thiếu → "Mua credit" → `/buy-credits?return=...&unlock=asset:id`
+- `src/components/paywall/CompanyPaywallDialog.tsx`: 3 tier card (7d/30d/1y) với mô tả giá trị, logic credit tương tự
+- `src/contexts/PaywallContext.tsx`: `openAssetPaywall(id)`, `openCompanyPaywall(orgId)` global
 
-### 2. Tạo route `/asset-owner/:id` (protected)
+### 4. Áp dụng khoá
 
-Thêm route trong `App.tsx`, tạo page `src/pages/AssetOwnerDetail.tsx`:
-- Header: avatar + tên chủ tài sản + địa chỉ
-- 3 stat cards: Tổng tài sản, Đấu giá thành công, Tỷ lệ thành công
-- Search + filter trạng thái
-- Grid `AuctionCard`
+`**AuctionDetail.tsx**` (free: tiêu đề, giá, địa chỉ, mô tả, ảnh, save):
 
-### 3. CTA trên trang AuctionDetail
+- Khoá `AuctionScheduleInfo`, `AuctionAttachments`, contact line trong `AuctionOrganizerInfo`
+- Thêm card placeholder "Phân tích & insight" (chỉ hiện khi locked) với note "Dữ liệu sẽ được cập nhật và phân tích sâu hơn..."
 
-Trong phần asset owner (dòng 170-179 của `AuctionDetail.tsx`), thêm CTA nổi bật: **"Khám phá tài sản từ chủ sở hữu này"** — link đến `/asset-owner/:id`, yêu cầu đăng nhập.
+`**CompanyDetail.tsx**` (free: tên, org_type badge, địa chỉ):
 
-### 4. Files thay đổi
-
-| File | Hành động |
-|------|-----------|
-| Migration SQL | Tạo bảng + migrate data |
-| `src/pages/AssetOwnerDetail.tsx` | Tạo mới |
-| `src/App.tsx` | Thêm route protected |
-| `src/pages/AuctionDetail.tsx` | Thêm CTA link đến asset owner page |
-| `src/hooks/useAuctionListings.tsx` | Thêm `asset_owner_id` vào interface |
-
+- Khoá stats grid, search/filter, listings

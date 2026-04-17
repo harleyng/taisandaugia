@@ -114,10 +114,16 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
                 {orgAddress && <span className="line-clamp-1">{orgAddress}</span>}
               </div>
             </div>
+            {isClickable && (
+              <div className="hidden sm:flex items-center gap-1 text-sm font-medium text-primary group shrink-0 self-center">
+                <span className="group-hover:underline whitespace-nowrap">Xem lịch sử đấu giá</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            )}
           </div>
 
           {isClickable && (
-            <div className="mt-3 flex items-center gap-1 text-sm font-medium text-primary group">
+            <div className="sm:hidden mt-3 flex items-center gap-1 text-sm font-medium text-primary group">
               <span className="group-hover:underline">Xem lịch sử đấu giá</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>

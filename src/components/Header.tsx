@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, PlusCircle, LogOut, ChevronDown, Home, LayoutGrid, UserCircle } from "lucide-react";
+import { Menu, User, Heart, PlusCircle, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Sparkles } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -24,6 +25,8 @@ import { useState, useEffect } from "react";
 import { Session } from "@supabase/supabase-js";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
+import { useCredits } from "@/hooks/useCredits";
+import { addCredits as addCreditsImpl } from "@/lib/mockCredits";
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -41,6 +44,7 @@ export const Header = () => {
 
   const { toast } = useToast();
   const [session, setSession] = useState<Session | null>(null);
+  const { balance } = useCredits();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));

@@ -72,12 +72,6 @@ export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing, s
       <div className="flex items-center justify-between">
         <Badge className={config.className}>{config.label}</Badge>
         <div className="flex items-center gap-3">
-          {listing.views_count != null && listing.views_count > 0 && (
-            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-              <Eye className="h-4 w-4" />
-              <span className="font-medium">{listing.views_count}</span>
-            </span>
-          )}
           {saveCount != null && saveCount > 0 && (
             <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
               <Heart className="h-4 w-4 fill-current text-rose-400" />

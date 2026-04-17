@@ -201,90 +201,153 @@ const CompanyDetail = () => {
               </div>
             </Card>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
-              <Card className="p-4 text-center">
-                <Gavel className="w-6 h-6 mx-auto mb-2 text-primary" />
-                <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.total}</p>
-                <p className="text-xs text-muted-foreground mt-1">Tổng tài sản</p>
-              </Card>
-              <Card className="p-4 text-center">
-                <Trophy className="w-6 h-6 mx-auto mb-2 text-[hsl(142,60%,40%)]" />
-                <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.successful}</p>
-                <p className="text-xs text-muted-foreground mt-1">Đấu giá thành công</p>
-              </Card>
-              <Card className="p-4 text-center">
-                <Percent className="w-6 h-6 mx-auto mb-2 text-[hsl(25,95%,53%)]" />
-                <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.rate}%</p>
-                <p className="text-xs text-muted-foreground mt-1">Tỷ lệ thành công</p>
-              </Card>
-            </div>
+            {isCompanyUnlocked ? (
+              <>
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
+                  <Card className="p-4 text-center">
+                    <Gavel className="w-6 h-6 mx-auto mb-2 text-primary" />
+                    <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.total}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Tổng tài sản</p>
+                  </Card>
+                  <Card className="p-4 text-center">
+                    <Trophy className="w-6 h-6 mx-auto mb-2 text-[hsl(142,60%,40%)]" />
+                    <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.successful}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Đấu giá thành công</p>
+                  </Card>
+                  <Card className="p-4 text-center">
+                    <Percent className="w-6 h-6 mx-auto mb-2 text-[hsl(25,95%,53%)]" />
+                    <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.rate}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">Tỷ lệ thành công</p>
+                  </Card>
+                </div>
 
-            {/* Search & Filter */}
-            <div className="flex gap-3 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Tìm kiếm tài sản..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px] shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="registration_open">Mở đăng ký</SelectItem>
-                  <SelectItem value="upcoming">Sắp diễn ra</SelectItem>
-                  <SelectItem value="ongoing">Đang diễn ra</SelectItem>
-                  <SelectItem value="ended">Đã kết thúc</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Tier 2/3 analytics placeholder */}
+                {(access.tier === "30d" || access.tier === "1y") && (
+                  <Card className="p-4 mb-6 border-dashed">
+                    <div className="flex items-start gap-3">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-foreground">Phân tích nhóm theo khu vực & giá</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Sắp ra mắt — bạn sẽ tự động được truy cập khi tính năng có sẵn.
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
 
-            {/* Results count */}
-            <p className="text-sm text-muted-foreground mb-4">
-              Tìm thấy <span className="font-semibold text-foreground">{filtered.length}</span> tài sản
-            </p>
-
-            {/* Listings grid */}
-            {filtered.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filtered.map((listing) => {
-                  const ca = (listing.custom_attributes || {}) as Record<string, any>;
-                  return (
-                    <AuctionCard
-                      key={listing.id}
-                      id={listing.id}
-                      imageUrl={listing.image_url}
-                      title={listing.title}
-                      address={formatAddress(listing.address) || "Chưa cập nhật"}
-                      startingPrice={listing.price}
-                      stepPrice={ca.bid_step ?? ca.step_price}
-                      depositAmount={ca.deposit_amount}
-                      auctionDate={ca.auction_date ?? ca.auction_time}
-                      registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
-                      sessionStatus={listing._sessionStatus}
-                      categorySlug={listing.property_type_slug}
-                      winPrice={ca.win_price ?? ca.winning_price}
-                      orgName={org.name}
-                      isSaved={savedIds.has(listing.id)}
-                      onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
-                      saveCount={saveCounts.get(listing.id) || 0}
-                      viewsCount={listing.views_count || 0}
+                {/* Search & Filter */}
+                <div className="flex gap-3 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Tìm kiếm tài sản..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
                     />
-                  );
-                })}
-              </div>
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[160px] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tất cả</SelectItem>
+                      <SelectItem value="registration_open">Mở đăng ký</SelectItem>
+                      <SelectItem value="upcoming">Sắp diễn ra</SelectItem>
+                      <SelectItem value="ongoing">Đang diễn ra</SelectItem>
+                      <SelectItem value="ended">Đã kết thúc</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-4">
+                  Tìm thấy <span className="font-semibold text-foreground">{filtered.length}</span> tài sản
+                </p>
+
+                {filtered.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filtered.map((listing) => {
+                      const ca = (listing.custom_attributes || {}) as Record<string, any>;
+                      return (
+                        <AuctionCard
+                          key={listing.id}
+                          id={listing.id}
+                          imageUrl={listing.image_url}
+                          title={listing.title}
+                          address={formatAddress(listing.address) || "Chưa cập nhật"}
+                          startingPrice={listing.price}
+                          stepPrice={ca.bid_step ?? ca.step_price}
+                          depositAmount={ca.deposit_amount}
+                          auctionDate={ca.auction_date ?? ca.auction_time}
+                          registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
+                          sessionStatus={listing._sessionStatus}
+                          categorySlug={listing.property_type_slug}
+                          winPrice={ca.win_price ?? ca.winning_price}
+                          orgName={org.name}
+                          isSaved={savedIds.has(listing.id)}
+                          onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
+                          saveCount={saveCounts.get(listing.id) || 0}
+                          viewsCount={listing.views_count || 0}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-card rounded-lg border border-border">
+                    <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Không tìm thấy tài sản</h3>
+                    <p className="text-muted-foreground">Thử điều chỉnh bộ lọc để tìm thấy kết quả</p>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="text-center py-12 bg-card rounded-lg border border-border">
-                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Không tìm thấy tài sản</h3>
-                <p className="text-muted-foreground">Thử điều chỉnh bộ lọc để tìm thấy kết quả</p>
-              </div>
+              /* LOCKED STATE — full company gate */
+              <Card className="p-6 md:p-10 text-center border-2 border-dashed border-primary/30 bg-primary/[0.02]">
+                <div className="mx-auto h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Lock className="h-7 w-7 text-primary" />
+                </div>
+                <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
+                  🔒 Hồ sơ đơn vị đấu giá
+                </h2>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+                  Xem toàn bộ danh sách tài sản và hiểu nhanh nguồn đấu giá trước khi quyết định.
+                </p>
+
+                {/* Teaser blurred grid */}
+                <div className="relative max-w-3xl mx-auto mb-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 select-none pointer-events-none blur-md opacity-60">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="aspect-[4/5] rounded-lg bg-muted" />
+                    ))}
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto mb-6 text-left">
+                  {[
+                    { label: "7 ngày", desc: "Xem toàn bộ danh sách tài sản" },
+                    { label: "30 ngày", desc: "Hiểu nhanh nguồn — nhóm theo khu vực & giá" },
+                    { label: "1 năm", desc: "Theo dõi nguồn đấu giá dài hạn" },
+                  ].map((t) => (
+                    <div key={t.label} className="rounded-lg border border-border bg-card p-3">
+                      <p className="text-sm font-bold text-foreground mb-1">{t.label}</p>
+                      <p className="text-xs text-muted-foreground leading-snug">{t.desc}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <Button size="lg" onClick={() => openCompanyPaywall(id!)}>
+                  Xem các gói mở khóa
+                </Button>
+
+                <p className="text-xs text-muted-foreground mt-4 max-w-md mx-auto">
+                  Dữ liệu sẽ được cập nhật và phân tích sâu hơn trong thời gian tới.
+                </p>
+              </Card>
             )}
           </>
         ) : (

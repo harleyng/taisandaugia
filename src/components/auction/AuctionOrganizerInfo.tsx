@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Building2, ChevronRight, BarChart3 } from "lucide-react";
+import { Building2, ChevronRight, BarChart3, MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
@@ -111,7 +111,12 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
                 {auctionOrgId && stats && stats.total > 0 && orgAddress && (
                   <span aria-hidden="true">•</span>
                 )}
-                {orgAddress && <span className="line-clamp-1">{orgAddress}</span>}
+                {orgAddress && (
+                  <span className="inline-flex items-center gap-1 line-clamp-1">
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    <span className="line-clamp-1">{orgAddress}</span>
+                  </span>
+                )}
               </div>
             </div>
             {isClickable && (

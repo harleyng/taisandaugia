@@ -64,83 +64,84 @@ export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => 
     ? guardedNavigate(`/auction-org/${auctionOrgId}`)
     : undefined;
 
+  const contactLine = [orgPhone, orgEmail].filter(Boolean).join("  -  ");
+  const locationText = auctionLocation || orgAddress;
+
   return (
-    <Card
-      onClick={handleClick}
-      className={`p-5 space-y-4 ${
-        isClickable
-          ? "cursor-pointer transition-all hover:border-primary/40 hover:shadow-md"
-          : ""
-      }`}
-    >
+    <Card className="p-5 space-y-4">
       <div className="flex items-center gap-2">
         <Building2 className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-bold text-foreground">Đơn vị tổ chức đấu giá</h3>
       </div>
 
-      {/* Logo + Name + Description + Stats */}
+      {/* Highlighted org sub-card (clickable) */}
       {orgName && (
-        <div className="flex items-start gap-3">
-          <img
-            src={orgLogo}
-            alt={orgName}
-            loading="lazy"
-            width={56}
-            height={56}
-            className="w-14 h-14 rounded-lg object-contain bg-muted/30 border border-border shrink-0"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold text-foreground leading-snug">{orgName}</p>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs text-muted-foreground">
-              <span>Hoạt động từ {operatingSince}</span>
-              {auctionOrgId && stats && stats.total > 0 && (
-                <>
-                  <span aria-hidden="true">•</span>
+        <div
+          onClick={handleClick}
+          role={isClickable ? "button" : undefined}
+          tabIndex={isClickable ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (isClickable && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              handleClick?.(e as any);
+            }
+          }}
+          className={`rounded-lg border border-secondary/40 bg-secondary/30 p-4 ${
+            isClickable
+              ? "cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 hover:shadow-md"
+              : ""
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <img
+              src={orgLogo}
+              alt={orgName}
+              loading="lazy"
+              width={56}
+              height={56}
+              className="w-14 h-14 rounded-lg object-contain bg-background border border-border shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-semibold text-foreground leading-snug">{orgName}</p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+                {auctionOrgId && stats && stats.total > 0 && (
                   <span className="inline-flex items-center gap-1">
                     <BarChart3 className="w-3.5 h-3.5 text-primary" />
                     <span className="font-semibold text-foreground">{stats.total}</span> phiên đấu giá
                   </span>
-                </>
-              )}
+                )}
+                {auctionOrgId && stats && stats.total > 0 && orgAddress && (
+                  <span aria-hidden="true">•</span>
+                )}
+                {orgAddress && <span className="line-clamp-1">{orgAddress}</span>}
+              </div>
             </div>
           </div>
+
+          {isClickable && (
+            <div className="mt-3 flex items-center gap-1 text-sm font-medium text-primary group">
+              <span className="group-hover:underline">Xem lịch sử đấu giá</span>
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          )}
         </div>
       )}
 
-      {/* Contact + location */}
-      <div className="space-y-2">
-        {(orgPhone || orgEmail) && (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-foreground">
-            {orgPhone && (
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span>{orgPhone}</span>
-              </div>
-            )}
-            {orgPhone && orgEmail && (
-              <span aria-hidden="true" className="text-muted-foreground">•</span>
-            )}
-            {orgEmail && (
-              <div className="flex items-center gap-2 min-w-0">
-                <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="truncate">{orgEmail}</span>
-              </div>
-            )}
-          </div>
-        )}
-        {(auctionLocation || orgAddress) && (
-          <div className="flex items-start gap-2 text-sm text-foreground">
-            <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-            <span>{auctionLocation || orgAddress}</span>
-          </div>
-        )}
-      </div>
-
-      {/* CTA as text link */}
-      {isClickable && (
-        <div className="pt-1 flex items-center gap-1 text-sm font-medium text-primary group">
-          <span className="group-hover:underline">Xem lịch sử đấu giá</span>
-          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+      {/* Contact info & auction location — key/value layout */}
+      {(contactLine || locationText) && (
+        <div className="space-y-3 text-sm">
+          {contactLine && (
+            <div className="flex gap-3">
+              <span className="text-muted-foreground shrink-0 w-28">Thông tin liên hệ:</span>
+              <span className="text-foreground">{contactLine}</span>
+            </div>
+          )}
+          {locationText && (
+            <div className="flex gap-3">
+              <span className="text-muted-foreground shrink-0 w-28">Địa điểm đấu giá:</span>
+              <span className="text-foreground">{locationText}</span>
+            </div>
+          )}
         </div>
       )}
     </Card>

@@ -171,15 +171,30 @@ const CompanyDetail = () => {
                     </p>
                   )}
                   <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                    {org.phone && (
-                      <a href={`tel:${org.phone}`} className="inline-flex items-center gap-1 hover:text-primary transition-colors">
-                        <Phone className="w-3.5 h-3.5" /> {org.phone}
-                      </a>
-                    )}
-                    {org.email && (
-                      <a href={`mailto:${org.email}`} className="inline-flex items-center gap-1 hover:text-primary transition-colors">
-                        <Mail className="w-3.5 h-3.5" /> {org.email}
-                      </a>
+                    {(org.phone || org.email) && (
+                      isCompanyUnlocked ? (
+                        <>
+                          {org.phone && (
+                            <a href={`tel:${org.phone}`} className="inline-flex items-center gap-1 hover:text-primary transition-colors">
+                              <Phone className="w-3.5 h-3.5" /> {org.phone}
+                            </a>
+                          )}
+                          {org.email && (
+                            <a href={`mailto:${org.email}`} className="inline-flex items-center gap-1 hover:text-primary transition-colors">
+                              <Mail className="w-3.5 h-3.5" /> {org.email}
+                            </a>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openCompanyPaywall(id!)}
+                          className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          Liên hệ – mở khóa hồ sơ
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

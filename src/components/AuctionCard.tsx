@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Heart, Eye } from "lucide-react";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatPrice, formatDate } from "@/utils/formatters";
+import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
 
 export type AuctionSessionStatus = "registration_open" | "upcoming" | "ongoing" | "ended";
 

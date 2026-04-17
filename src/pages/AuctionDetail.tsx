@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import { formatAddress } from "@/utils/formatters";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
+import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -29,6 +30,10 @@ const AuctionDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(true);
   const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
+  const guardedNavigate = useAuthGuardedNavigate();
+  const ownerClick = listing?.asset_owner_id
+    ? guardedNavigate(`/asset-owner/${listing.asset_owner_id}`)
+    : undefined;
 
   useEffect(() => {
     const fetchListing = async () => {

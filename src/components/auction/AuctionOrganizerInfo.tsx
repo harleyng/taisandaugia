@@ -7,9 +7,11 @@ import logoAuctionOrg from "@/assets/logo-auction-org.png";
 
 interface AuctionOrganizerInfoProps {
   listing: any;
+  isUnlocked?: boolean;
+  onLockedClick?: () => void;
 }
 
-export const AuctionOrganizerInfo = ({ listing }: AuctionOrganizerInfoProps) => {
+export const AuctionOrganizerInfo = ({ listing, isUnlocked = true, onLockedClick }: AuctionOrganizerInfoProps) => {
   const guardedNavigate = useAuthGuardedNavigate();
   const ca = listing.custom_attributes || {};
   const auctionOrgId = listing.auction_org_id;

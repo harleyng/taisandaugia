@@ -11,12 +11,15 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, ChevronRight, Search, Gavel, Trophy, Percent, Phone, Mail, MapPin } from "lucide-react";
+import { Building2, ChevronRight, Search, Gavel, Trophy, Percent, Phone, Mail, MapPin, Lock, Sparkles } from "lucide-react";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { formatAddress } from "@/utils/formatters";
+import { useCredits } from "@/hooks/useCredits";
+import { usePaywall } from "@/contexts/PaywallContext";
+import { LockedBlur } from "@/components/paywall/LockedBlur";
 
 const CompanyDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +28,10 @@ const CompanyDetail = () => {
   const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { companyAccess } = useCredits();
+  const { openCompanyPaywall } = usePaywall();
+  const access = id ? companyAccess(id) : { isUnlocked: false, tier: null, expiresAt: null };
+  const isCompanyUnlocked = access.isUnlocked;
 
   const { data: org, isLoading: orgLoading } = useQuery({
     queryKey: ["auction-org", id],

@@ -2,10 +2,12 @@ import { createContext, useCallback, useContext, useState, ReactNode } from "rea
 import { useLocation } from "react-router-dom";
 import { AssetPaywallDialog } from "@/components/paywall/AssetPaywallDialog";
 import { CompanyPaywallDialog } from "@/components/paywall/CompanyPaywallDialog";
+import { OwnerPaywallDialog } from "@/components/paywall/OwnerPaywallDialog";
 
 interface PaywallContextValue {
   openAssetPaywall: (listingId: string, label?: string) => void;
   openCompanyPaywall: (orgId: string, label?: string) => void;
+  openOwnerPaywall: (ownerId: string, label?: string) => void;
 }
 
 const PaywallContext = createContext<PaywallContextValue | null>(null);
@@ -16,8 +18,11 @@ export const PaywallProvider = ({ children }: { children: ReactNode }) => {
   const [assetLabel, setAssetLabel] = useState<string | undefined>(undefined);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgLabel, setOrgLabel] = useState<string | undefined>(undefined);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [ownerLabel, setOwnerLabel] = useState<string | undefined>(undefined);
   const [assetOpen, setAssetOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
+  const [ownerOpen, setOwnerOpen] = useState(false);
 
   const openAssetPaywall = useCallback((id: string, label?: string) => {
     setAssetId(id);
@@ -31,10 +36,16 @@ export const PaywallProvider = ({ children }: { children: ReactNode }) => {
     setCompanyOpen(true);
   }, []);
 
+  const openOwnerPaywall = useCallback((id: string, label?: string) => {
+    setOwnerId(id);
+    setOwnerLabel(label);
+    setOwnerOpen(true);
+  }, []);
+
   const returnPath = `${location.pathname}${location.search}`;
 
   return (
-    <PaywallContext.Provider value={{ openAssetPaywall, openCompanyPaywall }}>
+    <PaywallContext.Provider value={{ openAssetPaywall, openCompanyPaywall, openOwnerPaywall }}>
       {children}
       <AssetPaywallDialog
         open={assetOpen}
@@ -48,6 +59,13 @@ export const PaywallProvider = ({ children }: { children: ReactNode }) => {
         onOpenChange={setCompanyOpen}
         orgId={orgId}
         orgLabel={orgLabel}
+        returnPath={returnPath}
+      />
+      <OwnerPaywallDialog
+        open={ownerOpen}
+        onOpenChange={setOwnerOpen}
+        ownerId={ownerId}
+        ownerLabel={ownerLabel}
         returnPath={returnPath}
       />
     </PaywallContext.Provider>

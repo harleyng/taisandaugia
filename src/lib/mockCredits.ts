@@ -35,6 +35,14 @@ export const COMPANY_TIERS: { key: CompanyTierKey; days: number; cost: number; l
   { key: "1y", days: 365, cost: 1990, label: "1 năm", valueText: "Theo dõi nguồn đấu giá dài hạn, truy cập liên tục" },
 ];
 
+export type OwnerTierKey = "7d" | "30d" | "1y";
+
+export const OWNER_TIERS: { key: OwnerTierKey; days: number; cost: number; label: string; valueText: string }[] = [
+  { key: "7d", days: 7, cost: 49, label: "7 ngày", valueText: "Xem toàn bộ danh sách tài sản của chủ" },
+  { key: "30d", days: 30, cost: 149, label: "30 ngày", valueText: "Theo dõi danh sách & lịch sử đấu giá của chủ tài sản" },
+  { key: "1y", days: 365, cost: 995, label: "1 năm", valueText: "Theo dõi dài hạn, không bỏ lỡ tài sản mới" },
+];
+
 export type CreditPackageKey = "starter" | "popular" | "value" | "pro" | "max";
 
 export const CREDIT_PACKAGES: { key: CreditPackageKey; name: string; priceVnd: number; baseCredits: number; credits: number; popular?: boolean; best?: boolean }[] = [
@@ -50,7 +58,12 @@ interface CompanyUnlock {
   expiresAt: number; // epoch ms
 }
 
-export type TransactionType = "purchase" | "unlock_asset" | "unlock_company";
+interface OwnerUnlock {
+  tier: OwnerTierKey;
+  expiresAt: number; // epoch ms
+}
+
+export type TransactionType = "purchase" | "unlock_asset" | "unlock_company" | "unlock_owner";
 
 export interface Transaction {
   id: string;
@@ -64,6 +77,7 @@ interface MockState {
   balance: number;
   assetUnlocks: string[];
   companyUnlocks: Record<string, CompanyUnlock>;
+  ownerUnlocks: Record<string, OwnerUnlock>;
   transactions: Transaction[];
 }
 
@@ -71,6 +85,7 @@ const defaultState: MockState = {
   balance: 0,
   assetUnlocks: [],
   companyUnlocks: {},
+  ownerUnlocks: {},
   transactions: [],
 };
 
@@ -205,6 +220,41 @@ export const unlockCompany = (orgId: string, tierKey: CompanyTierKey, label?: st
   pushTx(s, {
     type: "unlock_company",
     description: `Theo dõi công ty ${label ?? orgId} ${tier.label}`,
+    creditDelta: -tier.cost,
+  });
+  write(s);
+  return { ok: true };
+};
+
+export interface OwnerAccess {
+  isUnlocked: boolean;
+  tier: OwnerTierKey | null;
+  expiresAt: number | null;
+}
+
+export const getOwnerAccess = (ownerId: string): OwnerAccess => {
+  const s = read();
+  const u = s.ownerUnlocks?.[ownerId];
+  if (!u) return { isUnlocked: false, tier: null, expiresAt: null };
+  if (u.expiresAt < Date.now()) return { isUnlocked: false, tier: null, expiresAt: u.expiresAt };
+  return { isUnlocked: true, tier: u.tier, expiresAt: u.expiresAt };
+};
+
+export const unlockOwner = (ownerId: string, tierKey: OwnerTierKey, label?: string): { ok: boolean; reason?: "insufficient" } => {
+  const tier = OWNER_TIERS.find((t) => t.key === tierKey)!;
+  const s = read();
+  if (s.balance < tier.cost) return { ok: false, reason: "insufficient" };
+  s.balance -= tier.cost;
+  if (!s.ownerUnlocks) s.ownerUnlocks = {};
+  const existing = s.ownerUnlocks[ownerId];
+  const base = existing && existing.expiresAt > Date.now() ? existing.expiresAt : Date.now();
+  s.ownerUnlocks[ownerId] = {
+    tier: tierKey,
+    expiresAt: base + tier.days * 24 * 60 * 60 * 1000,
+  };
+  pushTx(s, {
+    type: "unlock_owner",
+    description: `Theo dõi chủ tài sản ${label ?? ownerId} ${tier.label}`,
     creditDelta: -tier.cost,
   });
   write(s);

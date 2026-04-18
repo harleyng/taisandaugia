@@ -74,7 +74,7 @@ export const CreditsTab = () => {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {CREDIT_PACKAGES.map((pkg) => {
           const isPopular = pkg.popular;
           const isBest = pkg.best;

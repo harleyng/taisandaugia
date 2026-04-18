@@ -297,28 +297,30 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
               type="monotone"
               dataKey="high"
               name="Giá cao nhất"
-              stroke="hsl(265 60% 75%)"
-              strokeWidth={2}
+              stroke="hsl(265 45% 78%)"
+              strokeWidth={1.5}
+              strokeOpacity={0.7}
               dot={false}
-              activeDot={{ r: 4 }}
+              activeDot={{ r: 3 }}
             />
             <Line
               type="monotone"
               dataKey="popular"
-              name="Giá phổ biến nhất"
-              stroke="hsl(180 50% 45%)"
-              strokeWidth={2.5}
-              dot={{ r: 2 }}
-              activeDot={{ r: 5 }}
+              name="Giá phổ biến nhất (trung vị)"
+              stroke="hsl(217 91% 55%)"
+              strokeWidth={3}
+              dot={false}
+              activeDot={{ r: 5, fill: "hsl(217 91% 55%)", stroke: "hsl(var(--background))", strokeWidth: 2 }}
             />
             <Line
               type="monotone"
               dataKey="low"
               name="Giá thấp nhất"
-              stroke="hsl(38 90% 60%)"
-              strokeWidth={2}
+              stroke="hsl(28 50% 70%)"
+              strokeWidth={1.5}
+              strokeOpacity={0.7}
               dot={false}
-              activeDot={{ r: 4 }}
+              activeDot={{ r: 3 }}
             />
             {pricePerSqm > 0 && last && (
               <ReferenceDot

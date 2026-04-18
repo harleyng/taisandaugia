@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Loader2, ShieldCheck, ChevronRight, Star, Gift } from "lucide-react";
+import { Coins, Loader2, ShieldCheck, ChevronRight, Star } from "lucide-react";
 import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -62,7 +62,9 @@ export const CreditsTab = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-foreground">Mua credit</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">Chọn gói phù hợp để mở khóa thông tin tài sản và hồ sơ đơn vị.</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Mở khóa thông tin để hiểu rõ thị trường và đấu giá thông minh
+            </p>
           </div>
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm">
             <span className="text-muted-foreground">Số dư</span>
@@ -74,7 +76,7 @@ export const CreditsTab = () => {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
         {CREDIT_PACKAGES.map((pkg) => {
           const isPopular = pkg.popular;
           const isBest = pkg.best;
@@ -87,8 +89,8 @@ export const CreditsTab = () => {
                 isBest
                   ? "border-2 border-amber-500 shadow-lg bg-gradient-to-b from-amber-50/40 to-transparent dark:from-amber-500/10"
                   : isPopular
-                  ? "border-2 border-primary shadow-lg"
-                  : "border-border"
+                    ? "border-2 border-primary shadow-lg"
+                    : "border-border",
               )}
             >
               {isPopular && (
@@ -114,16 +116,10 @@ export const CreditsTab = () => {
               </div>
               <h3 className="text-lg font-bold text-foreground">{pkg.name}</h3>
               <p className="text-2xl font-extrabold text-foreground mt-1">{formatVnd(pkg.priceVnd)}</p>
-              <p className="text-sm text-muted-foreground mt-1 inline-flex items-center gap-1">
+              <p className="text-sm text-muted-foreground mt-0.5 inline-flex items-center gap-1">
                 <Coins className="h-3.5 w-3.5 text-primary" />
-                <span>{pkg.baseCredits.toLocaleString("vi-VN")} credit</span>
+                {pkg.credits} credit
               </p>
-              {pkg.credits > pkg.baseCredits && (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:text-green-400">
-                  <Gift className="h-3 w-3" />
-                  +{(pkg.credits - pkg.baseCredits).toLocaleString("vi-VN")} credit bonus
-                </span>
-              )}
               <Button
                 className={cn("w-full mt-4", isBest && "bg-amber-500 hover:bg-amber-600 text-white")}
                 variant={isPopular || isBest ? "default" : "outline"}
@@ -163,43 +159,43 @@ export const CreditsTab = () => {
             <p className="text-xs opacity-90 mt-1">Cổng thanh toán điện tử</p>
           </div>
           <div className="p-5 space-y-4">
-            {pendingKey && (() => {
-              const pkg = CREDIT_PACKAGES.find((p) => p.key === pendingKey)!;
-              return (
-                <>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Sản phẩm</span>
-                      <span className="font-medium text-foreground">Gói {pkg.name}</span>
+            {pendingKey &&
+              (() => {
+                const pkg = CREDIT_PACKAGES.find((p) => p.key === pendingKey)!;
+                return (
+                  <>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Sản phẩm</span>
+                        <span className="font-medium text-foreground">
+                          Gói {pkg.name} ({pkg.credits} credit)
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Số tiền</span>
+                        <span className="font-bold text-foreground">{pkg.priceVnd.toLocaleString("vi-VN")} ₫</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Phương thức</span>
+                        <span className="font-medium text-foreground">Thẻ ATM / QR</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Bạn sẽ nhận</span>
-                      <span className="font-medium text-foreground text-right">
-                        {pkg.baseCredits.toLocaleString("vi-VN")}
-                        {pkg.credits > pkg.baseCredits && (
-                          <span className="text-green-600 dark:text-green-400"> + {(pkg.credits - pkg.baseCredits).toLocaleString("vi-VN")} tặng</span>
-                        )}
-                        {" "}= {pkg.credits.toLocaleString("vi-VN")} credit
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Số tiền</span>
-                      <span className="font-bold text-foreground">{pkg.priceVnd.toLocaleString("vi-VN")} ₫</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Phương thức</span>
-                      <span className="font-medium text-foreground">Thẻ ATM / QR</span>
-                    </div>
-                  </div>
-                  <Button onClick={confirmVnpayPay} className="w-full" size="lg">
-                    {paying ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Đang xử lý...</> : "Thanh toán"}
-                  </Button>
-                  <p className="text-[11px] text-muted-foreground text-center">
-                    Đây là môi trường mô phỏng — không có giao dịch thật.
-                  </p>
-                </>
-              );
-            })()}
+                    <Button onClick={confirmVnpayPay} className="w-full" size="lg">
+                      {paying ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Đang xử lý...
+                        </>
+                      ) : (
+                        "Thanh toán"
+                      )}
+                    </Button>
+                    <p className="text-[11px] text-muted-foreground text-center">
+                      Đây là môi trường mô phỏng — không có giao dịch thật.
+                    </p>
+                  </>
+                );
+              })()}
           </div>
         </DialogContent>
       </Dialog>

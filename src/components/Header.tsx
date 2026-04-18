@@ -45,6 +45,8 @@ export const Header = () => {
 
   const { toast } = useToast();
   const [session, setSession] = useState<Session | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { balance } = useCredits();
 
   useEffect(() => {
@@ -54,6 +56,27 @@ export const Header = () => {
     } = supabase.auth.onAuthStateChange((_, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setProfileName(null);
+      setAvatarUrl(null);
+      return;
+    }
+    supabase
+      .from("profiles")
+      .select("name, agent_info")
+      .eq("id", session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setProfileName(data?.name ?? null);
+        const agentInfo = (data?.agent_info as any) || {};
+        setAvatarUrl(agentInfo?.profile_picture_url || null);
+      });
+  }, [session]);
+
+  const displayName = resolveDisplayName(profileName, session?.user.id);
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

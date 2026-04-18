@@ -317,13 +317,13 @@ export function AuctionCard({
             </span>
           </div>
 
-          {orgName && (
-            <div className="flex items-center gap-2 pt-3 border-t border-border">
-              {orgId ? (
+          <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
+            {orgName ? (
+              orgId ? (
                 <button
                   type="button"
                   onClick={orgClick}
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left min-w-0"
                 >
                   <img
                     src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
@@ -333,17 +333,20 @@ export function AuctionCard({
                   <span className="text-xs font-medium text-muted-foreground line-clamp-1 hover:text-primary transition-colors">{orgName}</span>
                 </button>
               ) : (
-                <>
+                <div className="flex items-center gap-2 min-w-0">
                   <img
                     src={`https://ui-avatars.com/api/?name=${orgInitialsDefault}&background=1e40af&color=fff&size=48&bold=true`}
                     alt={orgName}
                     className="h-5 w-5 rounded-full flex-shrink-0"
                   />
                   <span className="text-xs font-medium text-muted-foreground line-clamp-1">{orgName}</span>
-                </>
-              )}
-            </div>
-          )}
+                </div>
+              )
+            ) : <div />}
+            <span className="inline-flex items-center justify-center h-8 text-xs px-3 rounded-md border border-border font-medium shrink-0">
+              CHI TIẾT
+            </span>
+          </div>
         </div>
       </div>
     </Link>

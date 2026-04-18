@@ -75,21 +75,32 @@ const BuyCredits = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {CREDIT_PACKAGES.map((pkg) => {
               const isPopular = pkg.popular;
+              const isBest = pkg.best;
               const isPaying = paying === pkg.key;
               return (
                 <Card
                   key={pkg.key}
                   className={cn(
                     "relative p-5 flex flex-col items-center text-center transition-all",
-                    isPopular ? "border-2 border-primary shadow-lg" : "border-border"
+                    isBest
+                      ? "border-2 border-amber-500 shadow-lg bg-gradient-to-b from-amber-50/40 to-transparent dark:from-amber-500/10"
+                      : isPopular
+                      ? "border-2 border-primary shadow-lg"
+                      : "border-border"
                   )}
                 >
                   {isPopular && (
                     <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
                       Phổ biến
+                    </Badge>
+                  )}
+                  {isBest && (
+                    <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-500 text-white hover:bg-amber-500 inline-flex items-center gap-1">
+                      <Star className="h-3 w-3 fill-current" />
+                      Tốt nhất
                     </Badge>
                   )}
                   <div className="w-32 h-32 mb-3 flex items-center justify-center">
@@ -109,8 +120,8 @@ const BuyCredits = () => {
                     {pkg.credits} credit
                   </p>
                   <Button
-                    className="w-full mt-4"
-                    variant={isPopular ? "default" : "outline"}
+                    className={cn("w-full mt-4", isBest && "bg-amber-500 hover:bg-amber-600 text-white")}
+                    variant={isPopular || isBest ? "default" : "outline"}
                     onClick={() => handleBuy(pkg.key)}
                     disabled={!!paying}
                   >

@@ -14,6 +14,7 @@ interface AuctionQuickInfoProps {
   customAttributes: Record<string, any>;
   listing: any;
   saveCount?: number;
+  title?: string;
 }
 
 const statusConfig = {
@@ -48,7 +49,7 @@ function useCountdown(targetDate: string | null) {
   return timeLeft;
 }
 
-export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing, saveCount }: AuctionQuickInfoProps) => {
+export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing, saveCount, title }: AuctionQuickInfoProps) => {
   const status = getSessionStatus(listing);
   const { openAuthDialog } = useAuthDialog();
   const config = statusConfig[status];
@@ -80,6 +81,12 @@ export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing, s
           )}
         </div>
       </div>
+
+      {title && (
+        <h1 className="text-lg md:text-xl font-bold text-foreground leading-snug">
+          {title}
+        </h1>
+      )}
 
       {/* Giá khởi điểm */}
       <div>

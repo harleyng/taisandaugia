@@ -26,15 +26,26 @@ const RANGES: { key: RangeKey; label: string; months: number }[] = [
   { key: "5y", label: "5 năm", months: 60 },
 ];
 
-// Bất động sản slugs
+// Bất động sản slugs (chấp nhận thêm slug có prefix đất/nhà...)
 const REAL_ESTATE_SLUGS = new Set([
   "dat-o",
+  "dat-nen",
   "dat-nong-nghiep",
   "nha-pho",
+  "nha-rieng",
   "can-ho",
+  "chung-cu",
   "nha-xuong",
   "shophouse",
+  "biet-thu",
+  "lien-ke",
 ]);
+
+function isRealEstateSlug(slug?: string | null) {
+  if (!slug) return false;
+  if (REAL_ESTATE_SLUGS.has(slug)) return true;
+  return /^(dat|nha|can-ho|chung-cu|biet-thu|shophouse|lien-ke)/.test(slug);
+}
 
 // Deterministic pseudo-random based on string seed
 function seeded(seed: string) {
@@ -85,7 +96,7 @@ function generateSeries(seed: string, months: number, currentPrice: number) {
 export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
   const [range, setRange] = useState<RangeKey>("1y");
 
-  const isRealEstate = REAL_ESTATE_SLUGS.has(listing.property_type_slug);
+  const isRealEstate = isRealEstateSlug(listing.property_type_slug);
 
   const months = RANGES.find((r) => r.key === range)!.months;
   const pricePerSqm = listing.area > 0 ? listing.price / listing.area / 1_000_000 : 0; // tr/m²

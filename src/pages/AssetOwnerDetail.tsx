@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,8 @@ import { formatAddress } from "@/utils/formatters";
 
 const AssetOwnerDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const fromListing = (location.state as { fromListing?: { id: string; title: string } } | null)?.fromListing;
   const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -93,11 +95,23 @@ const AssetOwnerDetail = () => {
 
       <main className="container px-4 py-6 flex-1">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
+        <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6 flex-wrap">
           <Link to="/" className="hover:text-foreground transition-colors">Trang chủ</Link>
           <ChevronRight className="w-3.5 h-3.5" />
           <Link to="/listings" className="hover:text-foreground transition-colors">Danh sách</Link>
           <ChevronRight className="w-3.5 h-3.5" />
+          {fromListing && (
+            <>
+              <Link
+                to={`/auctions/${fromListing.id}`}
+                className="hover:text-foreground transition-colors truncate max-w-[280px]"
+                title={fromListing.title}
+              >
+                {fromListing.title}
+              </Link>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </>
+          )}
           <span className="text-foreground font-medium truncate max-w-[250px]">
             {owner?.name || "Chủ tài sản"}
           </span>

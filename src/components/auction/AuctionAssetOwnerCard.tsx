@@ -7,10 +7,13 @@ import { User, MapPin, Gavel, ChevronRight } from "lucide-react";
 
 interface AuctionAssetOwnerCardProps {
   ownerId: string;
+  fromListing?: { id: string; title: string };
 }
 
-export const AuctionAssetOwnerCard = ({ ownerId }: AuctionAssetOwnerCardProps) => {
+export const AuctionAssetOwnerCard = ({ ownerId, fromListing }: AuctionAssetOwnerCardProps) => {
   const navigate = useNavigate();
+  const goToOwner = () =>
+    navigate(`/asset-owner/${ownerId}`, { state: fromListing ? { fromListing } : undefined });
 
   const { data, isLoading } = useQuery({
     queryKey: ["asset-owner-card", ownerId],
@@ -45,11 +48,11 @@ export const AuctionAssetOwnerCard = ({ ownerId }: AuctionAssetOwnerCardProps) =
     <Card
       role="button"
       tabIndex={0}
-      onClick={() => navigate(`/asset-owner/${owner.id}`)}
+      onClick={goToOwner}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          navigate(`/asset-owner/${owner.id}`);
+          goToOwner();
         }
       }}
       className="p-5 cursor-pointer transition-all hover:shadow-md hover:border-primary/40 group"

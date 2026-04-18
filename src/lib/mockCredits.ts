@@ -14,12 +14,12 @@ export const COMPANY_TIERS: { key: CompanyTierKey; days: number; cost: number; l
 
 export type CreditPackageKey = "starter" | "popular" | "value" | "pro" | "max";
 
-export const CREDIT_PACKAGES: { key: CreditPackageKey; name: string; priceVnd: number; credits: number; popular?: boolean; best?: boolean }[] = [
-  { key: "starter", name: "Starter", priceVnd: 69_000, credits: 69 },
-  { key: "popular", name: "Popular", priceVnd: 179_000, credits: 190, popular: true },
-  { key: "value", name: "Value", priceVnd: 299_000, credits: 330 },
-  { key: "pro", name: "Pro", priceVnd: 499_000, credits: 600 },
-  { key: "max", name: "Max", priceVnd: 1_999_000, credits: 2600, best: true },
+export const CREDIT_PACKAGES: { key: CreditPackageKey; name: string; priceVnd: number; baseCredits: number; credits: number; popular?: boolean; best?: boolean }[] = [
+  { key: "starter", name: "Starter", priceVnd: 69_000, baseCredits: 69, credits: 69 },
+  { key: "popular", name: "Popular", priceVnd: 179_000, baseCredits: 179, credits: 190, popular: true },
+  { key: "value", name: "Value", priceVnd: 299_000, baseCredits: 299, credits: 330 },
+  { key: "pro", name: "Pro", priceVnd: 499_000, baseCredits: 499, credits: 600 },
+  { key: "max", name: "Max", priceVnd: 1_999_000, baseCredits: 1999, credits: 2600, best: true },
 ];
 
 interface CompanyUnlock {

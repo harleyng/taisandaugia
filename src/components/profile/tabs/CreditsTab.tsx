@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Loader2, ShieldCheck, ChevronRight, Star } from "lucide-react";
+import { Coins, Loader2, ShieldCheck, ChevronRight, Star, Gift } from "lucide-react";
 import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";

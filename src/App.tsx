@@ -47,9 +47,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
 
             {/* Protected: Saved Assets & Profile */}
-            <Route path="/saved-assets" element={<ProtectedRoute />}>
-              <Route index element={<SavedAssetsPage />} />
-            </Route>
+            <Route path="/saved-assets" element={<Navigate to="/profile?tab=saved" replace />} />
             <Route path="/profile" element={<ProtectedRoute />}>
               <Route index element={<ProfilePage />} />
             </Route>

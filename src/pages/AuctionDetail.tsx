@@ -33,8 +33,9 @@ import { AuctionPriceRow } from "@/components/auction/AuctionPriceRow";
 import { AuctionOrganizerInfo } from "@/components/auction/AuctionOrganizerInfo";
 import { AuctionScheduleInfo } from "@/components/auction/AuctionScheduleInfo";
 import { AuctionAttachments } from "@/components/auction/AuctionAttachments";
-import { AuctionSimilarAssets } from "@/components/auction/AuctionSimilarAssets";
 import { AuctionAssetOwnerCard } from "@/components/auction/AuctionAssetOwnerCard";
+import { AuctionPriceHistory } from "@/components/auction/AuctionPriceHistory";
+import { AuctionSimilarAssets } from "@/components/auction/AuctionSimilarAssets";
 import { Link } from "react-router-dom";
 import { formatAddress } from "@/utils/formatters";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -315,6 +316,9 @@ const AuctionDetail = () => {
 
             {/* 5. Attachments */}
             <AuctionAttachments listing={listing} />
+
+            {/* 6. Price history (Bất động sản only) */}
+            <AuctionPriceHistory listing={listing} />
 
             {/* 7. Sources */}
             {sourceUrls.length > 0 && (

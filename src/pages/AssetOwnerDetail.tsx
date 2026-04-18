@@ -19,6 +19,8 @@ import { formatAddress } from "@/utils/formatters";
 
 const AssetOwnerDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const fromListing = (location.state as { fromListing?: { id: string; title: string } } | null)?.fromListing;
   const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");

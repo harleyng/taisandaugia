@@ -15,6 +15,7 @@ import { AuctionOrganizerInfo } from "@/components/auction/AuctionOrganizerInfo"
 import { AuctionScheduleInfo } from "@/components/auction/AuctionScheduleInfo";
 import { AuctionAttachments } from "@/components/auction/AuctionAttachments";
 import { AuctionSimilarAssets } from "@/components/auction/AuctionSimilarAssets";
+import { AuctionAssetOwnerCard } from "@/components/auction/AuctionAssetOwnerCard";
 import { Link } from "react-router-dom";
 import { formatAddress } from "@/utils/formatters";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -212,21 +213,14 @@ const AuctionDetail = () => {
                     )}
                   </div>
 
-                  {/* Asset owner */}
-                  {(ca.asset_owner_name || ca.asset_owner_address) && (
-                    <>
-                      <div className="h-px bg-border" />
-                      <p className="text-sm text-muted-foreground">
-                        <span>Chủ tài sản:</span>{" "}
-                        <span className="text-foreground font-medium">
-                          {[ca.asset_owner_name, ca.asset_owner_address].filter(Boolean).join(" - ")}
-                        </span>
-                      </p>
-                    </>
-                  )}
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+
+            {/* 2b. Chủ tài sản (clickable card) */}
+            {listing.asset_owner_id && (
+              <AuctionAssetOwnerCard ownerId={listing.asset_owner_id} />
+            )}
 
             {/* 3. Organizer */}
             <AuctionOrganizerInfo listing={listing} isUnlocked={true} />

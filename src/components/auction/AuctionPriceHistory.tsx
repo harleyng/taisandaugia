@@ -176,14 +176,14 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
           <div className="p-4">
             <div className="flex items-center gap-2">
               <span
-                className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  isUp ? "bg-emerald-500" : "bg-rose-500"
+                className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                  isUp ? "bg-emerald-100" : "bg-rose-100"
                 }`}
               >
                 {isUp ? (
-                  <ArrowUp className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                  <ArrowUp className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
                 ) : (
-                  <ArrowDown className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                  <ArrowDown className="w-4 h-4 text-rose-600" strokeWidth={2.5} />
                 )}
               </span>
               <p className="text-2xl font-bold text-foreground">
@@ -200,12 +200,12 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
           <div className="p-4">
             <div className="flex items-center gap-2">
               {atPeak ? (
-                <span className="w-6 h-6 rounded-full flex items-center justify-center bg-emerald-500">
-                  <ArrowUp className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                <span className="w-7 h-7 rounded-full flex items-center justify-center bg-emerald-100">
+                  <ArrowUp className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
                 </span>
               ) : (
-                <span className="w-6 h-6 rounded-full flex items-center justify-center bg-rose-500">
-                  <ArrowDown className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                <span className="w-7 h-7 rounded-full flex items-center justify-center bg-rose-100">
+                  <ArrowDown className="w-4 h-4 text-rose-600" strokeWidth={2.5} />
                 </span>
               )}
               <p className="text-2xl font-bold text-foreground">

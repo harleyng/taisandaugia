@@ -164,12 +164,9 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
           {/* KPI 1 — Giá trúng phổ biến gần nhất */}
           <div className="p-4">
             <p className="text-2xl font-bold text-foreground">
-              {fmtNum(last.popular)}{" "}
-              <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
+              {fmtNum(last.popular)} <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
             </p>
-            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-              Giá trúng phổ biến nhất {last.month}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Giá trúng phổ biến nhất {last.month}</p>
           </div>
 
           {/* KPI 2 — Biến động giá theo khoảng thời gian đang chọn */}
@@ -208,9 +205,7 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
                   <ArrowDown className="w-4 h-4 text-rose-600" strokeWidth={2.5} />
                 </span>
               )}
-              <p className="text-2xl font-bold text-foreground">
-                {atPeak ? "Đang ở đỉnh" : `${fmtNum(vsPeak)}%`}
-              </p>
+              <p className="text-2xl font-bold text-foreground">{atPeak ? "Đang ở đỉnh" : `${fmtNum(vsPeak)}%`}</p>
             </div>
             <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
               {atPeak
@@ -258,10 +253,17 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
               wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
               payload={[
                 { value: "Giá cao nhất", type: "circle", id: "high", color: "hsl(280 65% 60%)" },
-                { value: "Giá phổ biến nhất (trung vị)", type: "circle", id: "popular", color: "hsl(217 91% 55%)" },
+                { value: "Giá phổ biến", type: "circle", id: "popular", color: "hsl(217 91% 55%)" },
                 { value: "Giá thấp nhất", type: "circle", id: "low", color: "hsl(45 90% 55%)" },
                 ...(pricePerSqm > 0
-                  ? [{ value: "Khởi điểm tin hiện tại", type: "circle" as const, id: "current", color: "hsl(0 75% 55%)" }]
+                  ? [
+                      {
+                        value: "Khởi điểm tin hiện tại",
+                        type: "circle" as const,
+                        id: "current",
+                        color: "hsl(0 75% 55%)",
+                      },
+                    ]
                   : []),
               ]}
             />

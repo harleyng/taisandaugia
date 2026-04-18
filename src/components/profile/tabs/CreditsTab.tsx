@@ -45,7 +45,7 @@ const IMAGES: Record<string, string> = {
   max: packMax,
 };
 
-const formatVnd = (n: number) => `${(n / 1000).toLocaleString("vi-VN")}k`;
+const formatVnd = (n: number) => `${n.toLocaleString("vi-VN")} đ`;
 
 const dateTimeFmt = new Intl.DateTimeFormat("vi-VN", {
   day: "2-digit",

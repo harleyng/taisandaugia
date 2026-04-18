@@ -175,7 +175,17 @@ export const CreditsTab = () => {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Sản phẩm</span>
-                      <span className="font-medium text-foreground">Gói {pkg.name} ({pkg.credits} credit)</span>
+                      <span className="font-medium text-foreground">Gói {pkg.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bạn sẽ nhận</span>
+                      <span className="font-medium text-foreground text-right">
+                        {pkg.baseCredits.toLocaleString("vi-VN")}
+                        {pkg.credits > pkg.baseCredits && (
+                          <span className="text-green-600 dark:text-green-400"> + {(pkg.credits - pkg.baseCredits).toLocaleString("vi-VN")} tặng</span>
+                        )}
+                        {" "}= {pkg.credits.toLocaleString("vi-VN")} credit
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Số tiền</span>

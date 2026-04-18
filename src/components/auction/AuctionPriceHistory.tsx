@@ -110,48 +110,20 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
 
   // Compute decision-oriented metrics from generated series
   const last = data[data.length - 1];
+  const first = data[0];
   const peak = data.reduce((acc, p) => (p.popular > acc.popular ? p : acc), data[0]);
 
-  // Sort popular prices to derive median + fair range (P25 - P75)
-  const sortedPopular = [...data].map((d) => d.popular).sort((a, b) => a - b);
-  const quantile = (arr: number[], q: number) => {
-    if (!arr.length) return 0;
-    const pos = (arr.length - 1) * q;
-    const base = Math.floor(pos);
-    const rest = pos - base;
-    return arr[base + 1] !== undefined ? arr[base] + rest * (arr[base + 1] - arr[base]) : arr[base];
-  };
-  const median = quantile(sortedPopular, 0.5);
-  const fairLow = quantile(sortedPopular, 0.4);
-  const fairHigh = quantile(sortedPopular, 0.6);
+  const rangeLabel = RANGES.find((r) => r.key === range)!.label;
 
-  // Expected winning price ≈ median nhẹ ngả về xu hướng gần đây (last popular)
-  const recentAvg = data.slice(-3).reduce((s, d) => s + d.popular, 0) / Math.max(1, Math.min(3, data.length));
-  const expectedWinning = median * 0.6 + recentAvg * 0.4;
+  // KPI 2: biến động giá theo khoảng thời gian
+  const change = first.popular > 0 ? ((last.popular - first.popular) / first.popular) * 100 : 0;
+  const isUp = change >= 0;
 
-  // Starting price comparison (current listing's price/m² vs fair range / median)
-  const starting = pricePerSqm;
-  const diffVsMedian = median > 0 ? ((starting - median) / median) * 100 : 0;
-  let startingState: "below" | "within" | "above" = "within";
-  if (starting > 0) {
-    if (starting < fairLow) startingState = "below";
-    else if (starting > fairHigh) startingState = "above";
-    else startingState = "within";
-  }
+  // KPI 3: so sánh với đỉnh lịch sử
+  const vsPeak = peak.popular > 0 ? ((peak.popular - last.popular) / peak.popular) * 100 : 0;
+  const atPeak = vsPeak < 0.05;
 
-  // Insight sentence — derived from historical data
-  let insight = "";
-  if (starting > 0) {
-    if (startingState === "below") {
-      insight = `Giá khởi điểm thấp hơn khoảng giá phổ biến ~${Math.abs(diffVsMedian).toFixed(1)}% so với trung vị ${RANGES.find((r) => r.key === range)!.label} qua → điểm vào tương đối tốt.`;
-    } else if (startingState === "above") {
-      insight = `Giá khởi điểm cao hơn ~${Math.abs(diffVsMedian).toFixed(1)}% so với trung vị ${RANGES.find((r) => r.key === range)!.label} qua → cần cân nhắc kỹ trước khi tham gia.`;
-    } else {
-      insight = `Giá khởi điểm nằm trong vùng giá phổ biến (${fairLow.toFixed(1)}–${fairHigh.toFixed(1)} tr/m²) → mức tham chiếu hợp lý so với lịch sử.`;
-    }
-  } else {
-    insight = `Giá phổ biến gần nhất ~${last?.popular.toFixed(1)} tr/m², đỉnh ${peak.popular.toFixed(1)} tr/m² (${peak.month}).`;
-  }
+  const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
 
   // Address parts
   const addr = listing.address || {};

@@ -22,22 +22,25 @@ const PriceCell = ({
   onClick?: () => void;
   highlight?: boolean;
 }) => (
-  <div className={`flex flex-col items-center text-center px-2 py-3 ${highlight ? "bg-primary/5" : ""}`}>
-    <span className="text-xs text-muted-foreground mb-1">{label}</span>
-    {isHidden ? (
-      <button
-        type="button"
-        onClick={onClick}
-        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-        aria-label={`Mở khóa để xem ${label}`}
-      >
+  isHidden ? (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Mở khóa để xem ${label}`}
+      className={`flex flex-col items-center text-center px-2 py-3 w-full h-full transition-colors hover:bg-primary/10 ${highlight ? "bg-primary/5" : ""}`}
+    >
+      <span className="text-xs text-muted-foreground mb-1">{label}</span>
+      <span className="inline-flex items-center gap-1 text-sm font-bold text-primary">
         <Lock className="w-3.5 h-3.5" />
         Mở khóa
-      </button>
-    ) : (
+      </span>
+    </button>
+  ) : (
+    <div className={`flex flex-col items-center text-center px-2 py-3 ${highlight ? "bg-primary/5" : ""}`}>
+      <span className="text-xs text-muted-foreground mb-1">{label}</span>
       <span className={`text-sm font-bold ${highlight ? "text-primary" : "text-foreground"}`}>{value}</span>
-    )}
-  </div>
+    </div>
+  )
 );
 
 export const AuctionPriceRow = ({

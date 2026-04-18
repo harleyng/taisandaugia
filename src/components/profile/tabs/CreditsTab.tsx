@@ -13,8 +13,13 @@ import {
   Building2,
 } from "lucide-react";
 import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { addCredits as addCreditsImpl, type Transaction, type TransactionType } from "@/lib/mockCredits";
 import packStarter from "@/assets/credits/pack-starter.jpg";
 import packPopular from "@/assets/credits/pack-popular.jpg";

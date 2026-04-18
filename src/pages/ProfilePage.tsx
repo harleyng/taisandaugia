@@ -83,7 +83,7 @@ const ProfilePage = () => {
           <ProfileSidebar
             activeTab={activeTab}
             onChange={setActiveTab}
-            name={name}
+            name={resolveDisplayName(name, userId)}
             email={email}
             avatarUrl={avatarUrl}
             onLogout={handleLogout}

@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Info, TrendingUp, TrendingDown, ArrowDown, ArrowUp, Minus, Lightbulb } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   LineChart,

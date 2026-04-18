@@ -238,6 +238,58 @@ const AuctionDetail = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Actions: Save + Share */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-border">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => toggleSave(listing.id)}
+                      aria-label={savedIds.has(listing.id) ? "Bỏ quan tâm" : "Quan tâm"}
+                    >
+                      <Heart className={`h-4 w-4 mr-1.5 ${savedIds.has(listing.id) ? "fill-rose-500 text-rose-500" : ""}`} />
+                      {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm"}
+                    </Button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                          aria-label="Chia sẻ"
+                        >
+                          <Share2 className="h-4 w-4 mr-1.5" />
+                          Chia sẻ
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const url = encodeURIComponent(window.location.href);
+                            window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, "_blank", "noopener,noreferrer");
+                          }}
+                        >
+                          <Facebook className="h-4 w-4 mr-2" />
+                          Facebook
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(window.location.href);
+                              toast.success("Đã sao chép liên kết");
+                            } catch {
+                              toast.error("Không thể sao chép");
+                            }
+                          }}
+                        >
+                          <LinkIcon className="h-4 w-4 mr-2" />
+                          Sao chép liên kết
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </CollapsibleContent>
               </Card>
             </Collapsible>

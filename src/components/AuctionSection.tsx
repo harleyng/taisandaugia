@@ -39,6 +39,22 @@ export const AuctionSection = () => {
     },
   });
 
+  const orgIds = Array.from(new Set(auctions.map((a) => a.auction_org_id).filter(Boolean) as string[]));
+  const { data: orgs = [] } = useQuery({
+    queryKey: ["auction-orgs-by-ids", orgIds.sort().join(",")],
+    queryFn: async () => {
+      if (orgIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("auction_organizations")
+        .select("id, name")
+        .in("id", orgIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: orgIds.length > 0,
+  });
+  const orgNameById = new Map(orgs.map((o) => [o.id, o.name]));
+
   const saveCounts = useListingSaveCounts(auctions.map((a) => a.id));
 
   if (!isLoading && auctions.length === 0) return null;
@@ -84,7 +100,7 @@ export const AuctionSection = () => {
               const customAttrs = (item.custom_attributes || {}) as Record<string, any>;
               const countdown = customAttrs.auction_time ? getCountdown(customAttrs.auction_time) : null;
               const location = getShortLocation(item.address);
-              const orgName = customAttrs.org_name || "";
+              const orgName = customAttrs.org_name || (item.auction_org_id ? orgNameById.get(item.auction_org_id) : "") || "";
 
               return (
                 <AuctionCard

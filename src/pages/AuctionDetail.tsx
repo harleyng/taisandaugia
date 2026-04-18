@@ -215,6 +215,23 @@ const AuctionDetail = () => {
               </Card>
             </Collapsible>
 
+            {/* 2. Price Row */}
+            <AuctionPriceRow
+              price={listing.price}
+              customAttributes={ca}
+              isUnlocked={isUnlocked}
+              onLockedClick={() => openAssetPaywall(listing.id, listing.title)}
+            />
+
+            {/* 2b. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) */}
+            {isUpcoming && (
+              <AuctionPricePrediction
+                listing={listing}
+                isUnlocked={isUnlocked}
+                onUnlock={() => openAssetPaywall(listing.id, listing.title)}
+              />
+            )}
+
             {/* 2b. Chủ tài sản (clickable card) */}
             {listing.asset_owner_id && (
               <AuctionAssetOwnerCard

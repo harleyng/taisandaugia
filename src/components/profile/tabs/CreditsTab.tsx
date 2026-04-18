@@ -188,10 +188,17 @@ export const CreditsTab = () => {
               </div>
               <h3 className="text-lg font-bold text-foreground">{pkg.name}</h3>
               <p className="text-2xl font-extrabold text-foreground mt-1">{formatVnd(pkg.priceVnd)}</p>
-              <p className="text-sm text-muted-foreground mt-0.5 inline-flex items-center gap-1">
-                <Coins className="h-3.5 w-3.5 text-primary" />
-                {pkg.credits} credit
-              </p>
+              <div className="mt-1 min-h-[40px] flex flex-col items-center justify-center">
+                <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
+                  <Coins className="h-3.5 w-3.5 text-primary" />
+                  {pkg.baseCredits} credit
+                </p>
+                {pkg.credits > pkg.baseCredits && (
+                  <p className="text-xs font-semibold text-green-600 dark:text-green-400 mt-0.5">
+                    +{pkg.credits - pkg.baseCredits} credit tặng thêm
+                  </p>
+                )}
+              </div>
               <Button
                 className={cn("w-full mt-4", isBest && "bg-amber-500 hover:bg-amber-600 text-white")}
                 variant={isPopular || isBest ? "default" : "outline"}

@@ -1,6 +1,29 @@
 // Mock credit system. Persisted in localStorage. Swap to real backend later.
 const KEY = "mockCredits.v1";
 const EVT = "mockCredits:change";
+const INVOICE_KEY = "mockCredits.invoiceInfo.v1";
+
+export interface InvoiceInfo {
+  companyName: string;
+  taxCode: string;
+  address: string;
+  email: string;
+}
+
+export const getInvoiceInfo = (): InvoiceInfo | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(INVOICE_KEY);
+    return raw ? (JSON.parse(raw) as InvoiceInfo) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const saveInvoiceInfo = (info: InvoiceInfo) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(INVOICE_KEY, JSON.stringify(info));
+};
 
 export const ASSET_COST = 59;
 

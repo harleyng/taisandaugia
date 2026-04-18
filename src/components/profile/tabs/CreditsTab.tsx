@@ -173,17 +173,11 @@ export const CreditsTab = () => {
       setHasSavedInvoice(true);
     }
     setShowVnpay(false);
-    setPaying(pendingKey);
-    const pkg = CREDIT_PACKAGES.find((p) => p.key === pendingKey)!;
-    setTimeout(() => {
-      addCreditsImpl(pkg.credits, pkg.key, pkg.priceVnd);
-      const sp = new URLSearchParams();
-      sp.set("status", "success");
-      sp.set("package", pkg.key);
-      if (returnPath) sp.set("return", returnPath);
-      if (unlockParam) sp.set("unlock", unlockParam);
-      navigate(`/payment-result?${sp.toString()}`);
-    }, 1500);
+    const sp = new URLSearchParams();
+    sp.set("package", pendingKey);
+    if (returnPath) sp.set("return", returnPath);
+    if (unlockParam) sp.set("unlock", unlockParam);
+    navigate(`/payment/vnpay?${sp.toString()}`);
   };
 
   return (

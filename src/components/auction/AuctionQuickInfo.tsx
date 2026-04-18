@@ -108,14 +108,6 @@ export const AuctionQuickInfo = ({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          {saveCount != null && saveCount > 0 && (
-            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-              <Heart className="h-4 w-4 fill-current text-rose-400" />
-              <span className="font-medium">{saveCount}</span>
-            </span>
-          )}
-        </div>
       </div>
 
       {title && <h1 className="text-lg md:text-xl font-bold text-foreground leading-snug">{title}</h1>}

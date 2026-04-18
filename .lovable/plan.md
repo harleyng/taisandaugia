@@ -1,48 +1,61 @@
 
 
-## Plan: Bonus credit thay vì giảm giá
+## Plan: Lịch sử giao dịch tổng hợp (mua + tiêu)
 
-Hiển thị mỗi gói (trừ Starter) dưới dạng `base credit + bonus credit`. Anchor giá tiền giữ nguyên, anchor credit được "thổi phồng" để khuyến khích gói lớn.
+Gộp lịch sử mua credit và lịch sử tiêu credit (mở khóa tài sản, theo dõi công ty) thành một bảng duy nhất, với cột credit hiển thị +/- rõ ràng.
 
-### Quy tắc quy đổi
-1k VND = 1 base credit. Bonus = `credits` hiện tại − `priceVnd/1000`.
+### Thay đổi data model (`src/lib/mockCredits.ts`)
 
-| Gói | Giá | Base | Bonus | Tổng |
-|---|---|---|---|---|
-| Starter | 69k | 69 | 0 | 69 |
-| Popular | 179k | 179 | +11 | 190 |
-| Value | 299k | 299 | +31 | 330 |
-| Pro | 499k | 499 | +101 | 600 |
-| Max | 1.999k | 1.999 | +601 | 2.600 |
+Thay `purchases[]` bằng `transactions[]` tổng quát:
 
-### Thay đổi file
+```ts
+type TransactionType = "purchase" | "unlock_asset" | "unlock_company";
 
-**`src/lib/mockCredits.ts`**
-- Thêm field `baseCredits` vào `CREDIT_PACKAGES` (= `priceVnd/1000`). `credits` giữ nguyên = tổng nhận được.
-- Logic `addCredits` giữ nguyên (cộng tổng `credits`).
-
-**`src/components/profile/tabs/CreditsTab.tsx`** — phần giá trong card:
-```
-[Ảnh gói]
-Tên gói
-179k                              ← giá tiền (giữ nguyên size lớn)
-🪙 179 credit + 11 tặng thêm      ← dòng credit có bonus inline
-[Badge: +11 credit bonus] (xanh)  ← chỉ hiện khi bonus > 0
-[Mua ngay]
+interface Transaction {
+  id: string;
+  type: TransactionType;
+  description: string;   // "Mua gói Popular", "Mở khóa tài sản Nhà phố Q1", ...
+  creditDelta: number;   // +190, -59, -299
+  at: number;
+}
 ```
 
-- Starter: chỉ hiện `🪙 69 credit`, không badge.
-- Các gói khác: 
-  - Dòng credit: `<span>{base} credit</span> <span class="text-green-600 font-semibold">+ {bonus} tặng</span>`
-  - Badge nhỏ phía trên hoặc dưới giá: `+{bonus} credit bonus` (bg-green-500/10, text-green-700)
-- Card "Max" có thể thêm dòng phụ: `Tặng nhiều nhất` dưới badge bonus để nhấn mạnh.
+- `addCredits(...)` → push transaction `purchase` với `creditDelta = +credits`, description `"Mua gói {name}"`.
+- `unlockAsset(id, label?)` → push `unlock_asset`, `creditDelta = -ASSET_COST`, description `"Mở khóa tài sản {label ?? id}"`.
+- `unlockCompany(orgId, tier, label?)` → push `unlock_company`, `creditDelta = -tier.cost`, description `"Theo dõi công ty {label ?? orgId} {tier.label}"`.
+- Migration nhẹ: nếu localStorage còn `purchases`, map sang `transactions` khi load lần đầu.
 
-### UI visual
-- Bonus highlight màu xanh lá (success): `text-green-600 dark:text-green-400`, `bg-green-500/10`.
-- Icon `Gift` (lucide) đứng trước số bonus thay vì `Coins` để phân biệt.
-- Giữ nguyên badge "Phổ biến" / "Tốt nhất" hiện có.
+### Cập nhật callsite
+
+Tìm và truyền thêm `label` (tên tài sản/công ty) khi gọi `unlockAsset` / `unlockCompany`:
+- `src/contexts/PaywallContext.tsx` (chính)
+- `src/components/paywall/AssetPaywallDialog.tsx`, `CompanyPaywallDialog.tsx`
+- `src/pages/PaymentResult.tsx` (auto-unlock sau thanh toán)
+
+Nếu chưa có sẵn label trong scope → fallback dùng id; ưu tiên truyền title đã có.
+
+### Hook (`src/hooks/useCredits.tsx`)
+
+Expose `transactions` thay cho `purchases`.
+
+### UI block "Lịch sử giao dịch" (`CreditsTab.tsx`)
+
+Bảng 3 cột:
+
+| Thời gian | Giao dịch | Credit |
+|---|---|---|
+| 18/04/2026 14:32 | Mua gói Popular | <span class="text-green-600">+190</span> |
+| 18/04/2026 14:35 | Mở khóa tài sản Nhà phố Q1 | <span class="text-red-600">−59</span> |
+| 18/04/2026 15:10 | Theo dõi công ty ABC 30 ngày | <span class="text-red-600">−299</span> |
+
+- Cột "Giao dịch": text + icon nhỏ phía trước theo type (`ShoppingCart` / `Unlock` / `Building2`).
+- Cột "Credit": format `+N` xanh hoặc `−N` đỏ, font-semibold, có icon `Coins` nhỏ.
+- Bỏ cột "Gói", "Số tiền", "Trạng thái".
+- Empty state giữ nguyên (icon `Receipt` + "Chưa có giao dịch nào").
+- Sort mới nhất trước. Mobile: `overflow-x-auto`.
 
 ### Không đổi
-- `addCreditsImpl` vẫn cộng đúng tổng `credits` → flow thanh toán mock + auto-unlock không bị ảnh hưởng.
-- Dialog VNPay vẫn hiển thị `priceVnd` và mô tả gói. Có thể bổ sung dòng `Bạn sẽ nhận: 179 + 11 credit tặng = 190 credit`.
+
+- Logic tính balance, paywall flow, payment mock.
+- `useSyncExternalStore` tự re-render khi có giao dịch mới.
 

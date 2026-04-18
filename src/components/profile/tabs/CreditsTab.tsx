@@ -101,7 +101,7 @@ export const CreditsTab = () => {
               {isBest && (
                 <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-500 text-white hover:bg-amber-500 inline-flex items-center gap-1">
                   <Star className="h-3 w-3 fill-current" />
-                  Tốt nhất
+                  Tiết kiệm
                 </Badge>
               )}
               <div className="w-28 h-28 mb-3 flex items-center justify-center">

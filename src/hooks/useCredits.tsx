@@ -15,6 +15,7 @@ import {
   isAssetUnlocked,
   subscribe,
   unlockAsset as unlockAssetImpl,
+  lockAsset as lockAssetImpl,
   unlockCompany as unlockCompanyImpl,
   unlockOwner as unlockOwnerImpl,
 } from "@/lib/mockCredits";
@@ -30,6 +31,7 @@ export const useCredits = () => {
   const companyAccess = useCallback((orgId: string) => getCompanyAccess(orgId), [state]);
   const ownerAccess = useCallback((ownerId: string) => getOwnerAccess(ownerId), [state]);
   const unlockAsset = useCallback((id: string, label?: string) => unlockAssetImpl(id, label), []);
+  const lockAsset = useCallback((id: string) => lockAssetImpl(id), []);
   const unlockCompany = useCallback(
     (orgId: string, tier: CompanyTierKey, label?: string) => unlockCompanyImpl(orgId, tier, label),
     []
@@ -50,6 +52,7 @@ export const useCredits = () => {
     companyAccess,
     ownerAccess,
     unlockAsset,
+    lockAsset,
     unlockCompany,
     unlockOwner,
     addCredits,

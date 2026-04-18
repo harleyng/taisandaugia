@@ -128,7 +128,7 @@ export const Header = () => {
           {session ? (
             <>
               <button
-                onClick={() => navigate("/buy-credits")}
+                onClick={() => navigate("/profile?tab=credits")}
                 className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                   transparent
                     ? "bg-white/15 text-white hover:bg-white/25"
@@ -167,7 +167,7 @@ export const Header = () => {
                       {balance} credit
                     </span>
                   </DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => navigate("/buy-credits")}>
+                  <DropdownMenuItem onClick={() => navigate("/profile?tab=credits")}>
                     <Coins className="mr-2 h-4 w-4 text-primary" />
                     Mua credit
                   </DropdownMenuItem>
@@ -274,7 +274,7 @@ export const Header = () => {
                         </span>
                       </div>
                       <Link
-                        to="/buy-credits"
+                        to="/profile?tab=credits"
                         className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
                       >
                         <Coins className="h-5 w-5 text-primary" />

@@ -39,7 +39,8 @@ export const CompanyPaywallDialog = ({ open, onOpenChange, orgId, returnPath }: 
     const params = new URLSearchParams();
     if (returnPath) params.set("return", returnPath);
     if (orgId) params.set("unlock", `company:${orgId}:${selected}`);
-    navigate(`/buy-credits?${params.toString()}`);
+    params.set("tab", "credits");
+    navigate(`/profile?${params.toString()}`);
   };
 
   return (

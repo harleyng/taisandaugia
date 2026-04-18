@@ -112,8 +112,8 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
   const province = addr.province || "";
   const locationLabel = [wardOrDistrict, province].filter(Boolean).join(" - ");
 
-  // Asset type label (legal_status preferred, fallback to property type name)
-  const assetTypeLabel = listing.legal_status || listing.property_types?.name || "Bất động sản";
+  // Asset type label — luôn dùng tên loại tài sản (Đất ở, Căn hộ, Nhà phố...)
+  const assetTypeLabel = listing.property_types?.name || "Bất động sản";
 
   const title = `Lịch sử đấu giá ${assetTypeLabel}${locationLabel ? ` tại ${locationLabel}` : ""}`;
 

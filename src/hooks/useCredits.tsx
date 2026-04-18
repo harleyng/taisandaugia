@@ -15,6 +15,7 @@ import {
   isAssetUnlocked,
   subscribe,
   unlockAsset as unlockAssetImpl,
+  lockAsset as lockAssetImpl,
   unlockCompany as unlockCompanyImpl,
   unlockOwner as unlockOwnerImpl,
 } from "@/lib/mockCredits";

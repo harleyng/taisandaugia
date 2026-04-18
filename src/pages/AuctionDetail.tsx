@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink, Eye, Search } from "lucide-react";
+import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink, Eye, Search, Lock } from "lucide-react";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";
@@ -193,7 +193,12 @@ const AuctionDetail = () => {
           {/* LEFT COLUMN */}
           <div className="lg:col-span-2 space-y-6">
             {/* 1. Price Row */}
-            <AuctionPriceRow price={listing.price} customAttributes={ca} />
+            <AuctionPriceRow
+              price={listing.price}
+              customAttributes={ca}
+              isUnlocked={isUnlocked}
+              onLockedClick={() => openAssetPaywall(listing.id, listing.title)}
+            />
 
             {/* 2. Thông tin việc đấu giá — Collapsible */}
             <Collapsible open={infoOpen} onOpenChange={setInfoOpen}>
@@ -260,6 +265,32 @@ const AuctionDetail = () => {
 
             {/* 5. Attachments */}
             <AuctionAttachments listing={listing} />
+
+            {/* 5b. Phân tích & insight (locked) */}
+            {!isUnlocked && (
+              <Card className="p-5 border-dashed">
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold text-foreground">Phân tích & insight nâng cao</h3>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      So sánh giá thị trường, lịch sử đấu giá khu vực, ước tính thanh khoản và các chỉ số đầu tư khác.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => openAssetPaywall(listing.id, listing.title)}
+                    >
+                      <Lock className="h-3.5 w-3.5 mr-1.5" />
+                      Mở khóa – 59 credit
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             {/* 6. Save button — full width */}
             <Button

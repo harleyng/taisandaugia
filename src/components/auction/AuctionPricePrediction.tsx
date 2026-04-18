@@ -26,20 +26,13 @@ const competitionLabel = (views: number): { label: string; tone: string } => {
   return { label: "Thấp", tone: "text-emerald-600" };
 };
 
-const recommendationLabel = (
-  confidence: number,
-  competition: string
-): { label: string; tone: string } => {
+const recommendationLabel = (confidence: number, competition: string): { label: string; tone: string } => {
   if (confidence >= 80 && competition !== "Cao") return { label: "Nên tham gia", tone: "text-emerald-600" };
   if (confidence < 70) return { label: "Cân nhắc", tone: "text-amber-600" };
   return { label: "Cân nhắc kỹ", tone: "text-amber-600" };
 };
 
-export const AuctionPricePrediction = ({
-  listing,
-  isUnlocked,
-  onUnlock,
-}: AuctionPricePredictionProps) => {
+export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: AuctionPricePredictionProps) => {
   const ca = listing.custom_attributes || {};
   const seed = hashFromId(listing.id);
 
@@ -68,12 +61,8 @@ export const AuctionPricePrediction = ({
           <Sparkles className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-            Dự đoán giá trúng (AI)
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Phân tích dựa trên dữ liệu phiên đấu giá tương tự trong khu vực
-          </p>
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">Dự đoán giá trúng (AI)</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Phân tích dựa trên dữ liệu phiên đấu giá tương tự</p>
         </div>
       </div>
 
@@ -87,14 +76,15 @@ export const AuctionPricePrediction = ({
             </div>
             <div className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1">
               <TrendingUp className="h-3.5 w-3.5" />
-              So với khởi điểm: <span className="font-semibold text-foreground">+{minPct}% đến +{maxPct}%</span>
+              So với khởi điểm:{" "}
+              <span className="font-semibold text-foreground">
+                +{minPct}% đến +{maxPct}%
+              </span>
             </div>
           </div>
         ) : (
           <div>
-            <div className="text-2xl md:text-3xl font-bold text-primary blur-md select-none">
-              X.XX tỷ – X.XX tỷ
-            </div>
+            <div className="text-2xl md:text-3xl font-bold text-primary blur-md select-none">X.XX tỷ – X.XX tỷ</div>
             <div className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1 blur-sm select-none">
               <TrendingUp className="h-3.5 w-3.5" />
               So với khởi điểm: +XX% đến +XX%
@@ -113,7 +103,9 @@ export const AuctionPricePrediction = ({
           </div>
           {isUnlocked ? (
             <>
-              <div className="text-sm font-bold text-foreground">{confidence}% · {confidenceLabel}</div>
+              <div className="text-sm font-bold text-foreground">
+                {confidence}% · {confidenceLabel}
+              </div>
               <Progress value={confidence} className="h-1.5 mt-1.5" />
             </>
           ) : (

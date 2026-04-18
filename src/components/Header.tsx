@@ -334,16 +334,6 @@ export const Header = () => {
                         <Heart className="h-5 w-5" />
                         Tài sản quan tâm
                       </Link>
-                      <button
-                        onClick={() => {
-                          addCreditsImpl(500);
-                          toast({ title: "Dev: +500 credit" });
-                        }}
-                        className="w-full text-left flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground hover:bg-muted rounded-lg transition-colors"
-                      >
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Dev: +500 credit
-                      </button>
                     </div>
                     <div className="pt-4 space-y-2">
                       <Button onClick={handleLogout} variant="outline" className="w-full justify-start">

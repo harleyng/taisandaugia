@@ -158,75 +158,67 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
         </div>
       </div>
 
-      {/* Decision-oriented cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Card 1 — Fair Price Range */}
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <p className="text-xs text-muted-foreground">Khoảng giá hợp lý</p>
-          <p className="text-xl font-bold text-foreground mt-1">
-            {fairLow.toFixed(1)}–{fairHigh.toFixed(1)}{" "}
-            <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">Dựa trên phân phối giá phổ biến lịch sử</p>
-        </div>
+      {/* Decision-oriented KPIs */}
+      <div className="rounded-lg border border-border">
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
+          {/* KPI 1 — Giá trúng phổ biến gần nhất */}
+          <div className="p-4">
+            <p className="text-2xl font-bold text-foreground">
+              {fmtNum(last.popular)}{" "}
+              <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              Giá trúng phổ biến nhất {last.month}
+            </p>
+          </div>
 
-        {/* Card 2 — Expected Winning Price */}
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <p className="text-xs text-muted-foreground">Giá trúng dự kiến</p>
-          <p className="text-xl font-bold text-foreground mt-1">
-            ~{expectedWinning.toFixed(1)} <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Ước tính từ trung vị & xu hướng gần đây
-          </p>
-        </div>
-
-        {/* Card 3 — Starting Price */}
-        <div
-          className={`rounded-lg border p-3 ${
-            startingState === "below"
-              ? "border-emerald-200 bg-emerald-50/60"
-              : startingState === "above"
-                ? "border-rose-200 bg-rose-50/60"
-                : "border-amber-200 bg-amber-50/60"
-          }`}
-        >
-          <p className="text-xs text-muted-foreground">Giá khởi điểm</p>
-          <p className="text-xl font-bold text-foreground mt-1">
-            {starting > 0 ? starting.toFixed(1) : "—"}{" "}
-            <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
-          </p>
-          {starting > 0 && (
-            <div
-              className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[11px] font-medium ${
-                startingState === "below"
-                  ? "bg-emerald-100 text-emerald-700"
-                  : startingState === "above"
-                    ? "bg-rose-100 text-rose-700"
-                    : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {startingState === "below" ? (
-                <ArrowDown className="w-3 h-3" />
-              ) : startingState === "above" ? (
-                <ArrowUp className="w-3 h-3" />
-              ) : (
-                <Minus className="w-3 h-3" />
-              )}
-              {startingState === "below"
-                ? `Dưới khoảng hợp lý (${diffVsMedian.toFixed(1)}% vs trung vị)`
-                : startingState === "above"
-                  ? `Trên khoảng hợp lý (+${diffVsMedian.toFixed(1)}% vs trung vị)`
-                  : `Trong khoảng hợp lý (${diffVsMedian >= 0 ? "+" : ""}${diffVsMedian.toFixed(1)}% vs trung vị)`}
+          {/* KPI 2 — Biến động giá theo khoảng thời gian đang chọn */}
+          <div className="p-4">
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  isUp ? "bg-emerald-500" : "bg-rose-500"
+                }`}
+              >
+                {isUp ? (
+                  <ArrowUp className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                ) : (
+                  <ArrowDown className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                )}
+              </span>
+              <p className="text-2xl font-bold text-foreground">
+                {isUp ? "+" : ""}
+                {fmtNum(change)}%
+              </p>
             </div>
-          )}
-        </div>
-      </div>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              Giá trúng đã {isUp ? "tăng" : "giảm"} trong {rangeLabel} qua {first.month} - {last.month}
+            </p>
+          </div>
 
-      {/* Insight sentence */}
-      <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
-        <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-        <p className="text-sm text-foreground leading-relaxed">{insight}</p>
+          {/* KPI 3 — So sánh với đỉnh lịch sử */}
+          <div className="p-4">
+            <div className="flex items-center gap-2">
+              {atPeak ? (
+                <span className="w-6 h-6 rounded-full flex items-center justify-center bg-emerald-500">
+                  <ArrowUp className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                </span>
+              ) : (
+                <span className="w-6 h-6 rounded-full flex items-center justify-center bg-rose-500">
+                  <ArrowDown className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                </span>
+              )}
+              <p className="text-2xl font-bold text-foreground">
+                {atPeak ? "Đang ở đỉnh" : `${fmtNum(vsPeak)}%`}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              {atPeak
+                ? `Giá trúng hiện tại đang ở mức đỉnh ${fmtNum(peak.popular)} tr/m²`
+                : `Giá trúng hiện tại thấp hơn đỉnh ${fmtNum(peak.popular)} tr/m² vào ${peak.month}`}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Chart */}

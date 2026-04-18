@@ -10,8 +10,9 @@ import { ProfileInfoTab } from "@/components/profile/tabs/ProfileInfoTab";
 import { CreditsTab } from "@/components/profile/tabs/CreditsTab";
 import { PasswordTab } from "@/components/profile/tabs/PasswordTab";
 import { NotificationsTab } from "@/components/profile/tabs/NotificationsTab";
+import { SavedAssetsTab } from "@/components/profile/tabs/SavedAssetsTab";
 
-const VALID_TABS: ProfileTab[] = ["profile", "credits", "password", "notifications"];
+const VALID_TABS: ProfileTab[] = ["profile", "saved", "credits", "password", "notifications"];
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -95,6 +96,7 @@ const ProfilePage = () => {
                 onAvatarChange={setAvatarUrl}
               />
             )}
+            {activeTab === "saved" && <SavedAssetsTab />}
             {activeTab === "credits" && <CreditsTab />}
             {activeTab === "password" && <PasswordTab />}
             {activeTab === "notifications" && <NotificationsTab />}

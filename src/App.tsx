@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthDialogProvider } from "@/contexts/AuthDialogContext";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -12,7 +12,6 @@ import Listings from "./pages/Listings";
 import ListingDetail from "./pages/ListingDetail";
 import AuctionDetail from "./pages/AuctionDetail";
 import NotFound from "./pages/NotFound";
-import SavedAssetsPage from "./pages/SavedAssetsPage";
 import ProfilePage from "./pages/ProfilePage";
 import PWAInstall from "./pages/PWAInstall";
 import CompanyDetail from "./pages/CompanyDetail";
@@ -48,9 +47,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
 
             {/* Protected: Saved Assets & Profile */}
-            <Route path="/saved-assets" element={<ProtectedRoute />}>
-              <Route index element={<SavedAssetsPage />} />
-            </Route>
+            <Route path="/saved-assets" element={<Navigate to="/profile?tab=saved" replace />} />
             <Route path="/profile" element={<ProtectedRoute />}>
               <Route index element={<ProfilePage />} />
             </Route>

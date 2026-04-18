@@ -143,7 +143,7 @@ export const Header = () => {
                 variant="ghost"
                 size="icon"
                 className={`hidden sm:inline-flex ${transparent ? "text-white/90 hover:text-white hover:bg-white/10" : ""}`}
-                onClick={() => navigate("/saved-assets")}
+                onClick={() => navigate("/profile?tab=saved")}
               >
                 <Heart className="h-5 w-5" />
               </Button>
@@ -176,7 +176,7 @@ export const Header = () => {
                     <UserCircle className="mr-2 h-4 w-4" />
                     Hồ sơ cá nhân
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/saved-assets")}>
+                  <DropdownMenuItem onClick={() => navigate("/profile?tab=saved")}>
                     <Heart className="mr-2 h-4 w-4" />
                     Tài sản quan tâm
                   </DropdownMenuItem>
@@ -288,7 +288,7 @@ export const Header = () => {
                         Hồ sơ cá nhân
                       </Link>
                       <Link
-                        to="/saved-assets"
+                        to="/profile?tab=saved"
                         className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
                       >
                         <Heart className="h-5 w-5" />

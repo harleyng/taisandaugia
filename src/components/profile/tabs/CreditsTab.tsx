@@ -133,7 +133,7 @@ export const CreditsTab = () => {
       <Card className="p-5 md:p-6 mb-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Mua credit</h2>
+            <h2 className="text-lg font-semibold text-foreground">Mua thêm credit</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               Mở khóa thông tin để hiểu rõ thị trường và đấu giá thông minh
             </p>

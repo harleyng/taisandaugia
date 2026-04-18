@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { formatPrice } from "@/utils/formatters";
-import { Eye } from "lucide-react";
-import { useAuthDialog } from "@/contexts/AuthDialogContext";
-import { supabase } from "@/integrations/supabase/client";
+import { Lock } from "lucide-react";
 
 interface AuctionPriceRowProps {
   price: number;
   customAttributes: any;
+  isUnlocked?: boolean;
+  onLockedClick?: () => void;
 }
 
 const PriceCell = ({
@@ -15,38 +14,38 @@ const PriceCell = ({
   value,
   isHidden,
   onClick,
+  highlight,
 }: {
   label: string;
   value: string;
   isHidden?: boolean;
   onClick?: () => void;
+  highlight?: boolean;
 }) => (
-  <div className="flex flex-col items-center text-center px-2 py-3">
+  <div className={`flex flex-col items-center text-center px-2 py-3 ${highlight ? "bg-primary/5" : ""}`}>
     <span className="text-xs text-muted-foreground mb-1">{label}</span>
     {isHidden ? (
       <button
+        type="button"
         onClick={onClick}
-        className="text-muted-foreground hover:text-primary transition-colors"
-        aria-label={`Đăng nhập để xem ${label}`}
+        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+        aria-label={`Mở khóa để xem ${label}`}
       >
-        <Eye className="w-4 h-4" />
+        <Lock className="w-3.5 h-3.5" />
+        Mở khóa
       </button>
     ) : (
-      <span className="text-sm font-bold text-foreground">{value}</span>
+      <span className={`text-sm font-bold ${highlight ? "text-primary" : "text-foreground"}`}>{value}</span>
     )}
   </div>
 );
 
-export const AuctionPriceRow = ({ price, customAttributes: ca }: AuctionPriceRowProps) => {
-  const { openAuthDialog } = useAuthDialog();
-  const [session, setSession] = useState<any>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, []);
-
+export const AuctionPriceRow = ({
+  price,
+  customAttributes: ca,
+  isUnlocked = true,
+  onLockedClick,
+}: AuctionPriceRowProps) => {
   const fmt = (v: number | undefined | null) =>
     v != null ? formatPrice(v, "TOTAL") : "–";
 
@@ -56,9 +55,9 @@ export const AuctionPriceRow = ({ price, customAttributes: ca }: AuctionPriceRow
   const cells = [
     { label: "Khởi điểm", rawValue: price, gated: false },
     { label: "Đặt trước", rawValue: ca.deposit_amount, gated: false },
-    { label: "Hồ sơ", rawValue: ca.document_fee, gated: true },
-    { label: "Bước giá", rawValue: bidStep, gated: true },
-    { label: "Giá trúng", rawValue: winPrice, gated: true },
+    { label: "Hồ sơ", rawValue: ca.document_fee, gated: false },
+    { label: "Bước giá", rawValue: bidStep, gated: false },
+    { label: "Giá trúng", rawValue: winPrice, gated: true, highlight: true },
   ];
 
   return (
@@ -66,7 +65,7 @@ export const AuctionPriceRow = ({ price, customAttributes: ca }: AuctionPriceRow
       <div className="grid grid-cols-3 lg:grid-cols-5">
         {cells.map((cell, i) => {
           const noData = cell.rawValue == null;
-          const hidden = !noData && cell.gated && !session;
+          const hidden = !noData && cell.gated && !isUnlocked;
 
           return (
             <div
@@ -77,7 +76,8 @@ export const AuctionPriceRow = ({ price, customAttributes: ca }: AuctionPriceRow
                 label={cell.label}
                 value={noData ? "–" : fmt(cell.rawValue)}
                 isHidden={hidden}
-                onClick={() => openAuthDialog()}
+                highlight={cell.highlight}
+                onClick={onLockedClick}
               />
             </div>
           );

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, PlusCircle, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Sparkles } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, KeyRound } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -26,7 +26,8 @@ import { Session } from "@supabase/supabase-js";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { useCredits } from "@/hooks/useCredits";
-import { addCredits as addCreditsImpl } from "@/lib/mockCredits";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { resolveDisplayName } from "@/lib/displayName";
 
 export const Header = () => {
   const navigate = useNavigate();

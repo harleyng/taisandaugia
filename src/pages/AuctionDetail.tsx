@@ -135,25 +135,8 @@ const AuctionDetail = () => {
         </nav>
 
 
-        {/* Title */}
+        {/* Stats + actions row (title shown in right sticky card) */}
         <div className="mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground leading-tight flex-1">
-              {listing.title}
-            </h1>
-            {false && listing.asset_owner_id && (
-              <Button
-                onClick={ownerClick}
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all group"
-              >
-                <Search className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Lịch sử đấu giá</span>
-                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            )}
-          </div>
           <div className="flex items-center gap-3 mt-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
               <Eye className="h-4 w-4" />

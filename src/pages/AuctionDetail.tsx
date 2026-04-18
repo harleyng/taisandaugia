@@ -253,63 +253,13 @@ const AuctionDetail = () => {
             </Collapsible>
 
             {/* 3. Organizer */}
-            <AuctionOrganizerInfo listing={listing} isUnlocked={isUnlocked} onLockedClick={() => openAssetPaywall(listing.id, listing.title)} />
+            <AuctionOrganizerInfo listing={listing} isUnlocked={true} />
 
-            {/* 4. Schedule (locked) */}
-            {isUnlocked ? (
-              <AuctionScheduleInfo listing={listing} />
-            ) : (
-              <LockedBlur
-                ctaLabel="Mở khóa tài sản – 59 credit"
-                teaser="Xem thông tin chi tiết để đánh giá tài sản"
-                futureNote="Lịch trình chi tiết, tài liệu và liên hệ đơn vị tổ chức."
-                onUnlockClick={() => openAssetPaywall(listing.id, listing.title)}
-              >
-                <AuctionScheduleInfo listing={listing} />
-              </LockedBlur>
-            )}
+            {/* 4. Schedule */}
+            <AuctionScheduleInfo listing={listing} />
 
-            {/* 5. Attachments (locked) */}
-            {isUnlocked ? (
-              <AuctionAttachments listing={listing} />
-            ) : (
-              <LockedBlur
-                ctaLabel="Mở khóa tài sản – 59 credit"
-                teaser="Tải về hồ sơ và tài liệu đính kèm"
-                onUnlockClick={() => openAssetPaywall(listing.id, listing.title)}
-              >
-                <Card className="p-5 space-y-3">
-                  <h3 className="text-lg font-bold text-foreground">File đính kèm</h3>
-                  <div className="h-12 bg-muted rounded" />
-                  <div className="h-12 bg-muted rounded" />
-                </Card>
-              </LockedBlur>
-            )}
-
-            {/* 5b. Future insight placeholder — only shown when locked */}
-            {!isUnlocked && (
-              <Card className="p-5 border-dashed">
-                <div className="flex items-start gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-base font-bold text-foreground">Phân tích & insight</h3>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      Dữ liệu sẽ được cập nhật và phân tích sâu hơn trong thời gian tới. Mở khóa để truy cập các thông tin nâng cao khi được cập nhật.
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-3"
-                      onClick={() => openAssetPaywall(listing.id, listing.title)}
-                    >
-                      Mở khóa – 59 credit
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            )}
+            {/* 5. Attachments */}
+            <AuctionAttachments listing={listing} />
 
             {/* 6. Save button — full width */}
             <Button

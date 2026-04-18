@@ -12,14 +12,17 @@ import packStarter from "@/assets/credits/pack-starter.jpg";
 import packPopular from "@/assets/credits/pack-popular.jpg";
 import packValue from "@/assets/credits/pack-value.jpg";
 import packPro from "@/assets/credits/pack-pro.jpg";
+import packMax from "@/assets/credits/pack-max.jpg";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Star } from "lucide-react";
 
 const IMAGES: Record<string, string> = {
   starter: packStarter,
   popular: packPopular,
   value: packValue,
   pro: packPro,
+  max: packMax,
 };
 
 const formatVnd = (n: number) => `${(n / 1000).toLocaleString("vi-VN")}k`;

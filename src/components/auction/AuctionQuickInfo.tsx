@@ -15,6 +15,8 @@ interface AuctionQuickInfoProps {
   listing: any;
   saveCount?: number;
   title?: string;
+  propertyTypeName?: string;
+  legalStatus?: string | null;
 }
 
 const statusConfig = {
@@ -72,6 +74,8 @@ export const AuctionQuickInfo = ({
   listing,
   saveCount,
   title,
+  propertyTypeName,
+  legalStatus,
 }: AuctionQuickInfoProps) => {
   const status = getSessionStatus(listing);
   const { openAuthDialog } = useAuthDialog();
@@ -90,9 +94,21 @@ export const AuctionQuickInfo = ({
   return (
     <Card className="p-5 space-y-5">
       {/* Status + save count */}
-      <div className="flex items-center justify-between">
-        <Badge className={config.className}>{config.label}</Badge>
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge className={config.className}>{config.label}</Badge>
+          {propertyTypeName && (
+            <Badge variant="secondary" className="font-medium">
+              {propertyTypeName}
+            </Badge>
+          )}
+          {legalStatus && (
+            <Badge variant="outline" className="font-medium">
+              {legalStatus}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
           {saveCount != null && saveCount > 0 && (
             <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
               <Heart className="h-4 w-4 fill-current text-rose-400" />

@@ -25,6 +25,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { usePaywall } from "@/contexts/PaywallContext";
 import { LockedBlur } from "@/components/paywall/LockedBlur";
 import { useCompanyViewTracker } from "@/hooks/useCompanyViewTracker";
+import { AuctionPricePrediction } from "@/components/auction/AuctionPricePrediction";
 import { Sparkles, X } from "lucide-react";
 
 const AuctionDetail = () => {
@@ -111,6 +112,11 @@ const AuctionDetail = () => {
   const ca = listing.custom_attributes || {};
   const sourceUrls: string[] = ca.source_urls || [];
 
+  const winPrice = ca.winning_price ?? ca.win_price;
+  const auctionDateStr = ca.auction_date;
+  const auctionDate = auctionDateStr ? new Date(auctionDateStr) : null;
+  const isUpcoming = !winPrice && (!auctionDate || auctionDate >= new Date());
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -171,6 +177,15 @@ const AuctionDetail = () => {
               isUnlocked={isUnlocked}
               onLockedClick={() => openAssetPaywall(listing.id, listing.title)}
             />
+
+            {/* 1b. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) */}
+            {isUpcoming && (
+              <AuctionPricePrediction
+                listing={listing}
+                isUnlocked={isUnlocked}
+                onUnlock={() => openAssetPaywall(listing.id, listing.title)}
+              />
+            )}
 
             {/* 2. Thông tin việc đấu giá — Collapsible */}
             <Collapsible open={infoOpen} onOpenChange={setInfoOpen}>
@@ -233,32 +248,6 @@ const AuctionDetail = () => {
 
             {/* 5. Attachments */}
             <AuctionAttachments listing={listing} />
-
-            {/* 5b. Phân tích & insight (locked) */}
-            {!isUnlocked && (
-              <Card className="p-5 border-dashed">
-                <div className="flex items-start gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-base font-bold text-foreground">Phân tích & insight nâng cao</h3>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      So sánh giá thị trường, lịch sử đấu giá khu vực, ước tính thanh khoản và các chỉ số đầu tư khác.
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-3"
-                      onClick={() => openAssetPaywall(listing.id, listing.title)}
-                    >
-                      <Lock className="h-3.5 w-3.5 mr-1.5" />
-                      Mở khóa – 59 credit
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            )}
 
             {/* 6. Save button — full width */}
             <Button

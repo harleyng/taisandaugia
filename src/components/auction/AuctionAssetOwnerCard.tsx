@@ -48,11 +48,11 @@ export const AuctionAssetOwnerCard = ({ ownerId, fromListing }: AuctionAssetOwne
     <Card
       role="button"
       tabIndex={0}
-      onClick={() => navigate(`/asset-owner/${owner.id}`)}
+      onClick={goToOwner}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          navigate(`/asset-owner/${owner.id}`);
+          goToOwner();
         }
       }}
       className="p-5 cursor-pointer transition-all hover:shadow-md hover:border-primary/40 group"

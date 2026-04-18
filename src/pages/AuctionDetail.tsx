@@ -180,7 +180,18 @@ const AuctionDetail = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Stats + actions row (inside left column so right sticky can rise above) */}
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2 mr-auto">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+                <Eye className="h-4 w-4" />
+                <span className="font-medium">{listing.views_count || 0}</span>
+                <span>lượt xem</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+                <Heart className="h-4 w-4 fill-current text-rose-400" />
+                <span className="font-medium">{saveCounts.get(listing.id) || 0}</span>
+                <span>quan tâm</span>
+              </span>
+
+              <div className="ml-auto flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -199,7 +210,7 @@ const AuctionDetail = () => {
                       Chia sẻ
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
+                  <DropdownMenuContent align="end">
                     <DropdownMenuItem
                       onClick={() => {
                         const url = encodeURIComponent(window.location.href);
@@ -225,17 +236,6 @@ const AuctionDetail = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-                <Eye className="h-4 w-4" />
-                <span className="font-medium">{listing.views_count || 0}</span>
-                <span>lượt xem</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-                <Heart className="h-4 w-4 fill-current text-rose-400" />
-                <span className="font-medium">{saveCounts.get(listing.id) || 0}</span>
-                <span>quan tâm</span>
-              </span>
             </div>
 
             {/* 1. Thông tin việc đấu giá — Collapsible */}

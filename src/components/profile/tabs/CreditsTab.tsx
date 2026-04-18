@@ -114,14 +114,9 @@ export const CreditsTab = () => {
               </div>
               <h3 className="text-lg font-bold text-foreground">{pkg.name}</h3>
               <p className="text-2xl font-extrabold text-foreground mt-1">{formatVnd(pkg.priceVnd)}</p>
-              <p className="text-sm text-muted-foreground mt-1 inline-flex items-center gap-1 flex-wrap justify-center">
+              <p className="text-sm text-muted-foreground mt-1 inline-flex items-center gap-1">
                 <Coins className="h-3.5 w-3.5 text-primary" />
                 <span>{pkg.baseCredits.toLocaleString("vi-VN")} credit</span>
-                {pkg.credits > pkg.baseCredits && (
-                  <span className="text-green-600 dark:text-green-400 font-semibold">
-                    + {(pkg.credits - pkg.baseCredits).toLocaleString("vi-VN")} tặng
-                  </span>
-                )}
               </p>
               {pkg.credits > pkg.baseCredits && (
                 <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:text-green-400">

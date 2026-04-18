@@ -95,11 +95,23 @@ const AssetOwnerDetail = () => {
 
       <main className="container px-4 py-6 flex-1">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
+        <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6 flex-wrap">
           <Link to="/" className="hover:text-foreground transition-colors">Trang chủ</Link>
           <ChevronRight className="w-3.5 h-3.5" />
           <Link to="/listings" className="hover:text-foreground transition-colors">Danh sách</Link>
           <ChevronRight className="w-3.5 h-3.5" />
+          {fromListing && (
+            <>
+              <Link
+                to={`/auctions/${fromListing.id}`}
+                className="hover:text-foreground transition-colors truncate max-w-[280px]"
+                title={fromListing.title}
+              >
+                {fromListing.title}
+              </Link>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </>
+          )}
           <span className="text-foreground font-medium truncate max-w-[250px]">
             {owner?.name || "Chủ tài sản"}
           </span>

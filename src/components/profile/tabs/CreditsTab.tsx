@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Loader2, ShieldCheck, ChevronRight, Star } from "lucide-react";
+import { Coins, Loader2, ShieldCheck, ChevronRight, Star, Gift } from "lucide-react";
 import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -114,10 +114,21 @@ export const CreditsTab = () => {
               </div>
               <h3 className="text-lg font-bold text-foreground">{pkg.name}</h3>
               <p className="text-2xl font-extrabold text-foreground mt-1">{formatVnd(pkg.priceVnd)}</p>
-              <p className="text-sm text-muted-foreground mt-0.5 inline-flex items-center gap-1">
+              <p className="text-sm text-muted-foreground mt-1 inline-flex items-center gap-1 flex-wrap justify-center">
                 <Coins className="h-3.5 w-3.5 text-primary" />
-                {pkg.credits} credit
+                <span>{pkg.baseCredits.toLocaleString("vi-VN")} credit</span>
+                {pkg.credits > pkg.baseCredits && (
+                  <span className="text-green-600 dark:text-green-400 font-semibold">
+                    + {(pkg.credits - pkg.baseCredits).toLocaleString("vi-VN")} tặng
+                  </span>
+                )}
               </p>
+              {pkg.credits > pkg.baseCredits && (
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:text-green-400">
+                  <Gift className="h-3 w-3" />
+                  +{(pkg.credits - pkg.baseCredits).toLocaleString("vi-VN")} credit bonus
+                </span>
+              )}
               <Button
                 className={cn("w-full mt-4", isBest && "bg-amber-500 hover:bg-amber-600 text-white")}
                 variant={isPopular || isBest ? "default" : "outline"}
@@ -164,7 +175,17 @@ export const CreditsTab = () => {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Sản phẩm</span>
-                      <span className="font-medium text-foreground">Gói {pkg.name} ({pkg.credits} credit)</span>
+                      <span className="font-medium text-foreground">Gói {pkg.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bạn sẽ nhận</span>
+                      <span className="font-medium text-foreground text-right">
+                        {pkg.baseCredits.toLocaleString("vi-VN")}
+                        {pkg.credits > pkg.baseCredits && (
+                          <span className="text-green-600 dark:text-green-400"> + {(pkg.credits - pkg.baseCredits).toLocaleString("vi-VN")} tặng</span>
+                        )}
+                        {" "}= {pkg.credits.toLocaleString("vi-VN")} credit
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Số tiền</span>

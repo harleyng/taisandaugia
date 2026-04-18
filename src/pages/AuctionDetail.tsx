@@ -6,8 +6,25 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, ChevronRight, ChevronDown, ChevronUp, ExternalLink, Eye, Search, Lock, Share2, Facebook, Link as LinkIcon } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Heart,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Eye,
+  Search,
+  Lock,
+  Share2,
+  Facebook,
+  Link as LinkIcon,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
@@ -44,23 +61,30 @@ const AuctionDetail = () => {
   const { openAssetPaywall, openCompanyPaywall } = usePaywall();
   const { shouldNudge, dismiss } = useCompanyViewTracker(listing?.auction_org_id, listing?.id);
   const isUnlocked = listing ? assetUnlocked(listing.id) : false;
-  const ownerClick = listing?.asset_owner_id
-    ? guardedNavigate(`/asset-owner/${listing.asset_owner_id}`)
-    : undefined;
+  const ownerClick = listing?.asset_owner_id ? guardedNavigate(`/asset-owner/${listing.asset_owner_id}`) : undefined;
 
   useEffect(() => {
     const fetchListing = async () => {
-      if (!id) { setError("ID không hợp lệ"); setLoading(false); return; }
+      if (!id) {
+        setError("ID không hợp lệ");
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
-        const { data, error: err } = await supabase
-          .from("listings").select("*").eq("id", id).single();
+        const { data, error: err } = await supabase.from("listings").select("*").eq("id", id).single();
         if (err) throw err;
-        if (!data) { setError("Không tìm thấy tài sản"); setLoading(false); return; }
+        if (!data) {
+          setError("Không tìm thấy tài sản");
+          setLoading(false);
+          return;
+        }
 
         const { data: pt } = await supabase
-          .from("property_types").select("name, slug")
-          .eq("slug", data.property_type_slug).single();
+          .from("property_types")
+          .select("name, slug")
+          .eq("slug", data.property_type_slug)
+          .single();
 
         setListing({ ...data, property_types: pt || { name: "BĐS", slug: data.property_type_slug } });
         setError(null);
@@ -79,7 +103,9 @@ const AuctionDetail = () => {
         <Header />
         <div className="container mx-auto px-4 py-16 text-center">
           <h1 className="text-2xl font-bold text-foreground">{error || "Không tìm thấy"}</h1>
-          <Button onClick={() => navigate("/listings")} className="mt-4">Quay lại</Button>
+          <Button onClick={() => navigate("/listings")} className="mt-4">
+            Quay lại
+          </Button>
         </div>
       </div>
     );
@@ -107,7 +133,6 @@ const AuctionDetail = () => {
     );
   }
 
-
   if (!listing) return null;
 
   const addressText = formatAddress(listing.address || {});
@@ -127,13 +152,16 @@ const AuctionDetail = () => {
       <div className="container mx-auto px-4 py-4 md:py-6">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3">
-          <Link to="/" className="hover:text-foreground transition-colors">Trang chủ</Link>
+          <Link to="/" className="hover:text-foreground transition-colors">
+            Trang chủ
+          </Link>
           <ChevronRight className="w-3.5 h-3.5" />
-          <Link to="/listings" className="hover:text-foreground transition-colors">Danh sách</Link>
+          <Link to="/listings" className="hover:text-foreground transition-colors">
+            Danh sách
+          </Link>
           <ChevronRight className="w-3.5 h-3.5" />
           <span className="text-foreground font-medium truncate max-w-[300px]">{listing.title}</span>
         </nav>
-
 
         {/* Stats + actions row (title shown in right sticky card) */}
         <div className="mb-6">
@@ -212,7 +240,11 @@ const AuctionDetail = () => {
                 <CollapsibleTrigger asChild>
                   <button className="flex items-center justify-between w-full text-left">
                     <h3 className="text-lg font-bold text-foreground">Thông tin tài sản đấu giá</h3>
-                    {infoOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+                    {infoOpen ? (
+                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    )}
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-4">
@@ -246,7 +278,6 @@ const AuctionDetail = () => {
                       </div>
                     )}
                   </div>
-
                 </CollapsibleContent>
               </Card>
             </Collapsible>
@@ -284,16 +315,6 @@ const AuctionDetail = () => {
 
             {/* 5. Attachments */}
             <AuctionAttachments listing={listing} />
-
-            {/* 6. Save button — full width */}
-            <Button
-              variant={savedIds.has(listing.id) ? "default" : "outline"}
-              className="w-full gap-2"
-              onClick={() => toggleSave(listing.id)}
-            >
-              <Heart className={`h-4 w-4 ${savedIds.has(listing.id) ? "fill-current" : ""}`} />
-              {savedIds.has(listing.id) ? "Đã quan tâm tài sản" : "Quan tâm tài sản"}
-            </Button>
 
             {/* 7. Sources */}
             {sourceUrls.length > 0 && (

@@ -291,15 +291,6 @@ const AuctionDetail = () => {
               onLockedClick={() => openAssetPaywall(listing.id, listing.title)}
             />
 
-            {/* 2b. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) */}
-            {isUpcoming && (
-              <AuctionPricePrediction
-                listing={listing}
-                isUnlocked={isUnlocked}
-                onUnlock={() => openAssetPaywall(listing.id, listing.title)}
-              />
-            )}
-
             {/* 2b. Chủ tài sản (clickable card) */}
             {listing.asset_owner_id && (
               <AuctionAssetOwnerCard
@@ -317,8 +308,29 @@ const AuctionDetail = () => {
             {/* 5. Attachments */}
             <AuctionAttachments listing={listing} />
 
-            {/* 6. Price history (Bất động sản only) */}
-            <AuctionPriceHistory listing={listing} />
+            {/* 6. Price history (Bất động sản only) — paywalled */}
+            {isUnlocked ? (
+              <AuctionPriceHistory listing={listing} />
+            ) : (
+              <LockedBlur
+                ctaLabel="Mở khóa lịch sử đấu giá"
+                teaser="Xem lịch sử giá đấu giá khu vực"
+                futureNote="Truy cập biểu đồ biến động giá theo thời gian, mức đỉnh và xu hướng để đánh giá cơ hội."
+                onUnlockClick={() => openAssetPaywall(listing.id, listing.title)}
+                minHeight="520px"
+              >
+                <AuctionPriceHistory listing={listing} />
+              </LockedBlur>
+            )}
+
+            {/* 7. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) */}
+            {isUpcoming && (
+              <AuctionPricePrediction
+                listing={listing}
+                isUnlocked={isUnlocked}
+                onUnlock={() => openAssetPaywall(listing.id, listing.title)}
+              />
+            )}
 
             {/* 7. Sources */}
             {sourceUrls.length > 0 && (

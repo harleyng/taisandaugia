@@ -11,6 +11,7 @@ import { CreditsTab } from "@/components/profile/tabs/CreditsTab";
 import { PasswordTab } from "@/components/profile/tabs/PasswordTab";
 import { NotificationsTab } from "@/components/profile/tabs/NotificationsTab";
 import { SavedAssetsTab } from "@/components/profile/tabs/SavedAssetsTab";
+import { resolveDisplayName } from "@/lib/displayName";
 
 const VALID_TABS: ProfileTab[] = ["profile", "saved", "credits", "password", "notifications"];
 
@@ -19,6 +20,7 @@ const ProfilePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [email, setEmail] = useState("");
 
@@ -36,6 +38,7 @@ const ProfilePage = () => {
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { navigate("/"); return; }
+      setUserId(session.user.id);
       setEmail(session.user.email || session.user.phone || "");
 
       const { data } = await supabase
@@ -80,7 +83,7 @@ const ProfilePage = () => {
           <ProfileSidebar
             activeTab={activeTab}
             onChange={setActiveTab}
-            name={name}
+            name={resolveDisplayName(name, userId)}
             email={email}
             avatarUrl={avatarUrl}
             onLogout={handleLogout}

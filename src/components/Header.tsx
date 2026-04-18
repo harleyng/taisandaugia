@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, PlusCircle, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Sparkles } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, KeyRound } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -26,7 +26,8 @@ import { Session } from "@supabase/supabase-js";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { useCredits } from "@/hooks/useCredits";
-import { addCredits as addCreditsImpl } from "@/lib/mockCredits";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { resolveDisplayName } from "@/lib/displayName";
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -44,6 +45,8 @@ export const Header = () => {
 
   const { toast } = useToast();
   const [session, setSession] = useState<Session | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { balance } = useCredits();
 
   useEffect(() => {
@@ -53,6 +56,27 @@ export const Header = () => {
     } = supabase.auth.onAuthStateChange((_, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setProfileName(null);
+      setAvatarUrl(null);
+      return;
+    }
+    supabase
+      .from("profiles")
+      .select("name, agent_info")
+      .eq("id", session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setProfileName(data?.name ?? null);
+        const agentInfo = (data?.agent_info as any) || {};
+        setAvatarUrl(agentInfo?.profile_picture_url || null);
+      });
+  }, [session]);
+
+  const displayName = resolveDisplayName(profileName, session?.user.id);
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -151,49 +175,65 @@ export const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className={`hidden sm:inline-flex gap-2 ${transparent ? "text-white/90 hover:text-white hover:bg-white/10" : ""}`}
+                    className={`hidden sm:inline-flex gap-2 px-2 ${transparent ? "text-white/90 hover:text-white hover:bg-white/10" : ""}`}
                   >
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                      U
-                    </div>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-60">
-                  <DropdownMenuLabel className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground font-normal">Số dư</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                      <Coins className="h-3.5 w-3.5 text-primary" />
-                      {balance} credit
-                    </span>
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => navigate("/profile?tab=credits")}>
-                    <Coins className="mr-2 h-4 w-4 text-primary" />
-                    Mua credit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <UserCircle className="mr-2 h-4 w-4" />
-                    Hồ sơ cá nhân
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/profile?tab=saved")}>
-                    <Heart className="mr-2 h-4 w-4" />
-                    Tài sản quan tâm
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => {
-                      addCreditsImpl(500);
-                      toast({ title: "Dev: +500 credit", description: "Chỉ dùng để thử nghiệm." });
-                    }}
-                    className="text-xs text-muted-foreground"
+                <DropdownMenuContent align="end" className="w-72 p-0 overflow-hidden">
+                  {/* User header */}
+                  <div className="flex items-center gap-3 p-4">
+                    <Avatar className="h-11 w-11">
+                      <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-foreground truncate">{displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {session.user.email || session.user.phone || ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Credits row */}
+                  <button
+                    onClick={() => navigate("/profile?tab=credits")}
+                    className="w-full flex items-center justify-between px-4 py-3 border-y border-border hover:bg-muted/60 transition-colors"
                   >
-                    <Sparkles className="mr-2 h-3.5 w-3.5" />
-                    Dev: +500 credit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <span className="font-semibold text-foreground text-sm">Credit của tôi</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+                      <Coins className="h-3.5 w-3.5" />
+                      {balance}
+                    </span>
+                  </button>
+
+                  {/* Tabs */}
+                  <div className="py-1">
+                    <DropdownMenuItem onClick={() => navigate("/profile")} className="px-4 py-2.5 cursor-pointer">
+                      <UserCircle className="mr-3 h-4 w-4" />
+                      Hồ sơ cá nhân
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/profile?tab=saved")} className="px-4 py-2.5 cursor-pointer">
+                      <Heart className="mr-3 h-4 w-4" />
+                      Tài sản quan tâm
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/profile?tab=password")} className="px-4 py-2.5 cursor-pointer">
+                      <KeyRound className="mr-3 h-4 w-4" />
+                      Đổi mật khẩu
+                    </DropdownMenuItem>
+                  </div>
+
+                  <DropdownMenuSeparator className="my-0" />
+                  <DropdownMenuItem onClick={handleLogout} className="px-4 py-2.5 cursor-pointer text-destructive focus:text-destructive">
+                    <LogOut className="mr-3 h-4 w-4" />
                     Đăng xuất
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -294,16 +334,6 @@ export const Header = () => {
                         <Heart className="h-5 w-5" />
                         Tài sản quan tâm
                       </Link>
-                      <button
-                        onClick={() => {
-                          addCreditsImpl(500);
-                          toast({ title: "Dev: +500 credit" });
-                        }}
-                        className="w-full text-left flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground hover:bg-muted rounded-lg transition-colors"
-                      >
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Dev: +500 credit
-                      </button>
                     </div>
                     <div className="pt-4 space-y-2">
                       <Button onClick={handleLogout} variant="outline" className="w-full justify-start">

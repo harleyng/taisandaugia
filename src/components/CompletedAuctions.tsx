@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionCard } from "@/components/AuctionCard";
+import { useAuctionOrgNames } from "@/hooks/useAuctionOrgNames";
 
 const getShortLocation = (address: any): string => {
   if (!address) return "";
@@ -25,6 +26,8 @@ export const CompletedAuctions = () => {
       return data || [];
     },
   });
+
+  const orgNameById = useAuctionOrgNames(auctions.map((a: any) => a.auction_org_id));
 
   if (!isLoading && auctions.length === 0) return null;
 
@@ -58,7 +61,8 @@ export const CompletedAuctions = () => {
           {auctions.map((item) => {
             const customAttrs = (item.custom_attributes || {}) as Record<string, any>;
             const location = getShortLocation(item.address);
-            const orgName = customAttrs.org_name || "";
+            const fallbackOrgName = (item as any).auction_org_id ? orgNameById.get((item as any).auction_org_id) : "";
+            const orgName = customAttrs.org_name || fallbackOrgName || "";
             const winPrice = customAttrs.win_price as number | undefined;
 
             return (
@@ -73,6 +77,7 @@ export const CompletedAuctions = () => {
                 sessionStatus="ended"
                 categorySlug={item.property_type_slug}
                 orgName={orgName}
+                orgId={(item as any).auction_org_id}
                 winPrice={winPrice}
               />
             );

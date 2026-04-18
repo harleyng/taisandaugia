@@ -17,6 +17,7 @@ import { formatAddress } from "@/utils/formatters";
 import { useSearchParams, Link } from "react-router-dom";
 import { type AuctionFilters, defaultAuctionFilters } from "@/types/auction-filters.types";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
+import { useAuctionOrgNames } from "@/hooks/useAuctionOrgNames";
 
 type SortMode = "newest" | "price-asc" | "price-desc";
 
@@ -55,6 +56,7 @@ const Listings = () => {
 
   const { data: listings, isLoading } = useAuctionListings();
   const saveCounts = useListingSaveCounts((listings || []).map((l) => l.id));
+  const orgNameById = useAuctionOrgNames((listings || []).map((l) => l.auction_org_id));
   const { openAuthDialog } = useAuthDialog();
   const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
   const [session, setSession] = useState<any>(null);
@@ -251,6 +253,9 @@ const Listings = () => {
                   items.push(<CtaCard key="cta" />);
                 }
 
+                const fallbackOrgName = listing.auction_org_id ? orgNameById.get(listing.auction_org_id) : "";
+                const orgName = ca.org_name || fallbackOrgName || "";
+
                   items.push(
                     <AuctionCard
                       key={listing.id}
@@ -267,7 +272,7 @@ const Listings = () => {
                       categorySlug={listing.property_type_slug}
                       viewMode="grid"
                       winPrice={ca.win_price ?? ca.winning_price}
-                      orgName={ca.org_name}
+                      orgName={orgName}
                       orgId={(listing as any).auction_org_id}
                       isSaved={savedIds.has(listing.id)}
                       onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}

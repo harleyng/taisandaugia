@@ -1,43 +1,67 @@
-## Plan: Hệ thống Credit + Khoá nội dung + Trang mua Credit (mock)
 
-Kết hợp toàn bộ: lock UI/paywall (đã đề xuất ở plan trước) + trang mua credit với 4 gói. KHÔNG tích hợp thanh toán thật — dùng mock + dev helper để chạy thông flow end-to-end. Sau này swap mock sang VNPay/Stripe chỉ cần đổi 1 hook.
 
----
+## Plan: Gộp /buy-credits vào /profile dưới dạng tabs sidebar
 
-### 1. Lớp state credit (mock, persist localStorage)
+Biến `/profile` thành layout 2 cột: sidebar trái chứa các tab, vùng nội dung phải hiển thị tab tương ứng. Trang `/buy-credits` cũ được giữ làm redirect để link cũ vẫn chạy.
 
-- `src/lib/mockCredits.ts`: balance, asset unlocks, company unlocks (kèm `expires_at`), purchase history. Emit event để các hook re-render.
-- `src/hooks/useCredits.tsx`: `balance`, `assetUnlocked(id)`, `companyAccess(orgId)` → `{tier, expiresAt, isUnlocked}`, `unlockAsset(id)`, `unlockCompany(orgId, tier)`, `addCredits(amount, packageKey)`.
-- Hằng số: `ASSET_COST = 59`. Tiers công ty: `7d=99`, `30d=299`, `1y=1990` credit.
-- Gói mua: Starter `69k→69`, Popular `179k→190` (highlight), Value `299k→330`, Pro `499k→600`.
+### Layout mới `ProfilePage`
 
-### 2. Trang mua credit + kết quả
+```text
++------------------------------------------------+
+| Header                                         |
++----------------+-------------------------------+
+| [Avatar+Name]  |                               |
+| Số dư: X credit|   Tab content                 |
+|                |                               |
+| ▸ Hồ sơ        |                               |
+| ▸ Mua credit   |                               |
+| ▸ Đổi mật khẩu |                               |
+| ▸ Thông báo    |                               |
+| ▸ Đăng xuất    |                               |
++----------------+-------------------------------+
+```
 
-- `src/pages/BuyCredits.tsx` (`/buy-credits`):
-  - Header: "Mua credit" + "Số dư hiện tại: X credit"
-  - 4 card gói dùng 4 ảnh minh hoạ (xu tăng dần) 
-  - Card Popular có badge "Phổ biến" + viền nổi bật
-  - CTA "Mua ngay" → mock: minh hoạ luồng thanh toand bằng VNPay -> click thanh toán -> loading → cộng credit → điều hướng `/payment-result?status=success&package=...&return=...`
-  - Hỗ trợ `?return=/auctions/abc&unlock=asset:abc` để auto-unlock + redirect sau khi mua
-- `src/pages/PaymentResult.tsx` (`/payment-result`):
-  - Success: "Thanh toán thành công" + "+X credit đã được cộng". Nếu có `unlock` param → tự động `unlockAsset/unlockCompany` rồi CTA "Tiếp tục" về `return` URL
-  - Failed: "Thanh toán thất bại" + "Thử lại"
-- 4 ảnh minh hoạ generate sẵn vào `src/assets/credits/` (coin pile tăng dần, có badge "Ảnh minh hoạ")
+### Tabs
 
-### 3. Paywall components (dùng chung)
+1. **profile** (mặc định) — Avatar upload + tên hiển thị (tách từ ProfilePage hiện tại)
+2. **credits** — Toàn bộ nội dung `BuyCredits` hiện tại (5 gói + dialog VNPay mock)
+3. **password** — Đổi mật khẩu
+4. **notifications** — Toggle thông báo
+5. **logout** — Action button (không phải tab content)
 
-- `src/components/paywall/LockedBlur.tsx`: wrap children, blur + chặn click, overlay icon khoá + teaser + CTA
-- `src/components/paywall/AssetPaywallDialog.tsx`: balance, "Mở khoá tài sản – 59 credit", note tương lai. Đủ → "Dùng credit để mở"; thiếu → "Mua credit" → `/buy-credits?return=...&unlock=asset:id`
-- `src/components/paywall/CompanyPaywallDialog.tsx`: 3 tier card (7d/30d/1y) với mô tả giá trị, logic credit tương tự
-- `src/contexts/PaywallContext.tsx`: `openAssetPaywall(id)`, `openCompanyPaywall(orgId)` global
+### Cơ chế tab
 
-### 4. Áp dụng khoá
+- Dùng URL query `?tab=credits` (sync với React Router) để các link bên ngoài trỏ thẳng vào tab cụ thể.
+- Sidebar items: icon + label + active state highlight (left border + bg muted).
+- Mobile: sidebar collapse thành horizontal scrollable tabs trên đầu trang (dùng `Tabs` shadcn hoặc custom flex).
 
-`**AuctionDetail.tsx**` (free: tiêu đề, giá, địa chỉ, mô tả, ảnh, save):
+### Files
 
-- Khoá `AuctionScheduleInfo`, `AuctionAttachments`, contact line trong `AuctionOrganizerInfo`
-- Thêm card placeholder "Phân tích & insight" (chỉ hiện khi locked) với note "Dữ liệu sẽ được cập nhật và phân tích sâu hơn..."
+**Tạo:**
+- `src/components/profile/ProfileSidebar.tsx` — sidebar với danh sách tab + avatar header + balance chip
+- `src/components/profile/tabs/ProfileInfoTab.tsx` — tách phần avatar/name từ ProfilePage cũ
+- `src/components/profile/tabs/CreditsTab.tsx` — toàn bộ UI mua credit (5 gói + VNPay dialog) tách từ BuyCredits.tsx; vẫn dùng cùng `useCredits` + `mockCredits`
+- `src/components/profile/tabs/PasswordTab.tsx` — đổi mật khẩu
+- `src/components/profile/tabs/NotificationsTab.tsx` — toggle thông báo
 
-`**CompanyDetail.tsx**` (free: tên, org_type badge, địa chỉ):
+**Sửa:**
+- `src/pages/ProfilePage.tsx` — thay bằng layout sidebar + render tab theo `?tab=...`. Default = `profile`.
+- `src/pages/BuyCredits.tsx` — chuyển thành component redirect: `<Navigate to={`/profile?tab=credits${location.search params}`} replace />` (giữ `return` & `unlock` query params). Đảm bảo các nút "Mua credit" hiện có (Header, AssetPaywallDialog, CompanyPaywallDialog) vẫn hoạt động không cần sửa.
+- `src/components/Header.tsx` — đổi điều hướng "Mua credit" sang `/profile?tab=credits` (cả desktop + mobile + chip balance).
+- `src/components/paywall/AssetPaywallDialog.tsx` & `CompanyPaywallDialog.tsx` — đổi `navigate('/buy-credits?...')` sang `/profile?tab=credits&...`.
+- `src/pages/PaymentResult.tsx` — nút "Mua thêm credit" / "Thử lại" trỏ về `/profile?tab=credits` (giữ logic auto-unlock & return URL).
 
-- Khoá stats grid, search/filter, listings
+### Chi tiết UI sidebar
+
+- Card sticky top-24 trên desktop (`lg:col-span-3`), nội dung `lg:col-span-9`.
+- Mỗi item: `<button>` full width, `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm`, active = `bg-primary/10 text-primary font-semibold`.
+- Header sidebar: avatar nhỏ + tên + email + chip "Số dư: X credit" (link tới tab credits).
+- Logout: tách dưới cùng, `variant="outline"` đỏ nhạt.
+- Mobile (`<lg`): sidebar thành `Tabs` ngang, scroll-x, sticky top dưới Header.
+
+### Bảo toàn behavior
+
+- Auto-unlock sau thanh toán: vẫn redirect qua `/payment-result` → `unlockAsset/unlockCompany` → `return` URL gốc (không thay đổi).
+- Deep link `/buy-credits?return=/auctions/abc&unlock=asset:abc` → redirect tới `/profile?tab=credits&return=...&unlock=...`, CreditsTab đọc cùng params như trước.
+- ProtectedRoute đã bao `/profile`, nên CreditsTab luôn yêu cầu đăng nhập (paywall dialog cần xử lý guest: bấm "Mua credit" khi chưa login → openAuthDialog rồi mới redirect — pattern đã có sẵn `useAuthGuardedNavigate`).
+

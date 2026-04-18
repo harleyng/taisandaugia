@@ -143,7 +143,7 @@ export const Header = () => {
                 variant="ghost"
                 size="icon"
                 className={`hidden sm:inline-flex ${transparent ? "text-white/90 hover:text-white hover:bg-white/10" : ""}`}
-                onClick={() => navigate("/saved-assets")}
+                onClick={() => navigate("/profile?tab=saved")}
               >
                 <Heart className="h-5 w-5" />
               </Button>

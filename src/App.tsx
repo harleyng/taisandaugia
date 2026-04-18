@@ -18,6 +18,7 @@ import CompanyDetail from "./pages/CompanyDetail";
 import AssetOwnerDetail from "./pages/AssetOwnerDetail";
 import BuyCredits from "./pages/BuyCredits";
 import PaymentResult from "./pages/PaymentResult";
+import VnpayCheckout from "./pages/VnpayCheckout";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
 
             {/* Credits */}
             <Route path="/buy-credits" element={<BuyCredits />} />
+            <Route path="/payment/vnpay" element={<VnpayCheckout />} />
             <Route path="/payment-result" element={<PaymentResult />} />
 
             {/* Auth */}

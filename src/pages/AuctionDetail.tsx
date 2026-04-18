@@ -47,6 +47,7 @@ import { LockedBlur } from "@/components/paywall/LockedBlur";
 import { useCompanyViewTracker } from "@/hooks/useCompanyViewTracker";
 import { AuctionPricePrediction } from "@/components/auction/AuctionPricePrediction";
 import { Sparkles, X } from "lucide-react";
+import { useAuthDialog } from "@/contexts/AuthDialogContext";
 
 const AuctionDetail = () => {
   const { id } = useParams();

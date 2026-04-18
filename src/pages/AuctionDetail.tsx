@@ -15,6 +15,7 @@ import { AuctionOrganizerInfo } from "@/components/auction/AuctionOrganizerInfo"
 import { AuctionScheduleInfo } from "@/components/auction/AuctionScheduleInfo";
 import { AuctionAttachments } from "@/components/auction/AuctionAttachments";
 import { AuctionSimilarAssets } from "@/components/auction/AuctionSimilarAssets";
+import { AuctionAssetOwnerCard } from "@/components/auction/AuctionAssetOwnerCard";
 import { Link } from "react-router-dom";
 import { formatAddress } from "@/utils/formatters";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";

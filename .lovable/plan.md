@@ -1,70 +1,56 @@
 
+
 ## Mục tiêu
-Bổ sung block "Dự đoán giá trúng" (locked) trên trang chi tiết tài sản, chỉ hiển thị với tài sản **chưa kết thúc đấu giá**.
+Áp paywall lên trang chi tiết **Chủ tài sản** giống trang **Công ty đấu giá**, với tier giá theo dõi **bằng nửa** giá tier công ty.
 
-## Cách xác định "chưa kết thúc"
-Dựa vào `custom_attributes`:
-- Có `auction_date` (ngày tổ chức) trong tương lai, HOẶC
-- Chưa có `winning_price` / `win_price`
+## So sánh giá (theo dõi)
 
-→ Logic: `isUpcoming = !winPrice && (auction_date == null || new Date(auction_date) >= now)`
+| Tier | Công ty (hiện tại) | Chủ tài sản (mới) |
+|---|---|---|
+| 7 ngày | 99 credit | **49 credit** |
+| 30 ngày | 299 credit | **149 credit** |
+| 1 năm | 1990 credit | **995 credit** |
 
-## Block mới: "Dự đoán giá trúng & Phân tích"
-Đặt ngay **dưới AuctionPriceRow** (vị trí đập vào mắt nhất), thay thế/gộp với block "Phân tích & insight nâng cao" hiện tại để tránh trùng lặp.
+Lý do giảm giá: chủ tài sản thường có ít listing hơn công ty → giá trị thấp hơn → hợp lý ở mức ½.
 
-### Nội dung khi LOCKED (blur + CTA)
-1. **Dự đoán giá trúng**: `2.45 tỷ – 2.78 tỷ` (mock, blur)
-2. **Độ tin cậy**: thanh progress (vd 78%) + label "Cao"
-3. **So với khởi điểm**: `+12% đến +27%`
-4. **Các chỉ số nên bổ sung** (đề xuất):
-   - **Mức độ cạnh tranh dự kiến**: Thấp / Trung bình / Cao (dựa trên lượt quan tâm + khu vực)
-   - **Số phiên tương tự gần đây**: vd "8 phiên cùng khu vực 90 ngày qua"
-   - **Tỷ lệ đấu giá thành công khu vực**: vd "65%"
-   - **Giá trung bình/m² khu vực**: để so sánh nhanh
-   - **Khuyến nghị đặt cọc/tham gia**: Nên / Cân nhắc / Bỏ qua
+## Block locked trên trang chủ tài sản
 
-### CTA
-- Button "Mở khóa dự đoán – 59 credit" → `openAssetPaywall(listing.id, listing.title)`
-- Reuse logic `isUnlocked` từ `useCredits`
+Header chủ tài sản (tên + địa chỉ) **vẫn hiển thị công khai**. Khi chưa unlock, ẩn:
+- Stats (tổng tài sản, đấu giá thành công, tỷ lệ)
+- Search/filter
+- Danh sách listings
 
-### Khi UNLOCKED
-Hiển thị giá trị thật (mock data lấy từ `ca.predicted_price_min/max`, `ca.confidence_score`, ...). Nếu chưa có dữ liệu thì hiện "Đang phân tích".
+Thay bằng card CTA giống `CompanyDetail`:
+- Icon Lock + tiêu đề "Hồ sơ chủ tài sản"
+- Mô tả "Theo dõi danh sách tài sản và lịch sử đấu giá của chủ tài sản này"
+- Nút "Xem các gói theo dõi" → mở `OwnerPaywallDialog` mới
 
 ## Thay đổi code
 
-### 1. Component mới: `src/components/auction/AuctionPricePrediction.tsx`
-- Props: `listing`, `isUnlocked`, `onUnlock`
-- Layout: Card với 2 phần:
-  - **Header**: icon Sparkles + tiêu đề "Dự đoán giá trúng (AI)"
-  - **Body**: 
-    - Range giá lớn (blur khi locked)
-    - 4 chip nhỏ: Độ tin cậy, Cạnh tranh, Phiên tương tự, Tỷ lệ thành công
-    - CTA mở khóa
-- Dùng `LockedBlur` component đã có sẵn để blur
+### 1. `src/lib/mockCredits.ts`
+- Thêm type `OwnerTierKey = "7d" | "30d" | "1y"` + `OWNER_TIERS` (giá ½ company)
+- Thêm `ownerUnlocks: Record<string, OwnerUnlock>` vào `MockState`
+- Thêm `getOwnerAccess(ownerId)` + `unlockOwner(ownerId, tier, label)` (mirror company logic)
+- Thêm transaction type `"unlock_owner"`
 
-### 2. Sửa `src/pages/AuctionDetail.tsx`
-- Thêm helper `isUpcoming` 
-- Render `<AuctionPricePrediction>` ngay sau `AuctionPriceRow` nếu `isUpcoming`
-- **Xóa** block "Phân tích & insight nâng cao" cũ (gộp vào block mới để tránh 2 block locked giống nhau)
+### 2. `src/hooks/useCredits.tsx`
+- Export `ownerAccess`, `unlockOwner`, `OWNER_TIERS`, `OwnerTierKey`
 
-### 3. Mock data (không cần migration)
-Dự đoán tính từ `price` (giá khởi điểm):
-- `min = price * 1.12`, `max = price * 1.27` (deterministic theo `listing.id` để mỗi tài sản có range khác nhau ổn định)
-- `confidence = 65-90%` (hash từ id)
-- `competition`: dựa trên `views_count`
+### 3. `src/components/paywall/OwnerPaywallDialog.tsx` (mới)
+- Clone `CompanyPaywallDialog`, đổi label "Hồ sơ chủ tài sản" + dùng `OWNER_TIERS` + `unlock=owner:{id}:{tier}` cho buy-credit redirect
 
-## Đề xuất bổ sung khác (ngoài giá dự đoán)
-Tôi gợi ý gộp luôn các chỉ số này vào block để 1 lần unlock cho ra nhiều giá trị, thay vì có nhiều block locked rời rạc:
+### 4. `src/contexts/PaywallContext.tsx`
+- Thêm `openOwnerPaywall(ownerId, label?)` + render `<OwnerPaywallDialog>`
 
-| Chỉ số | Lý do hữu ích |
-|---|---|
-| Range giá dự đoán | Giá trị cốt lõi |
-| Độ tin cậy AI | Giúp user đánh giá độ chắc chắn |
-| Mức cạnh tranh dự kiến | Quyết định có nên tham gia |
-| Số phiên tương tự gần đây | Bằng chứng/độ tin cậy |
-| Tỷ lệ đấu giá thành công khu vực | Bối cảnh thị trường |
-| Khuyến nghị (Nên/Cân nhắc/Bỏ qua) | Gợi ý hành động |
+### 5. `src/pages/AssetOwnerDetail.tsx`
+- Thêm `useCredits().ownerAccess(id)` + `usePaywall().openOwnerPaywall`
+- Bọc stats + search + grid trong `if (isOwnerUnlocked)`, else render card CTA locked
+- Header chủ tài sản giữ public
 
-## Files
-- **Tạo**: `src/components/auction/AuctionPricePrediction.tsx`
-- **Sửa**: `src/pages/AuctionDetail.tsx` (thêm component, xóa block insight cũ)
+### 6. `src/pages/BuyCredits.tsx` / `CreditsTab` redirect handler
+- Hỗ trợ param `unlock=owner:{id}:{tier}` → auto unlock sau khi nạp credit (giống company)
+
+## Lưu ý
+- Mock data chỉ lưu localStorage, không cần migration DB.
+- Các tier hiển thị "Phổ biến" cho `30d` (giống company).
+

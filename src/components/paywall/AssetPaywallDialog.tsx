@@ -13,7 +13,13 @@ interface AssetPaywallDialogProps {
   returnPath?: string;
 }
 
-export const AssetPaywallDialog = ({ open, onOpenChange, listingId, listingLabel, returnPath }: AssetPaywallDialogProps) => {
+export const AssetPaywallDialog = ({
+  open,
+  onOpenChange,
+  listingId,
+  listingLabel,
+  returnPath,
+}: AssetPaywallDialogProps) => {
   const { balance, unlockAsset } = useCredits();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -51,13 +57,16 @@ export const AssetPaywallDialog = ({ open, onOpenChange, listingId, listingLabel
 
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground text-center">
-            Xem đầy đủ lịch trình đấu giá, tài liệu đính kèm và thông tin liên hệ đơn vị tổ chức.
+            Xem đầy đủ lịch sử đấu giá, dự đoán giá trúng và giá trúng khi có kết quả
           </p>
 
           <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
             <div className="flex items-start gap-2 text-xs text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-              <span>Dữ liệu sẽ được cập nhật và phân tích sâu hơn trong thời gian tới — mở khóa để truy cập các thông tin nâng cao khi được cập nhật.</span>
+              <span>
+                Dữ liệu sẽ được cập nhật và phân tích sâu hơn trong thời gian tới — mở khóa để truy cập các thông tin
+                nâng cao khi được cập nhật.
+              </span>
             </div>
           </div>
 

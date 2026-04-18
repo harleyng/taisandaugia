@@ -128,8 +128,16 @@ const read = (): MockState => {
 };
 
 const write = (s: MockState) => {
-  cached = s;
-  localStorage.setItem(KEY, JSON.stringify(s));
+  // Always emit a fresh reference so React's useSyncExternalStore detects the change
+  const next: MockState = {
+    balance: s.balance,
+    assetUnlocks: [...s.assetUnlocks],
+    companyUnlocks: { ...s.companyUnlocks },
+    ownerUnlocks: { ...s.ownerUnlocks },
+    transactions: [...s.transactions],
+  };
+  cached = next;
+  localStorage.setItem(KEY, JSON.stringify(next));
   window.dispatchEvent(new CustomEvent(EVT));
 };
 

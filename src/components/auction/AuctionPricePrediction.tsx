@@ -61,7 +61,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
           <Sparkles className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">Dự đoán giá trúng (AI)</h3>
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">Dự đoán giá trúng</h3>
           <p className="text-xs text-muted-foreground mt-0.5">Phân tích dựa trên dữ liệu phiên đấu giá tương tự</p>
         </div>
       </div>

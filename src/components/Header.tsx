@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, KeyRound } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -224,10 +224,6 @@ export const Header = () => {
                     <DropdownMenuItem onClick={() => navigate("/profile?tab=saved")} className="px-4 py-2.5 cursor-pointer">
                       <Heart className="mr-3 h-4 w-4" />
                       Tài sản quan tâm
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/profile?tab=password")} className="px-4 py-2.5 cursor-pointer">
-                      <KeyRound className="mr-3 h-4 w-4" />
-                      Đổi mật khẩu
                     </DropdownMenuItem>
                   </div>
 

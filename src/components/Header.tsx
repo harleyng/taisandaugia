@@ -225,10 +225,6 @@ export const Header = () => {
                       <Heart className="mr-3 h-4 w-4" />
                       Tài sản quan tâm
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/profile?tab=password")} className="px-4 py-2.5 cursor-pointer">
-                      <KeyRound className="mr-3 h-4 w-4" />
-                      Đổi mật khẩu
-                    </DropdownMenuItem>
                   </div>
 
                   <DropdownMenuSeparator className="my-0" />

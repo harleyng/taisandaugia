@@ -17,7 +17,7 @@ interface Props {
 
 const NAV: { key: ProfileTab; label: string; icon: typeof UserCircle }[] = [
   { key: "profile", label: "Hồ sơ cá nhân", icon: UserCircle },
-  { key: "credits", label: "Mua credit", icon: CreditCard },
+  { key: "credits", label: "Credit", icon: CreditCard },
   { key: "password", label: "Đổi mật khẩu", icon: KeyRound },
   { key: "notifications", label: "Thông báo", icon: Bell },
 ];

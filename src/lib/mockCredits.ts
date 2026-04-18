@@ -192,6 +192,14 @@ export const unlockAsset = (id: string, label?: string): { ok: boolean; reason?:
   return { ok: true };
 };
 
+// Debug-only helper: relock an asset (does NOT refund credits)
+export const lockAsset = (id: string) => {
+  const s = read();
+  if (!s.assetUnlocks.includes(id)) return;
+  s.assetUnlocks = s.assetUnlocks.filter((x) => x !== id);
+  write(s);
+};
+
 export interface CompanyAccess {
   isUnlocked: boolean;
   tier: CompanyTierKey | null;

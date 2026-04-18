@@ -10,12 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, ChevronRight, Search, Gavel, Trophy, Percent, MapPin } from "lucide-react";
+import { User, ChevronRight, Search, Gavel, Trophy, Percent, MapPin, Lock } from "lucide-react";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { formatAddress } from "@/utils/formatters";
+import { useCredits } from "@/hooks/useCredits";
+import { usePaywall } from "@/contexts/PaywallContext";
 
 const AssetOwnerDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +26,10 @@ const AssetOwnerDetail = () => {
   const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { ownerAccess } = useCredits();
+  const { openOwnerPaywall } = usePaywall();
+  const access = id ? ownerAccess(id) : { isUnlocked: false, tier: null, expiresAt: null };
+  const isOwnerUnlocked = access.isUnlocked;
 
   const { data: owner, isLoading: ownerLoading } = useQuery({
     queryKey: ["asset-owner", id],

@@ -41,8 +41,8 @@ import {
 const IMAGES: Record<string, string> = {
   starter: packStarter,
   popular: packPopular,
-  value: packValue,
-  pro: packPro,
+  value: packPro,
+  pro: packValue,
   max: packMax,
 };
 

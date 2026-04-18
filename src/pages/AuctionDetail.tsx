@@ -170,24 +170,7 @@ const AuctionDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* LEFT COLUMN */}
           <div className="lg:col-span-2 space-y-6">
-            {/* 1. Price Row */}
-            <AuctionPriceRow
-              price={listing.price}
-              customAttributes={ca}
-              isUnlocked={isUnlocked}
-              onLockedClick={() => openAssetPaywall(listing.id, listing.title)}
-            />
-
-            {/* 1b. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) */}
-            {isUpcoming && (
-              <AuctionPricePrediction
-                listing={listing}
-                isUnlocked={isUnlocked}
-                onUnlock={() => openAssetPaywall(listing.id, listing.title)}
-              />
-            )}
-
-            {/* 2. Thông tin việc đấu giá — Collapsible */}
+            {/* 1. Thông tin việc đấu giá — Collapsible */}
             <Collapsible open={infoOpen} onOpenChange={setInfoOpen}>
               <Card className="p-5 space-y-4">
                 <CollapsibleTrigger asChild>
@@ -231,6 +214,23 @@ const AuctionDetail = () => {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+
+            {/* 2. Price Row */}
+            <AuctionPriceRow
+              price={listing.price}
+              customAttributes={ca}
+              isUnlocked={isUnlocked}
+              onLockedClick={() => openAssetPaywall(listing.id, listing.title)}
+            />
+
+            {/* 2b. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) */}
+            {isUpcoming && (
+              <AuctionPricePrediction
+                listing={listing}
+                isUnlocked={isUnlocked}
+                onUnlock={() => openAssetPaywall(listing.id, listing.title)}
+              />
+            )}
 
             {/* 2b. Chủ tài sản (clickable card) */}
             {listing.asset_owner_id && (

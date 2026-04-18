@@ -256,6 +256,14 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
               height={28}
               iconType="circle"
               wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
+              payload={[
+                { value: "Giá cao nhất", type: "circle", id: "high", color: "hsl(280 65% 60%)" },
+                { value: "Giá phổ biến nhất (trung vị)", type: "circle", id: "popular", color: "hsl(217 91% 55%)" },
+                { value: "Giá thấp nhất", type: "circle", id: "low", color: "hsl(45 90% 55%)" },
+                ...(pricePerSqm > 0
+                  ? [{ value: "Khởi điểm tin hiện tại", type: "circle" as const, id: "current", color: "hsl(0 75% 55%)" }]
+                  : []),
+              ]}
             />
             <Line
               type="monotone"
@@ -273,7 +281,7 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
               name="Giá phổ biến nhất (trung vị)"
               stroke="hsl(217 91% 55%)"
               strokeWidth={3}
-              dot={false}
+              dot={{ r: 3, fill: "hsl(217 91% 55%)", stroke: "hsl(var(--background))", strokeWidth: 1.5 }}
               activeDot={{ r: 5, fill: "hsl(217 91% 55%)", stroke: "hsl(var(--background))", strokeWidth: 2 }}
             />
             <Line
@@ -299,14 +307,6 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
             )}
           </LineChart>
         </ResponsiveContainer>
-        {pricePerSqm > 0 && (
-          <div className="flex justify-end -mt-1">
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full bg-[hsl(0_75%_55%)] inline-block" />
-              Giá tin đang xem: ~{pricePerSqm.toFixed(1)} tr/m²
-            </span>
-          </div>
-        )}
       </div>
     </Card>
   );

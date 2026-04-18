@@ -308,15 +308,6 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
           </div>
         )}
       </div>
-
-      {/* Disclaimer */}
-      <div className="flex gap-2 rounded-lg border border-border bg-muted/30 p-3">
-        <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Dữ liệu giá được tổng hợp và xử lý từ các phiên đấu giá công khai trong khu vực. Vui lòng lưu ý nếu tin đăng
-          nằm ngoài khoảng giá gợi ý và xác minh thêm thông tin trước khi tham gia đấu giá.
-        </p>
-      </div>
     </Card>
   );
 };

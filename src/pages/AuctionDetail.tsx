@@ -219,7 +219,10 @@ const AuctionDetail = () => {
 
             {/* 2b. Chủ tài sản (clickable card) */}
             {listing.asset_owner_id && (
-              <AuctionAssetOwnerCard ownerId={listing.asset_owner_id} />
+              <AuctionAssetOwnerCard
+                ownerId={listing.asset_owner_id}
+                fromListing={{ id: listing.id, title: listing.title }}
+              />
             )}
 
             {/* 3. Organizer */}

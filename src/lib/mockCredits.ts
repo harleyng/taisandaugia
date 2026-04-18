@@ -27,10 +27,13 @@ interface CompanyUnlock {
   expiresAt: number; // epoch ms
 }
 
-interface PurchaseRecord {
-  packageKey: CreditPackageKey;
-  credits: number;
-  priceVnd: number;
+export type TransactionType = "purchase" | "unlock_asset" | "unlock_company";
+
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  description: string;
+  creditDelta: number;
   at: number;
 }
 
@@ -38,24 +41,48 @@ interface MockState {
   balance: number;
   assetUnlocks: string[];
   companyUnlocks: Record<string, CompanyUnlock>;
-  purchases: PurchaseRecord[];
+  transactions: Transaction[];
 }
 
 const defaultState: MockState = {
   balance: 0,
   assetUnlocks: [],
   companyUnlocks: {},
-  purchases: [],
+  transactions: [],
 };
 
 let cached: MockState | null = null;
+
+const genId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const read = (): MockState => {
   if (typeof window === "undefined") return defaultState;
   if (cached) return cached;
   try {
     const raw = localStorage.getItem(KEY);
-    cached = raw ? { ...defaultState, ...JSON.parse(raw) } : defaultState;
+    if (!raw) {
+      cached = defaultState;
+    } else {
+      const parsed = JSON.parse(raw);
+      // Migrate legacy `purchases` → `transactions`
+      if (!parsed.transactions && Array.isArray(parsed.purchases)) {
+        parsed.transactions = parsed.purchases.map((p: { packageKey: CreditPackageKey; credits: number; at: number }) => {
+          const pkg = CREDIT_PACKAGES.find((x) => x.key === p.packageKey);
+          return {
+            id: genId(),
+            type: "purchase" as TransactionType,
+            description: `Mua gói ${pkg?.name ?? p.packageKey}`,
+            creditDelta: p.credits,
+            at: p.at,
+          };
+        });
+        delete parsed.purchases;
+      }
+      cached = { ...defaultState, ...parsed };
+    }
   } catch {
     cached = defaultState;
   }
@@ -66,6 +93,16 @@ const write = (s: MockState) => {
   cached = s;
   localStorage.setItem(KEY, JSON.stringify(s));
   window.dispatchEvent(new CustomEvent(EVT));
+};
+
+const pushTx = (s: MockState, tx: Omit<Transaction, "id" | "at"> & { at?: number }) => {
+  s.transactions.unshift({
+    id: genId(),
+    at: tx.at ?? Date.now(),
+    type: tx.type,
+    description: tx.description,
+    creditDelta: tx.creditDelta,
+  });
 };
 
 if (typeof window !== "undefined") {
@@ -86,23 +123,33 @@ export const subscribe = (cb: () => void) => {
 
 export const getState = (): MockState => read();
 
-export const addCredits = (credits: number, packageKey?: CreditPackageKey, priceVnd?: number) => {
+export const addCredits = (credits: number, packageKey?: CreditPackageKey, _priceVnd?: number) => {
   const s = read();
   s.balance += credits;
-  if (packageKey && priceVnd != null) {
-    s.purchases.unshift({ packageKey, credits, priceVnd, at: Date.now() });
+  if (packageKey) {
+    const pkg = CREDIT_PACKAGES.find((p) => p.key === packageKey);
+    pushTx(s, {
+      type: "purchase",
+      description: `Mua gói ${pkg?.name ?? packageKey}`,
+      creditDelta: credits,
+    });
   }
   write(s);
 };
 
 export const isAssetUnlocked = (id: string) => read().assetUnlocks.includes(id);
 
-export const unlockAsset = (id: string): { ok: boolean; reason?: "insufficient" | "already" } => {
+export const unlockAsset = (id: string, label?: string): { ok: boolean; reason?: "insufficient" | "already" } => {
   const s = read();
   if (s.assetUnlocks.includes(id)) return { ok: true, reason: "already" };
   if (s.balance < ASSET_COST) return { ok: false, reason: "insufficient" };
   s.balance -= ASSET_COST;
   s.assetUnlocks.push(id);
+  pushTx(s, {
+    type: "unlock_asset",
+    description: `Mở khóa tài sản ${label ?? id}`,
+    creditDelta: -ASSET_COST,
+  });
   write(s);
   return { ok: true };
 };
@@ -121,7 +168,7 @@ export const getCompanyAccess = (orgId: string): CompanyAccess => {
   return { isUnlocked: true, tier: u.tier, expiresAt: u.expiresAt };
 };
 
-export const unlockCompany = (orgId: string, tierKey: CompanyTierKey): { ok: boolean; reason?: "insufficient" } => {
+export const unlockCompany = (orgId: string, tierKey: CompanyTierKey, label?: string): { ok: boolean; reason?: "insufficient" } => {
   const tier = COMPANY_TIERS.find((t) => t.key === tierKey)!;
   const s = read();
   if (s.balance < tier.cost) return { ok: false, reason: "insufficient" };
@@ -132,6 +179,11 @@ export const unlockCompany = (orgId: string, tierKey: CompanyTierKey): { ok: boo
     tier: tierKey,
     expiresAt: base + tier.days * 24 * 60 * 60 * 1000,
   };
+  pushTx(s, {
+    type: "unlock_company",
+    description: `Theo dõi công ty ${label ?? orgId} ${tier.label}`,
+    creditDelta: -tier.cost,
+  });
   write(s);
   return { ok: true };
 };

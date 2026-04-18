@@ -5,6 +5,7 @@ import {
   CREDIT_PACKAGES,
   CompanyTierKey,
   CreditPackageKey,
+  Transaction,
   addCredits as addCreditsImpl,
   getCompanyAccess,
   getState,
@@ -23,8 +24,11 @@ export const useCredits = () => {
 
   const assetUnlocked = useCallback((id: string) => state.assetUnlocks.includes(id), [state]);
   const companyAccess = useCallback((orgId: string) => getCompanyAccess(orgId), [state]);
-  const unlockAsset = useCallback((id: string) => unlockAssetImpl(id), []);
-  const unlockCompany = useCallback((orgId: string, tier: CompanyTierKey) => unlockCompanyImpl(orgId, tier), []);
+  const unlockAsset = useCallback((id: string, label?: string) => unlockAssetImpl(id, label), []);
+  const unlockCompany = useCallback(
+    (orgId: string, tier: CompanyTierKey, label?: string) => unlockCompanyImpl(orgId, tier, label),
+    []
+  );
   const addCredits = useCallback(
     (credits: number, packageKey?: CreditPackageKey, priceVnd?: number) => addCreditsImpl(credits, packageKey, priceVnd),
     []
@@ -32,6 +36,7 @@ export const useCredits = () => {
 
   return {
     balance: state.balance,
+    transactions: state.transactions,
     assetUnlocked,
     companyAccess,
     unlockAsset,
@@ -44,4 +49,4 @@ export const useCredits = () => {
 };
 
 export { ASSET_COST, COMPANY_TIERS, CREDIT_PACKAGES };
-export type { CompanyTierKey, CreditPackageKey };
+export type { CompanyTierKey, CreditPackageKey, Transaction };

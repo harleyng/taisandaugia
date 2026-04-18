@@ -11,10 +11,11 @@ interface CompanyPaywallDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   orgId: string | null;
+  orgLabel?: string;
   returnPath?: string;
 }
 
-export const CompanyPaywallDialog = ({ open, onOpenChange, orgId, returnPath }: CompanyPaywallDialogProps) => {
+export const CompanyPaywallDialog = ({ open, onOpenChange, orgId, orgLabel, returnPath }: CompanyPaywallDialogProps) => {
   const { balance, unlockCompany } = useCredits();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -25,7 +26,7 @@ export const CompanyPaywallDialog = ({ open, onOpenChange, orgId, returnPath }: 
 
   const handleUnlock = () => {
     if (!orgId) return;
-    const r = unlockCompany(orgId, selected);
+    const r = unlockCompany(orgId, selected, orgLabel);
     if (r.ok) {
       toast({ title: "Đã mở khóa hồ sơ đơn vị", description: `Truy cập ${tier.label}. Đã trừ ${tier.cost} credit.` });
       onOpenChange(false);

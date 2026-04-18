@@ -9,10 +9,11 @@ interface AssetPaywallDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   listingId: string | null;
+  listingLabel?: string;
   returnPath?: string;
 }
 
-export const AssetPaywallDialog = ({ open, onOpenChange, listingId, returnPath }: AssetPaywallDialogProps) => {
+export const AssetPaywallDialog = ({ open, onOpenChange, listingId, listingLabel, returnPath }: AssetPaywallDialogProps) => {
   const { balance, unlockAsset } = useCredits();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -20,7 +21,7 @@ export const AssetPaywallDialog = ({ open, onOpenChange, listingId, returnPath }
 
   const handleUnlock = () => {
     if (!listingId) return;
-    const r = unlockAsset(listingId);
+    const r = unlockAsset(listingId, listingLabel);
     if (r.ok) {
       toast({ title: "Đã mở khóa tài sản", description: `Đã trừ ${ASSET_COST} credit.` });
       onOpenChange(false);

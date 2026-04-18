@@ -175,49 +175,65 @@ export const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className={`hidden sm:inline-flex gap-2 ${transparent ? "text-white/90 hover:text-white hover:bg-white/10" : ""}`}
+                    className={`hidden sm:inline-flex gap-2 px-2 ${transparent ? "text-white/90 hover:text-white hover:bg-white/10" : ""}`}
                   >
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                      U
-                    </div>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-60">
-                  <DropdownMenuLabel className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground font-normal">Số dư</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                      <Coins className="h-3.5 w-3.5 text-primary" />
-                      {balance} credit
-                    </span>
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => navigate("/profile?tab=credits")}>
-                    <Coins className="mr-2 h-4 w-4 text-primary" />
-                    Mua credit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <UserCircle className="mr-2 h-4 w-4" />
-                    Hồ sơ cá nhân
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/profile?tab=saved")}>
-                    <Heart className="mr-2 h-4 w-4" />
-                    Tài sản quan tâm
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => {
-                      addCreditsImpl(500);
-                      toast({ title: "Dev: +500 credit", description: "Chỉ dùng để thử nghiệm." });
-                    }}
-                    className="text-xs text-muted-foreground"
+                <DropdownMenuContent align="end" className="w-72 p-0 overflow-hidden">
+                  {/* User header */}
+                  <div className="flex items-center gap-3 p-4">
+                    <Avatar className="h-11 w-11">
+                      <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-foreground truncate">{displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {session.user.email || session.user.phone || ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Credits row */}
+                  <button
+                    onClick={() => navigate("/profile?tab=credits")}
+                    className="w-full flex items-center justify-between px-4 py-3 border-y border-border hover:bg-muted/60 transition-colors"
                   >
-                    <Sparkles className="mr-2 h-3.5 w-3.5" />
-                    Dev: +500 credit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <span className="font-semibold text-foreground text-sm">Credit của tôi</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+                      <Coins className="h-3.5 w-3.5" />
+                      {balance}
+                    </span>
+                  </button>
+
+                  {/* Tabs */}
+                  <div className="py-1">
+                    <DropdownMenuItem onClick={() => navigate("/profile")} className="px-4 py-2.5 cursor-pointer">
+                      <UserCircle className="mr-3 h-4 w-4" />
+                      Hồ sơ cá nhân
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/profile?tab=saved")} className="px-4 py-2.5 cursor-pointer">
+                      <Heart className="mr-3 h-4 w-4" />
+                      Tài sản quan tâm
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/profile?tab=password")} className="px-4 py-2.5 cursor-pointer">
+                      <KeyRound className="mr-3 h-4 w-4" />
+                      Đổi mật khẩu
+                    </DropdownMenuItem>
+                  </div>
+
+                  <DropdownMenuSeparator className="my-0" />
+                  <DropdownMenuItem onClick={handleLogout} className="px-4 py-2.5 cursor-pointer text-destructive focus:text-destructive">
+                    <LogOut className="mr-3 h-4 w-4" />
                     Đăng xuất
                   </DropdownMenuItem>
                 </DropdownMenuContent>

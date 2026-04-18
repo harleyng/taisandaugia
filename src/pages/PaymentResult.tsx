@@ -73,8 +73,13 @@ const PaymentResult = () => {
                   </p>
                 )}
                 <Button onClick={handleContinue} size="lg" className="w-full mt-6">
-                  Tiếp tục
+                  {returnPath ? "Tiếp tục" : "Quay về trang chủ"}
                 </Button>
+                {returnPath && (
+                  <Button onClick={() => navigate("/")} size="lg" variant="outline" className="w-full mt-2">
+                    Quay về trang chủ
+                  </Button>
+                )}
               </>
             ) : (
               <>

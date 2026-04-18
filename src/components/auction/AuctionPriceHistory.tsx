@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Info, TrendingUp, TrendingDown, ArrowDown, ArrowUp, Minus, Lightbulb } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   LineChart,
@@ -110,48 +110,20 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
 
   // Compute decision-oriented metrics from generated series
   const last = data[data.length - 1];
+  const first = data[0];
   const peak = data.reduce((acc, p) => (p.popular > acc.popular ? p : acc), data[0]);
 
-  // Sort popular prices to derive median + fair range (P25 - P75)
-  const sortedPopular = [...data].map((d) => d.popular).sort((a, b) => a - b);
-  const quantile = (arr: number[], q: number) => {
-    if (!arr.length) return 0;
-    const pos = (arr.length - 1) * q;
-    const base = Math.floor(pos);
-    const rest = pos - base;
-    return arr[base + 1] !== undefined ? arr[base] + rest * (arr[base + 1] - arr[base]) : arr[base];
-  };
-  const median = quantile(sortedPopular, 0.5);
-  const fairLow = quantile(sortedPopular, 0.4);
-  const fairHigh = quantile(sortedPopular, 0.6);
+  const rangeLabel = RANGES.find((r) => r.key === range)!.label;
 
-  // Expected winning price ≈ median nhẹ ngả về xu hướng gần đây (last popular)
-  const recentAvg = data.slice(-3).reduce((s, d) => s + d.popular, 0) / Math.max(1, Math.min(3, data.length));
-  const expectedWinning = median * 0.6 + recentAvg * 0.4;
+  // KPI 2: biến động giá theo khoảng thời gian
+  const change = first.popular > 0 ? ((last.popular - first.popular) / first.popular) * 100 : 0;
+  const isUp = change >= 0;
 
-  // Starting price comparison (current listing's price/m² vs fair range / median)
-  const starting = pricePerSqm;
-  const diffVsMedian = median > 0 ? ((starting - median) / median) * 100 : 0;
-  let startingState: "below" | "within" | "above" = "within";
-  if (starting > 0) {
-    if (starting < fairLow) startingState = "below";
-    else if (starting > fairHigh) startingState = "above";
-    else startingState = "within";
-  }
+  // KPI 3: so sánh với đỉnh lịch sử
+  const vsPeak = peak.popular > 0 ? ((peak.popular - last.popular) / peak.popular) * 100 : 0;
+  const atPeak = vsPeak < 0.05;
 
-  // Insight sentence — derived from historical data
-  let insight = "";
-  if (starting > 0) {
-    if (startingState === "below") {
-      insight = `Giá khởi điểm thấp hơn khoảng giá phổ biến ~${Math.abs(diffVsMedian).toFixed(1)}% so với trung vị ${RANGES.find((r) => r.key === range)!.label} qua → điểm vào tương đối tốt.`;
-    } else if (startingState === "above") {
-      insight = `Giá khởi điểm cao hơn ~${Math.abs(diffVsMedian).toFixed(1)}% so với trung vị ${RANGES.find((r) => r.key === range)!.label} qua → cần cân nhắc kỹ trước khi tham gia.`;
-    } else {
-      insight = `Giá khởi điểm nằm trong vùng giá phổ biến (${fairLow.toFixed(1)}–${fairHigh.toFixed(1)} tr/m²) → mức tham chiếu hợp lý so với lịch sử.`;
-    }
-  } else {
-    insight = `Giá phổ biến gần nhất ~${last?.popular.toFixed(1)} tr/m², đỉnh ${peak.popular.toFixed(1)} tr/m² (${peak.month}).`;
-  }
+  const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
 
   // Address parts
   const addr = listing.address || {};
@@ -186,75 +158,67 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
         </div>
       </div>
 
-      {/* Decision-oriented cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Card 1 — Fair Price Range */}
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <p className="text-xs text-muted-foreground">Khoảng giá hợp lý</p>
-          <p className="text-xl font-bold text-foreground mt-1">
-            {fairLow.toFixed(1)}–{fairHigh.toFixed(1)}{" "}
-            <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">Dựa trên phân phối giá phổ biến lịch sử</p>
-        </div>
+      {/* Decision-oriented KPIs */}
+      <div className="rounded-lg border border-border">
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
+          {/* KPI 1 — Giá trúng phổ biến gần nhất */}
+          <div className="p-4">
+            <p className="text-2xl font-bold text-foreground">
+              {fmtNum(last.popular)}{" "}
+              <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              Giá trúng phổ biến nhất {last.month}
+            </p>
+          </div>
 
-        {/* Card 2 — Expected Winning Price */}
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <p className="text-xs text-muted-foreground">Giá trúng dự kiến</p>
-          <p className="text-xl font-bold text-foreground mt-1">
-            ~{expectedWinning.toFixed(1)} <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Ước tính từ trung vị & xu hướng gần đây
-          </p>
-        </div>
-
-        {/* Card 3 — Starting Price */}
-        <div
-          className={`rounded-lg border p-3 ${
-            startingState === "below"
-              ? "border-emerald-200 bg-emerald-50/60"
-              : startingState === "above"
-                ? "border-rose-200 bg-rose-50/60"
-                : "border-amber-200 bg-amber-50/60"
-          }`}
-        >
-          <p className="text-xs text-muted-foreground">Giá khởi điểm</p>
-          <p className="text-xl font-bold text-foreground mt-1">
-            {starting > 0 ? starting.toFixed(1) : "—"}{" "}
-            <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
-          </p>
-          {starting > 0 && (
-            <div
-              className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[11px] font-medium ${
-                startingState === "below"
-                  ? "bg-emerald-100 text-emerald-700"
-                  : startingState === "above"
-                    ? "bg-rose-100 text-rose-700"
-                    : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {startingState === "below" ? (
-                <ArrowDown className="w-3 h-3" />
-              ) : startingState === "above" ? (
-                <ArrowUp className="w-3 h-3" />
-              ) : (
-                <Minus className="w-3 h-3" />
-              )}
-              {startingState === "below"
-                ? `Dưới khoảng hợp lý (${diffVsMedian.toFixed(1)}% vs trung vị)`
-                : startingState === "above"
-                  ? `Trên khoảng hợp lý (+${diffVsMedian.toFixed(1)}% vs trung vị)`
-                  : `Trong khoảng hợp lý (${diffVsMedian >= 0 ? "+" : ""}${diffVsMedian.toFixed(1)}% vs trung vị)`}
+          {/* KPI 2 — Biến động giá theo khoảng thời gian đang chọn */}
+          <div className="p-4">
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  isUp ? "bg-emerald-500" : "bg-rose-500"
+                }`}
+              >
+                {isUp ? (
+                  <ArrowUp className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                ) : (
+                  <ArrowDown className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                )}
+              </span>
+              <p className="text-2xl font-bold text-foreground">
+                {isUp ? "+" : ""}
+                {fmtNum(change)}%
+              </p>
             </div>
-          )}
-        </div>
-      </div>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              Giá trúng đã {isUp ? "tăng" : "giảm"} trong {rangeLabel} qua {first.month} - {last.month}
+            </p>
+          </div>
 
-      {/* Insight sentence */}
-      <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
-        <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-        <p className="text-sm text-foreground leading-relaxed">{insight}</p>
+          {/* KPI 3 — So sánh với đỉnh lịch sử */}
+          <div className="p-4">
+            <div className="flex items-center gap-2">
+              {atPeak ? (
+                <span className="w-6 h-6 rounded-full flex items-center justify-center bg-emerald-500">
+                  <ArrowUp className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                </span>
+              ) : (
+                <span className="w-6 h-6 rounded-full flex items-center justify-center bg-rose-500">
+                  <ArrowDown className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                </span>
+              )}
+              <p className="text-2xl font-bold text-foreground">
+                {atPeak ? "Đang ở đỉnh" : `${fmtNum(vsPeak)}%`}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              {atPeak
+                ? `Giá trúng hiện tại đang ở mức đỉnh ${fmtNum(peak.popular)} tr/m²`
+                : `Giá trúng hiện tại thấp hơn đỉnh ${fmtNum(peak.popular)} tr/m² vào ${peak.month}`}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Chart */}
@@ -343,15 +307,6 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
             </span>
           </div>
         )}
-      </div>
-
-      {/* Disclaimer */}
-      <div className="flex gap-2 rounded-lg border border-border bg-muted/30 p-3">
-        <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Dữ liệu giá được tổng hợp và xử lý từ các phiên đấu giá công khai trong khu vực. Vui lòng lưu ý nếu tin đăng
-          nằm ngoài khoảng giá gợi ý và xác minh thêm thông tin trước khi tham gia đấu giá.
-        </p>
       </div>
     </Card>
   );

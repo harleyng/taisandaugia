@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Coins, UserCircle, KeyRound, Bell, LogOut, CreditCard } from "lucide-react";
+import { Coins, UserCircle, KeyRound, Bell, LogOut, CreditCard, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCredits } from "@/hooks/useCredits";

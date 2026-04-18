@@ -34,7 +34,8 @@ export const AssetPaywallDialog = ({ open, onOpenChange, listingId, returnPath }
     const params = new URLSearchParams();
     if (returnPath) params.set("return", returnPath);
     if (listingId) params.set("unlock", `asset:${listingId}`);
-    navigate(`/buy-credits?${params.toString()}`);
+    params.set("tab", "credits");
+    navigate(`/profile?${params.toString()}`);
   };
 
   return (

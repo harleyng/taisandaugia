@@ -10,12 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, ChevronRight, Search, Gavel, Trophy, Percent, MapPin } from "lucide-react";
+import { User, ChevronRight, Search, Gavel, Trophy, Percent, MapPin, Lock } from "lucide-react";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { formatAddress } from "@/utils/formatters";
+import { useCredits } from "@/hooks/useCredits";
+import { usePaywall } from "@/contexts/PaywallContext";
 
 const AssetOwnerDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +26,10 @@ const AssetOwnerDetail = () => {
   const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { ownerAccess } = useCredits();
+  const { openOwnerPaywall } = usePaywall();
+  const access = id ? ownerAccess(id) : { isUnlocked: false, tier: null, expiresAt: null };
+  const isOwnerUnlocked = access.isUnlocked;
 
   const { data: owner, isLoading: ownerLoading } = useQuery({
     queryKey: ["asset-owner", id],
@@ -152,90 +158,115 @@ const AssetOwnerDetail = () => {
               </div>
             </Card>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
-              <Card className="p-4 text-center">
-                <Gavel className="w-6 h-6 mx-auto mb-2 text-primary" />
-                <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.total}</p>
-                <p className="text-xs text-muted-foreground mt-1">Tổng tài sản</p>
-              </Card>
-              <Card className="p-4 text-center">
-                <Trophy className="w-6 h-6 mx-auto mb-2 text-[hsl(142,60%,40%)]" />
-                <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.successful}</p>
-                <p className="text-xs text-muted-foreground mt-1">Đấu giá thành công</p>
-              </Card>
-              <Card className="p-4 text-center">
-                <Percent className="w-6 h-6 mx-auto mb-2 text-[hsl(25,95%,53%)]" />
-                <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.rate}%</p>
-                <p className="text-xs text-muted-foreground mt-1">Tỷ lệ thành công</p>
-              </Card>
-            </div>
+            {isOwnerUnlocked ? (
+              <>
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
+                  <Card className="p-4 text-center">
+                    <Gavel className="w-6 h-6 mx-auto mb-2 text-primary" />
+                    <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.total}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Tổng tài sản</p>
+                  </Card>
+                  <Card className="p-4 text-center">
+                    <Trophy className="w-6 h-6 mx-auto mb-2 text-[hsl(142,60%,40%)]" />
+                    <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.successful}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Đấu giá thành công</p>
+                  </Card>
+                  <Card className="p-4 text-center">
+                    <Percent className="w-6 h-6 mx-auto mb-2 text-[hsl(25,95%,53%)]" />
+                    <p className="text-2xl md:text-3xl font-bold text-foreground">{stats.rate}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">Tỷ lệ thành công</p>
+                  </Card>
+                </div>
 
-            {/* Search & Filter */}
-            <div className="flex gap-3 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Tìm kiếm tài sản..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px] shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="registration_open">Mở đăng ký</SelectItem>
-                  <SelectItem value="upcoming">Sắp diễn ra</SelectItem>
-                  <SelectItem value="ongoing">Đang diễn ra</SelectItem>
-                  <SelectItem value="ended">Đã kết thúc</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Results count */}
-            <p className="text-sm text-muted-foreground mb-4">
-              Tìm thấy <span className="font-semibold text-foreground">{filtered.length}</span> tài sản
-            </p>
-
-            {/* Listings grid */}
-            {filtered.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filtered.map((listing) => {
-                  const ca = (listing.custom_attributes || {}) as Record<string, any>;
-                  return (
-                    <AuctionCard
-                      key={listing.id}
-                      id={listing.id}
-                      imageUrl={listing.image_url}
-                      title={listing.title}
-                      address={formatAddress(listing.address) || "Chưa cập nhật"}
-                      startingPrice={listing.price}
-                      stepPrice={ca.bid_step ?? ca.step_price}
-                      depositAmount={ca.deposit_amount}
-                      auctionDate={ca.auction_date ?? ca.auction_time}
-                      registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
-                      sessionStatus={listing._sessionStatus}
-                      categorySlug={listing.property_type_slug}
-                      winPrice={ca.win_price ?? ca.winning_price}
-                      orgName={ca.org_name}
-                      isSaved={savedIds.has(listing.id)}
-                      onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
-                      saveCount={saveCounts.get(listing.id) || 0}
-                      viewsCount={listing.views_count || 0}
+                {/* Search & Filter */}
+                <div className="flex gap-3 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Tìm kiếm tài sản..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
                     />
-                  );
-                })}
-              </div>
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[160px] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tất cả</SelectItem>
+                      <SelectItem value="registration_open">Mở đăng ký</SelectItem>
+                      <SelectItem value="upcoming">Sắp diễn ra</SelectItem>
+                      <SelectItem value="ongoing">Đang diễn ra</SelectItem>
+                      <SelectItem value="ended">Đã kết thúc</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Results count */}
+                <p className="text-sm text-muted-foreground mb-4">
+                  Tìm thấy <span className="font-semibold text-foreground">{filtered.length}</span> tài sản
+                </p>
+
+                {/* Listings grid */}
+                {filtered.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filtered.map((listing) => {
+                      const ca = (listing.custom_attributes || {}) as Record<string, any>;
+                      return (
+                        <AuctionCard
+                          key={listing.id}
+                          id={listing.id}
+                          imageUrl={listing.image_url}
+                          title={listing.title}
+                          address={formatAddress(listing.address) || "Chưa cập nhật"}
+                          startingPrice={listing.price}
+                          stepPrice={ca.bid_step ?? ca.step_price}
+                          depositAmount={ca.deposit_amount}
+                          auctionDate={ca.auction_date ?? ca.auction_time}
+                          registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
+                          sessionStatus={listing._sessionStatus}
+                          categorySlug={listing.property_type_slug}
+                          winPrice={ca.win_price ?? ca.winning_price}
+                          orgName={ca.org_name}
+                          isSaved={savedIds.has(listing.id)}
+                          onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
+                          saveCount={saveCounts.get(listing.id) || 0}
+                          viewsCount={listing.views_count || 0}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-card rounded-lg border border-border">
+                    <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Không tìm thấy tài sản</h3>
+                    <p className="text-muted-foreground">Thử điều chỉnh bộ lọc để tìm thấy kết quả</p>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="text-center py-12 bg-card rounded-lg border border-border">
-                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Không tìm thấy tài sản</h3>
-                <p className="text-muted-foreground">Thử điều chỉnh bộ lọc để tìm thấy kết quả</p>
-              </div>
+              /* LOCKED STATE — owner profile gate */
+              <Card className="p-6 md:p-8 text-center border-2 border-dashed border-primary/30 bg-primary/[0.02]">
+                <div className="mx-auto h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Lock className="h-7 w-7 text-primary" />
+                </div>
+                <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
+                  Hồ sơ chủ tài sản
+                </h2>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
+                  Theo dõi danh sách tài sản và lịch sử đấu giá của chủ tài sản này.
+                </p>
+
+                <Button size="lg" onClick={() => openOwnerPaywall(id!, owner.name)}>
+                  Xem các gói theo dõi
+                </Button>
+
+                <p className="text-xs text-muted-foreground mt-3 max-w-md mx-auto">
+                  Dữ liệu sẽ được cập nhật và phân tích sâu hơn trong thời gian tới.
+                </p>
+              </Card>
             )}
           </>
         ) : (

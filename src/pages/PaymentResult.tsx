@@ -6,7 +6,7 @@ import { CheckCircle2, XCircle, Coins } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
-import { unlockAsset, unlockCompany, CompanyTierKey } from "@/lib/mockCredits";
+import { unlockAsset, unlockCompany, unlockOwner, CompanyTierKey, OwnerTierKey } from "@/lib/mockCredits";
 
 const PaymentResult = () => {
   const [params] = useSearchParams();
@@ -32,6 +32,9 @@ const PaymentResult = () => {
       } else if (type === "company" && id && tier) {
         const r = unlockCompany(id, tier as CompanyTierKey);
         if (r.ok) setAutoUnlocked("company");
+      } else if (type === "owner" && id && tier) {
+        const r = unlockOwner(id, tier as OwnerTierKey);
+        if (r.ok) setAutoUnlocked("owner");
       }
     }
   }, [status, unlockParam]);
@@ -70,6 +73,11 @@ const PaymentResult = () => {
                 {autoUnlocked === "company" && (
                   <p className="mt-4 text-sm text-foreground bg-primary/10 rounded-lg px-3 py-2">
                     ✅ Đã tự động mở khóa hồ sơ đơn vị
+                  </p>
+                )}
+                {autoUnlocked === "owner" && (
+                  <p className="mt-4 text-sm text-foreground bg-primary/10 rounded-lg px-3 py-2">
+                    ✅ Đã tự động mở khóa hồ sơ chủ tài sản
                   </p>
                 )}
                 <Button onClick={handleContinue} size="lg" className="w-full mt-6">

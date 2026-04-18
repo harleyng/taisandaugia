@@ -96,6 +96,7 @@ const ProfilePage = () => {
                 onAvatarChange={setAvatarUrl}
               />
             )}
+            {activeTab === "saved" && <SavedAssetsTab />}
             {activeTab === "credits" && <CreditsTab />}
             {activeTab === "password" && <PasswordTab />}
             {activeTab === "notifications" && <NotificationsTab />}

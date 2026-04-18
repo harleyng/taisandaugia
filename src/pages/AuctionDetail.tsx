@@ -125,35 +125,6 @@ const AuctionDetail = () => {
           <span className="text-foreground font-medium truncate max-w-[300px]">{listing.title}</span>
         </nav>
 
-        {/* Nudge: viewing many assets from same org */}
-        {shouldNudge && listing.auction_org_id && (
-          <div className="mb-4 flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-            <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">
-                Bạn đang xem nhiều tài sản từ cùng một nguồn
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Mở hồ sơ đơn vị đấu giá để xem đầy đủ danh sách tài sản.
-              </p>
-              <Button
-                size="sm"
-                variant="default"
-                className="mt-2"
-                onClick={() => openCompanyPaywall(listing.auction_org_id, listing.auction_organizations?.name)}
-              >
-                Xem các gói mở khóa
-              </Button>
-            </div>
-            <button
-              onClick={dismiss}
-              className="text-muted-foreground hover:text-foreground p-1 -m-1"
-              aria-label="Đóng"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
 
         {/* Title */}
         <div className="mb-6">

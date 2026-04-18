@@ -140,7 +140,7 @@ const AuctionDetail = () => {
                 size="sm"
                 variant="default"
                 className="mt-2"
-                onClick={() => openCompanyPaywall(listing.auction_org_id)}
+                onClick={() => openCompanyPaywall(listing.auction_org_id, listing.auction_organizations?.name)}
               >
                 Xem các gói mở khóa
               </Button>
@@ -253,7 +253,7 @@ const AuctionDetail = () => {
             </Collapsible>
 
             {/* 3. Organizer */}
-            <AuctionOrganizerInfo listing={listing} isUnlocked={isUnlocked} onLockedClick={() => openAssetPaywall(listing.id)} />
+            <AuctionOrganizerInfo listing={listing} isUnlocked={isUnlocked} onLockedClick={() => openAssetPaywall(listing.id, listing.title)} />
 
             {/* 4. Schedule (locked) */}
             {isUnlocked ? (
@@ -263,7 +263,7 @@ const AuctionDetail = () => {
                 ctaLabel="Mở khóa tài sản – 59 credit"
                 teaser="Xem thông tin chi tiết để đánh giá tài sản"
                 futureNote="Lịch trình chi tiết, tài liệu và liên hệ đơn vị tổ chức."
-                onUnlockClick={() => openAssetPaywall(listing.id)}
+                onUnlockClick={() => openAssetPaywall(listing.id, listing.title)}
               >
                 <AuctionScheduleInfo listing={listing} />
               </LockedBlur>
@@ -276,7 +276,7 @@ const AuctionDetail = () => {
               <LockedBlur
                 ctaLabel="Mở khóa tài sản – 59 credit"
                 teaser="Tải về hồ sơ và tài liệu đính kèm"
-                onUnlockClick={() => openAssetPaywall(listing.id)}
+                onUnlockClick={() => openAssetPaywall(listing.id, listing.title)}
               >
                 <Card className="p-5 space-y-3">
                   <h3 className="text-lg font-bold text-foreground">File đính kèm</h3>
@@ -302,7 +302,7 @@ const AuctionDetail = () => {
                       size="sm"
                       variant="outline"
                       className="mt-3"
-                      onClick={() => openAssetPaywall(listing.id)}
+                      onClick={() => openAssetPaywall(listing.id, listing.title)}
                     >
                       Mở khóa – 59 credit
                     </Button>

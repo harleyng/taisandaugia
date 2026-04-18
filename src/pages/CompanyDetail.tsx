@@ -188,7 +188,7 @@ const CompanyDetail = () => {
                       ) : (
                         <button
                           type="button"
-                          onClick={() => openCompanyPaywall(id!)}
+                          onClick={() => openCompanyPaywall(id!, org.name)}
                           className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium"
                         >
                           <Lock className="w-3.5 h-3.5" />
@@ -340,7 +340,7 @@ const CompanyDetail = () => {
                   ))}
                 </div>
 
-                <Button size="lg" onClick={() => openCompanyPaywall(id!)}>
+                <Button size="lg" onClick={() => openCompanyPaywall(id!, org.name)}>
                   Xem các gói mở khóa
                 </Button>
 

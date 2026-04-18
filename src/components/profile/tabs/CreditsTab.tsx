@@ -326,15 +326,15 @@ export const CreditsTab = () => {
 
       {/* VNPay mock dialog */}
       <Dialog open={showVnpay} onOpenChange={(o) => !paying && setShowVnpay(o)}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
-          <div className="bg-gradient-to-r from-[hsl(217,91%,40%)] to-[hsl(217,91%,55%)] text-white p-5">
+        <DialogContent className="max-w-md p-0 overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-gradient-to-r from-[hsl(217,91%,40%)] to-[hsl(217,91%,55%)] text-white p-5 shrink-0">
             <div className="flex items-center justify-between">
               <div className="font-bold text-lg tracking-wide">VNPAY</div>
               <ShieldCheck className="h-5 w-5" />
             </div>
             <p className="text-xs opacity-90 mt-1">Cổng thanh toán điện tử</p>
           </div>
-          <div className="p-5 space-y-4">
+          <div className="p-5 space-y-4 overflow-y-auto">
             {pendingKey &&
               (() => {
                 const pkg = CREDIT_PACKAGES.find((p) => p.key === pendingKey)!;
@@ -356,6 +356,87 @@ export const CreditsTab = () => {
                         <span className="font-medium text-foreground">Thẻ ATM / QR</span>
                       </div>
                     </div>
+
+                    <div className="border-t border-border pt-4 space-y-3">
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <Checkbox
+                          checked={wantInvoice}
+                          onCheckedChange={(c) => setWantInvoice(c === true)}
+                          className="mt-0.5"
+                        />
+                        <div className="text-sm">
+                          <span className="font-medium text-foreground">Xuất hóa đơn</span>
+                          {hasSavedInvoice && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Sử dụng thông tin đã lưu — bạn có thể chỉnh sửa bên dưới
+                            </p>
+                          )}
+                        </div>
+                      </label>
+
+                      {wantInvoice && (
+                        <div className="space-y-3 rounded-lg bg-muted/40 p-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="inv-company" className="text-xs">Tên công ty *</Label>
+                            <Input
+                              id="inv-company"
+                              value={invoice.companyName}
+                              onChange={(e) => setInvoice({ ...invoice, companyName: e.target.value })}
+                              maxLength={200}
+                              placeholder="Công ty TNHH ABC"
+                            />
+                            {invoiceErrors.companyName && (
+                              <p className="text-xs text-destructive">{invoiceErrors.companyName}</p>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="inv-tax" className="text-xs">Mã số thuế *</Label>
+                            <Input
+                              id="inv-tax"
+                              value={invoice.taxCode}
+                              onChange={(e) => setInvoice({ ...invoice, taxCode: e.target.value })}
+                              maxLength={20}
+                              placeholder="0123456789"
+                            />
+                            {invoiceErrors.taxCode && (
+                              <p className="text-xs text-destructive">{invoiceErrors.taxCode}</p>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="inv-address" className="text-xs">Địa chỉ *</Label>
+                            <Textarea
+                              id="inv-address"
+                              value={invoice.address}
+                              onChange={(e) => setInvoice({ ...invoice, address: e.target.value })}
+                              maxLength={500}
+                              rows={2}
+                              placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+                            />
+                            {invoiceErrors.address && (
+                              <p className="text-xs text-destructive">{invoiceErrors.address}</p>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="inv-email" className="text-xs">Email nhận hóa đơn *</Label>
+                            <Input
+                              id="inv-email"
+                              type="email"
+                              value={invoice.email}
+                              onChange={(e) => setInvoice({ ...invoice, email: e.target.value })}
+                              maxLength={255}
+                              placeholder={userEmail || "you@example.com"}
+                            />
+                            {invoiceErrors.email && (
+                              <p className="text-xs text-destructive">{invoiceErrors.email}</p>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Thông tin sẽ được lưu lại cho các lần thanh toán sau.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     <Button onClick={confirmVnpayPay} className="w-full" size="lg">
                       {paying ? (
                         <>

@@ -387,6 +387,23 @@ const AuctionDetail = () => {
                 propertyTypeName={listing.property_types?.name}
                 legalStatus={listing.legal_status}
               />
+
+              {/* DEBUG: Toggle paywall (dev only) */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isUnlocked) {
+                    lockAsset(listing.id);
+                  } else {
+                    if (balance < ASSET_COST) addCredits(ASSET_COST);
+                    unlockAsset(listing.id, listing.title);
+                  }
+                }}
+                className="mt-3 w-full text-xs text-muted-foreground hover:text-foreground border border-dashed border-border rounded-md py-2 transition-colors"
+                title="Debug: bật/tắt paywall tài sản"
+              >
+                🛠 Debug: {isUnlocked ? "Khoá lại paywall" : "Mở khoá paywall"}
+              </button>
             </div>
           </div>
         </div>

@@ -1,11 +1,21 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Loader2, ShieldCheck, ChevronRight, Star } from "lucide-react";
+import {
+  Coins,
+  Loader2,
+  ShieldCheck,
+  ChevronRight,
+  Star,
+  Receipt,
+  ShoppingCart,
+  Unlock,
+  Building2,
+} from "lucide-react";
 import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { addCredits as addCreditsImpl } from "@/lib/mockCredits";
+import { addCredits as addCreditsImpl, type Transaction, type TransactionType } from "@/lib/mockCredits";
 import packStarter from "@/assets/credits/pack-starter.jpg";
 import packPopular from "@/assets/credits/pack-popular.jpg";
 import packValue from "@/assets/credits/pack-value.jpg";
@@ -13,6 +23,14 @@ import packPro from "@/assets/credits/pack-pro.jpg";
 import packMax from "@/assets/credits/pack-max.jpg";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const IMAGES: Record<string, string> = {
   starter: packStarter,
@@ -24,8 +42,62 @@ const IMAGES: Record<string, string> = {
 
 const formatVnd = (n: number) => `${(n / 1000).toLocaleString("vi-VN")}k`;
 
+const dateTimeFmt = new Intl.DateTimeFormat("vi-VN", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const formatDateTime = (at: number) => dateTimeFmt.format(new Date(at));
+
+const TYPE_ICON: Record<TransactionType, typeof ShoppingCart> = {
+  purchase: ShoppingCart,
+  unlock_asset: Unlock,
+  unlock_company: Building2,
+};
+
+const TransactionRow = ({ tx }: { tx: Transaction }) => {
+  const Icon = TYPE_ICON[tx.type];
+  const isPositive = tx.creditDelta > 0;
+  return (
+    <TableRow>
+      <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
+        {formatDateTime(tx.at)}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2 text-sm text-foreground">
+          <span
+            className={cn(
+              "inline-flex h-7 w-7 items-center justify-center rounded-full shrink-0",
+              isPositive ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-muted text-muted-foreground",
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </span>
+          <span className="font-medium">{tx.description}</span>
+        </div>
+      </TableCell>
+      <TableCell className="text-right whitespace-nowrap">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 font-semibold",
+            isPositive ? "text-green-600 dark:text-green-400" : "text-destructive",
+          )}
+        >
+          <Coins className="h-3.5 w-3.5" />
+          {isPositive ? "+" : "−"}
+          {Math.abs(tx.creditDelta)}
+        </span>
+      </TableCell>
+    </TableRow>
+  );
+};
+
 export const CreditsTab = () => {
-  const { balance } = useCredits();
+  const { balance, transactions } = useCredits();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [paying, setPaying] = useState<string | null>(null);
@@ -76,7 +148,7 @@ export const CreditsTab = () => {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {CREDIT_PACKAGES.map((pkg) => {
           const isPopular = pkg.popular;
           const isBest = pkg.best;
@@ -147,6 +219,45 @@ export const CreditsTab = () => {
         <ShieldCheck className="h-4 w-4 text-primary" />
         Thanh toán an toàn qua VNPay (mô phỏng)
       </div>
+
+      {/* Lịch sử giao dịch */}
+      <Card className="mt-6 p-5 md:p-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Lịch sử giao dịch</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Các giao dịch credit gần đây của bạn
+          </p>
+        </div>
+
+        {transactions.length === 0 ? (
+          <div className="py-10 flex flex-col items-center justify-center text-center">
+            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+              <Receipt className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Chưa có giao dịch nào</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Lịch sử mua và sử dụng credit của bạn sẽ hiển thị tại đây
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto -mx-1">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Thời gian</TableHead>
+                  <TableHead>Giao dịch</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Credit</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((tx) => (
+                  <TransactionRow key={tx.id} tx={tx} />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Card>
 
       {/* VNPay mock dialog */}
       <Dialog open={showVnpay} onOpenChange={(o) => !paying && setShowVnpay(o)}>

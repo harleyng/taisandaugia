@@ -100,7 +100,7 @@ export const AuctionSection = () => {
               const customAttrs = (item.custom_attributes || {}) as Record<string, any>;
               const countdown = customAttrs.auction_time ? getCountdown(customAttrs.auction_time) : null;
               const location = getShortLocation(item.address);
-              const orgName = customAttrs.org_name || "";
+              const orgName = customAttrs.org_name || (item.auction_org_id ? orgNameById.get(item.auction_org_id) : "") || "";
 
               return (
                 <AuctionCard

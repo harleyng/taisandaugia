@@ -349,6 +349,8 @@ const AuctionDetail = () => {
                 listing={listing}
                 saveCount={saveCounts.get(listing.id) || 0}
                 title={listing.title}
+                propertyTypeName={listing.property_types?.name}
+                legalStatus={listing.legal_status}
               />
             </div>
           </div>

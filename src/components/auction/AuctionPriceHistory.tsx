@@ -297,7 +297,7 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
               type="monotone"
               dataKey="high"
               name="Giá cao nhất"
-              stroke="hsl(265 45% 78%)"
+              stroke="hsl(280 65% 60%)"
               strokeWidth={1.5}
               strokeOpacity={0.7}
               dot={false}
@@ -316,7 +316,7 @@ export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
               type="monotone"
               dataKey="low"
               name="Giá thấp nhất"
-              stroke="hsl(28 50% 70%)"
+              stroke="hsl(45 90% 55%)"
               strokeWidth={1.5}
               strokeOpacity={0.7}
               dot={false}

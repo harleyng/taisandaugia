@@ -47,6 +47,7 @@ import { LockedBlur } from "@/components/paywall/LockedBlur";
 import { useCompanyViewTracker } from "@/hooks/useCompanyViewTracker";
 import { AuctionPricePrediction } from "@/components/auction/AuctionPricePrediction";
 import { Sparkles, X } from "lucide-react";
+import { useAuthDialog } from "@/contexts/AuthDialogContext";
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -56,13 +57,22 @@ const AuctionDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(true);
+  const [session, setSession] = useState<any>(null);
   const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
   const guardedNavigate = useAuthGuardedNavigate();
   const { assetUnlocked } = useCredits();
   const { openAssetPaywall, openCompanyPaywall } = usePaywall();
+  const { openAuthDialog } = useAuthDialog();
   const { shouldNudge, dismiss } = useCompanyViewTracker(listing?.auction_org_id, listing?.id);
-  const isUnlocked = listing ? assetUnlocked(listing.id) : false;
+  const isLoggedIn = !!session;
+  const isUnlocked = listing ? isLoggedIn && assetUnlocked(listing.id) : false;
   const ownerClick = listing?.asset_owner_id ? guardedNavigate(`/asset-owner/${listing.asset_owner_id}`) : undefined;
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -313,10 +323,14 @@ const AuctionDetail = () => {
               <AuctionPriceHistory listing={listing} />
             ) : (
               <LockedBlur
-                ctaLabel="Mở khóa lịch sử đấu giá"
+                ctaLabel={isLoggedIn ? "Mở khóa lịch sử đấu giá" : "Đăng nhập để mở khóa"}
                 teaser="Xem lịch sử giá đấu giá khu vực"
                 futureNote="Truy cập biểu đồ biến động giá theo thời gian, mức đỉnh và xu hướng để đánh giá cơ hội."
-                onUnlockClick={() => openAssetPaywall(listing.id, listing.title)}
+                onUnlockClick={() =>
+                  isLoggedIn
+                    ? openAssetPaywall(listing.id, listing.title)
+                    : openAuthDialog(() => openAssetPaywall(listing.id, listing.title))
+                }
                 minHeight="520px"
               >
                 <AuctionPriceHistory listing={listing} />
@@ -328,7 +342,11 @@ const AuctionDetail = () => {
               <AuctionPricePrediction
                 listing={listing}
                 isUnlocked={isUnlocked}
-                onUnlock={() => openAssetPaywall(listing.id, listing.title)}
+                onUnlock={() =>
+                  isLoggedIn
+                    ? openAssetPaywall(listing.id, listing.title)
+                    : openAuthDialog(() => openAssetPaywall(listing.id, listing.title))
+                }
               />
             )}
 

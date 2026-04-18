@@ -109,16 +109,69 @@ export const CreditsTab = () => {
   const [showVnpay, setShowVnpay] = useState(false);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
 
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [wantInvoice, setWantInvoice] = useState(false);
+  const [hasSavedInvoice, setHasSavedInvoice] = useState(false);
+  const [invoice, setInvoice] = useState<InvoiceInfo>({
+    companyName: "",
+    taxCode: "",
+    address: "",
+    email: "",
+  });
+  const [invoiceErrors, setInvoiceErrors] = useState<Partial<Record<keyof InvoiceInfo, string>>>({});
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      const email = session?.user?.email ?? "";
+      setUserEmail(email);
+      const saved = getInvoiceInfo();
+      if (saved) {
+        setInvoice(saved);
+        setHasSavedInvoice(true);
+      } else {
+        setInvoice((prev) => ({ ...prev, email: prev.email || email }));
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const returnPath = params.get("return") || "";
   const unlockParam = params.get("unlock") || "";
 
   const handleBuy = (key: string) => {
     setPendingKey(key);
+    setInvoiceErrors({});
     setShowVnpay(true);
+  };
+
+  const validateInvoice = (): boolean => {
+    const errs: Partial<Record<keyof InvoiceInfo, string>> = {};
+    if (!invoice.companyName.trim()) errs.companyName = "Vui lòng nhập tên công ty";
+    if (!invoice.taxCode.trim()) errs.taxCode = "Vui lòng nhập mã số thuế";
+    if (!invoice.address.trim()) errs.address = "Vui lòng nhập địa chỉ";
+    if (!invoice.email.trim()) errs.email = "Vui lòng nhập email";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invoice.email.trim())) errs.email = "Email không hợp lệ";
+    setInvoiceErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const confirmVnpayPay = () => {
     if (!pendingKey) return;
+    if (wantInvoice) {
+      if (!validateInvoice()) return;
+      saveInvoiceInfo({
+        companyName: invoice.companyName.trim(),
+        taxCode: invoice.taxCode.trim(),
+        address: invoice.address.trim(),
+        email: invoice.email.trim(),
+      });
+      setHasSavedInvoice(true);
+    }
     setShowVnpay(false);
     setPaying(pendingKey);
     const pkg = CREDIT_PACKAGES.find((p) => p.key === pendingKey)!;

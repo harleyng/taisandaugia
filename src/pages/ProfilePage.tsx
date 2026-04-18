@@ -20,6 +20,7 @@ const ProfilePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [email, setEmail] = useState("");
 
@@ -37,6 +38,7 @@ const ProfilePage = () => {
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { navigate("/"); return; }
+      setUserId(session.user.id);
       setEmail(session.user.email || session.user.phone || "");
 
       const { data } = await supabase

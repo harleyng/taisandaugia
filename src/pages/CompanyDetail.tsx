@@ -171,30 +171,15 @@ const CompanyDetail = () => {
                     </p>
                   )}
                   <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                    {(org.phone || org.email) && (
-                      isCompanyUnlocked ? (
-                        <>
-                          {org.phone && (
-                            <a href={`tel:${org.phone}`} className="inline-flex items-center gap-1 hover:text-primary transition-colors">
-                              <Phone className="w-3.5 h-3.5" /> {org.phone}
-                            </a>
-                          )}
-                          {org.email && (
-                            <a href={`mailto:${org.email}`} className="inline-flex items-center gap-1 hover:text-primary transition-colors">
-                              <Mail className="w-3.5 h-3.5" /> {org.email}
-                            </a>
-                          )}
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => openCompanyPaywall(id!, org.name)}
-                          className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium"
-                        >
-                          <Lock className="w-3.5 h-3.5" />
-                          Liên hệ – mở khóa hồ sơ
-                        </button>
-                      )
+                    {org.phone && (
+                      <a href={`tel:${org.phone}`} className="inline-flex items-center gap-1 hover:text-primary transition-colors">
+                        <Phone className="w-3.5 h-3.5" /> {org.phone}
+                      </a>
+                    )}
+                    {org.email && (
+                      <a href={`mailto:${org.email}`} className="inline-flex items-center gap-1 hover:text-primary transition-colors">
+                        <Mail className="w-3.5 h-3.5" /> {org.email}
+                      </a>
                     )}
                   </div>
                 </div>
@@ -305,46 +290,23 @@ const CompanyDetail = () => {
                 )}
               </>
             ) : (
-              /* LOCKED STATE — full company gate */
-              <Card className="p-6 md:p-10 text-center border-2 border-dashed border-primary/30 bg-primary/[0.02]">
+              /* LOCKED STATE — full company gate (compact) */
+              <Card className="p-6 md:p-8 text-center border-2 border-dashed border-primary/30 bg-primary/[0.02]">
                 <div className="mx-auto h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <Lock className="h-7 w-7 text-primary" />
                 </div>
                 <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
-                  🔒 Hồ sơ đơn vị đấu giá
+                  Hồ sơ đơn vị đấu giá
                 </h2>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
                   Xem toàn bộ danh sách tài sản và hiểu nhanh nguồn đấu giá trước khi quyết định.
                 </p>
-
-                {/* Teaser blurred grid */}
-                <div className="relative max-w-3xl mx-auto mb-6">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 select-none pointer-events-none blur-md opacity-60">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div key={i} className="aspect-[4/5] rounded-lg bg-muted" />
-                    ))}
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto mb-6 text-left">
-                  {[
-                    { label: "7 ngày", desc: "Xem toàn bộ danh sách tài sản" },
-                    { label: "30 ngày", desc: "Hiểu nhanh nguồn — nhóm theo khu vực & giá" },
-                    { label: "1 năm", desc: "Theo dõi nguồn đấu giá dài hạn" },
-                  ].map((t) => (
-                    <div key={t.label} className="rounded-lg border border-border bg-card p-3">
-                      <p className="text-sm font-bold text-foreground mb-1">{t.label}</p>
-                      <p className="text-xs text-muted-foreground leading-snug">{t.desc}</p>
-                    </div>
-                  ))}
-                </div>
 
                 <Button size="lg" onClick={() => openCompanyPaywall(id!, org.name)}>
                   Xem các gói mở khóa
                 </Button>
 
-                <p className="text-xs text-muted-foreground mt-4 max-w-md mx-auto">
+                <p className="text-xs text-muted-foreground mt-3 max-w-md mx-auto">
                   Dữ liệu sẽ được cập nhật và phân tích sâu hơn trong thời gian tới.
                 </p>
               </Card>

@@ -52,6 +52,7 @@ export const useCredits = () => {
     companyAccess,
     ownerAccess,
     unlockAsset,
+    lockAsset,
     unlockCompany,
     unlockOwner,
     addCredits,

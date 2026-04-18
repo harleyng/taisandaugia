@@ -14,6 +14,7 @@ interface AuctionQuickInfoProps {
   customAttributes: Record<string, any>;
   listing: any;
   saveCount?: number;
+  title?: string;
 }
 
 const statusConfig = {

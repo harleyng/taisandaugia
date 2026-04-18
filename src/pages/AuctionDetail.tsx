@@ -344,6 +344,7 @@ const AuctionDetail = () => {
                 customAttributes={ca}
                 listing={listing}
                 saveCount={saveCounts.get(listing.id) || 0}
+                title={listing.title}
               />
             </div>
           </div>

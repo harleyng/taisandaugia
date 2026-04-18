@@ -49,7 +49,7 @@ function useCountdown(targetDate: string | null) {
   return timeLeft;
 }
 
-export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing, saveCount }: AuctionQuickInfoProps) => {
+export const AuctionQuickInfo = ({ price, area, customAttributes: ca, listing, saveCount, title }: AuctionQuickInfoProps) => {
   const status = getSessionStatus(listing);
   const { openAuthDialog } = useAuthDialog();
   const config = statusConfig[status];

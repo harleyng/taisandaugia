@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { addCredits as addCreditsImpl, type Transaction, type TransactionType } from "@/lib/mockCredits";
+import { addCredits as addCreditsImpl, getInvoiceInfo, saveInvoiceInfo, type InvoiceInfo, type Transaction, type TransactionType } from "@/lib/mockCredits";
 import packStarter from "@/assets/credits/pack-starter.jpg";
 import packPopular from "@/assets/credits/pack-popular.jpg";
 import packValue from "@/assets/credits/pack-value.jpg";

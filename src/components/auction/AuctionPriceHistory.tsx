@@ -205,8 +205,8 @@ export const AuctionPriceHistory = ({
   const volTone =
     vl === "high" ? "text-rose-600" : vl === "medium" ? "text-amber-600" : "text-emerald-600";
 
-  // Insight selection — only when total sessions >= 8 we allow Mode B with position
-  const allowPositionInsight = analytics12M.count12M >= 8 && hasPrediction;
+  // Insight selection — only when total sessions >= 8, has prediction, AND not skipPosition
+  const allowPositionInsight = analytics12M.count12M >= 8 && hasPrediction && !analytics12M.skipPosition;
   const insight = allowPositionInsight
     ? buildInsightModeB(analytics12M, predictedMidPerSqm)
     : buildInsightModeA(analytics12M);
@@ -366,7 +366,7 @@ export const AuctionPriceHistory = ({
                 axisLine={false}
                 width={40}
               />
-              <Tooltip content={<TooltipContent />} />
+              <Tooltip content={TooltipContentFactory(listing.area || 0, analytics12M.areaMode === "area-bucket")} />
               <Legend
                 verticalAlign="bottom"
                 height={28}

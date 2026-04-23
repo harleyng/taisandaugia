@@ -62,7 +62,6 @@ function isRealEstateSlug(slug?: string | null) {
 }
 
 const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
-const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1).replace(".", ",")}%`;
 
 const TooltipContentFactory = (assetArea: number, showTotal: boolean) => ({ active, payload }: any) => {
   if (!active || !payload || !payload.length) return null;

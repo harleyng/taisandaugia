@@ -232,14 +232,41 @@ export const AuctionPriceHistory = ({
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-lg font-bold text-foreground leading-snug">{title}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> trong {ctxY} tháng
-            {analytics12M.noisy && (
-              <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-300 text-amber-700">
-                Dữ liệu noisy
-              </Badge>
-            )}
-          </p>
+          {analytics12M.areaMode === "area-bucket" && analytics12M.bucketRange ? (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> tài sản{" "}
+              <span className="font-medium text-foreground">
+                ~{analytics12M.bucketRange[0]}–{analytics12M.bucketRange[1] === Infinity ? "∞" : analytics12M.bucketRange[1]} m²
+              </span>{" "}
+              trong khu vực, {ctxY} tháng gần nhất
+              {analytics12M.mergedFrom && analytics12M.mergedFrom.length > 1 && (
+                <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-primary/30 text-primary">
+                  Đã mở rộng dải diện tích
+                </Badge>
+              )}
+              {analytics12M.noisy && (
+                <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-300 text-amber-700">
+                  Dữ liệu noisy
+                </Badge>
+              )}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> trong khu vực ({ctxY} tháng) — không phân theo diện tích
+              {analytics12M.noisy && (
+                <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-300 text-amber-700">
+                  Dữ liệu noisy
+                </Badge>
+              )}
+            </p>
+          )}
+          {listing.area > 0 && analytics12M.areaMode === "area-bucket" && analytics12M.bucketLabel && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Diện tích tài sản: <span className="font-medium text-foreground">{Math.round(listing.area).toLocaleString("vi-VN")} m²</span>
+              {" → đối chiếu với nhóm "}
+              <span className="font-medium text-foreground">{analytics12M.bucketLabel} m²</span>
+            </p>
+          )}
         </div>
         <div className="inline-flex rounded-md border border-border p-0.5 bg-muted/50">
           {RANGES.map((r) => {

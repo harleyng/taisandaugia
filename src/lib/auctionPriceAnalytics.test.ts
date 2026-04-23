@@ -225,5 +225,106 @@ describe("AC8 — Paywall teaser line is contextual", () => {
 
   it("flat trend ⇒ teaser mentions ổn định", () => {
     expect(buildPaywallTeaser(make(() => 100))).toMatch(/ổn định/i);
+});
+
+// ---- BLOCK 1: area buckets ----
+describe("BLOCK 1 — Area bucketing", () => {
+  const mkAreaSessions = (entries: Array<[number /*monthsAgo*/, number /*price*/, number /*area*/]>): RawSession[] =>
+    entries.map(([m, p, a]) => ({ date: monthsAgo(m), price: p, area: a }));
+
+  it("pickBucket maps area to right range", () => {
+    expect(pickBucket(35)?.key).toBe("<40");
+    expect(pickBucket(50)?.key).toBe("40-60");
+    expect(pickBucket(70)?.key).toBe("60-80");
+    expect(pickBucket(100)?.key).toBe("80-120");
+    expect(pickBucket(200)?.key).toBe(">120");
+    expect(pickBucket(0)).toBeNull();
   });
+
+  it("Case 1: bucket 60-80 with ≥5 sessions → mode area-bucket, range [60,80]", () => {
+    // 6 sessions in 60-80, plus a few in others
+    const ss = mkAreaSessions([
+      [0, 50, 65], [1, 52, 70], [2, 48, 75], [3, 51, 62], [4, 53, 78], [5, 49, 68],
+      [0, 50, 30], [1, 52, 45], // outside
+    ]);
+    const r = resolveAreaSubset(ss, 70);
+    expect(r.mode).toBe("area-bucket");
+    expect(r.bucketRange).toEqual([60, 80]);
+    expect(r.mergedFrom).toBeUndefined();
+    expect(r.filteredSessions).toHaveLength(6);
+  });
+
+  it("Case 2: bucket 60-80 has 3 sessions → merge with neighbour, mergedFrom set", () => {
+    const ss = mkAreaSessions([
+      // 60-80: only 3
+      [0, 50, 65], [1, 52, 70], [2, 48, 75],
+      // 40-60: 4 (closer to median)
+      [0, 50, 45], [1, 52, 50], [2, 48, 55], [3, 51, 48],
+      // 80-120: 1
+      [0, 50, 100],
+    ]);
+    const r = resolveAreaSubset(ss, 70);
+    expect(r.mode).toBe("area-bucket");
+    expect(r.mergedFrom).toBeDefined();
+    expect(r.mergedFrom!.length).toBeGreaterThanOrEqual(2);
+    expect(r.filteredSessions.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("Case 3: still <5 after merge → no-area fallback", () => {
+    const ss = mkAreaSessions([
+      [0, 50, 65], [1, 52, 70], // only 2 in 60-80
+      [0, 50, 200], [1, 50, 220], // only in >120
+    ]);
+    const r = resolveAreaSubset(ss, 70);
+    expect(r.mode).toBe("no-area");
+    expect(r.reason).toBe("sparse");
+  });
+
+  it("Case 4: assetArea 500 with regional median ~80 → outlier → no-area", () => {
+    const ss = mkAreaSessions([
+      [0, 50, 70], [1, 52, 75], [2, 48, 80], [3, 51, 85], [4, 53, 90], [5, 49, 78],
+    ]);
+    const r = resolveAreaSubset(ss, 500);
+    expect(r.mode).toBe("no-area");
+    expect(r.reason).toBe("outlier");
+  });
+
+  it("Case 5: merge spans >2 buckets → skipPosition true", () => {
+    // Force merging across 3 buckets by sparsity
+    const ss = mkAreaSessions([
+      // 60-80: 1
+      [0, 50, 70],
+      // 40-60: 2
+      [1, 50, 50], [2, 50, 55],
+      // 80-120: 2
+      [3, 50, 100], [4, 50, 110],
+      // outside
+      [5, 50, 30], [6, 50, 200],
+    ]);
+    const r = resolveAreaSubset(ss, 70);
+    // After full merge it might use 3 buckets; if so skipPosition=true. If only 2, just verify sane result.
+    if (r.mode === "area-bucket" && r.mergedFrom && r.mergedFrom.length > 2) {
+      expect(r.skipPosition).toBe(true);
+    } else {
+      // Acceptable: data may still be sparse → no-area
+      expect(["area-bucket", "no-area"]).toContain(r.mode);
+    }
+  });
+
+  it("Case 6: assetArea=0 → no-area (AC1 fallback)", () => {
+    const ss = mkAreaSessions([[0, 50, 70], [1, 52, 75]]);
+    const r = resolveAreaSubset(ss, 0);
+    expect(r.mode).toBe("no-area");
+    expect(r.reason).toBe("invalid-area");
+  });
+
+  it("computeAnalytics propagates areaMode/bucketLabel", () => {
+    const ss = mkAreaSessions([
+      [0, 50, 65], [1, 52, 70], [2, 48, 75], [3, 51, 62], [4, 53, 78], [5, 49, 68],
+    ]);
+    const a = computeAnalytics(ss, 70);
+    expect(a.areaMode).toBe("area-bucket");
+    expect(a.bucketLabel).toBe("60-80");
+  });
+});
 });

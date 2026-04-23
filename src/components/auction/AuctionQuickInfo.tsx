@@ -1,8 +1,18 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, TrendingUp, Loader2, Heart, Eye } from "lucide-react";
-import { formatPrice } from "@/utils/formatters";
+import { Clock, TrendingUp, Loader2, Heart, Eye, Maximize2 } from "lucide-react";
+import { formatPrice, formatAreaM2 } from "@/utils/formatters";
+
+const REAL_ESTATE_SLUGS = new Set([
+  "dat-o", "dat-nen", "dat-nong-nghiep", "nha-pho", "nha-rieng",
+  "can-ho", "chung-cu", "nha-xuong", "shophouse", "biet-thu", "lien-ke",
+]);
+const isRealEstateSlug = (slug?: string | null) => {
+  if (!slug) return false;
+  if (REAL_ESTATE_SLUGS.has(slug)) return true;
+  return /^(dat|nha|can-ho|chung-cu|biet-thu|shophouse|lien-ke)/.test(slug);
+};
 import { useState, useEffect } from "react";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,6 +100,8 @@ export const AuctionQuickInfo = ({
   const pricePerSqm = area > 0 ? price / area : null;
   const winningPrice = (ca.winning_price ?? ca.win_price) as number | undefined;
   const growthPercent = winningPrice && price > 0 ? (((winningPrice - price) / price) * 100).toFixed(1) : null;
+  const isRE = isRealEstateSlug(listing?.property_type_slug);
+  const areaText = isRE ? formatAreaM2(area) : null;
 
   return (
     <Card className="p-5 space-y-5">
@@ -105,6 +117,12 @@ export const AuctionQuickInfo = ({
           {legalStatus && (
             <Badge variant="outline" className="font-medium">
               {legalStatus}
+            </Badge>
+          )}
+          {areaText && (
+            <Badge variant="outline" className="font-medium inline-flex items-center gap-1">
+              <Maximize2 className="w-3 h-3" />
+              {areaText}
             </Badge>
           )}
         </div>

@@ -1,6 +1,17 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
+import { formatAreaM2 } from "@/utils/formatters";
+
+const REAL_ESTATE_SLUGS = new Set([
+  "dat-o", "dat-nen", "dat-nong-nghiep", "nha-pho", "nha-rieng",
+  "can-ho", "chung-cu", "nha-xuong", "shophouse", "biet-thu", "lien-ke",
+]);
+const isRealEstateSlug = (slug?: string | null) => {
+  if (!slug) return false;
+  if (REAL_ESTATE_SLUGS.has(slug)) return true;
+  return /^(dat|nha|can-ho|chung-cu|biet-thu|shophouse|lien-ke)/.test(slug);
+};
 
 interface AuctionInfoTableProps {
   listing: any;
@@ -24,7 +35,14 @@ export const AuctionInfoTable = ({ listing }: AuctionInfoTableProps) => {
   const ca = listing.custom_attributes || {};
   const attachments: { name: string; url: string }[] = ca.attachments || [];
 
+  const isRE = isRealEstateSlug(listing.property_type_slug);
+  const areaValue = (typeof listing.area === "number" && listing.area > 0)
+    ? listing.area
+    : (typeof ca.area === "number" ? ca.area : 0);
+  const areaText = isRE ? formatAreaM2(areaValue) : null;
+
   const rows = [
+    ...(areaText ? [{ label: "Diện tích", value: areaText }] : []),
     { label: "Tên đơn vị tổ chức đấu giá", value: ca.org_name },
     { label: "Địa chỉ đơn vị đấu giá", value: ca.org_address },
     

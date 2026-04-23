@@ -27,6 +27,119 @@ export interface MonthBucket {
   usesPercentile: boolean;
 }
 
+// ---------- Area buckets (BLOCK 1 — AC2) ----------
+export interface AreaBucket {
+  key: string;
+  min: number;
+  max: number;
+}
+
+export const AREA_BUCKETS: AreaBucket[] = [
+  { key: "<40", min: 0, max: 40 },
+  { key: "40-60", min: 40, max: 60 },
+  { key: "60-80", min: 60, max: 80 },
+  { key: "80-120", min: 80, max: 120 },
+  { key: ">120", min: 120, max: Infinity },
+];
+
+export const pickBucket = (area: number): AreaBucket | null => {
+  if (!Number.isFinite(area) || area <= 0) return null;
+  const a = Math.round(area);
+  return AREA_BUCKETS.find((b) => a >= b.min && a < b.max) ?? AREA_BUCKETS[AREA_BUCKETS.length - 1];
+};
+
+export type AreaMode = "area-bucket" | "no-area";
+
+export interface AreaResolution {
+  mode: AreaMode;
+  bucketLabel?: string;
+  bucketRange?: [number, number];
+  mergedFrom?: string[];
+  skipPosition?: boolean;
+  reason?: "invalid-area" | "outlier" | "sparse" | "ok";
+  filteredSessions: RawSession[];
+}
+
+const MIN_BUCKET_COUNT = 5;
+
+/** Resolve which subset of sessions to use, based on assetArea + data density (AC1, AC3, AC7). */
+export const resolveAreaSubset = (sessions: RawSession[], assetArea: number): AreaResolution => {
+  // AC1: invalid area → no-area mode
+  if (!Number.isFinite(assetArea) || assetArea <= 0) {
+    return { mode: "no-area", reason: "invalid-area", filteredSessions: sessions };
+  }
+
+  // AC7a: outlier check (3× median area of the regional set)
+  const areas = sessions.map((s) => s.area).filter((a): a is number => typeof a === "number" && a > 0);
+  if (areas.length >= 4) {
+    const medArea = percentile(sortedAsc(areas), 0.5);
+    if (medArea > 0 && assetArea > medArea * 3) {
+      return { mode: "no-area", reason: "outlier", filteredSessions: sessions };
+    }
+  }
+
+  const startBucket = pickBucket(assetArea);
+  if (!startBucket) {
+    return { mode: "no-area", reason: "invalid-area", filteredSessions: sessions };
+  }
+
+  const sessionsInBucket = (b: AreaBucket) =>
+    sessions.filter((s) => typeof s.area === "number" && s.area! >= b.min && s.area! < b.max);
+
+  // AC2: try exact bucket first
+  let active: AreaBucket[] = [startBucket];
+  let filtered = sessionsInBucket(startBucket);
+
+  if (filtered.length < MIN_BUCKET_COUNT) {
+    // AC3: merge with neighbours (prefer side closer to regional median area)
+    const startIdx = AREA_BUCKETS.indexOf(startBucket);
+    const medArea = areas.length ? percentile(sortedAsc(areas), 0.5) : assetArea;
+
+    const neighbours: AreaBucket[] = [];
+    const lower = AREA_BUCKETS[startIdx - 1];
+    const upper = AREA_BUCKETS[startIdx + 1];
+    // priority: neighbour whose mid is closer to median
+    const midOf = (b: AreaBucket) => (b.max === Infinity ? b.min + 60 : (b.min + b.max) / 2);
+    const candidates = [lower, upper].filter(Boolean) as AreaBucket[];
+    candidates.sort((a, b) => Math.abs(midOf(a) - medArea) - Math.abs(midOf(b) - medArea));
+    neighbours.push(...candidates);
+
+    for (const n of neighbours) {
+      active = [...active, n].sort((a, b) => a.min - b.min);
+      filtered = active.flatMap(sessionsInBucket);
+      if (filtered.length >= MIN_BUCKET_COUNT) break;
+    }
+  }
+
+  if (filtered.length < MIN_BUCKET_COUNT) {
+    return { mode: "no-area", reason: "sparse", filteredSessions: sessions };
+  }
+
+  // Build merged label/range
+  active.sort((a, b) => a.min - b.min);
+  const min = active[0].min;
+  const maxRaw = active[active.length - 1].max;
+  const label = active.length === 1
+    ? active[0].key
+    : maxRaw === Infinity
+      ? `>${min}`
+      : `${min}-${maxRaw}`;
+  const mergedFrom = active.length > 1 ? active.map((b) => b.key) : undefined;
+
+  // AC7b: bucket merged across >2 base buckets → skip position
+  const skipPosition = active.length > 2;
+
+  return {
+    mode: "area-bucket",
+    bucketLabel: label,
+    bucketRange: [min, maxRaw === Infinity ? min + 60 : maxRaw],
+    mergedFrom,
+    skipPosition,
+    reason: "ok",
+    filteredSessions: filtered,
+  };
+};
+
 export interface AnalyticsResult {
   buckets: MonthBucket[];
   countTotal: number;
@@ -40,6 +153,13 @@ export interface AnalyticsResult {
   trend6M: number;
   volatility: number; // coefficient of variation on monthly medians (6-12M window)
   noisy: boolean; // true if outlier filter reverted
+  // BLOCK 1 additions
+  areaMode: AreaMode;
+  bucketLabel?: string;
+  bucketRange?: [number, number];
+  mergedFrom?: string[];
+  skipPosition?: boolean;
+  areaReason?: AreaResolution["reason"];
 }
 
 // ---------- Statistics ----------
@@ -132,11 +252,15 @@ export const sessionsWithinMonths = (sessions: RawSession[], months: number, now
 
 // ---------- Aggregate analytics ----------
 
-export const computeAnalytics = (sessions12M: RawSession[]): AnalyticsResult => {
+export const computeAnalytics = (sessions12M: RawSession[], assetArea?: number): AnalyticsResult => {
+  // BLOCK 1: resolve area subset first (AC1, AC3, AC7)
+  const resolved = resolveAreaSubset(sessions12M, assetArea ?? 0);
+  const baseSessions = resolved.filteredSessions;
+
   // IQR clean (AC7)
-  const { kept } = removeIQROutliers(sessions12M);
-  const noisy = kept.length < 5 && sessions12M.length >= 5;
-  const useSet = noisy ? sessions12M : kept;
+  const { kept } = removeIQROutliers(baseSessions);
+  const noisy = kept.length < 5 && baseSessions.length >= 5;
+  const useSet = noisy ? baseSessions : kept;
 
   const buckets12 = groupByMonth(useSet);
   const all = useSet.map((s) => s.price);
@@ -178,6 +302,12 @@ export const computeAnalytics = (sessions12M: RawSession[]): AnalyticsResult => 
     trend6M: trend(6),
     volatility,
     noisy,
+    areaMode: resolved.mode,
+    bucketLabel: resolved.bucketLabel,
+    bucketRange: resolved.bucketRange,
+    mergedFrom: resolved.mergedFrom,
+    skipPosition: resolved.skipPosition,
+    areaReason: resolved.reason,
   };
 };
 
@@ -223,21 +353,30 @@ export interface InsightPayload {
 
 const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1).replace(".", ",")}%`;
 
+const areaCtxPrefix = (a: AnalyticsResult) =>
+  a.areaMode === "area-bucket" && a.bucketLabel ? `Nhóm ${a.bucketLabel} m²: ` : "";
+const areaCtxSuffix = (a: AnalyticsResult) =>
+  a.areaMode === "no-area" ? " (không phân theo diện tích)" : "";
+
 export const buildInsightModeA = (a: AnalyticsResult): InsightPayload => {
   const dir = trendDirection(a.trend6M);
-  const trendText =
+  const trendBody =
     dir === "up"
-      ? `Giá trúng có xu hướng tăng trong 6 tháng gần đây (${fmtPct(a.trend6M)}).`
+      ? `giá trúng có xu hướng tăng trong 6 tháng gần đây (${fmtPct(a.trend6M)})`
       : dir === "down"
-        ? `Giá trúng có xu hướng giảm trong 6 tháng gần đây (${fmtPct(a.trend6M)}).`
-        : `Giá trúng đi ngang trong 6 tháng gần đây (${fmtPct(a.trend6M)}).`;
+        ? `giá trúng có xu hướng giảm trong 6 tháng gần đây (${fmtPct(a.trend6M)})`
+        : `giá trúng đi ngang trong 6 tháng gần đây (${fmtPct(a.trend6M)})`;
+  const trendText = `${areaCtxPrefix(a)}${trendBody}.${areaCtxSuffix(a)}`;
+
   const vl = volatilityLevel(a.volatility);
-  const volText =
+  const volBody =
     vl === "high"
-      ? "Thị trường biến động mạnh — giá có thể chênh lệch lớn giữa các phiên."
+      ? "thị trường biến động mạnh — giá có thể chênh lệch lớn giữa các phiên"
       : vl === "medium"
-        ? "Mức biến động trung bình — giá khá ổn định nhưng vẫn có dao động."
-        : "Mức biến động thấp — giá ổn định giữa các phiên đấu giá.";
+        ? "mức biến động trung bình — giá khá ổn định nhưng vẫn có dao động"
+        : "mức biến động thấp — giá ổn định giữa các phiên đấu giá";
+  const volText = `${areaCtxPrefix(a)}${volBody}.${areaCtxSuffix(a)}`;
+
   return {
     title: "Xu hướng giá đấu giá",
     bullets: [{ text: trendText }, { text: volText }],
@@ -245,24 +384,32 @@ export const buildInsightModeA = (a: AnalyticsResult): InsightPayload => {
 };
 
 export const buildInsightModeB = (a: AnalyticsResult, predictedMid: number): InsightPayload => {
+  // AC7b: if skipPosition flag, fall back to Mode A
+  if (a.skipPosition) return buildInsightModeA(a);
+
   const pos = computePosition(predictedMid, a.min12M, a.max12M);
   const pl = positionLevel(pos);
   const vl = volatilityLevel(a.volatility);
   const dir = trendDirection(a.trend6M);
 
+  const ctxNote =
+    a.areaMode === "area-bucket" && a.bucketLabel
+      ? ` so với các tài sản cùng diện tích (${a.bucketLabel} m²)`
+      : "";
+
   const posText =
     pl === "low"
-      ? `Giá dự đoán đang ở vùng thấp của 12 tháng (${Math.round(pos * 100)}% dải giá).`
+      ? `Giá dự đoán đang ở vùng thấp của 12 tháng${ctxNote} (${Math.round(pos * 100)}% dải giá).${areaCtxSuffix(a)}`
       : pl === "medium"
-        ? `Giá dự đoán nằm ở vùng giữa của 12 tháng (${Math.round(pos * 100)}% dải giá).`
-        : `Giá dự đoán đang ở vùng cao của 12 tháng (${Math.round(pos * 100)}% dải giá).`;
+        ? `Giá dự đoán nằm ở vùng giữa của 12 tháng${ctxNote} (${Math.round(pos * 100)}% dải giá).${areaCtxSuffix(a)}`
+        : `Giá dự đoán đang ở vùng cao của 12 tháng${ctxNote} (${Math.round(pos * 100)}% dải giá).${areaCtxSuffix(a)}`;
 
   const trendText =
     dir === "up"
-      ? `Xu hướng 6 tháng đang tăng (${fmtPct(a.trend6M)}).`
+      ? `${areaCtxPrefix(a)}xu hướng 6 tháng đang tăng (${fmtPct(a.trend6M)}).${areaCtxSuffix(a)}`
       : dir === "down"
-        ? `Xu hướng 6 tháng đang giảm (${fmtPct(a.trend6M)}).`
-        : `Xu hướng 6 tháng đi ngang (${fmtPct(a.trend6M)}).`;
+        ? `${areaCtxPrefix(a)}xu hướng 6 tháng đang giảm (${fmtPct(a.trend6M)}).${areaCtxSuffix(a)}`
+        : `${areaCtxPrefix(a)}xu hướng 6 tháng đi ngang (${fmtPct(a.trend6M)}).${areaCtxSuffix(a)}`;
 
   let lastBullet: InsightBullet;
   if (vl === "high") {

@@ -68,10 +68,11 @@ function isRealEstateSlug(slug?: string | null) {
 const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
 const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1).replace(".", ",")}%`;
 
-const TooltipContent = ({ active, payload }: any) => {
+const TooltipContentFactory = (assetArea: number, showTotal: boolean) => ({ active, payload }: any) => {
   if (!active || !payload || !payload.length) return null;
   const b: MonthBucket | undefined = payload[0]?.payload;
   if (!b) return null;
+  const totalMid = showTotal && assetArea > 0 ? b.median * assetArea : null;
   return (
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
       <p className="font-semibold text-foreground mb-1">{b.label}</p>
@@ -79,6 +80,14 @@ const TooltipContent = ({ active, payload }: any) => {
         <p>
           Trung vị: <span className="text-foreground font-medium">{fmtNum(b.median)} tr/m²</span>
         </p>
+        {totalMid !== null && (
+          <p>
+            Tổng giá ước tính:{" "}
+            <span className="text-foreground font-medium">
+              {totalMid >= 1000 ? `${(totalMid / 1000).toFixed(2)} tỷ` : `${fmtNum(totalMid)} tr`}
+            </span>
+          </p>
+        )}
         {b.usesPercentile ? (
           <p>
             P25 / P75:{" "}
@@ -125,12 +134,12 @@ export const AuctionPriceHistory = ({
   const sessions12M: RawSession[] = useMemo(() => {
     if (!isRealEstate || pricePerSqm <= 0) return [];
     const seed = `${listing.id || "seed"}-${listing.property_type_slug || ""}-${listing.address?.district || ""}`;
-    return generateMockSessions(seed, { anchor: pricePerSqm, months: 12 });
-  }, [listing.id, listing.property_type_slug, listing.address?.district, pricePerSqm, isRealEstate]);
+    return generateMockSessions(seed, { anchor: pricePerSqm, months: 12, anchorArea: listing.area || 0 });
+  }, [listing.id, listing.property_type_slug, listing.address?.district, pricePerSqm, isRealEstate, listing.area]);
 
   const analytics12M: AnalyticsResult | null = useMemo(
-    () => (sessions12M.length ? computeAnalytics(sessions12M) : null),
-    [sessions12M],
+    () => (sessions12M.length ? computeAnalytics(sessions12M, listing.area || 0) : null),
+    [sessions12M, listing.area],
   );
 
   // Determine which ranges have >= 5 sessions (AC2)
@@ -156,8 +165,8 @@ export const AuctionPriceHistory = ({
     [sessions12M, months],
   );
   const rangeAnalytics = useMemo(
-    () => (rangeSessions.length ? computeAnalytics(rangeSessions) : null),
-    [rangeSessions],
+    () => (rangeSessions.length ? computeAnalytics(rangeSessions, listing.area || 0) : null),
+    [rangeSessions, listing.area],
   );
 
   if (!isRealEstate || !analytics12M) return null;
@@ -196,8 +205,8 @@ export const AuctionPriceHistory = ({
   const volTone =
     vl === "high" ? "text-rose-600" : vl === "medium" ? "text-amber-600" : "text-emerald-600";
 
-  // Insight selection — only when total sessions >= 8 we allow Mode B with position
-  const allowPositionInsight = analytics12M.count12M >= 8 && hasPrediction;
+  // Insight selection — only when total sessions >= 8, has prediction, AND not skipPosition
+  const allowPositionInsight = analytics12M.count12M >= 8 && hasPrediction && !analytics12M.skipPosition;
   const insight = allowPositionInsight
     ? buildInsightModeB(analytics12M, predictedMidPerSqm)
     : buildInsightModeA(analytics12M);
@@ -223,14 +232,41 @@ export const AuctionPriceHistory = ({
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-lg font-bold text-foreground leading-snug">{title}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> trong {ctxY} tháng
-            {analytics12M.noisy && (
-              <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-300 text-amber-700">
-                Dữ liệu noisy
-              </Badge>
-            )}
-          </p>
+          {analytics12M.areaMode === "area-bucket" && analytics12M.bucketRange ? (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> tài sản{" "}
+              <span className="font-medium text-foreground">
+                ~{analytics12M.bucketRange[0]}–{analytics12M.bucketRange[1] === Infinity ? "∞" : analytics12M.bucketRange[1]} m²
+              </span>{" "}
+              trong khu vực, {ctxY} tháng gần nhất
+              {analytics12M.mergedFrom && analytics12M.mergedFrom.length > 1 && (
+                <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-primary/30 text-primary">
+                  Đã mở rộng dải diện tích
+                </Badge>
+              )}
+              {analytics12M.noisy && (
+                <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-300 text-amber-700">
+                  Dữ liệu noisy
+                </Badge>
+              )}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> trong khu vực ({ctxY} tháng) — không phân theo diện tích
+              {analytics12M.noisy && (
+                <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-300 text-amber-700">
+                  Dữ liệu noisy
+                </Badge>
+              )}
+            </p>
+          )}
+          {listing.area > 0 && analytics12M.areaMode === "area-bucket" && analytics12M.bucketLabel && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Diện tích tài sản: <span className="font-medium text-foreground">{Math.round(listing.area).toLocaleString("vi-VN")} m²</span>
+              {" → đối chiếu với nhóm "}
+              <span className="font-medium text-foreground">{analytics12M.bucketLabel} m²</span>
+            </p>
+          )}
         </div>
         <div className="inline-flex rounded-md border border-border p-0.5 bg-muted/50">
           {RANGES.map((r) => {
@@ -330,7 +366,7 @@ export const AuctionPriceHistory = ({
                 axisLine={false}
                 width={40}
               />
-              <Tooltip content={<TooltipContent />} />
+              <Tooltip content={TooltipContentFactory(listing.area || 0, analytics12M.areaMode === "area-bucket")} />
               <Legend
                 verticalAlign="bottom"
                 height={28}

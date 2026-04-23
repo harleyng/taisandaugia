@@ -19,6 +19,13 @@ export const formatArea = (area: number): string => {
   return `${area} m²`;
 };
 
+// BLOCK 1: format area with thousand separator (Vietnamese), integer m²
+export const formatAreaM2 = (area: number | null | undefined): string | null => {
+  if (typeof area !== "number" || !Number.isFinite(area) || area <= 0) return null;
+  const rounded = Math.round(area);
+  return `${rounded.toLocaleString("vi-VN")} m²`;
+};
+
 export const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN");

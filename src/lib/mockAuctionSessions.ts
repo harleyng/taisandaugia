@@ -27,6 +27,8 @@ export interface MockOptions {
   forceCount?: number;
   minCount?: number;
   maxCount?: number;
+  // BLOCK 1: anchor area (m²) — sessions get area lognormal-ish around this
+  anchorArea?: number;
 }
 
 export const generateMockSessions = (seed: string, opts: MockOptions): RawSession[] => {
@@ -41,6 +43,9 @@ export const generateMockSessions = (seed: string, opts: MockOptions): RawSessio
 
   const now = new Date();
   const sessions: RawSession[] = [];
+
+  // Area generator: spread around anchorArea so we hit 2–3 buckets nearby
+  const anchorArea = opts.anchorArea && opts.anchorArea > 0 ? opts.anchorArea : 0;
 
   for (let i = 0; i < total; i++) {
     // Distribute across last `months` months (skewing slightly more recent)
@@ -59,9 +64,19 @@ export const generateMockSessions = (seed: string, opts: MockOptions): RawSessio
       price *= rand() < 0.5 ? 0.4 : 1.9;
     }
 
+    // Area: lognormal-ish around anchor (mostly within ±35%, occasionally further)
+    let area: number | undefined;
+    if (anchorArea > 0) {
+      const u = rand();
+      // multiplier in roughly 0.55x .. 1.7x with some long-tail
+      const mult = 0.55 + Math.pow(u, 1.4) * 1.15 + (rand() - 0.5) * 0.2;
+      area = Math.max(10, Math.round(anchorArea * mult));
+    }
+
     sessions.push({
       date,
       price: Math.round(price * 10) / 10,
+      area,
     });
   }
 

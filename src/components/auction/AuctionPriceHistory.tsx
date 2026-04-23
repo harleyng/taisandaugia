@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowRight, ArrowUp, Lock, Minus, TrendingUp } from "lucide-react";
+import { ArrowRight, Lock, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   LineChart,
@@ -20,11 +20,7 @@ import {
   buildInsightModeB,
   buildPaywallTeaser,
   computeAnalytics,
-  positionLevel,
-  computePosition,
   sessionsWithinMonths,
-  trendDirection,
-  volatilityLevel,
   type AnalyticsResult,
   type MonthBucket,
   type RawSession,
@@ -66,7 +62,6 @@ function isRealEstateSlug(slug?: string | null) {
 }
 
 const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
-const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1).replace(".", ",")}%`;
 
 const TooltipContentFactory = (assetArea: number, showTotal: boolean) => ({ active, payload }: any) => {
   if (!active || !payload || !payload.length) return null;
@@ -197,14 +192,6 @@ export const AuctionPriceHistory = ({
   const ctxN = rangeAnalytics?.countTotal ?? 0;
   const ctxY = months;
 
-  // KPIs (always from 12M analytics for stable comparison)
-  const trend6mDir = trendDirection(analytics12M.trend6M);
-  const trend3mDir = trendDirection(analytics12M.trend3M);
-  const vl = volatilityLevel(analytics12M.volatility);
-  const volLabel = vl === "high" ? "Cao" : vl === "medium" ? "Trung bình" : "Thấp";
-  const volTone =
-    vl === "high" ? "text-rose-600" : vl === "medium" ? "text-amber-600" : "text-emerald-600";
-
   // Insight selection — only when total sessions >= 8, has prediction, AND not skipPosition
   const allowPositionInsight = analytics12M.count12M >= 8 && hasPrediction && !analytics12M.skipPosition;
   const insight = allowPositionInsight
@@ -213,18 +200,6 @@ export const AuctionPriceHistory = ({
 
   const isLocked = !isUnlocked;
   const teaser = buildPaywallTeaser(analytics12M);
-
-  const trendIcon = (dir: ReturnType<typeof trendDirection>) =>
-    dir === "up" ? (
-      <ArrowUp className="w-3.5 h-3.5" strokeWidth={2.5} />
-    ) : dir === "down" ? (
-      <ArrowDown className="w-3.5 h-3.5" strokeWidth={2.5} />
-    ) : (
-      <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
-    );
-
-  const trendTone = (dir: ReturnType<typeof trendDirection>) =>
-    dir === "up" ? "text-emerald-600" : dir === "down" ? "text-rose-600" : "text-muted-foreground";
 
   return (
     <Card className="p-5 space-y-4">
@@ -284,63 +259,6 @@ export const AuctionPriceHistory = ({
               </Button>
             );
           })}
-        </div>
-      </div>
-
-      {/* KPI strip — preview only Median 12M when locked, blur Trend & Volatility (AC8) */}
-      <div className="rounded-lg border border-border">
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
-          {/* Median 12M — always visible (preview KPI) */}
-          <div className="p-4 relative">
-            <p className="text-2xl font-bold text-foreground">
-              {fmtNum(analytics12M.median12M)}{" "}
-              <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
-            </p>
-            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-              Trung vị 12 tháng — khoảng {fmtNum(analytics12M.min12M)} – {fmtNum(analytics12M.max12M)} tr/m²
-            </p>
-            {isLocked && (
-              <Badge variant="outline" className="absolute top-2 right-2 text-[10px] py-0 px-1.5 border-primary/40 text-primary">
-                Preview
-              </Badge>
-            )}
-          </div>
-
-          {/* Trend — blurred when locked */}
-          <div className="p-4 relative">
-            <div className={isLocked ? "blur-[6px] opacity-70 select-none pointer-events-none" : ""} aria-hidden={isLocked}>
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className={`inline-flex items-center gap-1 text-base font-semibold ${trendTone(trend3mDir)}`}>
-                  {trendIcon(trend3mDir)} 3M {fmtPct(analytics12M.trend3M)}
-                </span>
-                <span className={`inline-flex items-center gap-1 text-base font-semibold ${trendTone(trend6mDir)}`}>
-                  {trendIcon(trend6mDir)} 6M {fmtPct(analytics12M.trend6M)}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Xu hướng giá trúng theo khoảng</p>
-            </div>
-            {isLocked && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Lock className="w-4 h-4 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-
-          {/* Volatility — blurred when locked */}
-          <div className="p-4 relative">
-            <div className={isLocked ? "blur-[6px] opacity-70 select-none pointer-events-none" : ""} aria-hidden={isLocked}>
-              <p className={`text-2xl font-bold ${volTone}`}>{volLabel}</p>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                Mức biến động giá ({(analytics12M.volatility * 100).toFixed(0).replace(".", ",")}% CV trên trung vị
-                tháng)
-              </p>
-            </div>
-            {isLocked && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Lock className="w-4 h-4 text-muted-foreground" />
-              </div>
-            )}
-          </div>
         </div>
       </div>
 

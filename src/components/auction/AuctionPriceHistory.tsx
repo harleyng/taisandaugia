@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowRight, ArrowUp, Lock, Minus, TrendingUp } from "lucide-react";
+import { ArrowRight, Lock, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   LineChart,

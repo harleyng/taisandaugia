@@ -68,10 +68,11 @@ function isRealEstateSlug(slug?: string | null) {
 const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
 const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1).replace(".", ",")}%`;
 
-const TooltipContent = ({ active, payload }: any) => {
+const TooltipContentFactory = (assetArea: number, showTotal: boolean) => ({ active, payload }: any) => {
   if (!active || !payload || !payload.length) return null;
   const b: MonthBucket | undefined = payload[0]?.payload;
   if (!b) return null;
+  const totalMid = showTotal && assetArea > 0 ? b.median * assetArea : null;
   return (
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
       <p className="font-semibold text-foreground mb-1">{b.label}</p>
@@ -79,6 +80,14 @@ const TooltipContent = ({ active, payload }: any) => {
         <p>
           Trung vị: <span className="text-foreground font-medium">{fmtNum(b.median)} tr/m²</span>
         </p>
+        {totalMid !== null && (
+          <p>
+            Tổng giá ước tính:{" "}
+            <span className="text-foreground font-medium">
+              {totalMid >= 1000 ? `${(totalMid / 1000).toFixed(2)} tỷ` : `${fmtNum(totalMid)} tr`}
+            </span>
+          </p>
+        )}
         {b.usesPercentile ? (
           <p>
             P25 / P75:{" "}
@@ -125,12 +134,12 @@ export const AuctionPriceHistory = ({
   const sessions12M: RawSession[] = useMemo(() => {
     if (!isRealEstate || pricePerSqm <= 0) return [];
     const seed = `${listing.id || "seed"}-${listing.property_type_slug || ""}-${listing.address?.district || ""}`;
-    return generateMockSessions(seed, { anchor: pricePerSqm, months: 12 });
-  }, [listing.id, listing.property_type_slug, listing.address?.district, pricePerSqm, isRealEstate]);
+    return generateMockSessions(seed, { anchor: pricePerSqm, months: 12, anchorArea: listing.area || 0 });
+  }, [listing.id, listing.property_type_slug, listing.address?.district, pricePerSqm, isRealEstate, listing.area]);
 
   const analytics12M: AnalyticsResult | null = useMemo(
-    () => (sessions12M.length ? computeAnalytics(sessions12M) : null),
-    [sessions12M],
+    () => (sessions12M.length ? computeAnalytics(sessions12M, listing.area || 0) : null),
+    [sessions12M, listing.area],
   );
 
   // Determine which ranges have >= 5 sessions (AC2)
@@ -156,8 +165,8 @@ export const AuctionPriceHistory = ({
     [sessions12M, months],
   );
   const rangeAnalytics = useMemo(
-    () => (rangeSessions.length ? computeAnalytics(rangeSessions) : null),
-    [rangeSessions],
+    () => (rangeSessions.length ? computeAnalytics(rangeSessions, listing.area || 0) : null),
+    [rangeSessions, listing.area],
   );
 
   if (!isRealEstate || !analytics12M) return null;

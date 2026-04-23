@@ -13,6 +13,8 @@ import {
   positionLevel,
   trendDirection,
   volatilityLevel,
+  pickBucket,
+  resolveAreaSubset,
   type RawSession,
 } from "./auctionPriceAnalytics";
 

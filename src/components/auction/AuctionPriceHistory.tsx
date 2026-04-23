@@ -193,14 +193,6 @@ export const AuctionPriceHistory = ({
   const ctxN = rangeAnalytics?.countTotal ?? 0;
   const ctxY = months;
 
-  // KPIs (always from 12M analytics for stable comparison)
-  const trend6mDir = trendDirection(analytics12M.trend6M);
-  const trend3mDir = trendDirection(analytics12M.trend3M);
-  const vl = volatilityLevel(analytics12M.volatility);
-  const volLabel = vl === "high" ? "Cao" : vl === "medium" ? "Trung bình" : "Thấp";
-  const volTone =
-    vl === "high" ? "text-rose-600" : vl === "medium" ? "text-amber-600" : "text-emerald-600";
-
   // Insight selection — only when total sessions >= 8, has prediction, AND not skipPosition
   const allowPositionInsight = analytics12M.count12M >= 8 && hasPrediction && !analytics12M.skipPosition;
   const insight = allowPositionInsight
@@ -209,18 +201,6 @@ export const AuctionPriceHistory = ({
 
   const isLocked = !isUnlocked;
   const teaser = buildPaywallTeaser(analytics12M);
-
-  const trendIcon = (dir: ReturnType<typeof trendDirection>) =>
-    dir === "up" ? (
-      <ArrowUp className="w-3.5 h-3.5" strokeWidth={2.5} />
-    ) : dir === "down" ? (
-      <ArrowDown className="w-3.5 h-3.5" strokeWidth={2.5} />
-    ) : (
-      <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
-    );
-
-  const trendTone = (dir: ReturnType<typeof trendDirection>) =>
-    dir === "up" ? "text-emerald-600" : dir === "down" ? "text-rose-600" : "text-muted-foreground";
 
   return (
     <Card className="p-5 space-y-4">

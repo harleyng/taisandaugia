@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowDown, ArrowRight, ArrowUp, Lock, Minus, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   LineChart,
@@ -13,20 +14,37 @@ import {
   ReferenceDot,
   Legend,
 } from "recharts";
+import { generateMockSessions } from "@/lib/mockAuctionSessions";
+import {
+  buildInsightModeA,
+  buildInsightModeB,
+  buildPaywallTeaser,
+  computeAnalytics,
+  positionLevel,
+  computePosition,
+  sessionsWithinMonths,
+  trendDirection,
+  volatilityLevel,
+  type AnalyticsResult,
+  type MonthBucket,
+  type RawSession,
+} from "@/lib/auctionPriceAnalytics";
 
 interface AuctionPriceHistoryProps {
   listing: any;
+  isUnlocked?: boolean;
+  isLoggedIn?: boolean;
+  onLogin?: () => void;
+  onUnlock?: () => void;
 }
 
-type RangeKey = "1y" | "2y" | "5y";
-
+type RangeKey = "3M" | "6M" | "12M";
 const RANGES: { key: RangeKey; label: string; months: number }[] = [
-  { key: "1y", label: "1 năm", months: 12 },
-  { key: "2y", label: "2 năm", months: 24 },
-  { key: "5y", label: "5 năm", months: 60 },
+  { key: "3M", label: "3 tháng", months: 3 },
+  { key: "6M", label: "6 tháng", months: 6 },
+  { key: "12M", label: "12 tháng", months: 12 },
 ];
 
-// Bất động sản slugs (chấp nhận thêm slug có prefix đất/nhà...)
 const REAL_ESTATE_SLUGS = new Set([
   "dat-o",
   "dat-nen",
@@ -47,269 +65,366 @@ function isRealEstateSlug(slug?: string | null) {
   return /^(dat|nha|can-ho|chung-cu|biet-thu|shophouse|lien-ke)/.test(slug);
 }
 
-// Deterministic pseudo-random based on string seed
-function seeded(seed: string) {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return () => {
-    h ^= h << 13;
-    h ^= h >>> 17;
-    h ^= h << 5;
-    return ((h >>> 0) % 10000) / 10000;
-  };
-}
+const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
+const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1).replace(".", ",")}%`;
 
-function formatMonth(d: Date) {
-  return `T${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
-}
+const TooltipContent = ({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const b: MonthBucket | undefined = payload[0]?.payload;
+  if (!b) return null;
+  return (
+    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+      <p className="font-semibold text-foreground mb-1">{b.label}</p>
+      <div className="space-y-0.5 text-muted-foreground">
+        <p>
+          Trung vị: <span className="text-foreground font-medium">{fmtNum(b.median)} tr/m²</span>
+        </p>
+        {b.usesPercentile ? (
+          <p>
+            P25 / P75:{" "}
+            <span className="text-foreground font-medium">
+              {fmtNum(b.p25!)} – {fmtNum(b.p75!)}
+            </span>
+          </p>
+        ) : (
+          <p>
+            Min / Max:{" "}
+            <span className="text-foreground font-medium">
+              {fmtNum(b.min)} – {fmtNum(b.max)}
+            </span>
+          </p>
+        )}
+        <p>
+          Số phiên: <span className="text-foreground font-medium">{b.count}</span>
+        </p>
+      </div>
+    </div>
+  );
+};
 
-function generateSeries(seed: string, months: number, currentPrice: number) {
-  const rand = seeded(seed);
-  const now = new Date();
-  const points: { month: string; high: number; popular: number; low: number; date: Date }[] = [];
-
-  // Base "popular" anchor — derive from current price; ensure positive
-  const anchorPopular = Math.max(currentPrice * 0.95, 30);
-  // Trend factor — slight upward drift overall
-  for (let i = months; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const t = (months - i) / months; // 0..1
-    const trend = 1 - t * 0.35; // older = lower (so growth ~35-40% over range)
-    const noise = (rand() - 0.5) * 0.06;
-    const popular = anchorPopular * (trend + noise);
-    const high = popular * (1.25 + rand() * 0.1);
-    const low = popular * (0.7 + rand() * 0.05);
-    points.push({
-      month: formatMonth(date),
-      date,
-      high: Math.round(high * 10) / 10,
-      popular: Math.round(popular * 10) / 10,
-      low: Math.round(low * 10) / 10,
-    });
-  }
-  return points;
-}
-
-export const AuctionPriceHistory = ({ listing }: AuctionPriceHistoryProps) => {
-  const [range, setRange] = useState<RangeKey>("1y");
-
+export const AuctionPriceHistory = ({
+  listing,
+  isUnlocked = true,
+  isLoggedIn = true,
+  onLogin,
+  onUnlock,
+}: AuctionPriceHistoryProps) => {
   const isRealEstate = isRealEstateSlug(listing.property_type_slug);
 
-  const months = RANGES.find((r) => r.key === range)!.months;
-  const pricePerSqm = listing.area > 0 ? listing.price / listing.area / 1_000_000 : 0; // tr/m²
+  const pricePerSqm = listing.area > 0 ? listing.price / listing.area / 1_000_000 : 0;
 
-  const data = useMemo(
-    () => (isRealEstate ? generateSeries(listing.id || "seed", months, pricePerSqm) : []),
-    [listing.id, months, pricePerSqm, isRealEstate],
+  const ca = listing.custom_attributes || {};
+  const predMin = ca.predicted_price_min as number | undefined;
+  const predMax = ca.predicted_price_max as number | undefined;
+  const hasPrediction = typeof predMin === "number" && typeof predMax === "number" && listing.area > 0;
+  const predictedMidPerSqm = hasPrediction ? (predMin! + predMax!) / 2 / listing.area / 1_000_000 : 0;
+  const predMinPerSqm = hasPrediction ? predMin! / listing.area / 1_000_000 : 0;
+  const predMaxPerSqm = hasPrediction ? predMax! / listing.area / 1_000_000 : 0;
+
+  // Generate 12M sessions deterministically (always — for background analytics)
+  const sessions12M: RawSession[] = useMemo(() => {
+    if (!isRealEstate || pricePerSqm <= 0) return [];
+    const seed = `${listing.id || "seed"}-${listing.property_type_slug || ""}-${listing.address?.district || ""}`;
+    return generateMockSessions(seed, { anchor: pricePerSqm, months: 12 });
+  }, [listing.id, listing.property_type_slug, listing.address?.district, pricePerSqm, isRealEstate]);
+
+  const analytics12M: AnalyticsResult | null = useMemo(
+    () => (sessions12M.length ? computeAnalytics(sessions12M) : null),
+    [sessions12M],
   );
 
-  if (!isRealEstate) return null;
+  // Determine which ranges have >= 5 sessions (AC2)
+  const availableRanges = useMemo(() => {
+    if (!analytics12M) return [] as RangeKey[];
+    const out: RangeKey[] = [];
+    if (analytics12M.count3M >= 5) out.push("3M");
+    if (analytics12M.count6M >= 5) out.push("6M");
+    if (analytics12M.count12M >= 5) out.push("12M");
+    return out;
+  }, [analytics12M]);
 
-  // Compute decision-oriented metrics from generated series
-  const last = data[data.length - 1];
-  const first = data[0];
-  const peak = data.reduce((acc, p) => (p.popular > acc.popular ? p : acc), data[0]);
+  const defaultRange: RangeKey = availableRanges.includes("6M")
+    ? "6M"
+    : availableRanges[0] || "12M";
+  const [range, setRange] = useState<RangeKey>(defaultRange);
+  const effectiveRange = availableRanges.includes(range) ? range : defaultRange;
 
-  const rangeLabel = RANGES.find((r) => r.key === range)!.label;
+  const months = RANGES.find((r) => r.key === effectiveRange)!.months;
 
-  // KPI 2: biến động giá theo khoảng thời gian
-  const change = first.popular > 0 ? ((last.popular - first.popular) / first.popular) * 100 : 0;
-  const isUp = change >= 0;
+  const rangeSessions = useMemo(
+    () => sessionsWithinMonths(sessions12M, months),
+    [sessions12M, months],
+  );
+  const rangeAnalytics = useMemo(
+    () => (rangeSessions.length ? computeAnalytics(rangeSessions) : null),
+    [rangeSessions],
+  );
 
-  // KPI 3: so sánh với đỉnh lịch sử
-  const vsPeak = peak.popular > 0 ? ((peak.popular - last.popular) / peak.popular) * 100 : 0;
-  const atPeak = vsPeak < 0.05;
+  if (!isRealEstate || !analytics12M) return null;
 
-  const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
-
-  // Address parts
+  // Address parts for header
   const addr = listing.address || {};
   const wardOrDistrict = addr.ward || addr.district || "";
   const province = addr.province || "";
   const locationLabel = [wardOrDistrict, province].filter(Boolean).join(" - ");
-
-  // Asset type label — luôn dùng tên loại tài sản (Đất ở, Căn hộ, Nhà phố...)
   const assetTypeLabel = listing.property_types?.name || "Bất động sản";
-
   const title = `Lịch sử đấu giá ${assetTypeLabel}${locationLabel ? ` tại ${locationLabel}` : ""}`;
+
+  // Hard guard — < 5 sessions in 12M → hide chart entirely (AC1, AC2)
+  if (analytics12M.count12M < 5) {
+    return (
+      <Card className="p-5 space-y-3">
+        <div>
+          <h3 className="text-lg font-bold text-foreground leading-snug">{title}</h3>
+        </div>
+        <div className="rounded-md border border-dashed border-border bg-muted/30 p-6 text-center">
+          <p className="text-sm text-muted-foreground">Không đủ dữ liệu để phân tích xu hướng</p>
+        </div>
+      </Card>
+    );
+  }
+
+  const chartData = rangeAnalytics?.buckets ?? [];
+  const ctxN = rangeAnalytics?.countTotal ?? 0;
+  const ctxY = months;
+
+  // KPIs (always from 12M analytics for stable comparison)
+  const trend6mDir = trendDirection(analytics12M.trend6M);
+  const trend3mDir = trendDirection(analytics12M.trend3M);
+  const vl = volatilityLevel(analytics12M.volatility);
+  const volLabel = vl === "high" ? "Cao" : vl === "medium" ? "Trung bình" : "Thấp";
+  const volTone =
+    vl === "high" ? "text-rose-600" : vl === "medium" ? "text-amber-600" : "text-emerald-600";
+
+  // Insight selection — only when total sessions >= 8 we allow Mode B with position
+  const allowPositionInsight = analytics12M.count12M >= 8 && hasPrediction;
+  const insight = allowPositionInsight
+    ? buildInsightModeB(analytics12M, predictedMidPerSqm)
+    : buildInsightModeA(analytics12M);
+
+  const isLocked = !isUnlocked;
+  const teaser = buildPaywallTeaser(analytics12M);
+
+  const trendIcon = (dir: ReturnType<typeof trendDirection>) =>
+    dir === "up" ? (
+      <ArrowUp className="w-3.5 h-3.5" strokeWidth={2.5} />
+    ) : dir === "down" ? (
+      <ArrowDown className="w-3.5 h-3.5" strokeWidth={2.5} />
+    ) : (
+      <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
+    );
+
+  const trendTone = (dir: ReturnType<typeof trendDirection>) =>
+    dir === "up" ? "text-emerald-600" : dir === "down" ? "text-rose-600" : "text-muted-foreground";
 
   return (
     <Card className="p-5 space-y-4">
+      {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-lg font-bold text-foreground leading-snug">{title}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Tổng hợp và xử lý từ dữ liệu đấu giá công khai</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> trong {ctxY} tháng
+            {analytics12M.noisy && (
+              <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-300 text-amber-700">
+                Dữ liệu noisy
+              </Badge>
+            )}
+          </p>
         </div>
         <div className="inline-flex rounded-md border border-border p-0.5 bg-muted/50">
-          {RANGES.map((r) => (
-            <Button
-              key={r.key}
-              variant={range === r.key ? "default" : "ghost"}
-              size="sm"
-              className="h-7 px-3 text-xs"
-              onClick={() => setRange(r.key)}
-            >
-              {r.label}
-            </Button>
-          ))}
+          {RANGES.map((r) => {
+            const enabled = availableRanges.includes(r.key);
+            return (
+              <Button
+                key={r.key}
+                variant={effectiveRange === r.key ? "default" : "ghost"}
+                size="sm"
+                className="h-7 px-3 text-xs"
+                disabled={!enabled}
+                onClick={() => setRange(r.key)}
+              >
+                {r.label}
+              </Button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Decision-oriented KPIs */}
+      {/* KPI strip — visible even when locked */}
       <div className="rounded-lg border border-border">
         <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
-          {/* KPI 1 — Giá trúng phổ biến gần nhất */}
+          {/* Median 12M */}
           <div className="p-4">
             <p className="text-2xl font-bold text-foreground">
-              {fmtNum(last.popular)} <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
+              {fmtNum(analytics12M.median12M)}{" "}
+              <span className="text-sm font-medium text-muted-foreground">tr/m²</span>
             </p>
-            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Giá trúng phổ biến nhất {last.month}</p>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              Trung vị 12 tháng — khoảng {fmtNum(analytics12M.min12M)} – {fmtNum(analytics12M.max12M)} tr/m²
+            </p>
           </div>
 
-          {/* KPI 2 — Biến động giá theo khoảng thời gian đang chọn */}
+          {/* Trend */}
           <div className="p-4">
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                  isUp ? "bg-emerald-100" : "bg-rose-100"
-                }`}
-              >
-                {isUp ? (
-                  <ArrowUp className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
-                ) : (
-                  <ArrowDown className="w-4 h-4 text-rose-600" strokeWidth={2.5} />
-                )}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className={`inline-flex items-center gap-1 text-base font-semibold ${trendTone(trend3mDir)}`}>
+                {trendIcon(trend3mDir)} 3M {fmtPct(analytics12M.trend3M)}
               </span>
-              <p className="text-2xl font-bold text-foreground">
-                {isUp ? "+" : ""}
-                {fmtNum(change)}%
-              </p>
+              <span className={`inline-flex items-center gap-1 text-base font-semibold ${trendTone(trend6mDir)}`}>
+                {trendIcon(trend6mDir)} 6M {fmtPct(analytics12M.trend6M)}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-              Giá trúng đã {isUp ? "tăng" : "giảm"} trong {rangeLabel} qua {first.month} - {last.month}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">Xu hướng giá trúng theo khoảng</p>
           </div>
 
-          {/* KPI 3 — So sánh với đỉnh lịch sử */}
+          {/* Volatility */}
           <div className="p-4">
-            <div className="flex items-center gap-2">
-              {atPeak ? (
-                <span className="w-7 h-7 rounded-full flex items-center justify-center bg-emerald-100">
-                  <ArrowUp className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
-                </span>
-              ) : (
-                <span className="w-7 h-7 rounded-full flex items-center justify-center bg-rose-100">
-                  <ArrowDown className="w-4 h-4 text-rose-600" strokeWidth={2.5} />
-                </span>
-              )}
-              <p className="text-2xl font-bold text-foreground">{atPeak ? "Đang ở đỉnh" : `${fmtNum(vsPeak)}%`}</p>
-            </div>
+            <p className={`text-2xl font-bold ${volTone}`}>{volLabel}</p>
             <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-              {atPeak
-                ? `Giá trúng hiện tại đang ở mức đỉnh ${fmtNum(peak.popular)} tr/m²`
-                : `Giá trúng hiện tại thấp hơn đỉnh ${fmtNum(peak.popular)} tr/m² vào ${peak.month}`}
+              Mức biến động giá ({(analytics12M.volatility * 100).toFixed(0).replace(".", ",")}% CV trên trung vị
+              tháng)
             </p>
           </div>
         </div>
       </div>
 
-      {/* Chart */}
-      <div className="h-[280px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 16, left: -10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-            <XAxis
-              dataKey="month"
-              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-              tickLine={false}
-              axisLine={{ stroke: "hsl(var(--border))" }}
-              interval="preserveStartEnd"
-              minTickGap={20}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-              tickLine={false}
-              axisLine={false}
-              width={40}
-              unit=""
-            />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-              formatter={(value: number, name: string) => [`${value.toFixed(1)} tr/m²`, name]}
-              labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-            />
-            <Legend
-              verticalAlign="bottom"
-              height={28}
-              iconType="circle"
-              wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
-              payload={[
-                { value: "Giá cao nhất", type: "circle", id: "high", color: "hsl(280 65% 60%)" },
-                { value: "Giá phổ biến", type: "circle", id: "popular", color: "hsl(217 91% 55%)" },
-                { value: "Giá thấp nhất", type: "circle", id: "low", color: "hsl(45 90% 55%)" },
-                ...(pricePerSqm > 0
-                  ? [
-                      {
-                        value: "Khởi điểm tin hiện tại",
-                        type: "circle" as const,
-                        id: "current",
-                        color: "hsl(0 75% 55%)",
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-            <Line
-              type="monotone"
-              dataKey="high"
-              name="Giá cao nhất"
-              stroke="hsl(280 65% 60%)"
-              strokeWidth={1.5}
-              strokeOpacity={0.7}
-              dot={false}
-              activeDot={{ r: 3 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="popular"
-              name="Giá phổ biến nhất (trung vị)"
-              stroke="hsl(217 91% 55%)"
-              strokeWidth={3}
-              dot={{ r: 3, fill: "hsl(217 91% 55%)", stroke: "hsl(var(--background))", strokeWidth: 1.5 }}
-              activeDot={{ r: 5, fill: "hsl(217 91% 55%)", stroke: "hsl(var(--background))", strokeWidth: 2 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="low"
-              name="Giá thấp nhất"
-              stroke="hsl(45 90% 55%)"
-              strokeWidth={1.5}
-              strokeOpacity={0.7}
-              dot={false}
-              activeDot={{ r: 3 }}
-            />
-            {pricePerSqm > 0 && last && (
-              <ReferenceDot
-                x={last.month}
-                y={pricePerSqm}
-                r={6}
-                fill="hsl(0 75% 55%)"
-                stroke="hsl(var(--background))"
-                strokeWidth={2}
-                ifOverflow="extendDomain"
+      {/* Chart — blurred lightly when locked (AC8) */}
+      <div className="relative">
+        <div
+          className={`h-[300px] w-full transition ${isLocked ? "blur-[3px] opacity-80 pointer-events-none select-none" : ""}`}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 10, right: 16, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                tickLine={false}
+                axisLine={{ stroke: "hsl(var(--border))" }}
+                interval="preserveStartEnd"
+                minTickGap={20}
               />
-            )}
-          </LineChart>
-        </ResponsiveContainer>
+              <YAxis
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                tickLine={false}
+                axisLine={false}
+                width={40}
+              />
+              <Tooltip content={<TooltipContent />} />
+              <Legend
+                verticalAlign="bottom"
+                height={28}
+                iconType="circle"
+                wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
+                payload={[
+                  { value: "Giá cao (P75/Max)", type: "circle", id: "high", color: "hsl(280 65% 60%)" },
+                  { value: "Giá phổ biến (Trung vị)", type: "circle", id: "mid", color: "hsl(217 91% 55%)" },
+                  { value: "Giá thấp (P25/Min)", type: "circle", id: "low", color: "hsl(45 90% 55%)" },
+                  hasPrediction
+                    ? { value: "Giá dự đoán", type: "circle" as const, id: "pred", color: "hsl(0 75% 55%)" }
+                    : { value: "Giá khởi điểm", type: "circle" as const, id: "start", color: "hsl(0 75% 55%)" },
+                ]}
+              />
+              <Line
+                type="monotone"
+                dataKey="high"
+                name="Giá cao"
+                stroke="hsl(280 65% 60%)"
+                strokeWidth={1.5}
+                strokeOpacity={0.7}
+                dot={false}
+                activeDot={{ r: 3 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="mid"
+                name="Giá phổ biến"
+                stroke="hsl(217 91% 55%)"
+                strokeWidth={3}
+                dot={{ r: 3, fill: "hsl(217 91% 55%)", stroke: "hsl(var(--background))", strokeWidth: 1.5 }}
+                activeDot={{ r: 5, fill: "hsl(217 91% 55%)", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="low"
+                name="Giá thấp"
+                stroke="hsl(45 90% 55%)"
+                strokeWidth={1.5}
+                strokeOpacity={0.7}
+                dot={false}
+                activeDot={{ r: 3 }}
+              />
+              {/* Marker logic (AC3) */}
+              {hasPrediction && chartData.length > 0 && (
+                <ReferenceDot
+                  x={chartData[chartData.length - 1].label}
+                  y={predictedMidPerSqm}
+                  r={6}
+                  fill="hsl(0 75% 55%)"
+                  stroke="hsl(var(--background))"
+                  strokeWidth={2}
+                  ifOverflow="extendDomain"
+                />
+              )}
+              {!hasPrediction && pricePerSqm > 0 && chartData.length > 0 && (
+                <ReferenceDot
+                  x={chartData[chartData.length - 1].label}
+                  y={pricePerSqm}
+                  r={6}
+                  fill="hsl(0 75% 55%)"
+                  stroke="hsl(var(--background))"
+                  strokeWidth={2}
+                  ifOverflow="extendDomain"
+                />
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
+
+      {/* Insight box (AC6) — hidden specific bullets when locked */}
+      {!isLocked && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <h4 className="text-sm font-semibold text-foreground">{insight.title}</h4>
+          </div>
+          <ul className="space-y-1.5">
+            {insight.bullets.map((b, i) => (
+              <li key={i} className="text-sm text-foreground/90 leading-relaxed">
+                <span>• {b.text}</span>
+                {b.implication && (
+                  <span className="block pl-3 text-primary font-medium mt-0.5">→ {b.implication}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Paywall preview (AC8) */}
+      {isLocked && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+          <div className="flex items-start gap-2">
+            <TrendingUp className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">{teaser}</p>
+              <p className="text-sm text-muted-foreground/70 italic flex items-center gap-1">
+                <ArrowRight className="w-3.5 h-3.5" /> Xem vị trí giá hiện tại & cơ hội tham gia
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() => (isLoggedIn ? onUnlock?.() : onLogin?.())}
+          >
+            <Lock className="w-3.5 h-3.5 mr-1.5" />
+            {isLoggedIn ? "Mở khoá để xem vị trí giá & cơ hội" : "Đăng nhập để xem phân tích giá"}
+          </Button>
+        </div>
+      )}
     </Card>
   );
 };

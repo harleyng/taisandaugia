@@ -311,24 +311,14 @@ const AuctionDetail = () => {
             {/* 5. Attachments */}
             <AuctionAttachments listing={listing} />
 
-            {/* 6. Price history (Bất động sản only) — paywalled */}
-            {isUnlocked ? (
-              <AuctionPriceHistory listing={listing} />
-            ) : (
-              <LockedBlur
-                ctaLabel={isLoggedIn ? "Mở khóa lịch sử đấu giá" : "Đăng nhập để mở khóa"}
-                teaser="Xem lịch sử giá đấu giá khu vực"
-                futureNote="Truy cập biểu đồ biến động giá theo thời gian, mức đỉnh và xu hướng để đánh giá cơ hội."
-                onUnlockClick={() =>
-                  isLoggedIn
-                    ? openAssetPaywall(listing.id, listing.title)
-                    : openAuthDialog(() => openAssetPaywall(listing.id, listing.title))
-                }
-                minHeight="520px"
-              >
-                <AuctionPriceHistory listing={listing} />
-              </LockedBlur>
-            )}
+            {/* 6. Price history (Bất động sản only) — paywall preview tự xử lý trong block (AC8) */}
+            <AuctionPriceHistory
+              listing={listing}
+              isUnlocked={isUnlocked}
+              isLoggedIn={isLoggedIn}
+              onLogin={() => openAuthDialog(() => openAssetPaywall(listing.id, listing.title))}
+              onUnlock={() => openAssetPaywall(listing.id, listing.title)}
+            />
 
             {/* 7. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) — paywalled */}
             {isUpcoming && (

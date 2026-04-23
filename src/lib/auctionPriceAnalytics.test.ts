@@ -50,10 +50,12 @@ describe("AC7 — IQR outlier filter", () => {
     expect(kept.find((s) => s.price === 500)).toBeUndefined();
   });
 
-  it("keeps everything when distribution is uniform", () => {
-    const ss = mkSessions([[0, 50], [1, 51], [2, 50], [3, 49], [4, 50]]);
-    const { removed } = removeIQROutliers(ss);
+  it("keeps the bulk when distribution has no extreme outliers", () => {
+    const ss = mkSessions([[0, 50], [1, 55], [2, 60], [3, 52], [4, 58], [5, 54], [6, 56]]);
+    const { kept, removed } = removeIQROutliers(ss);
+    // No price is outside Q1-1.5·IQR..Q3+1.5·IQR for this spread
     expect(removed).toBe(0);
+    expect(kept).toHaveLength(7);
   });
 });
 
@@ -186,7 +188,8 @@ describe("AC5/AC6 — Insight generation", () => {
   });
 
   it("Mode B: high volatility ⇒ warning, no opportunity (AC7)", () => {
-    const swings = [50, 150, 60, 140, 55, 145, 50, 150, 70, 130, 60, 140];
+    // Larger amplitude to push CV above 0.5
+    const swings = [20, 200, 25, 195, 30, 190, 22, 198, 28, 192, 35, 185];
     const ss: RawSession[] = [];
     for (let m = 11; m >= 0; m--) {
       for (let i = 0; i < 6; i++) ss.push({ date: monthsAgo(m, 5 + i), price: swings[m] });

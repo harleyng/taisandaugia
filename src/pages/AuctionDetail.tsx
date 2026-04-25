@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Heart,
+  Bell,
+  BellRing,
   ChevronRight,
   ChevronDown,
   ChevronUp,

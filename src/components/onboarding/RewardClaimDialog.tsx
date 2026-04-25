@@ -1,10 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Gift, Coins, Ticket, Loader2, PartyPopper } from "lucide-react";
+import { Gift, Coins, Loader2, PartyPopper } from "lucide-react";
 import { useState } from "react";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import { toast } from "sonner";
-import { REWARD_BASIC_CREDITS, REWARD_INTENT_CREDITS, REWARD_BASIC_TOKENS, REWARD_INTENT_TOKENS } from "@/lib/onboardingTasks";
+import { REWARD_BASIC_CREDITS, REWARD_INTENT_CREDITS } from "@/lib/onboardingTasks";
 
 interface Props {
   open: boolean;
@@ -17,7 +17,6 @@ export const RewardClaimDialog = ({ open, onOpenChange, taskKey }: Props) => {
   const [claiming, setClaiming] = useState(false);
 
   const credits = taskKey === "basic" ? REWARD_BASIC_CREDITS : REWARD_INTENT_CREDITS;
-  const tokens = taskKey === "basic" ? REWARD_BASIC_TOKENS : REWARD_INTENT_TOKENS;
   const taskName = taskKey === "basic" ? "hồ sơ cá nhân" : "nhu cầu đấu giá";
 
   const handleClaim = async () => {
@@ -43,18 +42,12 @@ export const RewardClaimDialog = ({ open, onOpenChange, taskKey }: Props) => {
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
                 <Coins className="h-4 w-4 text-primary" /> Credit
               </span>
               <span className="font-bold text-primary">+{credits}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-                <Ticket className="h-4 w-4 text-primary" /> Vé mở khóa miễn phí
-              </span>
-              <span className="font-bold text-primary">+{tokens}</span>
             </div>
           </div>
 

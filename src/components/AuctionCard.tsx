@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Heart, Eye } from "lucide-react";
+import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Eye } from "lucide-react";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatPrice, formatDate } from "@/utils/formatters";
 import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
@@ -29,6 +29,7 @@ export interface AuctionCardProps {
   winPrice?: number;
   isSaved?: boolean;
   onToggleSave?: (e: React.MouseEvent) => void;
+  /** @deprecated số lượt quan tâm — không còn hiển thị */
   saveCount?: number;
   viewsCount?: number;
 }
@@ -185,10 +186,6 @@ export function AuctionCard({
               <Eye className="h-3 w-3" />
               {viewsCount ?? 0}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <Heart className="h-3 w-3 fill-current text-rose-400" />
-              {saveCount ?? 0}
-            </span>
           </div>
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border">
@@ -292,10 +289,6 @@ export function AuctionCard({
             <span className="inline-flex items-center gap-1">
               <Eye className="h-3 w-3" />
               {viewsCount ?? 0}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Heart className="h-3 w-3 fill-current text-rose-400" />
-              {saveCount ?? 0}
             </span>
           </div>
 

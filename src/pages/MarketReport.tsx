@@ -72,8 +72,15 @@ const MarketReport = () => {
                   <ReportSubscribeForm />
                 </>
               ) : (
-                <div className="pt-4">
+                <div className="pt-4 space-y-6">
                   <ReportLockedCTA />
+                  <div aria-hidden className="pointer-events-none select-none opacity-30 blur-[3px] space-y-2">
+                    <SectionOverview />
+                    <SectionCompetition />
+                    <SectionOutcomes />
+                    <SectionPriceTrend />
+                    <SectionCategories />
+                  </div>
                 </div>
               )}
             </div>

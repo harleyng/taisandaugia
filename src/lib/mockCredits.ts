@@ -294,3 +294,65 @@ export const unlockOwner = (ownerId: string, tierKey: OwnerTierKey, label?: stri
   write(s);
   return { ok: true };
 };
+
+// ───────────────────────── Deep report period unlocks ─────────────────────────
+
+import {
+  expandUnlock,
+  formatPeriodLabel,
+  parsePeriod,
+} from "./reportPeriods";
+
+const deepKey = (slug: string, periodId: string) => `${slug}:${periodId}`;
+
+export const isDeepReportPeriodUnlocked = (slug: string, periodId: string): boolean => {
+  const s = read();
+  return (s.deepReportUnlocks ?? []).includes(deepKey(slug, periodId));
+};
+
+export const getUnlockedPeriodsForReport = (slug: string): string[] => {
+  const s = read();
+  const prefix = `${slug}:`;
+  return (s.deepReportUnlocks ?? [])
+    .filter((k) => k.startsWith(prefix))
+    .map((k) => k.slice(prefix.length));
+};
+
+export const unlockDeepReportPeriod = (
+  slug: string,
+  periodId: string,
+  reportLabel?: string,
+): { ok: boolean; reason?: "insufficient" | "already" | "invalid" } => {
+  const parsed = parsePeriod(periodId);
+  if (!parsed) return { ok: false, reason: "invalid" };
+
+  const s = read();
+  if (!s.deepReportUnlocks) s.deepReportUnlocks = [];
+
+  if (s.deepReportUnlocks.includes(deepKey(slug, periodId))) {
+    return { ok: true, reason: "already" };
+  }
+
+  const cost = DEEP_REPORT_PERIOD_PRICES[parsed.kind];
+  if (s.balance < cost) return { ok: false, reason: "insufficient" };
+
+  s.balance -= cost;
+
+  // Mở chính nó + tất cả con cháu (Quý → 3 tháng; Năm → 4 quý + 12 tháng)
+  const expanded = expandUnlock(periodId).map((p) => deepKey(slug, p));
+  for (const key of expanded) {
+    if (!s.deepReportUnlocks.includes(key)) {
+      s.deepReportUnlocks.push(key);
+    }
+  }
+
+  pushTx(s, {
+    type: "unlock_deep_report",
+    description: `Mở khóa ${reportLabel ?? slug} — ${formatPeriodLabel(periodId)}`,
+    creditDelta: -cost,
+  });
+
+  write(s);
+  return { ok: true };
+};
+

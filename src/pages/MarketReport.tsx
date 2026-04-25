@@ -1,4 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import { ReportTopNav } from "@/components/report/ReportTopNav";
 import { ReportHero } from "@/components/report/ReportHero";
 import { ReportTOC } from "@/components/report/ReportTOC";
@@ -8,8 +10,13 @@ import { SectionCompetition } from "@/components/report/SectionCompetition";
 import { SectionOutcomes } from "@/components/report/SectionOutcomes";
 import { SectionPriceTrend } from "@/components/report/SectionPriceTrend";
 import { ReportSubscribeForm } from "@/components/report/ReportSubscribeForm";
+import { ReportLockedCTA } from "@/components/report/ReportLockedCTA";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MarketReport = () => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   useEffect(() => {
     document.title = "Báo cáo thị trường đấu giá tài sản Việt Nam";
     const meta = document.querySelector('meta[name="description"]');
@@ -24,6 +31,17 @@ const MarketReport = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
+      setSession(s);
+    });
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setAuthLoading(false);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <ReportTopNav />
@@ -36,11 +54,26 @@ const MarketReport = () => {
 
             <div className="min-w-0 space-y-2">
               <ReportHighlights />
-              <SectionOverview />
-              <SectionCompetition />
-              <SectionOutcomes />
-              <SectionPriceTrend />
-              <ReportSubscribeForm />
+
+              {authLoading ? (
+                <div className="space-y-4 pt-4">
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              ) : session ? (
+                <>
+                  <SectionOverview />
+                  <SectionCompetition />
+                  <SectionOutcomes />
+                  <SectionPriceTrend />
+                  <ReportSubscribeForm />
+                </>
+              ) : (
+                <div className="pt-4">
+                  <ReportLockedCTA />
+                </div>
+              )}
             </div>
           </div>
         </div>

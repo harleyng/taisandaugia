@@ -1,56 +1,43 @@
 
 ## Mục tiêu
 
-Thêm một block mới trên homepage (`/`) ngay **phía trên** section "Phiên sắp diễn ra" (`<AuctionSection />`), giới thiệu Báo cáo thị trường đấu giá với:
-- Tiêu đề + meta (ngày cập nhật, số phiên trong 90 ngày)
-- 3 card tổng quan = 3 điểm nổi bật của báo cáo tháng
-- CTA "Xem báo cáo đầy đủ" dẫn vào `/report`
+Tại trang `/report`, khi người dùng **chưa đăng nhập**:
+- Vẫn hiển thị các phần "miễn phí" phía trên: `ReportTopNav`, `ReportHero`, `ReportTOC`, `ReportHighlights` (3 điểm nổi bật).
+- **Khoá toàn bộ các section dữ liệu chi tiết** phía dưới: `SectionOverview`, `SectionCompetition`, `SectionOutcomes`, `SectionPriceTrend`, `ReportSubscribeForm`.
+- Thay vào đó hiển thị 1 **lock card** với CTA "Đăng nhập để xem báo cáo đầy đủ" → click sẽ mở popup đăng ký/đăng nhập có sẵn (`AuthDialog`).
+- Khi user đăng nhập xong, popup đóng → nội dung tự hiển thị (do session state cập nhật qua `onAuthStateChange`).
 
-## Vị trí chèn
+## Cơ chế đã có sẵn (tái sử dụng)
 
-`src/pages/Index.tsx` — chèn `<MarketReportTeaser />` mới giữa khối Hero và `<AuctionSection />` (sau `</section>` của Hero, trước `<AuctionSection />` ở dòng 61).
+- `AuthDialogProvider` + `useAuthDialog().openAuthDialog()` đã được wrap toàn app → chỉ cần gọi để mở popup.
+- `AuthDialog` đã render ở root → không cần mount thêm.
+- Pattern session check: copy từ `ProtectedRoute.tsx` (`supabase.auth.getSession()` + `onAuthStateChange`).
 
-## Nguồn dữ liệu
+## Thay đổi
 
-Tái sử dụng `src/lib/mockMarketReport.ts` đã có sẵn:
-- `reportMeta` → tiêu đề, `updatedAt`, `sessionCount`, `periodDays`
-- `highlights` → 3 card (id 1, 2, 3 — đúng 3 điểm nổi bật)
+### 1. `src/pages/MarketReport.tsx`
+- Thêm `useState<Session | null>` + `useEffect` lắng nghe session (giống `ProtectedRoute`).
+- Trong cột nội dung phải, render có điều kiện:
+  - Luôn hiển thị: `<ReportHighlights />`
+  - Nếu `session` tồn tại: render đủ 4 sections + `<ReportSubscribeForm />`.
+  - Nếu chưa: render `<ReportLockedCTA />` (component mới) thay cho khối còn lại.
+- Trong khi `loading` (lần đầu), render skeleton nhẹ ở khối khoá (tránh flicker).
 
-Không tạo thêm mock data, không thay đổi trang `/report`.
+### 2. `src/components/report/ReportLockedCTA.tsx` (mới)
+- Card lớn `rounded-2xl` với:
+  - Icon `Lock` + tiêu đề "Đăng nhập để xem báo cáo đầy đủ"
+  - Mô tả ngắn: liệt kê những gì user sẽ unlock (Tổng quan thị trường, Cạnh tranh & chênh lệch, Kết quả & không thành, Xu hướng giá).
+  - Nút primary "Đăng nhập / Đăng ký" → gọi `openAuthDialog()`.
+  - Phần preview mờ phía sau (background blur) để gợi ý có nội dung bị khoá — sử dụng `LockedBlur` đã có (`src/components/paywall/LockedBlur.tsx`) hoặc style tương tự `bg-gradient-to-b` + `blur-sm` mock content lines.
+- Dùng semantic tokens: `bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`, `bg-primary text-primary-foreground` cho CTA.
 
-## Component mới
-
-Tạo `src/components/MarketReportTeaser.tsx`:
-
-**Layout (desktop ≥ md):**
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  [Badge] BÁO CÁO ĐỊNH KỲ                                     │
-│  Báo cáo thị trường đấu giá tài sản Việt Nam                 │
-│  📅 Cập nhật 30/09/2025 · ⚖️ 1.247 phiên trong 90 ngày        │
-│                                                              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
-│  │ ❶ Card 1 │  │ ❷ Card 2 │  │ ❸ Card 3 │                   │
-│  └──────────┘  └──────────┘  └──────────┘                   │
-│                                                              │
-│                          [ Xem báo cáo đầy đủ → ]            │
-└──────────────────────────────────────────────────────────────┘
-```
-
-**Mobile:** 3 card stack 1 cột, CTA full-width.
-
-**Style:**
-- Dùng `<section className="container px-4 py-8 md:py-12">` theo pattern của các section khác trên homepage
-- Wrapper card: `rounded-2xl` với gradient nhẹ `from-primary/5 to-background` + `border-l-4 border-l-accent` (giống tinh thần `ReportHighlights` hiện có để giữ consistency)
-- Mỗi card: `rounded-lg bg-muted/50 border border-border/60 hover:border-accent/40 p-4`, có số ❶❷❸ to màu accent (giống hệt `ReportHighlights.tsx`) + text highlight
-- Icon: `Sparkles` (header) và `ArrowRight` (CTA), từ `lucide-react`
-- CTA: `<Button asChild>` bọc `<Link to="/report">` — primary variant
+### 3. Không thay đổi
+- Không đổi `ReportTOC` (vẫn hiển thị, nhưng các anchor chỉ scroll được sau khi login — chấp nhận được vì các target không tồn tại trong DOM khi chưa login). Nếu muốn tinh tế hơn có thể disable visually nhưng không cần thiết cho yêu cầu này.
+- Không thay đổi block `MarketReportTeaser` ở homepage — vẫn cho phép mọi người vào trang `/report` để xem teaser + lock card.
 
 ## Implementation Notes
 
-- File mới duy nhất: `src/components/MarketReportTeaser.tsx`
-- Edit duy nhất: `src/pages/Index.tsx` — import + chèn 1 dòng JSX phía trên `<AuctionSection />`
-- Không thêm route, không thêm entry point ở Header (theo yêu cầu trước đó về trang report)
-- Reuse `highlights`, `reportMeta` từ `@/lib/mockMarketReport`
-- Format số: `sessionCount.toLocaleString("vi-VN")`
+- Import `Session` từ `@supabase/supabase-js` và `supabase` từ `@/integrations/supabase/client`.
+- Import `useAuthDialog` từ `@/contexts/AuthDialogContext`.
+- Reuse `LockedBlur` nếu API đơn giản; nếu phức tạp thì tự render mock blur content.
+- Không cần edit App.tsx (route vẫn public).

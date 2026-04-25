@@ -6,11 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { ReportTopNav } from "@/components/report/ReportTopNav";
 import { CategoryFilterTabs } from "@/components/report/CategoryFilterTabs";
 import { BdsReportContent } from "@/components/report/bds/BdsReportContent";
+import { DeepReportGate } from "@/components/report/DeepReportGate";
 import { ReportLockedCTA } from "@/components/report/ReportLockedCTA";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { bdsHighlights, bdsMeta, bdsTocSections } from "@/lib/mockBdsReport";
 
 const SUPPORTED_SLUGS = ["bds"];
 const CATEGORY_LABELS: Record<string, string> = {
@@ -103,7 +105,14 @@ const MarketReportCategory = () => {
         ) : !isSupported ? (
           <ComingSoonState slug={slug} />
         ) : (
-          <BdsReportContent />
+          <DeepReportGate
+            reportSlug="bds"
+            reportLabel="Bất động sản"
+            highlights={bdsHighlights}
+            tocSections={bdsTocSections}
+            meta={`${bdsMeta.sessionCount.toLocaleString("vi-VN")} phiên · ${bdsMeta.periodDays} ngày · ${bdsMeta.totalValue.toLocaleString("vi-VN")} tỷ VND`}
+            renderContent={() => <BdsReportContent />}
+          />
         )}
 
         {session && isSupported && (

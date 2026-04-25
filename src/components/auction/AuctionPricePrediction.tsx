@@ -305,7 +305,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
               <div className="flex-1">
                 <div className="flex items-center gap-1 text-sm font-semibold text-amber-900 mb-1">
                   Khuyến nghị
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Nhận định tổng quan dựa trên dữ liệu lịch sử. Giá thực tế có thể thay đổi tùy theo diễn biến của phiên đấu giá." />
                 </div>
                 <p className="text-xs text-amber-900/90 leading-relaxed">
                   Giá ước tính dựa trên dữ liệu đấu giá gần đây với các tài sản tương tự.{" "}

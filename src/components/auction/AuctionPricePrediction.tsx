@@ -158,7 +158,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
           </div>
           <Button size="sm" onClick={onUnlock} className="w-full sm:w-auto gap-1.5">
             <Lock className="w-3.5 h-3.5" />
-            Mở khóa dự đoán – 59 credit
+            Mở khóa dự đoán
           </Button>
         </div>
       )}
@@ -287,10 +287,8 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                 </div>
                 <p className="text-xs text-amber-900/90 leading-relaxed">
                   Giá ước tính dựa trên dữ liệu đấu giá gần đây với các tài sản tương tự.{" "}
-                  <span className="font-semibold">
-                    Giá thực tế có thể thay đổi tùy theo diễn biến phiên đấu giá
-                  </span>{" "}
-                  và các yếu tố thị trường khác tại thời điểm đấu giá.
+                  <span className="font-semibold">Giá thực tế có thể thay đổi tùy theo diễn biến phiên đấu giá</span> và
+                  các yếu tố thị trường khác tại thời điểm đấu giá.
                 </p>
               </div>
             </div>
@@ -328,8 +326,8 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
           <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground mt-2">
             <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span>
-              Lưu ý: Đây là ước tính tham khảo, không phải cam kết kết quả. Vui lòng cân nhắc kỹ trước
-              khi tham gia đấu giá.
+              Lưu ý: Đây là ước tính tham khảo, không phải cam kết kết quả. Vui lòng cân nhắc kỹ trước khi tham gia đấu
+              giá.
             </span>
           </div>
         </>

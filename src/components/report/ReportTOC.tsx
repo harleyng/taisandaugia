@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronRight, FileText, Mail, Download, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { tocSections, deepDiveLinks } from "@/lib/mockMarketReport";
+import { tocSections } from "@/lib/mockMarketReport";
 
 export const ReportTOC = () => {
   const [activeId, setActiveId] = useState<string>(tocSections[0].id);
@@ -68,26 +68,6 @@ export const ReportTOC = () => {
                 </li>
               );
             })}
-          </ul>
-        </div>
-
-        {/* Đào sâu */}
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            🔍 Đào sâu
-          </h3>
-          <ul className="space-y-1">
-            {deepDiveLinks.map((d) => (
-              <li key={d.slug}>
-                <a
-                  href={`#deep-${d.slug}`}
-                  className="flex items-center justify-between px-3 py-2 text-sm rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                >
-                  <span>• {d.label}</span>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-60" />
-                </a>
-              </li>
-            ))}
           </ul>
         </div>
 

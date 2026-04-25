@@ -69,15 +69,64 @@ export const priceTrendData = [
 ];
 
 export const deepDiveLinks = [
-  { slug: "bds", label: "Bất động sản" },
-  { slug: "oto", label: "Ô tô" },
-  { slug: "tai-san-cong", label: "Tài sản công" },
-  { slug: "npl", label: "Nợ xấu (NPL)" },
+  {
+    slug: "bds",
+    label: "Bất động sản",
+    iconName: "Building2",
+    desc: "Quyền sử dụng đất, nhà riêng, căn hộ, đất dự án.",
+    sessionCount: 512,
+    totalValue: 18420,
+    valueShare: 62.4,
+    avgDelta: 6.3,
+  },
+  {
+    slug: "npl",
+    label: "Nợ xấu (NPL)",
+    iconName: "Banknote",
+    desc: "Khoản nợ và tài sản bảo đảm xử lý theo NQ 42 và Luật TCTD.",
+    sessionCount: 154,
+    totalValue: 4960,
+    valueShare: 16.8,
+    avgDelta: 13.8,
+  },
+  {
+    slug: "tai-san-cong",
+    label: "Tài sản công",
+    iconName: "Landmark",
+    desc: "Tài sản nhà nước, máy móc thiết bị thanh lý theo Luật QLTSC.",
+    sessionCount: 198,
+    totalValue: 4310,
+    valueShare: 14.6,
+    avgDelta: 18.5,
+  },
+  {
+    slug: "oto",
+    label: "Ô tô",
+    iconName: "Car",
+    desc: "Xe ô tô từ thanh lý, xe công, xe cấn nợ — cạnh tranh cao nhất.",
+    sessionCount: 286,
+    totalValue: 1840,
+    valueShare: 6.2,
+    avgDelta: 34.2,
+  },
 ];
+
+// Categories ranked desc by total auction value (tỷ VND) — for the
+// "Danh mục có giá trị đấu giá lớn nhất" chart in SectionCategories.
+export const categoryByValue = [...deepDiveLinks]
+  .map((c) => ({
+    name: c.label,
+    value: c.totalValue,
+    share: c.valueShare,
+    sessionCount: c.sessionCount,
+  }))
+  .sort((a, b) => b.value - a.value);
 
 export const tocSections = [
   { id: "overview", label: "Tổng quan thị trường" },
   { id: "competition", label: "Cạnh tranh & chênh lệch" },
   { id: "outcomes", label: "Kết quả & không thành" },
   { id: "price-trend", label: "Xu hướng giá" },
+  { id: "categories", label: "Danh mục phổ biến" },
 ];
+

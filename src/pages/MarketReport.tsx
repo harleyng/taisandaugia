@@ -9,6 +9,7 @@ import { SectionOverview } from "@/components/report/SectionOverview";
 import { SectionCompetition } from "@/components/report/SectionCompetition";
 import { SectionOutcomes } from "@/components/report/SectionOutcomes";
 import { SectionPriceTrend } from "@/components/report/SectionPriceTrend";
+import { SectionCategories } from "@/components/report/SectionCategories";
 import { ReportSubscribeForm } from "@/components/report/ReportSubscribeForm";
 import { ReportLockedCTA } from "@/components/report/ReportLockedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,6 +68,7 @@ const MarketReport = () => {
                   <SectionCompetition />
                   <SectionOutcomes />
                   <SectionPriceTrend />
+                  <SectionCategories />
                   <ReportSubscribeForm />
                 </>
               ) : (

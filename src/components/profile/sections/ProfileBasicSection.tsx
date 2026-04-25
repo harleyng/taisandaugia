@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import { format, parseISO, isValid } from "date-fns";
+import { vi } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, CheckCircle2, Coins, Ticket } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Loader2, Save, CheckCircle2, Coins, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -16,11 +20,11 @@ import {
   Gender,
   UserRole,
   REWARD_BASIC_CREDITS,
-  REWARD_INTENT_CREDITS,
 } from "@/lib/onboardingTasks";
 import { vietnamProvinces } from "@/constants/vietnam-locations";
 import { notifyProfileUpdated, useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import { RewardClaimDialog } from "@/components/onboarding/RewardClaimDialog";
+import { cn } from "@/lib/utils";
 
 interface Props {
   initialName: string;
@@ -32,15 +36,21 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
   const sectionRef = useRef<HTMLDivElement>(null);
 
   const basic = agentInfo?.basic ?? {};
+  const initialBirth = basic.birth_date
+    ? basic.birth_date
+    : basic.birth_year
+    ? `${basic.birth_year}-01-01`
+    : "";
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState(basic.phone ?? "");
   const [role, setRole] = useState<UserRole | "">((basic.role as UserRole) ?? "");
   const [province, setProvince] = useState(basic.province ?? "");
-  const [birthYear, setBirthYear] = useState<string>(basic.birth_year ? String(basic.birth_year) : "");
+  const [birthDate, setBirthDate] = useState<string>(initialBirth);
   const [gender, setGender] = useState<Gender | "">((basic.gender as Gender) ?? "");
   const [saving, setSaving] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
   const [wasReadyBefore, setWasReadyBefore] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Sync from server snapshot when it changes
   useEffect(() => {
@@ -50,7 +60,13 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
     setPhone(basic.phone ?? "");
     setRole((basic.role as UserRole) ?? "");
     setProvince(basic.province ?? "");
-    setBirthYear(basic.birth_year ? String(basic.birth_year) : "");
+    setBirthDate(
+      basic.birth_date
+        ? basic.birth_date
+        : basic.birth_year
+        ? `${basic.birth_year}-01-01`
+        : ""
+    );
     setGender((basic.gender as Gender) ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentInfo]);
@@ -65,8 +81,11 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
   const basicTask = tasks.find((t) => t.key === "basic");
   const status = basicTask?.status ?? "todo";
 
+  const birthDateObj = birthDate ? parseISO(birthDate) : undefined;
+  const validBirth = birthDateObj && isValid(birthDateObj) ? birthDateObj : undefined;
+
   const filledOk = Boolean(
-    name.trim() && phone && role && province && birthYear && gender
+    name.trim() && phone && role && province && birthDate && gender
   );
 
   const handleSave = async () => {
@@ -82,7 +101,8 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
       phone: phone || undefined,
       role: (role || undefined) as UserRole | undefined,
       province: province || undefined,
-      birth_year: birthYear ? Number(birthYear) : undefined,
+      birth_date: birthDate || undefined,
+      birth_year: validBirth ? validBirth.getFullYear() : undefined,
       gender: (gender || undefined) as Gender | undefined,
     };
 
@@ -196,16 +216,47 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="b-year">Năm sinh</Label>
-          <Input
-            id="b-year"
-            type="number"
-            value={birthYear}
-            onChange={(e) => setBirthYear(e.target.value)}
-            placeholder="VD: 1990"
-            min={1940}
-            max={new Date().getFullYear() - 10}
-          />
+          <Label htmlFor="b-birth">Ngày sinh</Label>
+          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                id="b-birth"
+                type="button"
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !validBirth && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4 opacity-70" />
+                {validBirth ? format(validBirth, "dd/MM/yyyy", { locale: vi }) : <span>Chọn ngày sinh</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={validBirth}
+                onSelect={(d) => {
+                  if (d) {
+                    // store as yyyy-mm-dd to avoid timezone offset issues
+                    setBirthDate(format(d, "yyyy-MM-dd"));
+                    setDatePickerOpen(false);
+                  } else {
+                    setBirthDate("");
+                  }
+                }}
+                captionLayout="dropdown-buttons"
+                fromYear={1940}
+                toYear={new Date().getFullYear() - 10}
+                defaultMonth={validBirth ?? new Date(1995, 0, 1)}
+                disabled={(date) =>
+                  date > new Date() || date < new Date("1940-01-01")
+                }
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="space-y-2">

@@ -18,6 +18,9 @@ export interface OnboardingBasic {
   phone_verified?: boolean;
   role?: UserRole;
   province?: string;
+  /** ISO date string yyyy-mm-dd */
+  birth_date?: string;
+  /** @deprecated kept for backward compat with older saved profiles */
   birth_year?: number;
   gender?: Gender;
 }
@@ -95,7 +98,7 @@ export const isBasicComplete = (basic?: OnboardingBasic, name?: string | null): 
       basic.phone &&
       basic.role &&
       basic.province &&
-      basic.birth_year &&
+      (basic.birth_date || basic.birth_year) &&
       basic.gender
   );
 };

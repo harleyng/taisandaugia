@@ -4,8 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Save, CheckCircle2, Coins } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Loader2, Save, CheckCircle2, Coins, ChevronsUpDown, Check, X, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -40,6 +48,7 @@ export const ProfileIntentSection = () => {
   const [source, setSource] = useState<SourceChannel | "">((intent.source as SourceChannel) ?? "");
   const [saving, setSaving] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
+  const [regionsOpen, setRegionsOpen] = useState(false);
 
   useEffect(() => {
     setCategories(intent.asset_categories ?? []);
@@ -124,8 +133,7 @@ export const ProfileIntentSection = () => {
     }
   };
 
-  // Top-level provinces (limit to common 20 to avoid overflow)
-  const topProvinces = vietnamProvinces.slice(0, 20);
+  const removeRegion = (name: string) => setRegions((prev) => prev.filter((p) => p !== name));
 
   return (
     <Card ref={sectionRef} id="intent" className="p-6 scroll-mt-24">
@@ -176,17 +184,93 @@ export const ProfileIntentSection = () => {
 
         <div>
           <Label className="mb-2 block">Khu vực quan tâm</Label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto rounded-lg border border-border p-3">
-            {topProvinces.map((p) => {
-              const active = regions.includes(p.name);
-              return (
-                <label key={p.name} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <Checkbox checked={active} onCheckedChange={() => toggleRegion(p.name)} />
-                  <span className="truncate">{p.name}</span>
-                </label>
-              );
-            })}
-          </div>
+          <Popover open={regionsOpen} onOpenChange={setRegionsOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={regionsOpen}
+                className={cn(
+                  "w-full justify-between font-normal h-auto min-h-10 py-2",
+                  regions.length === 0 && "text-muted-foreground"
+                )}
+              >
+                {regions.length === 0 ? (
+                  <span className="inline-flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Chọn tỉnh/thành (có thể chọn nhiều)
+                  </span>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5 items-center text-left">
+                    {regions.map((name) => (
+                      <Badge
+                        key={name}
+                        variant="secondary"
+                        className="gap-1 pr-1 font-normal"
+                      >
+                        {name}
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Bỏ ${name}`}
+                          className="rounded-full hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            removeRegion(name);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeRegion(name);
+                            }
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Tìm tỉnh/thành..." />
+                <CommandList>
+                  <CommandEmpty>Không tìm thấy tỉnh/thành.</CommandEmpty>
+                  <CommandGroup>
+                    {vietnamProvinces.map((p) => {
+                      const active = regions.includes(p.name);
+                      return (
+                        <CommandItem
+                          key={p.name}
+                          value={p.name}
+                          onSelect={() => toggleRegion(p.name)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              active ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {p.name}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          {regions.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Đã chọn {regions.length} khu vực
+            </p>
+          )}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

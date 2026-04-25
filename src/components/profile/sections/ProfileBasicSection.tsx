@@ -44,6 +44,9 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
     : "";
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState(basic.phone ?? "");
+  const [phoneVerified, setPhoneVerified] = useState(Boolean(basic.phone_verified));
+  const [verifiedPhone, setVerifiedPhone] = useState(basic.phone_verified ? basic.phone ?? "" : "");
+  const [otpOpen, setOtpOpen] = useState(false);
   const [role, setRole] = useState<UserRole | "">((basic.role as UserRole) ?? "");
   const [province, setProvince] = useState(basic.province ?? "");
   const [birthDate, setBirthDate] = useState<string>(initialBirth);

@@ -6,7 +6,7 @@ import { CheckCircle2, XCircle, Coins } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
-import { unlockAsset, unlockCompany, unlockOwner, CompanyTierKey, OwnerTierKey } from "@/lib/mockCredits";
+import { unlockAsset, unlockCompany, unlockOwner, unlockDeepReportPeriod, CompanyTierKey, OwnerTierKey } from "@/lib/mockCredits";
 
 const PaymentResult = () => {
   const [params] = useSearchParams();
@@ -25,16 +25,28 @@ const PaymentResult = () => {
     if (ranRef.current) return;
     ranRef.current = true;
     if (status === "success" && unlockParam) {
-      const [type, id, tier] = unlockParam.split(":");
-      if (type === "asset" && id) {
-        const r = unlockAsset(id);
-        if (r.ok) setAutoUnlocked("asset");
-      } else if (type === "company" && id && tier) {
-        const r = unlockCompany(id, tier as CompanyTierKey);
-        if (r.ok) setAutoUnlocked("company");
-      } else if (type === "owner" && id && tier) {
-        const r = unlockOwner(id, tier as OwnerTierKey);
-        if (r.ok) setAutoUnlocked("owner");
+      // Format `deep:{slug}:{periodId}` — periodId chứa dấu `-` nên cần parse riêng
+      if (unlockParam.startsWith("deep:")) {
+        const rest = unlockParam.slice("deep:".length);
+        const sepIdx = rest.indexOf(":");
+        if (sepIdx > 0) {
+          const slug = rest.slice(0, sepIdx);
+          const periodId = rest.slice(sepIdx + 1);
+          const r = unlockDeepReportPeriod(slug, periodId);
+          if (r.ok) setAutoUnlocked("deep_report");
+        }
+      } else {
+        const [type, id, tier] = unlockParam.split(":");
+        if (type === "asset" && id) {
+          const r = unlockAsset(id);
+          if (r.ok) setAutoUnlocked("asset");
+        } else if (type === "company" && id && tier) {
+          const r = unlockCompany(id, tier as CompanyTierKey);
+          if (r.ok) setAutoUnlocked("company");
+        } else if (type === "owner" && id && tier) {
+          const r = unlockOwner(id, tier as OwnerTierKey);
+          if (r.ok) setAutoUnlocked("owner");
+        }
       }
     }
   }, [status, unlockParam]);
@@ -78,6 +90,11 @@ const PaymentResult = () => {
                 {autoUnlocked === "owner" && (
                   <p className="mt-4 text-sm text-foreground bg-primary/10 rounded-lg px-3 py-2">
                     ✅ Đã tự động mở khóa hồ sơ chủ tài sản
+                  </p>
+                )}
+                {autoUnlocked === "deep_report" && (
+                  <p className="mt-4 text-sm text-foreground bg-primary/10 rounded-lg px-3 py-2">
+                    ✅ Đã tự động mở khóa kỳ báo cáo chuyên sâu
                   </p>
                 )}
                 <Button onClick={handleContinue} size="lg" className="w-full mt-6">

@@ -25,10 +25,15 @@ const ProfilePage = () => {
   const [email, setEmail] = useState("");
 
   const tabParam = searchParams.get("tab") as ProfileTab | null;
+  const fromParam = searchParams.get("from");
   const activeTab: ProfileTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "profile";
+  // When viewing saved assets via notifications, keep the Notifications nav highlighted
+  const highlightedTab: ProfileTab =
+    activeTab === "saved" && fromParam === "notifications" ? "notifications" : activeTab;
 
   const setActiveTab = (tab: ProfileTab) => {
     const next = new URLSearchParams(searchParams);
+    next.delete("from");
     if (tab === "profile") next.delete("tab");
     else next.set("tab", tab);
     setSearchParams(next, { replace: true });

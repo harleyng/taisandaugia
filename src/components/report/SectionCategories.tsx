@@ -1,6 +1,8 @@
 import { ArrowRight, Banknote, Building2, Car, Landmark, TrendingUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ReportSection } from "./ReportSection";
 import { categoryByValue, deepDiveLinks } from "@/lib/mockMarketReport";
@@ -12,13 +14,21 @@ const iconMap = {
   Banknote,
 } as const;
 
+// Slugs that already have a deep-dive report page
+const AVAILABLE_SLUGS = new Set(["bds"]);
+
 const formatValue = (v: number) => `${v.toLocaleString("vi-VN")} tỷ`;
 
 export const SectionCategories = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const maxValue = Math.max(...categoryByValue.map((c) => c.value));
 
-  const handleDetail = (label: string) => {
+  const handleDetail = (slug: string, label: string) => {
+    if (AVAILABLE_SLUGS.has(slug)) {
+      navigate(`/report/${slug}`);
+      return;
+    }
     toast({
       title: "Báo cáo chuyên sâu sắp ra mắt",
       description: `Phân tích chi tiết cho danh mục "${label}" sẽ có trong bản cập nhật tới.`,

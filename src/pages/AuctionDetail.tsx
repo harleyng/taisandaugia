@@ -185,11 +185,7 @@ const AuctionDetail = () => {
                 <span className="font-medium">{listing.views_count || 0}</span>
                 <span>lượt xem</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-                <Heart className="h-4 w-4 fill-current text-rose-400" />
-                <span className="font-medium">{saveCounts.get(listing.id) || 0}</span>
-                <span>quan tâm</span>
-              </span>
+              {/* "X quan tâm" chip removed per design update */}
 
               <div className="ml-auto flex items-center gap-2">
                 {(() => {

@@ -163,14 +163,6 @@ export const Header = () => {
                 <Coins className="h-3.5 w-3.5" />
                 {balance} credit
               </button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`hidden sm:inline-flex ${transparent ? "text-white/90 hover:text-white hover:bg-white/10" : ""}`}
-                onClick={() => navigate("/profile?tab=saved")}
-              >
-                <Heart className="h-5 w-5" />
-              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -223,7 +215,7 @@ export const Header = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate("/profile?tab=saved")} className="px-4 py-2.5 cursor-pointer">
                       <Heart className="mr-3 h-4 w-4" />
-                      Tài sản quan tâm
+                      Tài sản đang theo dõi
                     </DropdownMenuItem>
                   </div>
 
@@ -328,7 +320,7 @@ export const Header = () => {
                         className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
                       >
                         <Heart className="h-5 w-5" />
-                        Tài sản quan tâm
+                        Tài sản đang theo dõi
                       </Link>
                     </div>
                     <div className="pt-4 space-y-2">

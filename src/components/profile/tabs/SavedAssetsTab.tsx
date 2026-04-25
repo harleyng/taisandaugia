@@ -1,19 +1,15 @@
 import { useAssetActions } from "@/hooks/useAssetActions";
-import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, Trash2, Bell } from "lucide-react";
+import { Heart, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice, formatAddress } from "@/utils/formatters";
-import { useNotificationSettings } from "@/hooks/useNotificationSettings";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const SavedAssetsTab = () => {
-  const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
-  const { notificationsEnabled, toggleNotifications } = useNotificationSettings();
+  const { savedIds, toggleSave } = useAssetActions();
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,31 +35,19 @@ export const SavedAssetsTab = () => {
 
   return (
     <div>
-      <NotificationPromptDialog open={showNotificationPrompt} onClose={dismissNotificationPrompt} />
-
       <Card className="p-5 md:p-6 mb-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Tài sản quan tâm</h2>
+            <h2 className="text-lg font-semibold text-foreground">Tài sản đang theo dõi</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Danh sách các tài sản bạn đã lưu để theo dõi
+              Bạn sẽ nhận thông báo khi có cập nhật về các tài sản này.
             </p>
           </div>
-          <span className="text-sm text-muted-foreground whitespace-nowrap">{savedIds.size} tài sản</span>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            {savedIds.size} tài sản
+          </span>
         </div>
       </Card>
-
-      {!notificationsEnabled && savedIds.size > 0 && (
-        <Alert className="mb-5">
-          <Bell className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between gap-3">
-            <span>Bật thông báo để nhận cập nhật về tài sản bạn quan tâm</span>
-            <Button size="sm" variant="outline" onClick={() => toggleNotifications(true)}>
-              Bật thông báo
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -72,10 +56,16 @@ export const SavedAssetsTab = () => {
           ))}
         </div>
       ) : listings.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Heart className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-          <p className="text-muted-foreground">Chưa có tài sản quan tâm</p>
-          <Button asChild variant="outline" className="mt-4">
+        <Card className="p-10 md:p-12 text-center">
+          <div className="mx-auto h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center mb-4">
+            <Heart className="h-7 w-7 text-muted-foreground/50" />
+          </div>
+          <p className="font-semibold text-foreground">Chưa theo dõi tài sản nào</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+            Bấm "Nhận thông báo khi có cập nhật" trên tài sản bạn quan tâm để được
+            cập nhật khi có thay đổi.
+          </p>
+          <Button asChild className="mt-5">
             <Link to="/listings">Khám phá tài sản</Link>
           </Button>
         </Card>
@@ -100,8 +90,9 @@ export const SavedAssetsTab = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="shrink-0 text-destructive hover:text-destructive"
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => toggleSave(listing.id)}
+                  aria-label="Ngừng theo dõi"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

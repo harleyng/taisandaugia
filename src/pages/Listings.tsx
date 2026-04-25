@@ -11,7 +11,6 @@ import { useAuctionListings, getSessionStatus } from "@/hooks/useAuctionListings
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { useAssetActions } from "@/hooks/useAssetActions";
-import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatAddress } from "@/utils/formatters";
 import { useSearchParams, Link } from "react-router-dom";
@@ -58,7 +57,7 @@ const Listings = () => {
   const saveCounts = useListingSaveCounts((listings || []).map((l) => l.id));
   const orgNameById = useAuctionOrgNames((listings || []).map((l) => l.auction_org_id));
   const { openAuthDialog } = useAuthDialog();
-  const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
+  const { savedIds, toggleSave } = useAssetActions();
   const [session, setSession] = useState<any>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -197,7 +196,6 @@ const Listings = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <NotificationPromptDialog open={showNotificationPrompt} onClose={dismissNotificationPrompt} />
       <Header />
 
       <main className="container py-6 flex-1">

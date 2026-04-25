@@ -3,14 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { toast } from "sonner";
 
-const NOTIFICATION_PROMPT_SHOWN_KEY = "notification_prompt_shown";
-const NOTIFICATION_PROMPT_PENDING_KEY = "notification_prompt_pending";
-
 export function useAssetActions() {
   const { openAuthDialog } = useAuthDialog();
   const [session, setSession] = useState<any>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
-  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
 
   const fetchActions = useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -36,23 +32,11 @@ export function useAssetActions() {
         fetchActions(s.user.id);
       } else {
         setSavedIds(new Set());
-        setShowNotificationPrompt(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [fetchActions]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    if (
-      localStorage.getItem(NOTIFICATION_PROMPT_PENDING_KEY) === "1" &&
-      localStorage.getItem(NOTIFICATION_PROMPT_SHOWN_KEY) !== "1"
-    ) {
-      setShowNotificationPrompt(true);
-    }
-  }, []);
 
   const upsertAction = useCallback(async (listingId: string, value: boolean) => {
     if (!session?.user?.id) return;
@@ -80,6 +64,23 @@ export function useAssetActions() {
     }
   }, [session]);
 
+  const ensureNotificationsEnabled = useCallback(async () => {
+    if (!session?.user?.id) return;
+    const userId = session.user.id;
+    const { data } = await supabase
+      .from("profiles")
+      .select("notifications_enabled")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (data && data.notifications_enabled !== true) {
+      await supabase
+        .from("profiles")
+        .update({ notifications_enabled: true } as any)
+        .eq("id", userId);
+    }
+  }, [session]);
+
   const toggleSaveInner = useCallback(async (listingId: string, newVal?: boolean) => {
     const val = newVal ?? !savedIds.has(listingId);
 
@@ -89,18 +90,18 @@ export function useAssetActions() {
       return next;
     });
 
-    toast(val ? "Đã lưu vào Quan tâm" : "Đã bỏ khỏi Quan tâm");
+    toast(
+      val
+        ? "Đã theo dõi — bạn sẽ nhận thông báo khi có cập nhật"
+        : "Đã ngừng theo dõi tài sản",
+    );
     await upsertAction(listingId, val);
 
-    if (
-      val &&
-      typeof window !== "undefined" &&
-      localStorage.getItem(NOTIFICATION_PROMPT_SHOWN_KEY) !== "1"
-    ) {
-      localStorage.setItem(NOTIFICATION_PROMPT_PENDING_KEY, "1");
-      setShowNotificationPrompt(true);
+    if (val) {
+      // Auto-bật master switch thông báo khi follow tài sản đầu tiên
+      await ensureNotificationsEnabled();
     }
-  }, [savedIds, upsertAction]);
+  }, [savedIds, upsertAction, ensureNotificationsEnabled]);
 
   const toggleSave = useCallback((listingId: string) => {
     if (!session) {
@@ -112,14 +113,5 @@ export function useAssetActions() {
     toggleSaveInner(listingId, !currentlySaved);
   }, [session, savedIds, openAuthDialog, toggleSaveInner]);
 
-  const dismissNotificationPrompt = useCallback(() => {
-    setShowNotificationPrompt(false);
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem(NOTIFICATION_PROMPT_SHOWN_KEY, "1");
-      localStorage.removeItem(NOTIFICATION_PROMPT_PENDING_KEY);
-    }
-  }, []);
-
-  return { savedIds, toggleSave, session, showNotificationPrompt, dismissNotificationPrompt };
+  return { savedIds, toggleSave, session };
 }

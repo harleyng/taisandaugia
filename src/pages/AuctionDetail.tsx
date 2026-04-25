@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Heart,
+  Bell,
+  BellRing,
   ChevronRight,
   ChevronDown,
   ChevronUp,
@@ -27,7 +29,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useAssetActions } from "@/hooks/useAssetActions";
-import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";
 import { AuctionPriceRow } from "@/components/auction/AuctionPriceRow";
 import { AuctionOrganizerInfo } from "@/components/auction/AuctionOrganizerInfo";
@@ -52,7 +53,7 @@ import { useAuthDialog } from "@/contexts/AuthDialogContext";
 const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
+  const { savedIds, toggleSave } = useAssetActions();
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,7 +159,6 @@ const AuctionDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <NotificationPromptDialog open={showNotificationPrompt} onClose={dismissNotificationPrompt} />
 
       <div className="container mx-auto px-4 py-4 md:py-6">
         {/* Breadcrumb */}
@@ -192,16 +192,22 @@ const AuctionDetail = () => {
               </span>
 
               <div className="ml-auto flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  onClick={() => toggleSave(listing.id)}
-                  aria-label={savedIds.has(listing.id) ? "Bỏ quan tâm" : "Quan tâm"}
-                >
-                  <Heart className={`h-4 w-4 mr-1.5 ${savedIds.has(listing.id) ? "fill-rose-500 text-rose-500" : ""}`} />
-                  {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm"}
-                </Button>
+                {(() => {
+                  const isFollowing = savedIds.has(listing.id);
+                  const Icon = isFollowing ? BellRing : Bell;
+                  return (
+                    <Button
+                      variant={isFollowing ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => toggleSave(listing.id)}
+                      aria-label={isFollowing ? "Đang nhận thông báo — bấm để dừng" : "Nhận thông báo khi có cập nhật"}
+                    >
+                      <Icon className="h-4 w-4 mr-1.5" />
+                      {isFollowing ? "Đang nhận thông báo" : "Nhận thông báo khi có cập nhật"}
+                    </Button>
+                  );
+                })()}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

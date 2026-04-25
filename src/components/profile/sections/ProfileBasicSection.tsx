@@ -215,14 +215,60 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="b-phone">Số điện thoại</Label>
-          <Input
-            id="b-phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/[^0-9+]/g, ""))}
-            placeholder="VD: 0987654321"
-            inputMode="tel"
-          />
+          <Label htmlFor="b-phone" className="flex items-center gap-2">
+            Số điện thoại
+            {isCurrentPhoneVerified && (
+              <Badge variant="secondary" className="gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border-0 font-normal">
+                <ShieldCheck className="h-3 w-3" /> Đã xác thực
+              </Badge>
+            )}
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="b-phone"
+              value={phone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              placeholder="VD: 0987654321"
+              inputMode="tel"
+              disabled={isCurrentPhoneVerified}
+              className={cn(
+                isCurrentPhoneVerified && "bg-muted/50 text-muted-foreground"
+              )}
+            />
+            {isCurrentPhoneVerified ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleResetPhone}
+                className="shrink-0"
+              >
+                Đổi số khác
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant={phoneIsValid ? "default" : "outline"}
+                onClick={() => setOtpOpen(true)}
+                disabled={!phoneIsValid}
+                className="shrink-0"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Xác thực
+              </Button>
+            )}
+          </div>
+          {phone && !phoneIsValid && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <ShieldAlert className="h-3 w-3" />
+              Số điện thoại không hợp lệ
+            </p>
+          )}
+          {phone && phoneIsValid && !isCurrentPhoneVerified && (
+            <p className="text-xs text-amber-600 dark:text-amber-500 flex items-center gap-1">
+              <ShieldAlert className="h-3 w-3" />
+              Số điện thoại chưa được xác thực
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">

@@ -63,50 +63,48 @@ function isRealEstateSlug(slug?: string | null) {
 
 const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
 
-const TooltipContentFactory =
-  (assetArea: number, showTotal: boolean) =>
-  ({ active, payload }: any) => {
-    if (!active || !payload || !payload.length) return null;
-    const b: MonthBucket | undefined = payload[0]?.payload;
-    if (!b) return null;
-    const totalMid = showTotal && assetArea > 0 ? b.median * assetArea : null;
-    return (
-      <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
-        <p className="font-semibold text-foreground mb-1">{b.label}</p>
-        <div className="space-y-0.5 text-muted-foreground">
+const TooltipContentFactory = (assetArea: number, showTotal: boolean) => ({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const b: MonthBucket | undefined = payload[0]?.payload;
+  if (!b) return null;
+  const totalMid = showTotal && assetArea > 0 ? b.median * assetArea : null;
+  return (
+    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+      <p className="font-semibold text-foreground mb-1">{b.label}</p>
+      <div className="space-y-0.5 text-muted-foreground">
+        <p>
+          Trung vị: <span className="text-foreground font-medium">{fmtNum(b.median)} tr/m²</span>
+        </p>
+        {totalMid !== null && (
           <p>
-            Trung vị: <span className="text-foreground font-medium">{fmtNum(b.median)} tr/m²</span>
+            Tổng giá ước tính:{" "}
+            <span className="text-foreground font-medium">
+              {totalMid >= 1000 ? `${(totalMid / 1000).toFixed(2)} tỷ` : `${fmtNum(totalMid)} tr`}
+            </span>
           </p>
-          {totalMid !== null && (
-            <p>
-              Tổng giá ước tính:{" "}
-              <span className="text-foreground font-medium">
-                {totalMid >= 1000 ? `${(totalMid / 1000).toFixed(2)} tỷ` : `${fmtNum(totalMid)} tr`}
-              </span>
-            </p>
-          )}
-          {b.usesPercentile ? (
-            <p>
-              P25 / P75:{" "}
-              <span className="text-foreground font-medium">
-                {fmtNum(b.p25!)} – {fmtNum(b.p75!)}
-              </span>
-            </p>
-          ) : (
-            <p>
-              Min / Max:{" "}
-              <span className="text-foreground font-medium">
-                {fmtNum(b.min)} – {fmtNum(b.max)}
-              </span>
-            </p>
-          )}
+        )}
+        {b.usesPercentile ? (
           <p>
-            Số phiên: <span className="text-foreground font-medium">{b.count}</span>
+            P25 / P75:{" "}
+            <span className="text-foreground font-medium">
+              {fmtNum(b.p25!)} – {fmtNum(b.p75!)}
+            </span>
           </p>
-        </div>
+        ) : (
+          <p>
+            Min / Max:{" "}
+            <span className="text-foreground font-medium">
+              {fmtNum(b.min)} – {fmtNum(b.max)}
+            </span>
+          </p>
+        )}
+        <p>
+          Số phiên: <span className="text-foreground font-medium">{b.count}</span>
+        </p>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 export const AuctionPriceHistory = ({
   listing,
@@ -149,13 +147,18 @@ export const AuctionPriceHistory = ({
     return out;
   }, [analytics12M]);
 
-  const defaultRange: RangeKey = availableRanges.includes("6M") ? "6M" : availableRanges[0] || "12M";
+  const defaultRange: RangeKey = availableRanges.includes("6M")
+    ? "6M"
+    : availableRanges[0] || "12M";
   const [range, setRange] = useState<RangeKey>(defaultRange);
   const effectiveRange = availableRanges.includes(range) ? range : defaultRange;
 
   const months = RANGES.find((r) => r.key === effectiveRange)!.months;
 
-  const rangeSessions = useMemo(() => sessionsWithinMonths(sessions12M, months), [sessions12M, months]);
+  const rangeSessions = useMemo(
+    () => sessionsWithinMonths(sessions12M, months),
+    [sessions12M, months],
+  );
   const rangeAnalytics = useMemo(
     () => (rangeSessions.length ? computeAnalytics(rangeSessions, listing.area || 0) : null),
     [rangeSessions, listing.area],
@@ -208,8 +211,7 @@ export const AuctionPriceHistory = ({
             <p className="text-xs text-muted-foreground mt-0.5">
               Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> tài sản{" "}
               <span className="font-medium text-foreground">
-                ~{analytics12M.bucketRange[0]}–
-                {analytics12M.bucketRange[1] === Infinity ? "∞" : analytics12M.bucketRange[1]} m²
+                ~{analytics12M.bucketRange[0]}–{analytics12M.bucketRange[1] === Infinity ? "∞" : analytics12M.bucketRange[1]} m²
               </span>{" "}
               trong khu vực, {ctxY} tháng gần nhất
               {analytics12M.mergedFrom && analytics12M.mergedFrom.length > 1 && (
@@ -225,8 +227,7 @@ export const AuctionPriceHistory = ({
             </p>
           ) : (
             <p className="text-xs text-muted-foreground mt-0.5">
-              Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> trong khu vực ({ctxY}{" "}
-              tháng) — không phân theo diện tích
+              Dữ liệu từ <span className="font-medium text-foreground">{ctxN} phiên đấu giá</span> trong khu vực ({ctxY} tháng) — không phân theo diện tích
               {analytics12M.noisy && (
                 <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-amber-300 text-amber-700">
                   Dữ liệu noisy
@@ -236,8 +237,7 @@ export const AuctionPriceHistory = ({
           )}
           {listing.area > 0 && analytics12M.areaMode === "area-bucket" && analytics12M.bucketLabel && (
             <p className="text-[11px] text-muted-foreground mt-1">
-              Diện tích tài sản:{" "}
-              <span className="font-medium text-foreground">{Math.round(listing.area).toLocaleString("vi-VN")} m²</span>
+              Diện tích tài sản: <span className="font-medium text-foreground">{Math.round(listing.area).toLocaleString("vi-VN")} m²</span>
               {" → đối chiếu với nhóm "}
               <span className="font-medium text-foreground">{analytics12M.bucketLabel} m²</span>
             </p>
@@ -367,7 +367,9 @@ export const AuctionPriceHistory = ({
             {insight.bullets.map((b, i) => (
               <li key={i} className="text-sm text-foreground/90 leading-relaxed">
                 <span>• {b.text}</span>
-                {b.implication && <span className="block pl-3 text-primary font-medium mt-0.5">→ {b.implication}</span>}
+                {b.implication && (
+                  <span className="block pl-3 text-primary font-medium mt-0.5">→ {b.implication}</span>
+                )}
               </li>
             ))}
           </ul>
@@ -381,9 +383,16 @@ export const AuctionPriceHistory = ({
             <TrendingUp className="w-4 h-4 text-primary mt-0.5 shrink-0" />
             <div className="space-y-1">
               <p className="text-sm font-medium text-foreground">{teaser}</p>
+              <p className="text-sm text-muted-foreground/70 italic flex items-center gap-1">
+                <ArrowRight className="w-3.5 h-3.5" /> Xem vị trí giá hiện tại & cơ hội tham gia
+              </p>
             </div>
           </div>
-          <Button size="sm" className="w-full sm:w-auto" onClick={() => (isLoggedIn ? onUnlock?.() : onLogin?.())}>
+          <Button
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() => (isLoggedIn ? onUnlock?.() : onLogin?.())}
+          >
             <Lock className="w-3.5 h-3.5 mr-1.5" />
             {isLoggedIn ? "Mở khoá để xem vị trí giá & cơ hội" : "Đăng nhập để xem phân tích giá"}
           </Button>

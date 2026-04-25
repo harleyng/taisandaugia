@@ -320,25 +320,17 @@ const AuctionDetail = () => {
               onUnlock={() => openAssetPaywall(listing.id, listing.title)}
             />
 
-            {/* 7. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) — paywalled */}
+            {/* 7. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) — paywall preview tự xử lý trong block, giống Lịch sử giá */}
             {isUpcoming && (
-              isUnlocked ? (
-                <AuctionPricePrediction listing={listing} isUnlocked={true} onUnlock={() => {}} />
-              ) : (
-                <LockedBlur
-                  ctaLabel={isLoggedIn ? "Mở khóa dự đoán giá trúng" : "Đăng nhập để mở khóa"}
-                  teaser="Xem dự đoán giá trúng phiên đấu giá"
-                  futureNote="Phân tích dựa trên dữ liệu phiên tương tự, mức cạnh tranh và độ tin cậy mô hình."
-                  onUnlockClick={() =>
-                    isLoggedIn
-                      ? openAssetPaywall(listing.id, listing.title)
-                      : openAuthDialog(() => openAssetPaywall(listing.id, listing.title))
-                  }
-                  minHeight="420px"
-                >
-                  <AuctionPricePrediction listing={listing} isUnlocked={true} onUnlock={() => {}} />
-                </LockedBlur>
-              )
+              <AuctionPricePrediction
+                listing={listing}
+                isUnlocked={isUnlocked}
+                onUnlock={() =>
+                  isLoggedIn
+                    ? openAssetPaywall(listing.id, listing.title)
+                    : openAuthDialog(() => openAssetPaywall(listing.id, listing.title))
+                }
+              />
             )}
 
             {/* 7. Sources */}

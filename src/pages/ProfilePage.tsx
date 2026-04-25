@@ -25,10 +25,15 @@ const ProfilePage = () => {
   const [email, setEmail] = useState("");
 
   const tabParam = searchParams.get("tab") as ProfileTab | null;
+  const fromParam = searchParams.get("from");
   const activeTab: ProfileTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "profile";
+  // When viewing saved assets via notifications, keep the Notifications nav highlighted
+  const highlightedTab: ProfileTab =
+    activeTab === "saved" && fromParam === "notifications" ? "notifications" : activeTab;
 
   const setActiveTab = (tab: ProfileTab) => {
     const next = new URLSearchParams(searchParams);
+    next.delete("from");
     if (tab === "profile") next.delete("tab");
     else next.set("tab", tab);
     setSearchParams(next, { replace: true });
@@ -81,7 +86,7 @@ const ProfilePage = () => {
       <main className="flex-1 container py-6 md:py-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6">
           <ProfileSidebar
-            activeTab={activeTab}
+            activeTab={highlightedTab}
             onChange={setActiveTab}
             name={resolveDisplayName(name, userId)}
             email={email}
@@ -99,7 +104,7 @@ const ProfilePage = () => {
                 onAvatarChange={setAvatarUrl}
               />
             )}
-            {activeTab === "saved" && <SavedAssetsTab />}
+            {activeTab === "saved" && <SavedAssetsTab fromNotifications={fromParam === "notifications"} />}
             {activeTab === "credits" && <CreditsTab />}
             {activeTab === "password" && <PasswordTab />}
             {activeTab === "notifications" && <NotificationsTab />}

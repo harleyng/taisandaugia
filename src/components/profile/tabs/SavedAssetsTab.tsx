@@ -3,12 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, Trash2 } from "lucide-react";
+import { Heart, Trash2, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice, formatAddress } from "@/utils/formatters";
 
-export const SavedAssetsTab = () => {
+interface SavedAssetsTabProps {
+  fromNotifications?: boolean;
+}
+
+export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProps) => {
   const { savedIds, toggleSave } = useAssetActions();
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +39,18 @@ export const SavedAssetsTab = () => {
 
   return (
     <div>
+      {fromNotifications && (
+        <nav aria-label="Breadcrumb" className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Link
+            to="/profile?tab=notifications"
+            className="hover:text-foreground transition-colors"
+          >
+            Thông báo
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <span className="text-foreground font-medium">Tài sản đang theo dõi</span>
+        </nav>
+      )}
       <Card className="p-5 md:p-6 mb-5">
         <div className="flex items-center justify-between gap-3">
           <div>

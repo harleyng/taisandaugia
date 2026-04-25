@@ -185,10 +185,6 @@ export function AuctionCard({
               <Eye className="h-3 w-3" />
               {viewsCount ?? 0}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <Heart className="h-3 w-3 fill-current text-rose-400" />
-              {saveCount ?? 0}
-            </span>
           </div>
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border">

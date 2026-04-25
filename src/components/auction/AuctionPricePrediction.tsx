@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Check,
   Info,
+  ArrowRight,
 } from "lucide-react";
 import { formatPrice } from "@/utils/formatters";
 import { generateMockSessions } from "@/lib/mockAuctionSessions";

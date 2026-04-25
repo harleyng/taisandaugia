@@ -243,7 +243,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                     <ShieldCheck className="h-4 w-4 text-primary" />
                   </span>
                   Độ tin cậy dữ liệu
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Thể hiện mức độ đáng tin của dữ liệu phân tích, dựa trên số lượng phiên tương tự, mức độ giống nhau và độ biến động giá." />
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-primary leading-none">{confidence}%</span>

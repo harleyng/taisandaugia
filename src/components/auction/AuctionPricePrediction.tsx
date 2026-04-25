@@ -195,7 +195,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
               <div className="md:border-r md:border-border md:pr-6">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
                   Giá trúng ước tính
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Khoảng giá ước tính mà tài sản có thể kết thúc, dựa trên các phiên đấu giá tương tự trong khu vực và xu hướng gần đây." />
                 </div>
                 <div className="text-2xl md:text-3xl font-bold text-primary leading-tight">
                   {formatPrice(predMin, "TOTAL")} – {formatPrice(predMax, "TOTAL")}

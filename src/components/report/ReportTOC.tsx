@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronRight, FileText, Mail, Download, BookOpen } from "lucide-react";
+import { ChevronRight, FileText, Mail, Download, BookOpen, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { tocSections } from "@/lib/mockMarketReport";
 
@@ -70,6 +70,14 @@ export const ReportTOC = () => {
             })}
           </ul>
         </div>
+
+        <button
+          type="button"
+          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          Yêu cầu báo cáo
+        </button>
 
         <div className="border-t border-border pt-4 space-y-1">
           <a

@@ -1,39 +1,12 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Bell, ChevronRight, Heart, Trash2 } from "lucide-react";
+import { Bell, ChevronRight, Heart } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
 import { useAssetActions } from "@/hooks/useAssetActions";
-import { formatPrice, formatAddress } from "@/utils/formatters";
-import { cn } from "@/lib/utils";
 
 export const NotificationsTab = () => {
-  const { savedIds, toggleSave } = useAssetActions();
-  const [open, setOpen] = useState(false);
-  const [listings, setListings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
+  const { savedIds } = useAssetActions();
   const count = savedIds.size;
-
-  useEffect(() => {
-    if (!open) return;
-    const ids = Array.from(savedIds);
-    if (ids.length === 0) {
-      setListings([]);
-      return;
-    }
-    setLoading(true);
-    supabase
-      .from("listings")
-      .select("id, title, price, price_unit, address")
-      .in("id", ids)
-      .then(({ data }) => {
-        setListings(data || []);
-        setLoading(false);
-      });
-  }, [open, savedIds]);
 
   return (
     <div className="space-y-5">

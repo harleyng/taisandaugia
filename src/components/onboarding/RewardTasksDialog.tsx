@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Gift, ArrowRight, Coins, Ticket, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
+import { Gift, ArrowRight, Coins, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
@@ -27,7 +27,7 @@ export const RewardTasksDialog = ({ open, onOpenChange }: Props) => {
     const r = await claimReward(key);
     setClaiming(null);
     if (r.ok) {
-      toast.success(`Đã nhận +${r.credits} credit & ${r.tokens} vé mở khóa miễn phí 🎉`);
+      toast.success(`Đã nhận +${r.credits} credit miễn phí 🎉`);
     } else {
       toast.error("Không thể nhận thưởng, vui lòng thử lại");
     }
@@ -44,7 +44,7 @@ export const RewardTasksDialog = ({ open, onOpenChange }: Props) => {
           <DialogDescription className="text-center">
             {availableCredits > 0
               ? `Bạn đang có ${availableCredits} credit chờ nhận`
-              : "Hoàn thành để nhận credit & vé mở khóa miễn phí"}
+              : "Hoàn thành để nhận credit miễn phí"}
           </DialogDescription>
         </DialogHeader>
 
@@ -79,12 +79,9 @@ export const RewardTasksDialog = ({ open, onOpenChange }: Props) => {
                       <p className="text-xs text-muted-foreground mt-0.5">{task.description}</p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
+                  <div className="shrink-0">
                     <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                       <Coins className="h-3 w-3" />+{task.credits}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Ticket className="h-3 w-3" />+{task.tokens} vé
                     </span>
                   </div>
                 </div>

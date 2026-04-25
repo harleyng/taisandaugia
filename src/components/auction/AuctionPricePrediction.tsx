@@ -352,5 +352,6 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
         </>
       )}
     </Card>
+    </TooltipProvider>
   );
 };

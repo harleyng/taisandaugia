@@ -71,14 +71,6 @@ export const ReportTOC = () => {
           </ul>
         </div>
 
-        <button
-          type="button"
-          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          Yêu cầu báo cáo
-        </button>
-
         <div className="border-t border-border pt-4 space-y-1">
           <a
             href="#methodology"
@@ -101,6 +93,14 @@ export const ReportTOC = () => {
           >
             <Download className="h-3.5 w-3.5" />
             Tải PDF tổng
+          </button>
+
+          <button
+            type="button"
+            className="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Yêu cầu báo cáo
           </button>
         </div>
       </nav>

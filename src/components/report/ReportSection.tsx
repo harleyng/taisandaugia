@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight, Lightbulb, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ interface ReportSectionProps {
   children: React.ReactNode;
   className?: string;
   hideDeepDive?: boolean;
+  deepDiveHref?: string;
 }
 
 export const ReportSection = ({
@@ -31,6 +33,7 @@ export const ReportSection = ({
   children,
   className,
   hideDeepDive,
+  deepDiveHref,
 }: ReportSectionProps) => {
   const [open, setOpen] = useState(false);
 
@@ -58,10 +61,19 @@ export const ReportSection = ({
       <div className="mb-6">{children}</div>
 
       {!hideDeepDive && (
-        <Button variant="outline" className="group" onClick={() => setOpen(true)}>
-          Đào sâu {deepDiveLabel}
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </Button>
+        deepDiveHref ? (
+          <Button asChild variant="outline" className="group">
+            <Link to={deepDiveHref}>
+              Đào sâu {deepDiveLabel}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </Button>
+        ) : (
+          <Button variant="outline" className="group" onClick={() => setOpen(true)}>
+            Đào sâu {deepDiveLabel}
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Button>
+        )
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>

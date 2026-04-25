@@ -12,6 +12,7 @@ import {
   Unlock,
   Building2,
   User,
+  FileText,
 } from "lucide-react";
 import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
 import { useEffect, useState } from "react";
@@ -64,6 +65,7 @@ const TYPE_ICON: Record<TransactionType, typeof ShoppingCart> = {
   unlock_asset: Unlock,
   unlock_company: Building2,
   unlock_owner: User,
+  unlock_deep_report: FileText,
 };
 
 const TransactionRow = ({ tx }: { tx: Transaction }) => {

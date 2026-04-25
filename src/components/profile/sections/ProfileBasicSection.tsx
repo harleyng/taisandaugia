@@ -216,16 +216,47 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="b-year">Năm sinh</Label>
-          <Input
-            id="b-year"
-            type="number"
-            value={birthYear}
-            onChange={(e) => setBirthYear(e.target.value)}
-            placeholder="VD: 1990"
-            min={1940}
-            max={new Date().getFullYear() - 10}
-          />
+          <Label htmlFor="b-birth">Ngày sinh</Label>
+          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                id="b-birth"
+                type="button"
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !validBirth && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4 opacity-70" />
+                {validBirth ? format(validBirth, "dd/MM/yyyy", { locale: vi }) : <span>Chọn ngày sinh</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={validBirth}
+                onSelect={(d) => {
+                  if (d) {
+                    // store as yyyy-mm-dd to avoid timezone offset issues
+                    setBirthDate(format(d, "yyyy-MM-dd"));
+                    setDatePickerOpen(false);
+                  } else {
+                    setBirthDate("");
+                  }
+                }}
+                captionLayout="dropdown-buttons"
+                fromYear={1940}
+                toYear={new Date().getFullYear() - 10}
+                defaultMonth={validBirth ?? new Date(1995, 0, 1)}
+                disabled={(date) =>
+                  date > new Date() || date < new Date("1940-01-01")
+                }
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="space-y-2">

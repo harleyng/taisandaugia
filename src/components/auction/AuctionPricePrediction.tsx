@@ -282,7 +282,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                     <CalendarDays className="h-4 w-4 text-violet-600" />
                   </span>
                   Khoảng thời gian
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Khoảng thời gian của các phiên được sử dụng trong phân tích. Dữ liệu gần đây phản ánh xu hướng thị trường hiện tại tốt hơn." />
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-bold text-violet-600 leading-none">90</span>

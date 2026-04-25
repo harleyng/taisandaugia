@@ -133,8 +133,7 @@ export const ProfileIntentSection = () => {
     }
   };
 
-  // Top-level provinces (limit to common 20 to avoid overflow)
-  const topProvinces = vietnamProvinces.slice(0, 20);
+  const removeRegion = (name: string) => setRegions((prev) => prev.filter((p) => p !== name));
 
   return (
     <Card ref={sectionRef} id="intent" className="p-6 scroll-mt-24">

@@ -122,7 +122,25 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
       : `~${bucket.min}–${bucket.max} m²`
     : "tương đương";
 
+  const InfoTip = ({ content, className = "h-3 w-3" }: { content: string; className?: string }) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+          aria-label="Thông tin"
+        >
+          <Info className={className} aria-hidden />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+        {content}
+      </TooltipContent>
+    </Tooltip>
+  );
+
   return (
+    <TooltipProvider delayDuration={150}>
     <Card className="p-5 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
       {/* Header */}
       <div className="flex items-start gap-3 mb-4">

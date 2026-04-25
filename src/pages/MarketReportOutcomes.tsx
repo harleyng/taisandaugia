@@ -6,8 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { ReportTopNav } from "@/components/report/ReportTopNav";
 import { ReportLockedCTA } from "@/components/report/ReportLockedCTA";
 import { OutcomesContent } from "@/components/report/outcomes/OutcomesContent";
+import { DeepReportGate } from "@/components/report/DeepReportGate";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { outcomesHighlights, outcomesMeta, outcomesTocSections } from "@/lib/mockOutcomesReport";
 
 const MarketReportOutcomes = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -57,7 +59,14 @@ const MarketReportOutcomes = () => {
             <ReportLockedCTA />
           </div>
         ) : (
-          <OutcomesContent />
+          <DeepReportGate
+            reportSlug="outcomes"
+            reportLabel="Kết quả & không thành"
+            highlights={outcomesHighlights}
+            tocSections={outcomesTocSections}
+            meta={`${outcomesMeta.sessionCount.toLocaleString("vi-VN")} phiên · ${outcomesMeta.periodDays} ngày · cập nhật ${outcomesMeta.updatedAt}`}
+            renderContent={() => <OutcomesContent />}
+          />
         )}
 
         {session && (

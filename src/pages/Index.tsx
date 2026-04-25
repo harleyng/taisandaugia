@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SearchBar } from "@/components/SearchBar";
 import { AuctionSection } from "@/components/AuctionSection";
+import { MarketReportTeaser } from "@/components/MarketReportTeaser";
 import { CompletedAuctions } from "@/components/CompletedAuctions";
 import { FeaturedProjects } from "@/components/FeaturedProjects";
 import { PopularAreas } from "@/components/PopularAreas";
@@ -56,6 +57,9 @@ const Index = () => {
           </svg>
         </div>
       </section>
+
+      {/* Market Report Teaser */}
+      <MarketReportTeaser />
 
       {/* Auction Section */}
       <AuctionSection />

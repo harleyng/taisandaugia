@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Coins, UserCircle, KeyRound, Bell, LogOut, CreditCard, Heart } from "lucide-react";
+import { Coins, UserCircle, KeyRound, Bell, LogOut, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCredits } from "@/hooks/useCredits";
@@ -17,10 +17,9 @@ interface Props {
 
 const NAV: { key: ProfileTab; label: string; icon: typeof UserCircle }[] = [
   { key: "profile", label: "Hồ sơ cá nhân", icon: UserCircle },
-  { key: "saved", label: "Tài sản quan tâm", icon: Heart },
+  { key: "notifications", label: "Thông báo", icon: Bell },
   { key: "credits", label: "Credit", icon: CreditCard },
   { key: "password", label: "Đổi mật khẩu", icon: KeyRound },
-  { key: "notifications", label: "Thông báo", icon: Bell },
 ];
 
 export const ProfileSidebar = ({ activeTab, onChange, name, email, avatarUrl, onLogout }: Props) => {

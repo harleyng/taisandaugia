@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Sparkles,
   Lock,
@@ -121,7 +122,25 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
       : `~${bucket.min}–${bucket.max} m²`
     : "tương đương";
 
+  const InfoTip = ({ content, className = "h-3 w-3" }: { content: string; className?: string }) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+          aria-label="Thông tin"
+        >
+          <Info className={className} aria-hidden />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+        {content}
+      </TooltipContent>
+    </Tooltip>
+  );
+
   return (
+    <TooltipProvider delayDuration={150}>
     <Card className="p-5 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
       {/* Header */}
       <div className="flex items-start gap-3 mb-4">
@@ -139,7 +158,10 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
             Ước tính dựa trên dữ liệu đấu giá tương tự trong quá khứ
           </p>
         </div>
-        <Info className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+        <InfoTip
+          className="h-4 w-4 shrink-0"
+          content="Kết quả được tính từ các phiên đấu giá tương tự, kết hợp với xu hướng giá và mức độ biến động trong khu vực."
+        />
       </div>
 
       {/* Locked: paywall preview (UI giống Lịch sử giá) */}
@@ -173,7 +195,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
               <div className="md:border-r md:border-border md:pr-6">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
                   Giá trúng ước tính
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Khoảng giá ước tính mà tài sản có thể kết thúc, dựa trên các phiên đấu giá tương tự trong khu vực và xu hướng gần đây." />
                 </div>
                 <div className="text-2xl md:text-3xl font-bold text-primary leading-tight">
                   {formatPrice(predMin, "TOTAL")} – {formatPrice(predMax, "TOTAL")}
@@ -195,7 +217,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
               <div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
                   So với giá khởi điểm
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Mức chênh lệch giữa giá khởi điểm và giá trúng trong các phiên tương tự. Giúp ước lượng mức tăng thường xảy ra." />
                 </div>
                 <div className="text-2xl md:text-3xl font-bold text-emerald-600 leading-tight">
                   +{minPct}% đến +{maxPct}%
@@ -221,7 +243,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                     <ShieldCheck className="h-4 w-4 text-primary" />
                   </span>
                   Độ tin cậy dữ liệu
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Thể hiện mức độ đáng tin của dữ liệu phân tích, dựa trên số lượng phiên tương tự, mức độ giống nhau và độ biến động giá." />
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-primary leading-none">{confidence}%</span>
@@ -241,7 +263,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                     <Database className="h-4 w-4 text-emerald-600" />
                   </span>
                   Thông tin hỗ trợ
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Số phiên đấu giá tương tự được sử dụng để phân tích. Dữ liệu càng nhiều thì kết quả càng ổn định." />
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-bold text-emerald-600 leading-none">{similarSessions}</span>
@@ -260,7 +282,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                     <CalendarDays className="h-4 w-4 text-violet-600" />
                   </span>
                   Khoảng thời gian
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Khoảng thời gian của các phiên được sử dụng trong phân tích. Dữ liệu gần đây phản ánh xu hướng thị trường hiện tại tốt hơn." />
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-bold text-violet-600 leading-none">90</span>
@@ -283,7 +305,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
               <div className="flex-1">
                 <div className="flex items-center gap-1 text-sm font-semibold text-amber-900 mb-1">
                   Khuyến nghị
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Nhận định tổng quan dựa trên dữ liệu lịch sử. Giá thực tế có thể thay đổi tùy theo diễn biến của phiên đấu giá." />
                 </div>
                 <p className="text-xs text-amber-900/90 leading-relaxed">
                   Giá ước tính dựa trên dữ liệu đấu giá gần đây với các tài sản tương tự.{" "}
@@ -303,7 +325,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
               <div className="flex-1">
                 <div className="flex items-center gap-1 text-sm font-semibold text-sky-900 mb-2">
                   Dựa trên dữ liệu
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Các tài sản được chọn dựa trên loại tài sản, khu vực và đặc điểm tương tự để đảm bảo tính so sánh." />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
                   {[
@@ -333,5 +355,6 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
         </>
       )}
     </Card>
+    </TooltipProvider>
   );
 };

@@ -14,7 +14,6 @@ import { User, ChevronRight, Search, Gavel, Trophy, Percent, MapPin, Lock } from
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
-import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { formatAddress } from "@/utils/formatters";
 import { useCredits } from "@/hooks/useCredits";
 import { usePaywall } from "@/contexts/PaywallContext";
@@ -23,7 +22,7 @@ const AssetOwnerDetail = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const fromListing = (location.state as { fromListing?: { id: string; title: string } } | null)?.fromListing;
-  const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
+  const { savedIds, toggleSave } = useAssetActions();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { ownerAccess } = useCredits();
@@ -97,7 +96,6 @@ const AssetOwnerDetail = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      <NotificationPromptDialog open={showNotificationPrompt} onClose={dismissNotificationPrompt} />
 
       <main className="container px-4 py-6 flex-1">
         {/* Breadcrumb */}

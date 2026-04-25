@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useAssetActions } from "@/hooks/useAssetActions";
-import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";
 import { AuctionPriceRow } from "@/components/auction/AuctionPriceRow";
 import { AuctionOrganizerInfo } from "@/components/auction/AuctionOrganizerInfo";
@@ -52,7 +51,7 @@ import { useAuthDialog } from "@/contexts/AuthDialogContext";
 const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
+  const { savedIds, toggleSave } = useAssetActions();
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,7 +157,6 @@ const AuctionDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <NotificationPromptDialog open={showNotificationPrompt} onClose={dismissNotificationPrompt} />
 
       <div className="container mx-auto px-4 py-4 md:py-6">
         {/* Breadcrumb */}

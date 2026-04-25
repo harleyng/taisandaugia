@@ -1,5 +1,4 @@
 import { useAssetActions } from "@/hooks/useAssetActions";
-import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
@@ -12,7 +11,7 @@ import { useNotificationSettings } from "@/hooks/useNotificationSettings";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const SavedAssetsTab = () => {
-  const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
+  const { savedIds, toggleSave } = useAssetActions();
   const { notificationsEnabled, toggleNotifications } = useNotificationSettings();
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +38,6 @@ export const SavedAssetsTab = () => {
 
   return (
     <div>
-      <NotificationPromptDialog open={showNotificationPrompt} onClose={dismissNotificationPrompt} />
 
       <Card className="p-5 md:p-6 mb-5">
         <div className="flex items-center justify-between gap-3">

@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionCard } from "@/components/AuctionCard";
 import { useAssetActions } from "@/hooks/useAssetActions";
-import { NotificationPromptDialog } from "@/components/NotificationPromptDialog";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import auctionBg from "@/assets/auction-bg.png";
 
@@ -24,7 +23,7 @@ const getShortLocation = (address: any): string => {
 };
 
 export const AuctionSection = () => {
-  const { savedIds, toggleSave, showNotificationPrompt, dismissNotificationPrompt } = useAssetActions();
+  const { savedIds, toggleSave } = useAssetActions();
   const { data: auctions = [], isLoading } = useQuery({
     queryKey: ["upcoming-auctions"],
     queryFn: async () => {
@@ -61,7 +60,6 @@ export const AuctionSection = () => {
 
   return (
     <>
-    <NotificationPromptDialog open={showNotificationPrompt} onClose={dismissNotificationPrompt} />
     <section className="container px-4 py-6 md:py-8">
       <div
         className="rounded-2xl p-6 md:p-10 pb-10 md:pb-14"

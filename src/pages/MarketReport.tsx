@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { Gavel } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ReportTopNav } from "@/components/report/ReportTopNav";
 import { ReportHero } from "@/components/report/ReportHero";
 import { ReportTOC } from "@/components/report/ReportTOC";
 import { ReportHighlights } from "@/components/report/ReportHighlights";
 import { PeriodPickerCompact } from "@/components/report/PeriodPickerCompact";
+import { reportMeta } from "@/lib/mockMarketReport";
 import { latestPeriodId } from "@/lib/reportPeriods";
 import { SectionOverview } from "@/components/report/SectionOverview";
 import { SectionCompetition } from "@/components/report/SectionCompetition";
@@ -50,14 +52,27 @@ const MarketReport = () => {
     <div className="min-h-screen bg-background">
       <ReportTopNav />
       <main>
-        <ReportHero periodId={periodId} />
+        <ReportHero />
 
         <div className="container py-8 md:py-12">
           <div className="grid lg:grid-cols-[240px_1fr] gap-8 lg:gap-10">
             <ReportTOC />
 
             <div className="min-w-0 space-y-4">
-              <PeriodPickerCompact value={periodId} onChange={setPeriodId} />
+              <div className="flex flex-wrap items-center gap-3">
+                <PeriodPickerCompact
+                  value={periodId}
+                  onChange={setPeriodId}
+                  className="flex-1 min-w-[260px]"
+                />
+                <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Gavel className="h-4 w-4" />
+                  <span className="font-semibold text-foreground">
+                    {reportMeta.sessionCount.toLocaleString("vi-VN")}
+                  </span>
+                  phiên
+                </span>
+              </div>
 
               <ReportHighlights periodId={periodId} />
 

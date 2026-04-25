@@ -1,14 +1,9 @@
-import { Download, CalendarDays, Gavel } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { reportMeta } from "@/lib/mockMarketReport";
-import { formatPeriodLabel } from "@/lib/reportPeriods";
 
-interface ReportHeroProps {
-  periodId?: string;
-}
-
-export const ReportHero = ({ periodId }: ReportHeroProps) => {
+export const ReportHero = () => {
   const { toast } = useToast();
 
   const handleDownload = () => {
@@ -17,8 +12,6 @@ export const ReportHero = ({ periodId }: ReportHeroProps) => {
       description: "Báo cáo tổng sẽ được gửi đến email của bạn trong ít phút.",
     });
   };
-
-  const periodLabel = periodId ? formatPeriodLabel(periodId) : null;
 
   return (
     <section className="border-b border-border bg-gradient-to-b from-primary/5 to-background">
@@ -31,23 +24,6 @@ export const ReportHero = ({ periodId }: ReportHeroProps) => {
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
               {reportMeta.title}
             </h1>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-5 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarDays className="h-4 w-4" />
-                {periodLabel ? (
-                  <>Kỳ: <span className="font-medium text-foreground">{periodLabel}</span></>
-                ) : (
-                  <>Cập nhật: <span className="font-medium text-foreground">{reportMeta.updatedAt}</span></>
-                )}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Gavel className="h-4 w-4" />
-                <span className="font-medium text-foreground">
-                  {reportMeta.sessionCount.toLocaleString("vi-VN")} phiên
-                </span>{" "}
-                trong kỳ
-              </span>
-            </div>
           </div>
 
           <Button onClick={handleDownload} size="lg" className="shrink-0">
@@ -59,3 +35,4 @@ export const ReportHero = ({ periodId }: ReportHeroProps) => {
     </section>
   );
 };
+

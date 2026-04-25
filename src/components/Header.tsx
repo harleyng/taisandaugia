@@ -50,8 +50,11 @@ export const Header = () => {
   const [profileName, setProfileName] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { balance } = useCredits();
-  const { hasUnclaimed, availableCredits, tasks: onboardingTasks } = useOnboardingTasks();
+  const { hasUnclaimed, tasks: onboardingTasks } = useOnboardingTasks();
   const hasIncompleteTasks = onboardingTasks.some((t) => t.status !== "claimed");
+  const pendingCredits = onboardingTasks
+    .filter((t) => t.status !== "claimed")
+    .reduce((sum, t) => sum + t.credits, 0);
   const [rewardOpen, setRewardOpen] = useState(false);
 
   useEffect(() => {
@@ -163,17 +166,13 @@ export const Header = () => {
                     hasUnclaimed ? "animate-pulse hover:animate-none" : ""
                   } ${
                     transparent
-                      ? hasUnclaimed
-                        ? "bg-amber-400/90 text-amber-950 hover:bg-amber-300"
-                        : "bg-white/15 text-white hover:bg-white/25"
-                      : hasUnclaimed
-                        ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:opacity-90"
-                        : "bg-primary/10 text-primary hover:bg-primary/20"
+                      ? "bg-amber-400/90 text-amber-950 hover:bg-amber-300"
+                      : "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:opacity-90"
                   }`}
                   title="Nhiệm vụ thưởng"
                 >
                   <Gift className="h-3.5 w-3.5" />
-                  {hasUnclaimed ? `+${availableCredits}` : "Nhiệm vụ"}
+                  Nhận ngay {pendingCredits} credit
                 </button>
               )}
               <button
@@ -329,21 +328,12 @@ export const Header = () => {
                       {hasIncompleteTasks && (
                         <button
                           onClick={() => setRewardOpen(true)}
-                          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-base font-medium rounded-lg transition-colors mb-1 ${
-                            hasUnclaimed
-                              ? "text-amber-950 bg-gradient-to-r from-amber-200 to-amber-100 hover:from-amber-300 hover:to-amber-200"
-                              : "text-foreground bg-primary/10 hover:bg-primary/20"
-                          }`}
+                          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-base font-medium text-amber-950 bg-gradient-to-r from-amber-200 to-amber-100 hover:from-amber-300 hover:to-amber-200 rounded-lg transition-colors mb-1"
                         >
                           <span className="inline-flex items-center gap-3">
                             <Gift className="h-5 w-5" />
-                            {hasUnclaimed ? "Quà chào mừng" : "Nhiệm vụ thưởng"}
+                            Nhận ngay {pendingCredits} credit
                           </span>
-                          {hasUnclaimed && (
-                            <span className="rounded-full bg-amber-950/15 px-2 py-0.5 text-xs font-bold">
-                              +{availableCredits}
-                            </span>
-                          )}
                         </button>
                       )}
                       <Link

@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Save, Loader2 } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { ProfileBasicSection } from "@/components/profile/sections/ProfileBasicSection";
+import { ProfileIntentSection } from "@/components/profile/sections/ProfileIntentSection";
 
 interface Props {
   name: string;
@@ -17,19 +16,8 @@ interface Props {
 }
 
 export const ProfileInfoTab = ({ name, email, avatarUrl, onNameChange, onAvatarChange }: Props) => {
-  const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const initials = name ? name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "U";
-
-  const handleSaveName = async () => {
-    setSaving(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    const { error } = await supabase.from("profiles").update({ name }).eq("id", session.user.id);
-    setSaving(false);
-    if (error) toast.error("Không thể cập nhật tên");
-    else toast.success("Đã cập nhật tên");
-  };
+  const initials = name ? name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() : "U";
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,10 +47,10 @@ export const ProfileInfoTab = ({ name, email, avatarUrl, onNameChange, onAvatarC
       .eq("id", session.user.id)
       .single();
 
-    const agentInfo = (profile?.agent_info as any) || {};
+    const agentInfo = (profile?.agent_info as Record<string, unknown>) || {};
     await supabase
       .from("profiles")
-      .update({ agent_info: { ...agentInfo, profile_picture_url: publicUrl } } as any)
+      .update({ agent_info: { ...agentInfo, profile_picture_url: publicUrl } as never })
       .eq("id", session.user.id);
 
     onAvatarChange(publicUrl);
@@ -71,34 +59,39 @@ export const ProfileInfoTab = ({ name, email, avatarUrl, onNameChange, onAvatarC
   };
 
   return (
-    <Card className="p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-5">Hồ sơ cá nhân</h2>
-      <div className="flex items-center gap-5 mb-6">
-        <div className="relative">
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={avatarUrl || undefined} />
-            <AvatarFallback className="text-xl bg-primary text-primary-foreground">{initials}</AvatarFallback>
-          </Avatar>
-          <label className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center cursor-pointer hover:bg-muted transition-colors">
-            {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4 text-muted-foreground" />}
-            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
-          </label>
+    <div className="space-y-4">
+      {/* Avatar header */}
+      <Card className="p-6">
+        <div className="flex items-center gap-5">
+          <div className="relative">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={avatarUrl || undefined} />
+              <AvatarFallback className="text-xl bg-primary text-primary-foreground">{initials}</AvatarFallback>
+            </Avatar>
+            <label className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-card border border-border flex items-center justify-center cursor-pointer hover:bg-muted transition-colors">
+              {uploadingAvatar ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4 text-muted-foreground" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+                disabled={uploadingAvatar}
+              />
+            </label>
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-foreground truncate">{name || "Chưa đặt tên"}</p>
+            <p className="text-sm text-muted-foreground truncate">{email}</p>
+          </div>
         </div>
-        <div>
-          <p className="font-semibold text-foreground">{name || "Chưa đặt tên"}</p>
-          <p className="text-sm text-muted-foreground">{email}</p>
-        </div>
-      </div>
+      </Card>
 
-      <div className="space-y-3">
-        <Label htmlFor="name">Tên hiển thị</Label>
-        <div className="flex gap-2">
-          <Input id="name" value={name} onChange={(e) => onNameChange(e.target.value)} placeholder="Nhập tên của bạn" />
-          <Button onClick={handleSaveName} disabled={saving} size="sm" className="shrink-0">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4 mr-1" />Lưu</>}
-          </Button>
-        </div>
-      </div>
-    </Card>
+      <ProfileBasicSection initialName={name} onNameChange={onNameChange} />
+      <ProfileIntentSection />
+    </div>
   );
 };

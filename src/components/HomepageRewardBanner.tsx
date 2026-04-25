@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Gift, ArrowRight, X, Coins, Ticket } from "lucide-react";
+import { Gift, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
@@ -8,8 +8,11 @@ import { cn } from "@/lib/utils";
 const DISMISS_KEY = "onboarding.banner.dismissed";
 
 export const HomepageRewardBanner = () => {
-  const { isAuthed, availableCredits, tasks } = useOnboardingTasks();
+  const { isAuthed, tasks } = useOnboardingTasks();
   const hasIncompleteTasks = tasks.some((t) => t.status !== "claimed");
+  const pendingCredits = tasks
+    .filter((t) => t.status !== "claimed")
+    .reduce((sum, t) => sum + t.credits, 0);
   const [dismissed, setDismissed] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -20,10 +23,6 @@ export const HomepageRewardBanner = () => {
   }, []);
 
   if (!isAuthed || !hasIncompleteTasks || dismissed) return null;
-
-  const totalTokens = tasks
-    .filter((t) => t.status === "ready")
-    .reduce((sum, t) => sum + t.tokens, 0);
 
   const handleDismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -49,13 +48,8 @@ export const HomepageRewardBanner = () => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm md:text-base font-semibold text-foreground">
-                Hoàn thành hồ sơ — Nhận{" "}
-                <span className="text-primary">{availableCredits} credit miễn phí</span>
-                {totalTokens > 0 && (
-                  <>
-                    {" "}+ <span className="text-primary">{totalTokens} vé mở khóa</span>
-                  </>
-                )}
+                Hoàn thành nhiệm vụ — Nhận{" "}
+                <span className="text-primary">{pendingCredits} credit miễn phí</span>
               </p>
               <p className="text-xs md:text-sm text-muted-foreground mt-0.5 hidden sm:block">
                 Cập nhật thông tin & khai báo nhu cầu để nhận thưởng — chỉ mất 2 phút

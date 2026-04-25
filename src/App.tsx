@@ -19,6 +19,7 @@ import AssetOwnerDetail from "./pages/AssetOwnerDetail";
 import BuyCredits from "./pages/BuyCredits";
 import PaymentResult from "./pages/PaymentResult";
 import VnpayCheckout from "./pages/VnpayCheckout";
+import MarketReport from "./pages/MarketReport";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/listings" element={<Listings />} />
             <Route path="/listings/:id" element={<ListingDetail />} />
             <Route path="/auctions/:id" element={<AuctionDetail />} />
+            <Route path="/report" element={<MarketReport />} />
             <Route path="/install" element={<PWAInstall />} />
 
             {/* Credits */}

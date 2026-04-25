@@ -97,7 +97,7 @@ export const formatPeriodKindLabel = (kind: PeriodKind): string =>
  *  - Quý: 6 quý gần nhất.
  *  - Năm: 2 năm gần nhất.
  */
-const REFERENCE = { year: 2025, month: 9 } as const;
+const REFERENCE: { year: number; month: number } = { year: 2025, month: 9 };
 
 export interface AvailablePeriods {
   months: string[];

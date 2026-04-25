@@ -48,6 +48,7 @@ export const ProfileIntentSection = () => {
   const [source, setSource] = useState<SourceChannel | "">((intent.source as SourceChannel) ?? "");
   const [saving, setSaving] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
+  const [regionsOpen, setRegionsOpen] = useState(false);
 
   useEffect(() => {
     setCategories(intent.asset_categories ?? []);

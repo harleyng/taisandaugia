@@ -1,0 +1,244 @@
+import { useEffect, useRef, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Save, CheckCircle2, Coins, Ticket } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  GENDER_OPTIONS,
+  ROLE_OPTIONS,
+  isBasicComplete,
+  AgentInfoShape,
+  Gender,
+  UserRole,
+  REWARD_BASIC_CREDITS,
+  REWARD_INTENT_CREDITS,
+} from "@/lib/onboardingTasks";
+import { vietnamProvinces } from "@/constants/vietnam-locations";
+import { notifyProfileUpdated, useOnboardingTasks } from "@/hooks/useOnboardingTasks";
+import { RewardClaimDialog } from "@/components/onboarding/RewardClaimDialog";
+
+interface Props {
+  initialName: string;
+  onNameChange: (n: string) => void;
+}
+
+export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
+  const { agentInfo, tasks, refresh } = useOnboardingTasks();
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  const basic = agentInfo?.basic ?? {};
+  const [name, setName] = useState(initialName);
+  const [phone, setPhone] = useState(basic.phone ?? "");
+  const [role, setRole] = useState<UserRole | "">((basic.role as UserRole) ?? "");
+  const [province, setProvince] = useState(basic.province ?? "");
+  const [birthYear, setBirthYear] = useState<string>(basic.birth_year ? String(basic.birth_year) : "");
+  const [gender, setGender] = useState<Gender | "">((basic.gender as Gender) ?? "");
+  const [saving, setSaving] = useState(false);
+  const [showClaim, setShowClaim] = useState(false);
+  const [wasReadyBefore, setWasReadyBefore] = useState(false);
+
+  // Sync from server snapshot when it changes
+  useEffect(() => {
+    setName(initialName);
+  }, [initialName]);
+  useEffect(() => {
+    setPhone(basic.phone ?? "");
+    setRole((basic.role as UserRole) ?? "");
+    setProvince(basic.province ?? "");
+    setBirthYear(basic.birth_year ? String(basic.birth_year) : "");
+    setGender((basic.gender as Gender) ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentInfo]);
+
+  // Scroll to section when hash matches
+  useEffect(() => {
+    if (window.location.hash === "#basic" && sectionRef.current) {
+      setTimeout(() => sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    }
+  }, []);
+
+  const basicTask = tasks.find((t) => t.key === "basic");
+  const status = basicTask?.status ?? "todo";
+
+  const filledOk = Boolean(
+    name.trim() && phone && role && province && birthYear && gender
+  );
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setSaving(false);
+      toast.error("Bạn cần đăng nhập");
+      return;
+    }
+
+    const nextBasic = {
+      phone: phone || undefined,
+      role: (role || undefined) as UserRole | undefined,
+      province: province || undefined,
+      birth_year: birthYear ? Number(birthYear) : undefined,
+      gender: (gender || undefined) as Gender | undefined,
+    };
+
+    const wasComplete = isBasicComplete(basic, initialName);
+    const willBeComplete = isBasicComplete(nextBasic, name);
+
+    const nextAgentInfo: AgentInfoShape = {
+      ...(agentInfo ?? {}),
+      basic: nextBasic,
+      rewards: {
+        ...(agentInfo?.rewards ?? {}),
+        basic_completed_at:
+          willBeComplete
+            ? agentInfo?.rewards?.basic_completed_at ?? Date.now()
+            : agentInfo?.rewards?.basic_completed_at ?? null,
+      },
+    };
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        name: name.trim() || null,
+        agent_info: nextAgentInfo as never,
+      })
+      .eq("id", session.user.id);
+
+    setSaving(false);
+
+    if (error) {
+      toast.error("Không thể lưu thông tin");
+      return;
+    }
+
+    onNameChange(name);
+    toast.success("Đã lưu thông tin");
+    notifyProfileUpdated();
+    await refresh();
+
+    // Trigger celebration if just became ready & not claimed
+    if (!wasComplete && willBeComplete && !agentInfo?.rewards?.basic_claimed_at) {
+      setWasReadyBefore(true);
+      setTimeout(() => setShowClaim(true), 300);
+    }
+  };
+
+  return (
+    <Card ref={sectionRef} id="basic" className="p-6 scroll-mt-24">
+      <div className="flex items-start justify-between gap-3 mb-5">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Thông tin cơ bản</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Giúp xác thực tài khoản & cá nhân hóa trải nghiệm</p>
+        </div>
+        {status === "claimed" ? (
+          <Badge variant="secondary" className="gap-1">
+            <CheckCircle2 className="h-3 w-3" /> Đã nhận thưởng
+          </Badge>
+        ) : status === "ready" ? (
+          <Badge className="gap-1 bg-primary/15 text-primary hover:bg-primary/20">
+            <Coins className="h-3 w-3" /> +{REWARD_BASIC_CREDITS} chờ nhận
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="gap-1">
+            <Coins className="h-3 w-3" /> +{REWARD_BASIC_CREDITS} sau khi hoàn thành
+          </Badge>
+        )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="b-name">Họ tên</Label>
+          <Input id="b-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nhập họ tên đầy đủ" />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="b-phone">Số điện thoại</Label>
+          <Input
+            id="b-phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/[^0-9+]/g, ""))}
+            placeholder="VD: 0987654321"
+            inputMode="tel"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="b-role">Vai trò</Label>
+          <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
+            <SelectTrigger id="b-role">
+              <SelectValue placeholder="Chọn vai trò" />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="b-province">Tỉnh/Thành phố</Label>
+          <Select value={province} onValueChange={setProvince}>
+            <SelectTrigger id="b-province">
+              <SelectValue placeholder="Chọn tỉnh/thành" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {vietnamProvinces.map((p) => (
+                <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="b-year">Năm sinh</Label>
+          <Input
+            id="b-year"
+            type="number"
+            value={birthYear}
+            onChange={(e) => setBirthYear(e.target.value)}
+            placeholder="VD: 1990"
+            min={1940}
+            max={new Date().getFullYear() - 10}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="b-gender">Giới tính</Label>
+          <Select value={gender} onValueChange={(v) => setGender(v as Gender)}>
+            <SelectTrigger id="b-gender">
+              <SelectValue placeholder="Chọn giới tính" />
+            </SelectTrigger>
+            <SelectContent>
+              {GENDER_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mt-6">
+        <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
+          {filledOk ? (
+            <>
+              <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Đã đủ thông tin
+            </>
+          ) : (
+            "Điền đầy đủ để mở khóa thưởng"
+          )}
+        </p>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4" /> Lưu thông tin</>}
+        </Button>
+      </div>
+
+      <RewardClaimDialog open={showClaim} onOpenChange={setShowClaim} taskKey="basic" />
+    </Card>
+  );
+};

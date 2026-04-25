@@ -1,5 +1,7 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift } from "lucide-react";
+import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
+import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -48,6 +50,8 @@ export const Header = () => {
   const [profileName, setProfileName] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { balance } = useCredits();
+  const { hasUnclaimed, availableCredits } = useOnboardingTasks();
+  const [rewardOpen, setRewardOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -151,6 +155,20 @@ export const Header = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           {session ? (
             <>
+              {hasUnclaimed && (
+                <button
+                  onClick={() => setRewardOpen(true)}
+                  className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors animate-pulse hover:animate-none ${
+                    transparent
+                      ? "bg-amber-400/90 text-amber-950 hover:bg-amber-300"
+                      : "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:opacity-90"
+                  }`}
+                  title="Nhận thưởng"
+                >
+                  <Gift className="h-3.5 w-3.5" />
+                  +{availableCredits}
+                </button>
+              )}
               <button
                 onClick={() => navigate("/profile?tab=credits")}
                 className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
@@ -301,6 +319,20 @@ export const Header = () => {
                           {balance} credit
                         </span>
                       </div>
+                      {hasUnclaimed && (
+                        <button
+                          onClick={() => setRewardOpen(true)}
+                          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-base font-medium text-amber-950 bg-gradient-to-r from-amber-200 to-amber-100 hover:from-amber-300 hover:to-amber-200 rounded-lg transition-colors mb-1"
+                        >
+                          <span className="inline-flex items-center gap-3">
+                            <Gift className="h-5 w-5" />
+                            Quà chào mừng
+                          </span>
+                          <span className="rounded-full bg-amber-950/15 px-2 py-0.5 text-xs font-bold">
+                            +{availableCredits}
+                          </span>
+                        </button>
+                      )}
                       <Link
                         to="/profile?tab=credits"
                         className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
@@ -346,6 +378,7 @@ export const Header = () => {
           </Sheet>
         </div>
       </div>
+      <RewardTasksDialog open={rewardOpen} onOpenChange={setRewardOpen} />
     </header>
   );
 };

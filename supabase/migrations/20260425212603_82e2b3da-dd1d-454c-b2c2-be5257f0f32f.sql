@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS free_unlock_tokens INTEGER NOT NULL DEFAULT 0;

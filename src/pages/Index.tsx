@@ -8,6 +8,7 @@ import { FeaturedProjects } from "@/components/FeaturedProjects";
 import { PopularAreas } from "@/components/PopularAreas";
 
 import { NewsSection } from "@/components/NewsSection";
+import { HomepageRewardBanner } from "@/components/HomepageRewardBanner";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Building2, Home, LandPlot, MapPin, Building, Landmark } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -57,6 +58,9 @@ const Index = () => {
           </svg>
         </div>
       </section>
+
+      {/* Reward banner — only when user has unclaimed rewards */}
+      <HomepageRewardBanner />
 
       {/* Market Report Teaser */}
       <MarketReportTeaser />

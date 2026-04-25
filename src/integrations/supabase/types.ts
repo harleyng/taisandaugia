@@ -429,6 +429,7 @@ export type Database = {
           agent_info: Json | null
           created_at: string
           email: string
+          free_unlock_tokens: number
           id: string
           kyc_status: Database["public"]["Enums"]["kyc_status"]
           name: string | null
@@ -440,6 +441,7 @@ export type Database = {
           agent_info?: Json | null
           created_at?: string
           email: string
+          free_unlock_tokens?: number
           id: string
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           name?: string | null
@@ -451,6 +453,7 @@ export type Database = {
           agent_info?: Json | null
           created_at?: string
           email?: string
+          free_unlock_tokens?: number
           id?: string
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           name?: string | null

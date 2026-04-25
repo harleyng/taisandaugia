@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Save, CheckCircle2, Coins, CalendarIcon } from "lucide-react";
+import { Loader2, Save, CheckCircle2, Coins, CalendarIcon, ShieldCheck, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -24,6 +24,7 @@ import {
 import { vietnamProvinces } from "@/constants/vietnam-locations";
 import { notifyProfileUpdated, useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import { RewardClaimDialog } from "@/components/onboarding/RewardClaimDialog";
+import { PhoneOtpDialog } from "@/components/profile/sections/PhoneOtpDialog";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -43,6 +44,9 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
     : "";
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState(basic.phone ?? "");
+  const [phoneVerified, setPhoneVerified] = useState(Boolean(basic.phone_verified));
+  const [verifiedPhone, setVerifiedPhone] = useState(basic.phone_verified ? basic.phone ?? "" : "");
+  const [otpOpen, setOtpOpen] = useState(false);
   const [role, setRole] = useState<UserRole | "">((basic.role as UserRole) ?? "");
   const [province, setProvince] = useState(basic.province ?? "");
   const [birthDate, setBirthDate] = useState<string>(initialBirth);
@@ -58,6 +62,8 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
   }, [initialName]);
   useEffect(() => {
     setPhone(basic.phone ?? "");
+    setPhoneVerified(Boolean(basic.phone_verified));
+    setVerifiedPhone(basic.phone_verified ? basic.phone ?? "" : "");
     setRole((basic.role as UserRole) ?? "");
     setProvince(basic.province ?? "");
     setBirthDate(
@@ -84,11 +90,42 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
   const birthDateObj = birthDate ? parseISO(birthDate) : undefined;
   const validBirth = birthDateObj && isValid(birthDateObj) ? birthDateObj : undefined;
 
+  const PHONE_REGEX = /^(0|\+84)[0-9]{9,10}$/;
+  const phoneIsValid = PHONE_REGEX.test(phone.trim());
+  const isCurrentPhoneVerified = phoneVerified && phone.trim() === verifiedPhone.trim() && phone.trim() !== "";
+
+  const handlePhoneChange = (value: string) => {
+    const cleaned = value.replace(/[^0-9+]/g, "");
+    setPhone(cleaned);
+    // If user edits to a number different from the verified one, reset verified state
+    if (cleaned.trim() !== verifiedPhone.trim()) {
+      setPhoneVerified(false);
+    } else if (verifiedPhone) {
+      // editing back to the verified number — restore verified state
+      setPhoneVerified(true);
+    }
+  };
+
+  const handleOtpVerified = () => {
+    setPhoneVerified(true);
+    setVerifiedPhone(phone.trim());
+  };
+
+  const handleResetPhone = () => {
+    setPhoneVerified(false);
+    setVerifiedPhone("");
+    setPhone("");
+  };
+
   const filledOk = Boolean(
-    name.trim() && phone && role && province && birthDate && gender
+    name.trim() && phone && isCurrentPhoneVerified && role && province && birthDate && gender
   );
 
   const handleSave = async () => {
+    if (phone && !isCurrentPhoneVerified) {
+      toast.error("Vui lòng xác thực số điện thoại trước khi lưu");
+      return;
+    }
     setSaving(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -99,6 +136,7 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
 
     const nextBasic = {
       phone: phone || undefined,
+      phone_verified: phone ? isCurrentPhoneVerified : false,
       role: (role || undefined) as UserRole | undefined,
       province: province || undefined,
       birth_date: birthDate || undefined,
@@ -177,14 +215,60 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="b-phone">Số điện thoại</Label>
-          <Input
-            id="b-phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/[^0-9+]/g, ""))}
-            placeholder="VD: 0987654321"
-            inputMode="tel"
-          />
+          <Label htmlFor="b-phone" className="flex items-center gap-2">
+            Số điện thoại
+            {isCurrentPhoneVerified && (
+              <Badge variant="secondary" className="gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border-0 font-normal">
+                <ShieldCheck className="h-3 w-3" /> Đã xác thực
+              </Badge>
+            )}
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="b-phone"
+              value={phone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              placeholder="VD: 0987654321"
+              inputMode="tel"
+              disabled={isCurrentPhoneVerified}
+              className={cn(
+                isCurrentPhoneVerified && "bg-muted/50 text-muted-foreground"
+              )}
+            />
+            {isCurrentPhoneVerified ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleResetPhone}
+                className="shrink-0"
+              >
+                Đổi số khác
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant={phoneIsValid ? "default" : "outline"}
+                onClick={() => setOtpOpen(true)}
+                disabled={!phoneIsValid}
+                className="shrink-0"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Xác thực
+              </Button>
+            )}
+          </div>
+          {phone && !phoneIsValid && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <ShieldAlert className="h-3 w-3" />
+              Số điện thoại không hợp lệ
+            </p>
+          )}
+          {phone && phoneIsValid && !isCurrentPhoneVerified && (
+            <p className="text-xs text-amber-600 dark:text-amber-500 flex items-center gap-1">
+              <ShieldAlert className="h-3 w-3" />
+              Số điện thoại chưa được xác thực
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -284,12 +368,18 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
             "Điền đầy đủ để mở khóa thưởng"
           )}
         </p>
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving || (Boolean(phone) && !isCurrentPhoneVerified)}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4" /> Lưu thông tin</>}
         </Button>
       </div>
 
       <RewardClaimDialog open={showClaim} onOpenChange={setShowClaim} taskKey="basic" />
+      <PhoneOtpDialog
+        open={otpOpen}
+        phone={phone}
+        onOpenChange={setOtpOpen}
+        onVerified={handleOtpVerified}
+      />
     </Card>
   );
 };

@@ -192,16 +192,22 @@ const AuctionDetail = () => {
               </span>
 
               <div className="ml-auto flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  onClick={() => toggleSave(listing.id)}
-                  aria-label={savedIds.has(listing.id) ? "Bỏ quan tâm" : "Quan tâm"}
-                >
-                  <Heart className={`h-4 w-4 mr-1.5 ${savedIds.has(listing.id) ? "fill-rose-500 text-rose-500" : ""}`} />
-                  {savedIds.has(listing.id) ? "Đã quan tâm" : "Quan tâm"}
-                </Button>
+                {(() => {
+                  const isFollowing = savedIds.has(listing.id);
+                  const Icon = isFollowing ? BellRing : Bell;
+                  return (
+                    <Button
+                      variant={isFollowing ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => toggleSave(listing.id)}
+                      aria-label={isFollowing ? "Đang nhận thông báo — bấm để dừng" : "Nhận thông báo khi có cập nhật"}
+                    >
+                      <Icon className="h-4 w-4 mr-1.5" />
+                      {isFollowing ? "Đang nhận thông báo" : "Nhận thông báo khi có cập nhật"}
+                    </Button>
+                  );
+                })()}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

@@ -158,7 +158,10 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
             Ước tính dựa trên dữ liệu đấu giá tương tự trong quá khứ
           </p>
         </div>
-        <Info className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+        <InfoTip
+          className="h-4 w-4 shrink-0"
+          content="Kết quả được tính từ các phiên đấu giá tương tự, kết hợp với xu hướng giá và mức độ biến động trong khu vực."
+        />
       </div>
 
       {/* Locked: paywall preview (UI giống Lịch sử giá) */}

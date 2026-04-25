@@ -368,12 +368,18 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
             "Điền đầy đủ để mở khóa thưởng"
           )}
         </p>
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving || (Boolean(phone) && !isCurrentPhoneVerified)}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4" /> Lưu thông tin</>}
         </Button>
       </div>
 
       <RewardClaimDialog open={showClaim} onOpenChange={setShowClaim} taskKey="basic" />
+      <PhoneOtpDialog
+        open={otpOpen}
+        phone={phone}
+        onOpenChange={setOtpOpen}
+        onVerified={handleOtpVerified}
+      />
     </Card>
   );
 };

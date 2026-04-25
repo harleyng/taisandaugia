@@ -27,6 +27,15 @@ export const saveInvoiceInfo = (info: InvoiceInfo) => {
 
 export const ASSET_COST = 59;
 
+// Giá mở khóa 1 kỳ báo cáo chuyên sâu (vĩnh viễn, theo từng báo cáo).
+export const DEEP_REPORT_PERIOD_PRICES = {
+  month: 990,
+  quarter: 2490,
+  year: 8900,
+} as const;
+
+export type DeepReportPeriodKind = keyof typeof DEEP_REPORT_PERIOD_PRICES;
+
 export type CompanyTierKey = "7d" | "30d" | "1y";
 
 export const COMPANY_TIERS: { key: CompanyTierKey; days: number; cost: number; label: string; valueText: string }[] = [
@@ -63,7 +72,12 @@ interface OwnerUnlock {
   expiresAt: number; // epoch ms
 }
 
-export type TransactionType = "purchase" | "unlock_asset" | "unlock_company" | "unlock_owner";
+export type TransactionType =
+  | "purchase"
+  | "unlock_asset"
+  | "unlock_company"
+  | "unlock_owner"
+  | "unlock_deep_report";
 
 export interface Transaction {
   id: string;
@@ -78,6 +92,8 @@ interface MockState {
   assetUnlocks: string[];
   companyUnlocks: Record<string, CompanyUnlock>;
   ownerUnlocks: Record<string, OwnerUnlock>;
+  // Mỗi entry là chuỗi `${slug}:${periodId}` đã unlock vĩnh viễn.
+  deepReportUnlocks: string[];
   transactions: Transaction[];
 }
 
@@ -86,6 +102,7 @@ const defaultState: MockState = {
   assetUnlocks: [],
   companyUnlocks: {},
   ownerUnlocks: {},
+  deepReportUnlocks: [],
   transactions: [],
 };
 

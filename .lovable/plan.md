@@ -1,53 +1,106 @@
 
 ## Mục tiêu
 
-1. **Bỏ block "🔍 Đào sâu"** khỏi sidebar TOC (`ReportTOC`).
-2. **Thêm 1 section mới ở dưới cùng** trang `/report` (sau "Xu hướng giá", trước form đăng ký): **"Danh mục phổ biến"**, gồm:
-   - Chart chính: **"Danh mục có giá trị đấu giá lớn nhất"** — bar chart so sánh 4 nhóm tài sản (BĐS, Nợ xấu, Tài sản công, Ô tô) theo tổng giá trị đấu giá (tỷ VND) + % share.
-   - 4 card đào sâu danh mục với link "Xem chi tiết" (mock).
-3. **Giữ nguyên** chart bubble cloud "Phân bố theo tỉnh" ở Section A — Tổng quan.
+Triển khai trang chi tiết **Báo cáo chuyên sâu: Bất động sản đấu giá** tại route `/report/bds`, kèm bộ lọc cho phép chuyển sang xem báo cáo loại tài sản khác. Các loại chưa có dữ liệu (Ô tô, Tài sản công, Nợ xấu) → tab disabled + badge "Sắp ra mắt".
 
-## Thay đổi chi tiết
+## Routing & Entry
 
-### 1. `src/lib/mockMarketReport.ts`
-- Mở rộng `deepDiveLinks` thành object đầy đủ:
-  - BĐS: 512 phiên, 18.420 tỷ, 62.4%, +6.3% delta
-  - Nợ xấu (NPL): 154 phiên, 4.960 tỷ, 16.8%, +13.8%
-  - Tài sản công: 198 phiên, 4.310 tỷ, 14.6%, +18.5%
-  - Ô tô: 286 phiên, 1.840 tỷ, 6.2%, +34.2%
-  - Mỗi item có: `slug`, `label`, `iconName` (Building2/Car/Landmark/Banknote), `desc`.
-- Thêm `categoryByValue` array (đã sắp xếp desc theo tổng giá trị) phục vụ chart.
-- Thêm `{ id: "categories", label: "Danh mục phổ biến" }` vào `tocSections`.
+- **Route mới**: `/report/:slug` → `MarketReportCategory.tsx` (chỉ render nội dung khi `slug === "bds"`; các slug khác hiển thị state "Sắp ra mắt").
+- **Entry point**: Cập nhật `SectionCategories.tsx` — nút "Xem chi tiết" của card BĐS → `navigate("/report/bds")`. Các card còn lại giữ behaviour toast "Sắp ra mắt".
+- **Auth gate**: tái sử dụng pattern `ProtectedRoute` style (kiểm tra session, nếu chưa login → render lock CTA giống `/report`).
 
-### 2. `src/components/report/ReportTOC.tsx`
-- **Xóa** toàn bộ block "🔍 Đào sâu" (dòng 74-92).
-- TOC mới sẽ tự có entry "Danh mục phổ biến" qua `tocSections`.
+## Cấu trúc trang `/report/bds`
 
-### 3. `src/components/report/SectionCategories.tsx` (MỚI)
-- Wrap bằng `<ReportSection id="categories" label="E" title="Danh mục phổ biến">`.
-- `keyInsight`: "Bất động sản dẫn dắt thị trường với 18.420 tỷ VND (62% tổng giá trị), nhưng Ô tô có mức chênh lệch lớn nhất (+34.2%)."
-- Layout 2 phần trong cùng 1 `<Card>`:
-  - **Phần trên — Bar chart "Danh mục có giá trị đấu giá lớn nhất"**:
-    - Tiêu đề nhỏ + hint
-    - 4 hàng horizontal bar (pure Tailwind, không cần recharts):
-      - Cột trái: tên danh mục
-      - Bar chính: width tỉ lệ với value/maxValue, màu primary với opacity giảm dần theo rank
-      - Cột phải: `18.420 tỷ` + badge `62.4%`
-  - **Divider**
-  - **Phần dưới — 4 card đào sâu**:
-    - Grid `sm:grid-cols-2 lg:grid-cols-4`
-    - Mỗi card: icon (lucide map qua switch) + tên + 2 KPI inline (`sessionCount` phiên · `avgDelta`% delta) + `desc` + nút outline "Xem chi tiết →" (toast "Báo cáo chuyên sâu sắp ra mắt").
-- Set `hideDeepDive` để không render nút "Đào sâu Danh mục phổ biến" mặc định.
+```text
+[ReportTopNav]
+[← Quay về Báo cáo tổng quan]
+[CategoryFilterTabs]                          ← bộ lọc danh mục (4 tab)
+[ReportHero] (tùy biến: title + meta số phiên + tổng giá trị)
+┌─────────────┬──────────────────────────────┐
+│ TOC         │ [5 điểm nổi bật]             │
+│ - 5 điểm... │ B1. Giá/m² theo khu vực      │
+│ - B1...     │ B2. Chênh lệch theo phân khúc│
+│ - B2...     │ B3. Phân phối chênh lệch     │
+│ - B3...     │ B4. Hall of Fame             │
+│ - B4...     │ B5. Xu hướng giá/m² 12 tháng │
+│ - B5...     │ B6. Tỷ lệ thành công         │
+│ - B6...     │ [CTA cuối — tải/đăng ký]     │
+└─────────────┴──────────────────────────────┘
+```
 
-### 4. `src/components/report/ReportSection.tsx`
-- Thêm prop optional `hideDeepDive?: boolean`. Nếu `true` thì bỏ nút "Đào sâu …" cuối section.
+## Components mới
 
-### 5. `src/pages/MarketReport.tsx`
-- Import `SectionCategories`. Render sau `<SectionPriceTrend />` và trước `<ReportSubscribeForm />` (vẫn nằm trong block đã login).
+### 1. `src/pages/MarketReportCategory.tsx`
+- Đọc `slug` từ `useParams`. Nếu khác `"bds"` → render `<ComingSoonState />` (card lớn với badge "Sắp ra mắt" + nút quay lại).
+- Auth gate: dùng cùng pattern `useEffect` + `supabase.auth.getSession()` + `onAuthStateChange` như `MarketReport.tsx`. Chưa login → render `<ReportLockedCTA />`.
+- Layout: `[ReportTopNav]` → back link → `[CategoryFilterTabs slug="bds"]` → `<BdsReportContent />`.
+
+### 2. `src/components/report/CategoryFilterTabs.tsx`
+- Nhận `currentSlug`. Render 4 tab pill horizontal:
+  - BĐS (`bds`) — enabled, active state.
+  - Ô tô (`oto`) — disabled + badge `Sắp ra mắt`.
+  - Tài sản công (`tai-san-cong`) — disabled + badge.
+  - Nợ xấu/NPL (`npl`) — disabled + badge.
+- Tab enabled: click → `navigate("/report/" + slug)`.
+- Tab disabled: `cursor-not-allowed opacity-60`, không navigate, hover hiện tooltip giải thích.
+- Mỗi tab có icon (lucide từ `iconMap` đã có).
+
+### 3. `src/components/report/bds/BdsReportContent.tsx` (orchestrator)
+Render lần lượt:
+- `<BdsHero />` — title + 562 phiên, 8.420 tỷ VND (lưu ý: data mock chỉ cho BĐS chuyên sâu, độc lập với 18.420 tỷ ở overview).
+- `<BdsHighlights />` — 5 điểm nổi bật (card với số ❶❷❸❹❺ giống `ReportHighlights`).
+- `<BdsTOC />` — sticky sidebar (similar pattern, 6 anchors B1–B6).
+- 6 sections nội dung (xem dưới).
+- `<BdsFinalCTA />` — Tải PDF / CSV (Pro) / Lọc DB / Đăng ký email.
+
+### 4. Sections (placed in `src/components/report/bds/`)
+Mỗi section dùng wrapper `<ReportSection label="B1" hideDeepDive>` đã có.
+
+- **`BdsSectionPriceMap.tsx` (B1)** — Heatmap pure-Tailwind: bảng `[Khu vực × 5 loại đất]`, mỗi ô background gradient theo giá (hsl primary với opacity = price/maxPrice). Insight bullet ở dưới. Nút "Xem đầy đủ 63 tỉnh →" (toast).
+- **`BdsSectionDelta.tsx` (B2)** — 2 sub-card horizontal bar charts (theo diện tích, theo loại đất/nhà). Style copy `SectionCompetition` pattern.
+- **`BdsSectionDistribution.tsx` (B3)** — Histogram bằng pure-Tailwind divs: 10 cột phân phối delta từ -10% → 80%+. 3 bullet KPI (median, ≥50%, ≤0%).
+- **`BdsSectionHallOfFame.tsx` (B4)** — 2 bảng (`Table` shadcn): top 5 chênh cao, top 5 deal hiếm. Cột: ngày, vị trí, loại, DT, khởi điểm, trúng, chênh.
+- **`BdsSectionPriceTrend.tsx` (B5)** — recharts `LineChart` 12 tháng × 5 tỉnh.
+- **`BdsSectionOutcomes.tsx` (B6)** — `BarChart` recharts (thành công/không thành/đấu giá lại) + funnel mini bằng divs.
+
+### 5. `src/lib/mockBdsReport.ts` (mock data mới)
+Tất cả arrays/constants riêng cho trang BĐS:
+- `bdsMeta` (title, sessionCount: 562, totalValue: 8420)
+- `bdsHighlights` (5 items)
+- `bdsPriceHeatmap` — array `{region, prices: { datO, datNN, datTM, chungCu, nhaPho }}` (~7 hàng).
+- `bdsDeltaByArea`, `bdsDeltaByType` (mỗi item: label, delta, n).
+- `bdsDistribution` — 10 buckets `{bucket, count}`.
+- `bdsTopBidWars`, `bdsTopDeals` (5 rows mỗi cái).
+- `bdsPriceTrend12m` — 12 tháng × 5 tỉnh.
+- `bdsOutcomes` (success/fail/reauctioned %).
+- `bdsTocSections` (B1–B6).
 
 ## Implementation Notes
 
-- Format số: `value.toLocaleString("vi-VN") + " tỷ"`.
-- Icon map: simple object `{ Building2, Car, Landmark, Banknote }` import sẵn, lookup theo `iconName`.
-- Bar chart pattern: tái sử dụng style tương tự `SectionCompetition` (horizontal bars Tailwind).
-- Toast khi click card: `useToast` đã có sẵn.
+- **Disabled state for tabs**: dùng `<button disabled>` + class `disabled:opacity-60 disabled:cursor-not-allowed`, render `<Badge variant="secondary">Sắp ra mắt</Badge>` bên trong.
+- **Reuse**: `ReportTopNav`, `ReportSection` (với `hideDeepDive`), `ReportLockedCTA`, `ReportSubscribeForm` (có thể dùng lại trong final CTA hoặc viết inline).
+- **Chart library**: tiếp tục dùng `recharts` cho line chart B5 và bar B6; còn lại pure Tailwind để nhẹ.
+- **Back link**: `<Link to="/report">` với icon `ArrowLeft`, đặt 2 chỗ (đầu trang + cuối trang).
+- **Auth/scroll-spy**: copy logic từ `ReportTOC` — `IntersectionObserver` cho B1–B6.
+- **SEO**: set `document.title` = "Báo cáo chuyên sâu: BĐS đấu giá".
+
+## File changes summary
+
+- **Mới**: 
+  - `src/pages/MarketReportCategory.tsx`
+  - `src/lib/mockBdsReport.ts`
+  - `src/components/report/CategoryFilterTabs.tsx`
+  - `src/components/report/bds/BdsReportContent.tsx`
+  - `src/components/report/bds/BdsHero.tsx`
+  - `src/components/report/bds/BdsHighlights.tsx`
+  - `src/components/report/bds/BdsTOC.tsx`
+  - `src/components/report/bds/BdsSectionPriceMap.tsx`
+  - `src/components/report/bds/BdsSectionDelta.tsx`
+  - `src/components/report/bds/BdsSectionDistribution.tsx`
+  - `src/components/report/bds/BdsSectionHallOfFame.tsx`
+  - `src/components/report/bds/BdsSectionPriceTrend.tsx`
+  - `src/components/report/bds/BdsSectionOutcomes.tsx`
+  - `src/components/report/bds/BdsFinalCTA.tsx`
+- **Sửa**:
+  - `src/App.tsx` — thêm route `/report/:slug`.
+  - `src/components/report/SectionCategories.tsx` — nút "Xem chi tiết" của BĐS dùng `navigate`, các card khác giữ toast.

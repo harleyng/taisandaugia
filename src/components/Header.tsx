@@ -319,6 +319,20 @@ export const Header = () => {
                           {balance} credit
                         </span>
                       </div>
+                      {hasUnclaimed && (
+                        <button
+                          onClick={() => setRewardOpen(true)}
+                          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-base font-medium text-amber-950 bg-gradient-to-r from-amber-200 to-amber-100 hover:from-amber-300 hover:to-amber-200 rounded-lg transition-colors mb-1"
+                        >
+                          <span className="inline-flex items-center gap-3">
+                            <Gift className="h-5 w-5" />
+                            Quà chào mừng
+                          </span>
+                          <span className="rounded-full bg-amber-950/15 px-2 py-0.5 text-xs font-bold">
+                            +{availableCredits}
+                          </span>
+                        </button>
+                      )}
                       <Link
                         to="/profile?tab=credits"
                         className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"

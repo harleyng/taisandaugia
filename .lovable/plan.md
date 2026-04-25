@@ -1,64 +1,156 @@
 ## Mục tiêu
 
-Triển khai trang báo cáo chuyên sâu cho section "Kết quả & Không thành" (C1–C7), tương tự kiến trúc trang BĐS đã có.
+Khóa các báo cáo chuyên sâu (BĐS, Outcomes, …) phía sau paywall **theo từng kỳ**. Người dùng chọn Tháng / Quý / Năm trên bộ lọc, mua kỳ nào → mở kỳ đó **vĩnh viễn** cho riêng báo cáo đang xem.
 
-## Routing
+Phạm vi: `/report/bds`, `/report/deep/outcomes`, và mọi trang chuyên sâu sau này.
+KHÔNG khóa: `/report` (trang tổng — vẫn chỉ yêu cầu đăng nhập).
 
-- Route mới: `/report/deep/outcomes` → trang `MarketReportOutcomes.tsx`.
-- Pattern `/report/deep/:topic` để mở rộng sau (Cạnh tranh, Xu hướng giá…).
-- Trên `MarketReport` (trang tổng), nút "Đào sâu Kết quả & không thành" trong `SectionOutcomes` sẽ navigate sang route mới (thay vì popup "Sắp ra mắt"). Cách làm: thêm prop `deepDiveHref?: string` vào `ReportSection`; nếu có thì render `<Link>` thay vì mở dialog. Các section khác giữ nguyên hành vi popup.
+## Mô hình tính phí
 
-## Cấu trúc trang `/report/deep/outcomes`
-
-Layout đồng bộ với trang BĐS:
-- `ReportTopNav`
-- Nút "← Quay về Báo cáo tổng quan" (trên + cuối trang)
-- Hero: tiêu đề "Báo cáo chuyên sâu: Kết quả & Nguyên nhân không thành", meta "1,247 phiên · 90 ngày qua · Cập nhật 30/09/2025", actions phụ "Tải PDF / Lưu" (toast "Sắp ra mắt").
-- 5 Highlights (component mới, theo mẫu `BdsHighlights`).
-- Grid `[240px_1fr]` với sticky TOC (C1–C7) + danh sách sections.
-- CTA cuối: tải PDF / CSV (Pro), form đăng ký email, link "Đào sâu section khác" (Cạnh tranh, Xu hướng giá → mở popup "Sắp ra mắt" với pattern hiện tại).
-- Auth gating: dùng `ReportLockedCTA` như trang BĐS.
-
-## 7 sub-sections
-
-| ID | Tiêu đề | Visual chính |
+| Loại kỳ | Giá / báo cáo | Quyền lợi |
 |---|---|---|
-| C1 | Tỷ lệ thành công toàn thị trường | Donut 76/24 + ghi chú bối cảnh (so với 95–98% market thường) |
-| C2 | Theo loại tài sản | Bar chart ngang tỷ lệ KHÔNG THÀNH (NPL 49 / TSC 35 / Khác 28 / BĐS 22 / Ô tô 18) |
-| C3 | Theo khu vực | Top-5 cao nhất + Top-5 thấp nhất (table); placeholder "Bản đồ VN heatmap (sắp ra mắt)" |
-| C4 | Theo khoảng giá trị | Bar chart ngang (<1tỷ 18 / 1–5 22 / 5–10 28 / >10 34) |
-| C5 | Phiên đấu giá lại — pattern | Funnel 4-bước thuần Tailwind (100 → 70 → -8% → 50/20); button "Xem tài sản đang đấu lại" → toast |
-| C6 | Hall of Fame — tài sản đấu nhiều lần | Bảng 10 dòng (tài sản, loại, số lần, mức giảm TB); click row mở `Sheet` drawer hiển thị chi tiết mock |
-| C7 | Xu hướng theo thời gian | Line chart `recharts` 4 quý (Q4'24 → Q3'25, 28→22→20→19) |
+| Tháng (vd 09/2025) | **990 credit** | Mở vĩnh viễn snapshot Tháng đó của báo cáo |
+| Quý (vd Q3/2025) | **2.490 credit** | Mở vĩnh viễn snapshot Quý đó **+ tự động unlock 3 tháng bên trong** |
+| Năm (vd 2025) | **8.900 credit** | Mở vĩnh viễn snapshot Năm đó **+ tự động unlock 4 quý + 12 tháng bên trong** |
 
-Mỗi section dùng wrapper `ReportSection` (label C1–C7, có Insight box) và `hideDeepDive`.
+Mỗi unlock chỉ áp cho **1 báo cáo** (slug). Mua "Tháng 09/2025 — BĐS" không mở "Tháng 09/2025 — Outcomes".
+
+## Cấu trúc dữ liệu kỳ
+
+Khóa unlock dạng string: `"{slug}:{periodId}"`, ví dụ:
+- `bds:m-2025-09` (tháng)
+- `bds:q-2025-3` (quý)
+- `outcomes:y-2025` (năm)
+
+Helpers (`src/lib/reportPeriods.ts` mới):
+- `getMonthsInQuarter(year, q)` → `["m-2025-07","m-2025-08","m-2025-09"]`
+- `getQuartersInYear(year)` → 4 IDs
+- `getMonthsInYear(year)` → 12 IDs
+- `expandUnlock(periodId)` → tất cả periodId con cần auto-unlock
+- `formatPeriodLabel(periodId)` → "Tháng 09/2025", "Quý 3/2025", "Năm 2025"
+- `availablePeriods()` → 12 tháng gần nhất, 4 quý, 2 năm — config cứng cho từng báo cáo (sau này có thể đẩy vào mock data riêng)
+
+## Mock credit system (`src/lib/mockCredits.ts`)
+
+Thêm:
+- `DEEP_REPORT_PERIOD_PRICES = { month: 990, quarter: 2490, year: 8900 }`
+- `state.deepReportPeriodUnlocks: string[]` — danh sách `"{slug}:{periodId}"` đã mở
+- `isDeepReportPeriodUnlocked(slug, periodId)` → `boolean`
+- `unlockDeepReportPeriod(slug, periodId, label?)`:
+  - check không trùng
+  - check đủ credit theo loại kỳ (parse từ periodId)
+  - trừ credit, push tất cả unlock IDs (chính nó + con cháu qua `expandUnlock`) vào state — dedupe
+  - push transaction `unlock_deep_report` với mô tả "Mở khóa {label báo cáo} — {label kỳ}"
+- Migration trong `read()`: khởi tạo mảng nếu state cũ không có
+- Thêm `"unlock_deep_report"` vào `TransactionType` + icon mapping trong `CreditsTab.tsx`
+
+Expose từ `useCredits.tsx`:
+- `isDeepReportPeriodUnlocked(slug, periodId)`
+- `unlockDeepReportPeriod(slug, periodId, label?)`
+- `DEEP_REPORT_PERIOD_PRICES`
+
+## Component mới
+
+### `src/components/report/PeriodFilterTabs.tsx`
+Bộ lọc trên cùng mỗi báo cáo chuyên sâu:
+- Tabs: **Tháng | Quý | Năm**
+- Bên dưới: grid các kỳ khả dụng (chip-button)
+  - Mỗi chip: label kỳ + badge nhỏ ở góc:
+    - "Đã mở" (xanh) nếu unlocked
+    - "Mới" (cam) nếu là kỳ mới nhất
+    - icon Lock + giá nếu chưa mở
+- Click chip:
+  - Đã mở → set period đang xem (cập nhật URL `?period=...`)
+  - Chưa mở → mở `DeepReportPaywallDialog` với period đó
+- Default: kỳ Tháng mới nhất
+
+### `src/components/paywall/DeepReportPaywallDialog.tsx`
+Dialog xác nhận mua 1 kỳ cụ thể:
+- Header: "🔒 Mở khóa báo cáo: {label báo cáo}"
+- Body:
+  - Tên kỳ to: "Tháng 09/2025" + badge loại (Tháng/Quý/Năm)
+  - Highlight quyền lợi: "Mở vĩnh viễn — không hết hạn"
+  - Nếu Quý/Năm: liệt kê thêm "Bonus: tự động mở 3 tháng (Q3) hoặc 4 quý + 12 tháng (Năm)"
+  - Giá theo loại kỳ (lấy từ `DEEP_REPORT_PERIOD_PRICES`)
+  - Số dư + trạng thái đủ/không đủ credit
+- Nếu đủ credit → button "Dùng credit để mở" → call `unlockDeepReportPeriod` → toast → close
+- Nếu thiếu → button "Mua credit" → navigate `/profile?tab=credits&unlock=deep:{slug}:{periodId}&return={returnPath}`
+
+### `src/components/report/DeepReportGate.tsx`
+Wrapper layout chuẩn cho mọi trang chuyên sâu:
+
+```tsx
+<DeepReportGate
+  slug="bds"
+  label="Bất động sản"
+  availableMonths={[...]} availableQuarters={[...]} availableYears={[...]}
+  renderContent={(periodId) => <BdsReportContent periodId={periodId} />}
+/>
+```
+
+Hành vi:
+1. Chưa login → render `<ReportLockedCTA />` như cũ.
+2. Đã login:
+   - Render `<PeriodFilterTabs />` (luôn hiện, kể cả khi chưa mua kỳ nào)
+   - Render badge trạng thái kỳ đang chọn ("✓ Đã mở khóa vĩnh viễn" hoặc "🔒 Bản preview")
+   - Nếu kỳ đang chọn unlocked → render `renderContent(periodId)`
+   - Nếu chưa unlocked → render `<DeepReportPreview />` blur + nút mở dialog
+3. URL state: `?period=m-2025-09` để share / persist.
+
+### `src/components/report/DeepReportPreview.tsx`
+Preview khi chưa mua: hero + 5 highlights + danh sách section rút gọn (chỉ tiêu đề + 1 dòng insight) — phần còn lại blur bằng `LockedBlur` có sẵn.
+
+## Sửa file hiện có
+
+### `src/pages/PaymentResult.tsx`
+Thêm nhánh xử lý:
+```ts
+if (type === "deep") {
+  // unlockParam = "deep:{slug}:{periodId}"
+  unlockDeepReportPeriod(id, periodId);
+}
+```
+(Lưu ý parse: `["deep", slug, periodId]` — `periodId` có dấu `-`, cần `split` cẩn thận hoặc dùng pattern `unlock=deep:{slug}:{periodId}` parse bằng index 0/1/rest.)
+
+### `src/components/profile/tabs/CreditsTab.tsx`
+- Thêm `unlock_deep_report` vào icon map (icon `FileText` hoặc `BookOpen`).
+
+### `src/pages/MarketReportCategory.tsx` (BĐS)
+Bọc nội dung BĐS bằng `<DeepReportGate slug="bds" label="Bất động sản" ... />`. Truyền `periodId` vào `BdsReportContent` (chấp nhận prop optional — content mock không thay đổi theo kỳ ở giai đoạn này, chỉ hiển thị label kỳ ở đầu).
+
+### `src/pages/MarketReportOutcomes.tsx`
+Bọc bằng `<DeepReportGate slug="outcomes" label="Kết quả & không thành" ... />`.
+
+### `src/components/report/bds/BdsReportContent.tsx` & `outcomes/OutcomesContent.tsx`
+- Nhận prop `periodId?: string`.
+- Hiển thị thẻ nhỏ ở đầu Hero: "Đang xem: {periodLabel}" — chỉ visual, data vẫn từ mock cũ (sẽ swap khi có data thật).
+
+### `src/components/report/SectionOutcomes.tsx` (trên trang `/report`)
+Thêm icon `Lock` nhỏ + tooltip "Báo cáo chuyên sâu — mất phí" cạnh nút "Đào sâu Kết quả & không thành" (UX hint, không chặn click).
 
 ## Files
 
 **Mới:**
-- `src/pages/MarketReportOutcomes.tsx` — page shell + auth gate.
-- `src/components/report/outcomes/OutcomesHero.tsx`
-- `src/components/report/outcomes/OutcomesHighlights.tsx`
-- `src/components/report/outcomes/OutcomesTOC.tsx`
-- `src/components/report/outcomes/OutcomesContent.tsx` — orchestrator giống `BdsReportContent`.
-- `src/components/report/outcomes/OutcomesSectionMarketRate.tsx` (C1)
-- `src/components/report/outcomes/OutcomesSectionByCategory.tsx` (C2)
-- `src/components/report/outcomes/OutcomesSectionByRegion.tsx` (C3)
-- `src/components/report/outcomes/OutcomesSectionByValue.tsx` (C4)
-- `src/components/report/outcomes/OutcomesSectionReauction.tsx` (C5, funnel)
-- `src/components/report/outcomes/OutcomesSectionHallOfFame.tsx` (C6, table + drawer)
-- `src/components/report/outcomes/OutcomesSectionTrend.tsx` (C7, line chart)
-- `src/components/report/outcomes/OutcomesFinalCTA.tsx`
-- `src/lib/mockOutcomesReport.ts` — toàn bộ data cho C1–C7.
+- `src/lib/reportPeriods.ts`
+- `src/components/report/PeriodFilterTabs.tsx`
+- `src/components/report/DeepReportGate.tsx`
+- `src/components/report/DeepReportPreview.tsx`
+- `src/components/paywall/DeepReportPaywallDialog.tsx`
 
 **Sửa:**
-- `src/App.tsx` — thêm route `/report/deep/outcomes`.
-- `src/components/report/ReportSection.tsx` — thêm prop `deepDiveHref?: string`; nếu có dùng `<Link>` từ `react-router-dom` thay nút mở dialog (giữ nguyên dialog cho các section khác).
-- `src/components/report/SectionOutcomes.tsx` — pass `deepDiveHref="/report/deep/outcomes"`.
+- `src/lib/mockCredits.ts`
+- `src/hooks/useCredits.tsx`
+- `src/pages/PaymentResult.tsx`
+- `src/components/profile/tabs/CreditsTab.tsx`
+- `src/pages/MarketReportCategory.tsx`
+- `src/pages/MarketReportOutcomes.tsx`
+- `src/components/report/bds/BdsReportContent.tsx`
+- `src/components/report/outcomes/OutcomesContent.tsx`
+- `src/components/report/SectionOutcomes.tsx` (icon Lock)
 
 ## Ghi chú kỹ thuật
 
-- Charts: dùng `recharts` (đã có) cho donut C1 & line C7; C2/C4 dùng bar bằng div + Tailwind (đồng bộ style với `BdsSectionDistribution`).
-- Drawer C6: dùng `Sheet` từ `@/components/ui/sheet` (đã có trong project shadcn).
-- Toàn bộ màu lấy từ design tokens (`hsl(var(--primary))`, `--muted`, …); không hardcode hex.
-- Không cần thay đổi DB/edge function — toàn bộ là mock client-side.
+- Toàn bộ persist trong `localStorage` (đồng bộ kiến trúc mock hiện tại). Khi chuyển sang backend, chỉ thay impl của `unlockDeepReportPeriod` / `isDeepReportPeriodUnlocked`.
+- Auto-unlock con cháu xử lý ngay tại thời điểm mua (snapshot) — không tính lại lúc đọc, đảm bảo logic đơn giản.
+- Không tạo bảng DB / edge function mới.
+- Màu / spacing / typography lấy từ design tokens — không hardcode.

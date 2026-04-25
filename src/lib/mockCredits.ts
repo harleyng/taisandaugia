@@ -151,6 +151,7 @@ const write = (s: MockState) => {
     assetUnlocks: [...s.assetUnlocks],
     companyUnlocks: { ...s.companyUnlocks },
     ownerUnlocks: { ...s.ownerUnlocks },
+    deepReportUnlocks: [...(s.deepReportUnlocks ?? [])],
     transactions: [...s.transactions],
   };
   cached = next;

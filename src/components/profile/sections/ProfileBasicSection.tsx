@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Save, CheckCircle2, Coins, CalendarIcon } from "lucide-react";
+import { Loader2, Save, CheckCircle2, Coins, CalendarIcon, ShieldCheck, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -24,6 +24,7 @@ import {
 import { vietnamProvinces } from "@/constants/vietnam-locations";
 import { notifyProfileUpdated, useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import { RewardClaimDialog } from "@/components/onboarding/RewardClaimDialog";
+import { PhoneOtpDialog } from "@/components/profile/sections/PhoneOtpDialog";
 import { cn } from "@/lib/utils";
 
 interface Props {

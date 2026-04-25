@@ -142,17 +142,39 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
         <Info className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
       </div>
 
-      {/* Section 1: Range + Delta */}
-      <div className="rounded-xl border border-border bg-card p-4 mb-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {/* Range */}
-          <div className="md:border-r md:border-border md:pr-6">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-              Giá trúng ước tính
-              <Info className="h-3 w-3" aria-hidden />
+      {/* Locked: paywall preview (UI giống Lịch sử giá) */}
+      {!isUnlocked && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+          <div className="flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                Khoảng giá trúng ước tính, độ tin cậy & dữ liệu hỗ trợ
+              </p>
+              <p className="text-sm text-muted-foreground/70 italic flex items-center gap-1">
+                <ArrowRight className="w-3.5 h-3.5" /> Mở khoá để xem dự đoán giá trúng & phân tích chi tiết
+              </p>
             </div>
-            {isUnlocked ? (
-              <>
+          </div>
+          <Button size="sm" onClick={onUnlock} className="w-full sm:w-auto gap-1.5">
+            <Lock className="w-3.5 h-3.5" />
+            Mở khóa dự đoán – 59 credit
+          </Button>
+        </div>
+      )}
+
+      {/* Unlocked: full content */}
+      {isUnlocked && (
+        <>
+          {/* Section 1: Range + Delta */}
+          <div className="rounded-xl border border-border bg-card p-4 mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {/* Range */}
+              <div className="md:border-r md:border-border md:pr-6">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                  Giá trúng ước tính
+                  <Info className="h-3 w-3" aria-hidden />
+                </div>
                 <div className="text-2xl md:text-3xl font-bold text-primary leading-tight">
                   {formatPrice(predMin, "TOTAL")} – {formatPrice(predMax, "TOTAL")}
                 </div>
@@ -167,22 +189,14 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                     <span>{formatPrice(predMax, "TOTAL")}</span>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="text-2xl md:text-3xl font-bold text-primary blur-md select-none">
-                X.XX tỷ – X.XX tỷ
               </div>
-            )}
-          </div>
 
-          {/* Delta + trend */}
-          <div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-              So với giá khởi điểm
-              <Info className="h-3 w-3" aria-hidden />
-            </div>
-            {isUnlocked ? (
-              <>
+              {/* Delta + trend */}
+              <div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                  So với giá khởi điểm
+                  <Info className="h-3 w-3" aria-hidden />
+                </div>
                 <div className="text-2xl md:text-3xl font-bold text-emerald-600 leading-tight">
                   +{minPct}% đến +{maxPct}%
                 </div>
@@ -193,30 +207,22 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                   <TrendIcon className="h-3.5 w-3.5" />
                   {tBadge.text}
                 </div>
-              </>
-            ) : (
-              <div className="text-2xl md:text-3xl font-bold text-emerald-600 blur-md select-none">
-                +XX% đến +XX%
               </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Section 2: Three info cards */}
-      <div className="rounded-xl border border-border bg-card p-4 mb-3">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Confidence */}
-          <div className="md:border-r md:border-border md:pr-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-              </span>
-              Độ tin cậy dữ liệu
-              <Info className="h-3 w-3" aria-hidden />
             </div>
-            {isUnlocked ? (
-              <>
+          </div>
+
+          {/* Section 2: Three info cards */}
+          <div className="rounded-xl border border-border bg-card p-4 mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Confidence */}
+              <div className="md:border-r md:border-border md:pr-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <span className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                  </span>
+                  Độ tin cậy dữ liệu
+                  <Info className="h-3 w-3" aria-hidden />
+                </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-primary leading-none">{confidence}%</span>
                 </div>
@@ -226,23 +232,17 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                 <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
                   Độ tin cậy dựa trên số lượng dữ liệu tương tự và mức độ ổn định của giá.
                 </p>
-              </>
-            ) : (
-              <div className="text-3xl font-bold blur-sm select-none">XX%</div>
-            )}
-          </div>
+              </div>
 
-          {/* Supporting info */}
-          <div className="md:border-r md:border-border md:pr-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="h-7 w-7 rounded-full bg-emerald-100 flex items-center justify-center">
-                <Database className="h-4 w-4 text-emerald-600" />
-              </span>
-              Thông tin hỗ trợ
-              <Info className="h-3 w-3" aria-hidden />
-            </div>
-            {isUnlocked ? (
-              <>
+              {/* Supporting info */}
+              <div className="md:border-r md:border-border md:pr-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <span className="h-7 w-7 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <Database className="h-4 w-4 text-emerald-600" />
+                  </span>
+                  Thông tin hỗ trợ
+                  <Info className="h-3 w-3" aria-hidden />
+                </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-bold text-emerald-600 leading-none">{similarSessions}</span>
                   <span className="text-sm text-muted-foreground">phiên</span>
@@ -251,23 +251,17 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                 <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
                   Dữ liệu từ các tài sản tương tự về đặc điểm và vị trí.
                 </p>
-              </>
-            ) : (
-              <div className="text-3xl font-bold blur-sm select-none">XX phiên</div>
-            )}
-          </div>
+              </div>
 
-          {/* Time range */}
-          <div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="h-7 w-7 rounded-full bg-violet-100 flex items-center justify-center">
-                <CalendarDays className="h-4 w-4 text-violet-600" />
-              </span>
-              Khoảng thời gian
-              <Info className="h-3 w-3" aria-hidden />
-            </div>
-            {isUnlocked ? (
-              <>
+              {/* Time range */}
+              <div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <span className="h-7 w-7 rounded-full bg-violet-100 flex items-center justify-center">
+                    <CalendarDays className="h-4 w-4 text-violet-600" />
+                  </span>
+                  Khoảng thời gian
+                  <Info className="h-3 w-3" aria-hidden />
+                </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-bold text-violet-600 leading-none">90</span>
                   <span className="text-sm text-muted-foreground">ngày</span>
@@ -276,85 +270,69 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                 <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
                   Từ ngày {formatVnDate(start)} đến {formatVnDate(now)}
                 </p>
-              </>
-            ) : (
-              <div className="text-3xl font-bold blur-sm select-none">XX ngày</div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Section 3: Neutral recommendation */}
-      {isUnlocked && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 mb-3">
-          <div className="flex items-start gap-3">
-            <span className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-              <Lightbulb className="h-4 w-4 text-amber-600" />
-            </span>
-            <div className="flex-1">
-              <div className="flex items-center gap-1 text-sm font-semibold text-amber-900 mb-1">
-                Khuyến nghị
-                <Info className="h-3 w-3" aria-hidden />
-              </div>
-              <p className="text-xs text-amber-900/90 leading-relaxed">
-                Giá ước tính dựa trên dữ liệu đấu giá gần đây với các tài sản tương tự.{" "}
-                <span className="font-semibold">
-                  Giá thực tế có thể thay đổi tùy theo diễn biến phiên đấu giá
-                </span>{" "}
-                và các yếu tố thị trường khác tại thời điểm đấu giá.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Section 4: Explainability */}
-      {isUnlocked && (
-        <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 mb-3">
-          <div className="flex items-start gap-3">
-            <span className="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
-              <ClipboardList className="h-4 w-4 text-sky-600" />
-            </span>
-            <div className="flex-1">
-              <div className="flex items-center gap-1 text-sm font-semibold text-sky-900 mb-2">
-                Dựa trên dữ liệu
-                <Info className="h-3 w-3" aria-hidden />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
-                {[
-                  "Các tài sản tương tự về loại và đặc điểm",
-                  `Cùng khu vực (${districtName})`,
-                  `Diện tích tương đương (${bucketText})`,
-                  "Dữ liệu đấu giá thành công",
-                ].map((t) => (
-                  <div key={t} className="flex items-start gap-1.5 text-xs text-sky-900">
-                    <Check className="h-3.5 w-3.5 text-sky-600 shrink-0 mt-0.5" />
-                    <span>{t}</span>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Disclaimer footer */}
-      {isUnlocked && (
-        <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground mt-2">
-          <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-          <span>
-            Lưu ý: Đây là ước tính tham khảo, không phải cam kết kết quả. Vui lòng cân nhắc kỹ trước
-            khi tham gia đấu giá.
-          </span>
-        </div>
-      )}
+          {/* Section 3: Neutral recommendation */}
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 mb-3">
+            <div className="flex items-start gap-3">
+              <span className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <Lightbulb className="h-4 w-4 text-amber-600" />
+              </span>
+              <div className="flex-1">
+                <div className="flex items-center gap-1 text-sm font-semibold text-amber-900 mb-1">
+                  Khuyến nghị
+                  <Info className="h-3 w-3" aria-hidden />
+                </div>
+                <p className="text-xs text-amber-900/90 leading-relaxed">
+                  Giá ước tính dựa trên dữ liệu đấu giá gần đây với các tài sản tương tự.{" "}
+                  <span className="font-semibold">
+                    Giá thực tế có thể thay đổi tùy theo diễn biến phiên đấu giá
+                  </span>{" "}
+                  và các yếu tố thị trường khác tại thời điểm đấu giá.
+                </p>
+              </div>
+            </div>
+          </div>
 
-      {/* CTA */}
-      {!isUnlocked && (
-        <Button onClick={onUnlock} className="w-full gap-2 mt-3">
-          <Lock className="h-4 w-4" />
-          Mở khóa dự đoán – 59 credit
-        </Button>
+          {/* Section 4: Explainability */}
+          <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 mb-3">
+            <div className="flex items-start gap-3">
+              <span className="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+                <ClipboardList className="h-4 w-4 text-sky-600" />
+              </span>
+              <div className="flex-1">
+                <div className="flex items-center gap-1 text-sm font-semibold text-sky-900 mb-2">
+                  Dựa trên dữ liệu
+                  <Info className="h-3 w-3" aria-hidden />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                  {[
+                    "Các tài sản tương tự về loại và đặc điểm",
+                    `Cùng khu vực (${districtName})`,
+                    `Diện tích tương đương (${bucketText})`,
+                    "Dữ liệu đấu giá thành công",
+                  ].map((t) => (
+                    <div key={t} className="flex items-start gap-1.5 text-xs text-sky-900">
+                      <Check className="h-3.5 w-3.5 text-sky-600 shrink-0 mt-0.5" />
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Disclaimer footer */}
+          <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground mt-2">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>
+              Lưu ý: Đây là ước tính tham khảo, không phải cam kết kết quả. Vui lòng cân nhắc kỹ trước
+              khi tham gia đấu giá.
+            </span>
+          </div>
+        </>
       )}
     </Card>
   );

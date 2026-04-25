@@ -62,6 +62,8 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
   }, [initialName]);
   useEffect(() => {
     setPhone(basic.phone ?? "");
+    setPhoneVerified(Boolean(basic.phone_verified));
+    setVerifiedPhone(basic.phone_verified ? basic.phone ?? "" : "");
     setRole((basic.role as UserRole) ?? "");
     setProvince(basic.province ?? "");
     setBirthDate(

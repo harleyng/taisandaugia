@@ -1,5 +1,7 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift } from "lucide-react";
+import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
+import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";

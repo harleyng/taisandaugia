@@ -90,11 +90,42 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
   const birthDateObj = birthDate ? parseISO(birthDate) : undefined;
   const validBirth = birthDateObj && isValid(birthDateObj) ? birthDateObj : undefined;
 
+  const PHONE_REGEX = /^(0|\+84)[0-9]{9,10}$/;
+  const phoneIsValid = PHONE_REGEX.test(phone.trim());
+  const isCurrentPhoneVerified = phoneVerified && phone.trim() === verifiedPhone.trim() && phone.trim() !== "";
+
+  const handlePhoneChange = (value: string) => {
+    const cleaned = value.replace(/[^0-9+]/g, "");
+    setPhone(cleaned);
+    // If user edits to a number different from the verified one, reset verified state
+    if (cleaned.trim() !== verifiedPhone.trim()) {
+      setPhoneVerified(false);
+    } else if (verifiedPhone) {
+      // editing back to the verified number — restore verified state
+      setPhoneVerified(true);
+    }
+  };
+
+  const handleOtpVerified = () => {
+    setPhoneVerified(true);
+    setVerifiedPhone(phone.trim());
+  };
+
+  const handleResetPhone = () => {
+    setPhoneVerified(false);
+    setVerifiedPhone("");
+    setPhone("");
+  };
+
   const filledOk = Boolean(
-    name.trim() && phone && role && province && birthDate && gender
+    name.trim() && phone && isCurrentPhoneVerified && role && province && birthDate && gender
   );
 
   const handleSave = async () => {
+    if (phone && !isCurrentPhoneVerified) {
+      toast.error("Vui lòng xác thực số điện thoại trước khi lưu");
+      return;
+    }
     setSaving(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -105,6 +136,7 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
 
     const nextBasic = {
       phone: phone || undefined,
+      phone_verified: phone ? isCurrentPhoneVerified : false,
       role: (role || undefined) as UserRole | undefined,
       province: province || undefined,
       birth_date: birthDate || undefined,

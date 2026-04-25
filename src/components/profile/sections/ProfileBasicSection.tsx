@@ -36,15 +36,21 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
   const sectionRef = useRef<HTMLDivElement>(null);
 
   const basic = agentInfo?.basic ?? {};
+  const initialBirth = basic.birth_date
+    ? basic.birth_date
+    : basic.birth_year
+    ? `${basic.birth_year}-01-01`
+    : "";
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState(basic.phone ?? "");
   const [role, setRole] = useState<UserRole | "">((basic.role as UserRole) ?? "");
   const [province, setProvince] = useState(basic.province ?? "");
-  const [birthYear, setBirthYear] = useState<string>(basic.birth_year ? String(basic.birth_year) : "");
+  const [birthDate, setBirthDate] = useState<string>(initialBirth);
   const [gender, setGender] = useState<Gender | "">((basic.gender as Gender) ?? "");
   const [saving, setSaving] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
   const [wasReadyBefore, setWasReadyBefore] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Sync from server snapshot when it changes
   useEffect(() => {
@@ -54,7 +60,13 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
     setPhone(basic.phone ?? "");
     setRole((basic.role as UserRole) ?? "");
     setProvince(basic.province ?? "");
-    setBirthYear(basic.birth_year ? String(basic.birth_year) : "");
+    setBirthDate(
+      basic.birth_date
+        ? basic.birth_date
+        : basic.birth_year
+        ? `${basic.birth_year}-01-01`
+        : ""
+    );
     setGender((basic.gender as Gender) ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentInfo]);
@@ -69,8 +81,11 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
   const basicTask = tasks.find((t) => t.key === "basic");
   const status = basicTask?.status ?? "todo";
 
+  const birthDateObj = birthDate ? parseISO(birthDate) : undefined;
+  const validBirth = birthDateObj && isValid(birthDateObj) ? birthDateObj : undefined;
+
   const filledOk = Boolean(
-    name.trim() && phone && role && province && birthYear && gender
+    name.trim() && phone && role && province && birthDate && gender
   );
 
   const handleSave = async () => {
@@ -86,7 +101,8 @@ export const ProfileBasicSection = ({ initialName, onNameChange }: Props) => {
       phone: phone || undefined,
       role: (role || undefined) as UserRole | undefined,
       province: province || undefined,
-      birth_year: birthYear ? Number(birthYear) : undefined,
+      birth_date: birthDate || undefined,
+      birth_year: validBirth ? validBirth.getFullYear() : undefined,
       gender: (gender || undefined) as Gender | undefined,
     };
 

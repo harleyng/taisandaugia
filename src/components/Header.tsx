@@ -155,6 +155,20 @@ export const Header = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           {session ? (
             <>
+              {hasUnclaimed && (
+                <button
+                  onClick={() => setRewardOpen(true)}
+                  className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors animate-pulse hover:animate-none ${
+                    transparent
+                      ? "bg-amber-400/90 text-amber-950 hover:bg-amber-300"
+                      : "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:opacity-90"
+                  }`}
+                  title="Nhận thưởng"
+                >
+                  <Gift className="h-3.5 w-3.5" />
+                  +{availableCredits}
+                </button>
+              )}
               <button
                 onClick={() => navigate("/profile?tab=credits")}
                 className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${

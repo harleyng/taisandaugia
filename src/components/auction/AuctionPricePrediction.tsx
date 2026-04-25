@@ -325,7 +325,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
               <div className="flex-1">
                 <div className="flex items-center gap-1 text-sm font-semibold text-sky-900 mb-2">
                   Dựa trên dữ liệu
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Các tài sản được chọn dựa trên loại tài sản, khu vực và đặc điểm tương tự để đảm bảo tính so sánh." />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
                   {[

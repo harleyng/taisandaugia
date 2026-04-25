@@ -5,6 +5,8 @@ import { ReportTopNav } from "@/components/report/ReportTopNav";
 import { ReportHero } from "@/components/report/ReportHero";
 import { ReportTOC } from "@/components/report/ReportTOC";
 import { ReportHighlights } from "@/components/report/ReportHighlights";
+import { PeriodPickerCompact } from "@/components/report/PeriodPickerCompact";
+import { latestPeriodId } from "@/lib/reportPeriods";
 import { SectionOverview } from "@/components/report/SectionOverview";
 import { SectionCompetition } from "@/components/report/SectionCompetition";
 import { SectionOutcomes } from "@/components/report/SectionOutcomes";
@@ -17,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const MarketReport = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [periodId, setPeriodId] = useState<string>(() => latestPeriodId("month"));
 
   useEffect(() => {
     document.title = "Báo cáo thị trường đấu giá tài sản Việt Nam";
@@ -47,14 +50,16 @@ const MarketReport = () => {
     <div className="min-h-screen bg-background">
       <ReportTopNav />
       <main>
-        <ReportHero />
+        <ReportHero periodId={periodId} />
 
         <div className="container py-8 md:py-12">
           <div className="grid lg:grid-cols-[240px_1fr] gap-8 lg:gap-10">
             <ReportTOC />
 
-            <div className="min-w-0 space-y-2">
-              <ReportHighlights />
+            <div className="min-w-0 space-y-4">
+              <PeriodPickerCompact value={periodId} onChange={setPeriodId} />
+
+              <ReportHighlights periodId={periodId} />
 
               {authLoading ? (
                 <div className="space-y-4 pt-4">

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { Gavel } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ReportTopNav } from "@/components/report/ReportTopNav";
 import { ReportHero } from "@/components/report/ReportHero";
 import { ReportTOC } from "@/components/report/ReportTOC";
 import { ReportHighlights } from "@/components/report/ReportHighlights";
 import { PeriodPickerCompact } from "@/components/report/PeriodPickerCompact";
+import { reportMeta } from "@/lib/mockMarketReport";
 import { latestPeriodId } from "@/lib/reportPeriods";
 import { SectionOverview } from "@/components/report/SectionOverview";
 import { SectionCompetition } from "@/components/report/SectionCompetition";

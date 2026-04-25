@@ -50,6 +50,8 @@ export const Header = () => {
   const [profileName, setProfileName] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { balance } = useCredits();
+  const { hasUnclaimed, availableCredits } = useOnboardingTasks();
+  const [rewardOpen, setRewardOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));

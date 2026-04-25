@@ -378,6 +378,7 @@ export const Header = () => {
           </Sheet>
         </div>
       </div>
+      <RewardTasksDialog open={rewardOpen} onOpenChange={setRewardOpen} />
     </header>
   );
 };

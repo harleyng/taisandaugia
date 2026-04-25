@@ -41,23 +41,32 @@ const ProfilePage = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/"); return; }
-      setUserId(session.user.id);
-      setEmail(session.user.email || session.user.phone || "");
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { navigate("/"); return; }
+        setUserId(session.user.id);
+        setEmail(session.user.email || session.user.phone || "");
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("name, agent_info")
-        .eq("id", session.user.id)
-        .single();
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("name, agent_info")
+          .eq("id", session.user.id)
+          .maybeSingle();
 
-      if (data) {
-        setName(data.name || "");
-        const agentInfo = data.agent_info as any;
-        setAvatarUrl(agentInfo?.profile_picture_url || null);
+        if (error) {
+          console.error("Failed to load profile:", error);
+        }
+
+        if (data) {
+          setName(data.name || "");
+          const agentInfo = data.agent_info as any;
+          setAvatarUrl(agentInfo?.profile_picture_url || null);
+        }
+      } catch (e) {
+        console.error("Profile fetch exception:", e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchProfile();
   }, [navigate]);

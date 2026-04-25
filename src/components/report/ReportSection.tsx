@@ -10,6 +10,7 @@ interface ReportSectionProps {
   deepDiveLabel: string;
   children: React.ReactNode;
   className?: string;
+  hideDeepDive?: boolean;
 }
 
 export const ReportSection = ({
@@ -20,6 +21,7 @@ export const ReportSection = ({
   deepDiveLabel,
   children,
   className,
+  hideDeepDive,
 }: ReportSectionProps) => {
   return (
     <section id={id} className={cn("scroll-mt-20 pt-10 md:pt-14 border-t border-border", className)}>
@@ -44,10 +46,12 @@ export const ReportSection = ({
 
       <div className="mb-6">{children}</div>
 
-      <Button variant="outline" className="group">
-        Đào sâu {deepDiveLabel}
-        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-      </Button>
+      {!hideDeepDive && (
+        <Button variant="outline" className="group">
+          Đào sâu {deepDiveLabel}
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </Button>
+      )}
     </section>
   );
 };

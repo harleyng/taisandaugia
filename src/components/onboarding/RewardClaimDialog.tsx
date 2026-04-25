@@ -23,7 +23,7 @@ const fireSideConfetti = () => {
     scalar: 1,
     zIndex: 9999,
     colors: ["#FFD166", "#06D6A0", "#118AB2", "#EF476F", "#F78C6B", "#8338EC"],
-  } as const;
+  };
 
   // Left cannon
   confetti({

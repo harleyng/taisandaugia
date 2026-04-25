@@ -96,6 +96,7 @@ export const isBasicComplete = (basic?: OnboardingBasic, name?: string | null): 
     name &&
       name.trim() &&
       basic.phone &&
+      basic.phone_verified &&
       basic.role &&
       basic.province &&
       (basic.birth_date || basic.birth_year) &&

@@ -98,18 +98,26 @@ export const SectionCategories = () => {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {deepDiveLinks.map((d) => {
               const Icon = iconMap[d.iconName as keyof typeof iconMap] ?? Building2;
+              const available = AVAILABLE_SLUGS.has(d.slug);
               return (
                 <div
                   key={d.slug}
                   className="rounded-lg border border-border p-4 flex flex-col gap-3 hover:border-primary/40 hover:bg-muted/30 transition-colors"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Icon className="h-4.5 w-4.5 text-primary" />
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <Icon className="h-4.5 w-4.5 text-primary" />
+                      </div>
+                      <h4 className="text-sm font-semibold text-foreground leading-tight truncate">
+                        {d.label}
+                      </h4>
                     </div>
-                    <h4 className="text-sm font-semibold text-foreground leading-tight">
-                      {d.label}
-                    </h4>
+                    {!available && (
+                      <Badge variant="secondary" className="text-[10px] shrink-0">
+                        Sắp ra mắt
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
@@ -130,12 +138,12 @@ export const SectionCategories = () => {
                   </p>
 
                   <Button
-                    variant="outline"
+                    variant={available ? "default" : "outline"}
                     size="sm"
                     className="group justify-between"
-                    onClick={() => handleDetail(d.label)}
+                    onClick={() => handleDetail(d.slug, d.label)}
                   >
-                    Xem chi tiết
+                    {available ? "Xem báo cáo chi tiết" : "Xem chi tiết"}
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </div>

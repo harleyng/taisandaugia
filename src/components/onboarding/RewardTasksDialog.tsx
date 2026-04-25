@@ -57,42 +57,51 @@ export const RewardTasksDialog = ({ open, onOpenChange }: Props) => {
               <div
                 key={task.key}
                 className={cn(
-                  "rounded-xl border p-4 transition-colors",
+                  "rounded-xl border p-4 transition-all",
                   isClaimed
-                    ? "border-border bg-muted/30 opacity-70"
+                    ? "border-border bg-muted/40 opacity-60"
                     : isReady
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-border bg-card"
+                      ? "border-primary/50 bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                      : "border-primary/30 bg-card hover:border-primary/50"
                 )}
               >
-                <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-2 min-w-0 flex-1">
                     {isClaimed ? (
                       <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                     ) : isReady ? (
                       <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                     ) : (
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0 mt-0.5" />
+                      <div className="h-5 w-5 rounded-full border-2 border-primary/40 shrink-0 mt-0.5" />
                     )}
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm text-foreground">{task.title}</p>
+                      <p className={cn(
+                        "font-semibold text-sm",
+                        isClaimed ? "text-muted-foreground line-through" : "text-foreground"
+                      )}>
+                        {task.title}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-0.5">{task.description}</p>
                     </div>
                   </div>
                   <div className="shrink-0">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                      <Coins className="h-3 w-3" />+{task.credits}
-                    </span>
+                    {isClaimed ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        <CheckCircle2 className="h-3 w-3" />Đã nhận
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                        <Coins className="h-3 w-3" />+{task.credits}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {isClaimed ? (
-                  <p className="text-xs text-muted-foreground italic mt-2">Đã nhận thưởng</p>
-                ) : isReady ? (
+                {isReady ? (
                   <Button
                     onClick={() => handleClaim(task.key)}
                     disabled={claiming === task.key}
-                    className="w-full mt-2"
+                    className="w-full mt-3"
                     size="sm"
                   >
                     {claiming === task.key ? (
@@ -103,17 +112,17 @@ export const RewardTasksDialog = ({ open, onOpenChange }: Props) => {
                       </>
                     )}
                   </Button>
-                ) : (
+                ) : !isClaimed ? (
                   <Button
                     onClick={() => handleGo(task.anchor)}
                     variant="outline"
-                    className="w-full mt-2"
+                    className="w-full mt-3"
                     size="sm"
                   >
                     Đi đến {task.key === "basic" ? "hồ sơ" : "khai báo nhu cầu"}
                     <ArrowRight className="h-4 w-4" />
                   </Button>
-                )}
+                ) : null}
               </div>
             );
           })}

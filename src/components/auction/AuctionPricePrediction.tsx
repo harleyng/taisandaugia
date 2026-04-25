@@ -263,7 +263,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
                     <Database className="h-4 w-4 text-emerald-600" />
                   </span>
                   Thông tin hỗ trợ
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Số phiên đấu giá tương tự được sử dụng để phân tích. Dữ liệu càng nhiều thì kết quả càng ổn định." />
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-bold text-emerald-600 leading-none">{similarSessions}</span>

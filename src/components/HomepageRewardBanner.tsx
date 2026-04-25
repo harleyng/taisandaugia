@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 const DISMISS_KEY = "onboarding.banner.dismissed";
 
 export const HomepageRewardBanner = () => {
-  const { isAuthed, hasUnclaimed, availableCredits, tasks } = useOnboardingTasks();
+  const { isAuthed, availableCredits, tasks } = useOnboardingTasks();
+  const hasIncompleteTasks = tasks.some((t) => t.status !== "claimed");
   const [dismissed, setDismissed] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -18,7 +19,7 @@ export const HomepageRewardBanner = () => {
     }
   }, []);
 
-  if (!isAuthed || !hasUnclaimed || dismissed) return null;
+  if (!isAuthed || !hasIncompleteTasks || dismissed) return null;
 
   const totalTokens = tasks
     .filter((t) => t.status === "ready")

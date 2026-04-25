@@ -98,7 +98,7 @@ export const isBasicComplete = (basic?: OnboardingBasic, name?: string | null): 
       basic.phone &&
       basic.role &&
       basic.province &&
-      basic.birth_year &&
+      (basic.birth_date || basic.birth_year) &&
       basic.gender
   );
 };

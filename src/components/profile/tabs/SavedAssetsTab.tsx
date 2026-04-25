@@ -3,12 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, Trash2 } from "lucide-react";
+import { Heart, Trash2, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice, formatAddress } from "@/utils/formatters";
 
-export const SavedAssetsTab = () => {
+interface SavedAssetsTabProps {
+  fromNotifications?: boolean;
+}
+
+export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProps) => {
   const { savedIds, toggleSave } = useAssetActions();
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

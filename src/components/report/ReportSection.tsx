@@ -1,5 +1,14 @@
-import { ArrowRight, Lightbulb } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Lightbulb, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 interface ReportSectionProps {
@@ -23,6 +32,8 @@ export const ReportSection = ({
   className,
   hideDeepDive,
 }: ReportSectionProps) => {
+  const [open, setOpen] = useState(false);
+
   return (
     <section id={id} className={cn("scroll-mt-20 pt-10 md:pt-14 border-t border-border", className)}>
       <div className="mb-6">
@@ -47,11 +58,29 @@ export const ReportSection = ({
       <div className="mb-6">{children}</div>
 
       {!hideDeepDive && (
-        <Button variant="outline" className="group">
+        <Button variant="outline" className="group" onClick={() => setOpen(true)}>
           Đào sâu {deepDiveLabel}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </Button>
       )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+              <Sparkles className="h-6 w-6 text-primary" />
+            </div>
+            <DialogTitle className="text-center">Sắp ra mắt</DialogTitle>
+            <DialogDescription className="text-center">
+              Báo cáo chuyên sâu cho phần "{deepDiveLabel}" đang được hoàn thiện và sẽ
+              có mặt trong bản cập nhật sắp tới.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center">
+            <Button onClick={() => setOpen(false)}>Đã hiểu</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

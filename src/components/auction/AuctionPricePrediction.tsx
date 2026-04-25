@@ -217,7 +217,7 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
               <div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
                   So với giá khởi điểm
-                  <Info className="h-3 w-3" aria-hidden />
+                  <InfoTip content="Mức chênh lệch giữa giá khởi điểm và giá trúng trong các phiên tương tự. Giúp ước lượng mức tăng thường xảy ra." />
                 </div>
                 <div className="text-2xl md:text-3xl font-bold text-emerald-600 leading-tight">
                   +{minPct}% đến +{maxPct}%

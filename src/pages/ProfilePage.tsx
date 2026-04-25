@@ -86,7 +86,7 @@ const ProfilePage = () => {
       <main className="flex-1 container py-6 md:py-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6">
           <ProfileSidebar
-            activeTab={activeTab}
+            activeTab={highlightedTab}
             onChange={setActiveTab}
             name={resolveDisplayName(name, userId)}
             email={email}
@@ -104,7 +104,7 @@ const ProfilePage = () => {
                 onAvatarChange={setAvatarUrl}
               />
             )}
-            {activeTab === "saved" && <SavedAssetsTab />}
+            {activeTab === "saved" && <SavedAssetsTab fromNotifications={fromParam === "notifications"} />}
             {activeTab === "credits" && <CreditsTab />}
             {activeTab === "password" && <PasswordTab />}
             {activeTab === "notifications" && <NotificationsTab />}

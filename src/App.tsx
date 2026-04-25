@@ -21,6 +21,7 @@ import PaymentResult from "./pages/PaymentResult";
 import VnpayCheckout from "./pages/VnpayCheckout";
 import MarketReport from "./pages/MarketReport";
 import MarketReportCategory from "./pages/MarketReportCategory";
+import MarketReportOutcomes from "./pages/MarketReportOutcomes";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/auctions/:id" element={<AuctionDetail />} />
             <Route path="/report" element={<MarketReport />} />
             <Route path="/report/:slug" element={<MarketReportCategory />} />
+            <Route path="/report/deep/outcomes" element={<MarketReportOutcomes />} />
             <Route path="/install" element={<PWAInstall />} />
 
             {/* Credits */}

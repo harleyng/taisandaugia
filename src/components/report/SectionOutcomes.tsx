@@ -13,6 +13,7 @@ export const SectionOutcomes = () => {
       title="Kết quả & không thành"
       keyInsight={`24% phiên đấu giá kết thúc không có người trúng — và ${outcomeMeta.reauctionRate}% trong số đó được tổ chức lại trong ${outcomeMeta.reauctionWindow} ngày, thường ở giá thấp hơn.`}
       deepDiveLabel="Kết quả & không thành"
+      deepDiveHref="/report/deep/outcomes"
     >
       <Card className="p-6">
         <div className="grid md:grid-cols-[1fr_1fr] gap-6 items-center">

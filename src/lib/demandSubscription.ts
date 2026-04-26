@@ -94,7 +94,9 @@ export interface DemandSubscriptionState {
   daysRemaining: number;
 }
 
-export const getDemandSubscription = (): DemandSubscriptionState => {
+let cachedSnapshot: DemandSubscriptionState | null = null;
+
+const computeSnapshot = (): DemandSubscriptionState => {
   const s = read();
   if (!s) return { status: "NOT_SUBSCRIBED", tier: null, startedAt: null, expiresAt: null, daysRemaining: 0 };
   const now = Date.now();
@@ -110,7 +112,30 @@ export const getDemandSubscription = (): DemandSubscriptionState => {
   };
 };
 
+const snapshotsEqual = (a: DemandSubscriptionState, b: DemandSubscriptionState) =>
+  a.status === b.status &&
+  a.tier === b.tier &&
+  a.startedAt === b.startedAt &&
+  a.expiresAt === b.expiresAt &&
+  a.daysRemaining === b.daysRemaining;
+
+export const getDemandSubscription = (): DemandSubscriptionState => {
+  const next = computeSnapshot();
+  if (cachedSnapshot && snapshotsEqual(cachedSnapshot, next)) return cachedSnapshot;
+  cachedSnapshot = next;
+  return cachedSnapshot;
+};
+
 export const getState = getDemandSubscription;
+
+// Invalidate cached snapshot whenever underlying state may have changed
+const invalidateSnapshot = () => {
+  cachedSnapshot = null;
+};
+if (typeof window !== "undefined") {
+  window.addEventListener(EVT, invalidateSnapshot);
+  window.addEventListener("storage", invalidateSnapshot);
+}
 
 // Imports: lấy mockCredits read/write trực tiếp để trừ + log transaction.
 import {

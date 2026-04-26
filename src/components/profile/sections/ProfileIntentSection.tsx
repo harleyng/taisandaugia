@@ -16,6 +16,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Loader2, Save, CheckCircle2, Coins, ChevronsUpDown, Check, X, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useAuctionListings } from "@/hooks/useAuctionListings";
+import { countMatches } from "@/lib/demandMatch";
 import {
   BUDGET_OPTIONS,
   EXPERIENCE_OPTIONS,
@@ -37,6 +40,8 @@ import { cn } from "@/lib/utils";
 
 export const ProfileIntentSection = () => {
   const { agentInfo, tasks, refresh } = useOnboardingTasks();
+  const { data: allListings } = useAuctionListings();
+  const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
 
   const intent = agentInfo?.intent ?? {};
@@ -130,6 +135,17 @@ export const ProfileIntentSection = () => {
 
     if (!wasComplete && willBeComplete && !agentInfo?.rewards?.intent_claimed_at) {
       setTimeout(() => setShowClaim(true), 300);
+    } else if (allListings && allListings.length > 0) {
+      // Trigger A: thông báo số lượng tài sản phù hợp
+      const matches = countMatches(allListings, nextIntent);
+      if (matches > 0) {
+        toast.success(`Có ${matches} tài sản phù hợp với nhu cầu của bạn`, {
+          action: {
+            label: "Xem ngay",
+            onClick: () => navigate("/listings"),
+          },
+        });
+      }
     }
   };
 

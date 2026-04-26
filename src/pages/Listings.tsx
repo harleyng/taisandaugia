@@ -17,6 +17,12 @@ import { useSearchParams, Link } from "react-router-dom";
 import { type AuctionFilters, defaultAuctionFilters } from "@/types/auction-filters.types";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import { useAuctionOrgNames } from "@/hooks/useAuctionOrgNames";
+import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
+import { useDemandSubscription } from "@/hooks/useDemandSubscription";
+import { countMatches, hasIntent } from "@/lib/demandMatch";
+import { DemandUpsellBanner } from "@/components/demand/DemandUpsellBanner";
+import { DemandEmptyMatch } from "@/components/demand/DemandEmptyMatch";
+import { DemandStatusBadge } from "@/components/demand/DemandStatusBadge";
 
 type SortMode = "newest" | "price-asc" | "price-desc";
 
@@ -58,6 +64,10 @@ const Listings = () => {
   const orgNameById = useAuctionOrgNames((listings || []).map((l) => l.auction_org_id));
   const { openAuthDialog } = useAuthDialog();
   const { savedIds, toggleSave } = useAssetActions();
+  const { agentInfo } = useOnboardingTasks();
+  const { status: demandStatus } = useDemandSubscription();
+  const intent = agentInfo?.intent ?? null;
+  const userHasIntent = hasIntent(intent);
   const [session, setSession] = useState<any>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -200,11 +210,16 @@ const Listings = () => {
 
       <main className="container py-6 flex-1">
         {/* Page Header */}
-        <div className="mb-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Danh Sách Tài Sản Đấu Giá</h1>
-          <p className="text-muted-foreground mt-1">
-            Tìm thấy <span className="font-semibold text-foreground">{filteredListings.length}</span> tài sản
-          </p>
+        <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Danh Sách Tài Sản Đấu Giá</h1>
+            <p className="text-muted-foreground mt-1">
+              Tìm thấy <span className="font-semibold text-foreground">{filteredListings.length}</span> tài sản
+            </p>
+          </div>
+          {session && userHasIntent && demandStatus !== "NOT_SUBSCRIBED" && (
+            <DemandStatusBadge />
+          )}
         </div>
 
         {/* Quick Filters + Sort bar */}
@@ -233,6 +248,15 @@ const Listings = () => {
           filters={filters}
           onApply={handleFiltersChange}
         />
+
+        {/* Demand upsell banner — Trigger B */}
+        {session &&
+          userHasIntent &&
+          demandStatus === "NOT_SUBSCRIBED" &&
+          !isLoading &&
+          countMatches(filteredListings, intent) > 0 && (
+            <DemandUpsellBanner matchCount={countMatches(filteredListings, intent)} />
+          )}
 
         {/* Content */}
         {isLoading ? (
@@ -308,6 +332,8 @@ const Listings = () => {
               </p>
             )}
           </>
+        ) : userHasIntent && session ? (
+          <DemandEmptyMatch onResetFilters={resetFilters} />
         ) : (
           <div className="text-center py-12 bg-card rounded-lg border border-border">
             <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />

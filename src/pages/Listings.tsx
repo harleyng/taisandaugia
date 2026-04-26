@@ -249,6 +249,15 @@ const Listings = () => {
           onApply={handleFiltersChange}
         />
 
+        {/* Demand upsell banner — Trigger B */}
+        {session &&
+          userHasIntent &&
+          demandStatus === "NOT_SUBSCRIBED" &&
+          !isLoading &&
+          countMatches(filteredListings, intent) > 0 && (
+            <DemandUpsellBanner matchCount={countMatches(filteredListings, intent)} />
+          )}
+
         {/* Content */}
         {isLoading ? (
           <div className="text-center py-12">

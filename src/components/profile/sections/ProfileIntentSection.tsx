@@ -135,6 +135,17 @@ export const ProfileIntentSection = () => {
 
     if (!wasComplete && willBeComplete && !agentInfo?.rewards?.intent_claimed_at) {
       setTimeout(() => setShowClaim(true), 300);
+    } else if (allListings && allListings.length > 0) {
+      // Trigger A: thông báo số lượng tài sản phù hợp
+      const matches = countMatches(allListings, nextIntent);
+      if (matches > 0) {
+        toast.success(`Có ${matches} tài sản phù hợp với nhu cầu của bạn`, {
+          action: {
+            label: "Xem ngay",
+            onClick: () => navigate("/listings"),
+          },
+        });
+      }
     }
   };
 

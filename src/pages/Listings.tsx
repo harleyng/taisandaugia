@@ -210,11 +210,16 @@ const Listings = () => {
 
       <main className="container py-6 flex-1">
         {/* Page Header */}
-        <div className="mb-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Danh Sách Tài Sản Đấu Giá</h1>
-          <p className="text-muted-foreground mt-1">
-            Tìm thấy <span className="font-semibold text-foreground">{filteredListings.length}</span> tài sản
-          </p>
+        <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Danh Sách Tài Sản Đấu Giá</h1>
+            <p className="text-muted-foreground mt-1">
+              Tìm thấy <span className="font-semibold text-foreground">{filteredListings.length}</span> tài sản
+            </p>
+          </div>
+          {session && userHasIntent && demandStatus !== "NOT_SUBSCRIBED" && (
+            <DemandStatusBadge />
+          )}
         </div>
 
         {/* Quick Filters + Sort bar */}

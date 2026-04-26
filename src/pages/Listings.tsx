@@ -17,6 +17,12 @@ import { useSearchParams, Link } from "react-router-dom";
 import { type AuctionFilters, defaultAuctionFilters } from "@/types/auction-filters.types";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import { useAuctionOrgNames } from "@/hooks/useAuctionOrgNames";
+import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
+import { useDemandSubscription } from "@/hooks/useDemandSubscription";
+import { countMatches, hasIntent, matchListingToIntent } from "@/lib/demandMatch";
+import { DemandUpsellBanner } from "@/components/demand/DemandUpsellBanner";
+import { DemandEmptyMatch } from "@/components/demand/DemandEmptyMatch";
+import { DemandStatusBadge } from "@/components/demand/DemandStatusBadge";
 
 type SortMode = "newest" | "price-asc" | "price-desc";
 

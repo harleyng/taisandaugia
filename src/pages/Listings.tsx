@@ -64,6 +64,10 @@ const Listings = () => {
   const orgNameById = useAuctionOrgNames((listings || []).map((l) => l.auction_org_id));
   const { openAuthDialog } = useAuthDialog();
   const { savedIds, toggleSave } = useAssetActions();
+  const { agentInfo } = useOnboardingTasks();
+  const { status: demandStatus } = useDemandSubscription();
+  const intent = agentInfo?.intent ?? null;
+  const userHasIntent = hasIntent(intent);
   const [session, setSession] = useState<any>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 

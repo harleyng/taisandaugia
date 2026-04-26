@@ -332,6 +332,8 @@ const Listings = () => {
               </p>
             )}
           </>
+        ) : userHasIntent && session ? (
+          <DemandEmptyMatch onResetFilters={resetFilters} />
         ) : (
           <div className="text-center py-12 bg-card rounded-lg border border-border">
             <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />

@@ -40,6 +40,8 @@ import { cn } from "@/lib/utils";
 
 export const ProfileIntentSection = () => {
   const { agentInfo, tasks, refresh } = useOnboardingTasks();
+  const { data: allListings } = useAuctionListings();
+  const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
 
   const intent = agentInfo?.intent ?? {};

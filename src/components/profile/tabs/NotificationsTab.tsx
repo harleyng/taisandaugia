@@ -67,14 +67,12 @@ export const NotificationsTab = () => {
           </div>
 
           {!userHasIntent ? (
-            <div className="rounded-lg bg-muted/40 p-3 text-sm">
-              <p className="text-muted-foreground">
-                Bạn cần khai báo nhu cầu trong hồ sơ trước khi đăng ký theo dõi.
-              </p>
-              <Button asChild variant="outline" size="sm" className="mt-2">
-                <Link to="/profile?tab=info#intent">Khai báo nhu cầu</Link>
-              </Button>
-            </div>
+            <Button asChild className="w-full">
+              <Link to="/profile?tab=profile#intent">
+                <Bell className="h-4 w-4" />
+                Khai báo nhu cầu để đăng ký
+              </Link>
+            </Button>
           ) : status === "ACTIVE" ? (
             <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 space-y-1">
               <div className="flex items-center justify-between text-sm">

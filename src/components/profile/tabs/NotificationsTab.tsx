@@ -31,7 +31,7 @@ export const NotificationsTab = () => {
         </p>
       </div>
 
-      {/* Demand subscription card */}
+      {/* Block 1 – Tài sản phù hợp */}
       <Card className="overflow-hidden">
         <div className="p-5 md:p-6">
           <div className="flex items-start gap-3 mb-4">
@@ -46,7 +46,7 @@ export const NotificationsTab = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-foreground">Theo dõi nhu cầu</p>
+                <p className="font-semibold text-foreground">Tài sản phù hợp</p>
                 {status === "ACTIVE" && (
                   <Badge className="gap-1 bg-primary/15 text-primary hover:bg-primary/20 border-primary/20">
                     Đang hoạt động
@@ -59,9 +59,7 @@ export const NotificationsTab = () => {
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {status === "ACTIVE"
-                  ? "Tự động thông báo khi có tài sản mới phù hợp với nhu cầu đã khai báo."
-                  : "Đăng ký để được thông báo ngay khi có tài sản mới phù hợp với nhu cầu của bạn."}
+                Tự động thông báo khi có tài sản mới phù hợp với nhu cầu của bạn
               </p>
             </div>
           </div>
@@ -70,7 +68,7 @@ export const NotificationsTab = () => {
             <Button asChild className="w-full">
               <Link to="/profile?tab=profile#intent">
                 <Bell className="h-4 w-4" />
-                Khai báo nhu cầu để đăng ký
+                Khai báo nhu cầu
               </Link>
             </Button>
           ) : status === "ACTIVE" ? (
@@ -98,43 +96,40 @@ export const NotificationsTab = () => {
         </div>
       </Card>
 
-      {count > 0 ? (
-        <Card className="overflow-hidden">
-          <Link
-            to="/profile?tab=saved&from=notifications"
-            className="w-full flex items-center gap-4 p-5 text-left hover:bg-muted/30 transition-colors"
-          >
+      {/* Block 2 – Tài sản sắp diễn ra */}
+      <Card className="overflow-hidden">
+        <div className="p-5 md:p-6">
+          <div className="flex items-start gap-3 mb-4">
             <div className="h-11 w-11 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
               <Heart className="h-5 w-5 text-rose-500 fill-rose-500" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-foreground">
-                Đang theo dõi {count} tài sản
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Xem danh sách chi tiết
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-semibold text-foreground">Tài sản sắp diễn ra</p>
+                <Badge className="gap-1 bg-primary/15 text-primary hover:bg-primary/20 border-primary/20">
+                  {count}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Nhận thông báo khi tài sản bạn theo dõi có cập nhật quan trọng (mở bán hồ sơ, sắp diễn ra, kết thúc phiên...)
               </p>
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-          </Link>
-        </Card>
-      ) : (
-        <Card className="p-10 md:p-12 text-center">
-          <div className="mx-auto h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center mb-4">
-            <Heart className="h-7 w-7 text-muted-foreground/50" />
           </div>
-          <p className="font-semibold text-foreground">
-            Chưa theo dõi tài sản nào
-          </p>
-          <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-            Bấm "Nhận thông báo khi có cập nhật" trên tài sản bạn quan tâm để được
-            cập nhật khi có thay đổi.
-          </p>
-          <Button asChild className="mt-5">
-            <Link to="/listings">Khám phá tài sản</Link>
-          </Button>
-        </Card>
-      )}
+
+          {count > 0 ? (
+            <Button asChild variant="outline" className="w-full">
+              <Link to="/profile?tab=saved&from=notifications">
+                Xem danh sách
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild className="w-full">
+              <Link to="/listings">Khám phá tài sản</Link>
+            </Button>
+          )}
+        </div>
+      </Card>
 
       <DemandPaywallDialog open={paywallOpen} onOpenChange={setPaywallOpen} />
     </div>

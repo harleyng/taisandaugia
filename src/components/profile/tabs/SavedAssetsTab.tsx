@@ -3,10 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, Trash2, ChevronRight } from "lucide-react";
+import { Heart, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatPrice, formatAddress } from "@/utils/formatters";
+import { formatAddress } from "@/utils/formatters";
+import { AuctionCard } from "@/components/AuctionCard";
+import { getSessionStatus, type AuctionListing } from "@/hooks/useAuctionListings";
+import { useAuctionOrgNames } from "@/hooks/useAuctionOrgNames";
 
 interface SavedAssetsTabProps {
   fromNotifications?: boolean;
@@ -14,8 +17,11 @@ interface SavedAssetsTabProps {
 
 export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProps) => {
   const { savedIds, toggleSave } = useAssetActions();
-  const [listings, setListings] = useState<any[]>([]);
+  const [listings, setListings] = useState<AuctionListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const orgNameById = useAuctionOrgNames(
+    listings.map((l) => l.auction_org_id).filter(Boolean) as string[],
+  );
 
   useEffect(() => {
     const ids = Array.from(savedIds);
@@ -29,18 +35,18 @@ export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProp
       setLoading(true);
       const { data } = await supabase
         .from("listings")
-        .select("id, title, price, price_unit, area, address, property_type_slug, image_url, custom_attributes")
+        .select("*")
         .in("id", ids);
-      setListings(data || []);
+      setListings((data as AuctionListing[]) || []);
       setLoading(false);
     };
     fetchListings();
   }, [savedIds]);
 
   return (
-    <div>
+    <div className="space-y-5">
       {fromNotifications && (
-        <nav aria-label="Breadcrumb" className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link
             to="/profile?tab=notifications"
             className="hover:text-foreground transition-colors"
@@ -51,24 +57,23 @@ export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProp
           <span className="text-foreground font-medium">Tài sản đang theo dõi</span>
         </nav>
       )}
-      <Card className="p-5 md:p-6 mb-5">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Tài sản đang theo dõi</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Bạn sẽ nhận thông báo khi có cập nhật về các tài sản này.
-            </p>
-          </div>
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {savedIds.size} tài sản
-          </span>
+
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Tài sản đang theo dõi</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Bạn sẽ nhận thông báo khi có cập nhật về các tài sản này.
+          </p>
         </div>
-      </Card>
+        <span className="text-sm text-muted-foreground whitespace-nowrap mt-1">
+          {savedIds.size} tài sản
+        </span>
+      </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-lg" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-72 w-full rounded-xl" />
           ))}
         </div>
       ) : listings.length === 0 ? (
@@ -86,33 +91,38 @@ export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProp
           </Button>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {listings.map((listing) => {
-            const addr = formatAddress(listing.address || {});
+            const ca = listing.custom_attributes || {};
+            const fallbackOrgName = listing.auction_org_id ? orgNameById.get(listing.auction_org_id) : "";
+            const orgName = ca.org_name || fallbackOrgName || "";
             return (
-              <Card key={listing.id} className="p-4 flex items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <Link
-                    to={`/auctions/${listing.id}`}
-                    className="text-sm font-semibold text-foreground hover:text-primary transition-colors line-clamp-1"
-                  >
-                    {listing.title}
-                  </Link>
-                  {addr && <p className="text-xs text-muted-foreground mt-0.5 truncate">{addr}</p>}
-                  <p className="text-sm font-bold text-primary mt-1">
-                    {formatPrice(listing.price, listing.price_unit)}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => toggleSave(listing.id)}
-                  aria-label="Ngừng theo dõi"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </Card>
+              <AuctionCard
+                key={listing.id}
+                id={listing.id}
+                imageUrl={listing.image_url}
+                title={listing.title}
+                address={formatAddress(listing.address) || "Chưa cập nhật"}
+                startingPrice={listing.price}
+                stepPrice={ca.bid_step ?? ca.step_price}
+                depositAmount={ca.deposit_amount}
+                auctionDate={ca.auction_date ?? ca.auction_time}
+                registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
+                sessionStatus={getSessionStatus(listing)}
+                categorySlug={listing.property_type_slug}
+                viewMode="grid"
+                winPrice={ca.win_price ?? ca.winning_price}
+                orgName={orgName}
+                orgId={listing.auction_org_id || undefined}
+                isSaved
+                onToggleSave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleSave(listing.id);
+                  setListings((prev) => prev.filter((l) => l.id !== listing.id));
+                }}
+                viewsCount={listing.views_count || 0}
+              />
             );
           })}
         </div>

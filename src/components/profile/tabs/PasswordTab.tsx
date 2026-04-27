@@ -33,8 +33,14 @@ export const PasswordTab = () => {
   };
 
   return (
-    <Card className="p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-5">Đổi mật khẩu</h2>
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Đổi mật khẩu</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Cập nhật mật khẩu để bảo vệ tài khoản của bạn.
+        </p>
+      </div>
+      <Card className="p-6">
       <div className="space-y-3 max-w-md">
         <div>
           <Label htmlFor="new-password">Mật khẩu mới</Label>
@@ -49,6 +55,7 @@ export const PasswordTab = () => {
           Đổi mật khẩu
         </Button>
       </div>
-    </Card>
+      </Card>
+    </div>
   );
 };

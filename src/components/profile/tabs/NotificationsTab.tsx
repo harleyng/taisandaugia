@@ -24,19 +24,12 @@ export const NotificationsTab = () => {
 
   return (
     <div className="space-y-5">
-      <Card className="p-5 md:p-6">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <Bell className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Thông báo</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Nhận cập nhật về tài sản đang theo dõi và tài sản phù hợp với nhu cầu của bạn.
-            </p>
-          </div>
-        </div>
-      </Card>
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Thông báo</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Nhận cập nhật về tài sản đang theo dõi và tài sản phù hợp với nhu cầu của bạn.
+        </p>
+      </div>
 
       {/* Demand subscription card */}
       <Card className="overflow-hidden">

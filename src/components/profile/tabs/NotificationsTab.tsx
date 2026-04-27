@@ -96,7 +96,7 @@ export const NotificationsTab = () => {
         </div>
       </Card>
 
-      {/* Block 2 – Tài sản sắp diễn ra */}
+      {/* Block 2 – Tài sản đang theo dõi */}
       <Card className="overflow-hidden">
         <div className="p-5 md:p-6">
           <div className="flex items-start gap-3 mb-4">
@@ -105,7 +105,7 @@ export const NotificationsTab = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-foreground">Tài sản sắp diễn ra</p>
+                <p className="font-semibold text-foreground">Tài sản đang theo dõi</p>
                 <Badge className="gap-1 bg-primary/15 text-primary hover:bg-primary/20 border-primary/20">
                   {count}
                 </Badge>

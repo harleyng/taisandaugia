@@ -91,7 +91,7 @@ export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProp
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {listings.map((listing) => {
             const ca = listing.custom_attributes || {};
             const fallbackOrgName = listing.auction_org_id ? orgNameById.get(listing.auction_org_id) : "";

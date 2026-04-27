@@ -31,7 +31,7 @@ export const NotificationsTab = () => {
         </p>
       </div>
 
-      {/* Demand subscription card */}
+      {/* Block 1 – Tài sản phù hợp */}
       <Card className="overflow-hidden">
         <div className="p-5 md:p-6">
           <div className="flex items-start gap-3 mb-4">
@@ -46,7 +46,7 @@ export const NotificationsTab = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold text-foreground">Theo dõi nhu cầu</p>
+                <p className="font-semibold text-foreground">Tài sản phù hợp</p>
                 {status === "ACTIVE" && (
                   <Badge className="gap-1 bg-primary/15 text-primary hover:bg-primary/20 border-primary/20">
                     Đang hoạt động
@@ -59,9 +59,7 @@ export const NotificationsTab = () => {
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {status === "ACTIVE"
-                  ? "Tự động thông báo khi có tài sản mới phù hợp với nhu cầu đã khai báo."
-                  : "Đăng ký để được thông báo ngay khi có tài sản mới phù hợp với nhu cầu của bạn."}
+                Tự động thông báo khi có tài sản mới phù hợp với nhu cầu của bạn
               </p>
             </div>
           </div>
@@ -70,7 +68,7 @@ export const NotificationsTab = () => {
             <Button asChild className="w-full">
               <Link to="/profile?tab=profile#intent">
                 <Bell className="h-4 w-4" />
-                Khai báo nhu cầu để đăng ký
+                Khai báo nhu cầu
               </Link>
             </Button>
           ) : status === "ACTIVE" ? (

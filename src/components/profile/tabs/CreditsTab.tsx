@@ -106,7 +106,7 @@ const TransactionRow = ({ tx }: { tx: Transaction }) => {
 };
 
 export const CreditsTab = () => {
-  const { balance, transactions } = useCredits();
+  const { transactions } = useCredits();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [paying, setPaying] = useState<string | null>(null);

@@ -13,7 +13,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Save, CheckCircle2, Coins, ChevronsUpDown, Check, X, MapPin } from "lucide-react";
+import { Loader2, Save, CheckCircle2, Coins, ChevronsUpDown, Check, X, MapPin, Sparkles, BellRing, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -54,6 +54,7 @@ export const ProfileIntentSection = () => {
   const [saving, setSaving] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
   const [regionsOpen, setRegionsOpen] = useState(false);
+  const [matchBanner, setMatchBanner] = useState<{ count: number } | null>(null);
 
   useEffect(() => {
     setCategories(intent.asset_categories ?? []);
@@ -139,16 +140,11 @@ export const ProfileIntentSection = () => {
       setTimeout(() => setShowClaim(true), 300);
     }
 
-    if (allListings && allListings.length > 0) {
+    if (willBeComplete && allListings) {
       const matches = countMatches(allListings, nextIntent);
-      if (matches > 0) {
-        toast.success(`Có ${matches} tài sản phù hợp với nhu cầu của bạn`, {
-          action: {
-            label: "Xem ngay",
-            onClick: () => navigate("/listings"),
-          },
-        });
-      }
+      setMatchBanner({ count: matches });
+    } else {
+      setMatchBanner(null);
     }
   };
 

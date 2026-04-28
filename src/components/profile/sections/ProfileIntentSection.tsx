@@ -13,7 +13,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Save, CheckCircle2, Coins, ChevronsUpDown, Check, X, MapPin } from "lucide-react";
+import { Loader2, Save, CheckCircle2, Coins, ChevronsUpDown, Check, X, MapPin, Sparkles, BellRing, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -54,6 +54,7 @@ export const ProfileIntentSection = () => {
   const [saving, setSaving] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
   const [regionsOpen, setRegionsOpen] = useState(false);
+  const [matchBanner, setMatchBanner] = useState<{ count: number } | null>(null);
 
   useEffect(() => {
     setCategories(intent.asset_categories ?? []);
@@ -139,16 +140,11 @@ export const ProfileIntentSection = () => {
       setTimeout(() => setShowClaim(true), 300);
     }
 
-    if (allListings && allListings.length > 0) {
+    if (willBeComplete && allListings) {
       const matches = countMatches(allListings, nextIntent);
-      if (matches > 0) {
-        toast.success(`Có ${matches} tài sản phù hợp với nhu cầu của bạn`, {
-          action: {
-            label: "Xem ngay",
-            onClick: () => navigate("/listings"),
-          },
-        });
-      }
+      setMatchBanner({ count: matches });
+    } else {
+      setMatchBanner(null);
     }
   };
 
@@ -342,6 +338,55 @@ export const ProfileIntentSection = () => {
           </div>
         </div>
       </div>
+
+      {matchBanner && (
+        matchBanner.count > 0 ? (
+          <div className="mt-5 rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 to-primary/5 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-start gap-3 flex-1">
+              <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">
+                  Có <span className="text-primary">{matchBanner.count}</span> tài sản đang diễn ra phù hợp với nhu cầu của bạn
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Khám phá ngay để không bỏ lỡ cơ hội đấu giá phù hợp.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => navigate("/listings")}
+              className="shrink-0 w-full sm:w-auto"
+            >
+              Khám phá <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-start gap-3 flex-1">
+              <div className="h-10 w-10 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                <BellRing className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">
+                  Chưa có tài sản đang diễn ra phù hợp với nhu cầu
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Đăng ký nhận thông báo để được báo ngay khi có tài sản mới phù hợp.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/profile?tab=notifications")}
+              className="shrink-0 w-full sm:w-auto"
+            >
+              <BellRing className="h-4 w-4" /> Đăng ký nhận thông báo
+            </Button>
+          </div>
+        )
+      )}
 
       <div className="flex items-center justify-between mt-6">
         <p className="text-xs text-muted-foreground inline-flex items-center gap-1">

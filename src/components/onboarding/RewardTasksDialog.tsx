@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 import { Gift, ArrowRight, Coins, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -14,8 +15,13 @@ interface Props {
 
 export const RewardTasksDialog = ({ open, onOpenChange }: Props) => {
   const navigate = useNavigate();
-  const { tasks, claimReward, availableCredits } = useOnboardingTasks();
+  const { tasks, claimReward, availableCredits, refresh } = useOnboardingTasks();
   const [claiming, setClaiming] = useState<"basic" | "intent" | null>(null);
+
+  // Refresh tasks each time the dialog opens to ensure freshness
+  useEffect(() => {
+    if (open) refresh();
+  }, [open, refresh]);
 
   const handleGo = (anchor: string) => {
     onOpenChange(false);

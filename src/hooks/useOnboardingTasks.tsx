@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AgentInfoShape,
@@ -30,6 +30,7 @@ export const useOnboardingTasks = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [snap, setSnap] = useState<ProfileSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const userIdRef = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (uid: string) => {
     const { data } = await supabase
@@ -53,6 +54,7 @@ export const useOnboardingTasks = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!mounted) return;
       const uid = session?.user.id ?? null;
+      userIdRef.current = uid;
       setUserId(uid);
       if (uid) {
         await fetchProfile(uid);
@@ -66,13 +68,15 @@ export const useOnboardingTasks = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_evt, session) => {
       const uid = session?.user.id ?? null;
+      userIdRef.current = uid;
       setUserId(uid);
       if (uid) await fetchProfile(uid);
       else setSnap(null);
     });
 
     const handler = () => {
-      if (userId) fetchProfile(userId);
+      const uid = userIdRef.current;
+      if (uid) fetchProfile(uid);
     };
     window.addEventListener(EVT, handler);
 
@@ -138,6 +142,11 @@ export const useOnboardingTasks = () => {
     [userId, snap, tasks, fetchProfile]
   );
 
+  const refresh = useCallback(() => {
+    const uid = userIdRef.current;
+    if (uid) fetchProfile(uid);
+  }, [fetchProfile]);
+
   return {
     loading,
     isAuthed: Boolean(userId),
@@ -148,7 +157,7 @@ export const useOnboardingTasks = () => {
     agentInfo: snap?.agentInfo ?? null,
     name: snap?.name ?? null,
     claimReward,
-    refresh: () => userId && fetchProfile(userId),
+    refresh,
   };
 };
 

@@ -142,6 +142,11 @@ export const useOnboardingTasks = () => {
     [userId, snap, tasks, fetchProfile]
   );
 
+  const refresh = useCallback(() => {
+    const uid = userIdRef.current;
+    if (uid) fetchProfile(uid);
+  }, [fetchProfile]);
+
   return {
     loading,
     isAuthed: Boolean(userId),
@@ -152,10 +157,7 @@ export const useOnboardingTasks = () => {
     agentInfo: snap?.agentInfo ?? null,
     name: snap?.name ?? null,
     claimReward,
-    refresh: useCallback(() => {
-      const uid = userIdRef.current;
-      if (uid) fetchProfile(uid);
-    }, [fetchProfile]),
+    refresh,
   };
 };
 

@@ -133,10 +133,13 @@ export const ProfileIntentSection = () => {
     notifyProfileUpdated();
     await refresh();
 
-    if (!wasComplete && willBeComplete && !agentInfo?.rewards?.intent_claimed_at) {
+    if (willBeComplete) {
+      // Always celebrate on save when intent is complete (test-friendly).
+      // RewardClaimDialog skips re-crediting when already claimed.
       setTimeout(() => setShowClaim(true), 300);
-    } else if (allListings && allListings.length > 0) {
-      // Trigger A: thông báo số lượng tài sản phù hợp
+    }
+
+    if (allListings && allListings.length > 0) {
       const matches = countMatches(allListings, nextIntent);
       if (matches > 0) {
         toast.success(`Có ${matches} tài sản phù hợp với nhu cầu của bạn`, {

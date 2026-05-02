@@ -1,135 +1,59 @@
-## Tổng quan
+## Mục tiêu
 
-Xây dựng tính năng "Theo dõi nhu cầu" (Follow Demand) — dịch vụ trả phí giúp user nhận thông báo khi có tài sản mới phù hợp với nhu cầu (intent) đã khai báo trong hồ sơ. Sử dụng credit balance hiện có để trừ phí gói, demand match dựa trên `agent_info.intent` (asset_categories, regions, budget_range).
+Trang hồ sơ cá nhân (`/profile` tab "Hồ sơ cá nhân") hiện đang hiển thị form chỉnh sửa luôn. Cần tách thành 2 chế độ cho từng section ("Thông tin cơ bản" và "Nhu cầu đấu giá"):
 
-## Phạm vi triển khai (giai đoạn 1)
+- **Chế độ Xem (mặc định)**: hiển thị thông tin dạng read-only kèm nút **Chỉnh sửa** ở góc trên phải.
+- **Chế độ Sửa**: chỉ bật khi bấm **Chỉnh sửa** — hiện form như hiện tại, kèm nút **Lưu** và **Hủy**. Sau khi lưu thành công (hoặc bấm Hủy) thì quay lại chế độ Xem.
 
-Tập trung vào **Trigger A, B, D** + paywall + state subscribed/expired. Trigger C/E/F để giai đoạn sau.
+## Phạm vi
 
----
+Áp dụng cho 2 component:
+1. `src/components/profile/sections/ProfileBasicSection.tsx`
+2. `src/components/profile/sections/ProfileIntentSection.tsx`
 
-## 1. Data layer
+Các phần khác (avatar header, các tab Credit/Mật khẩu/Thông báo/Saved) giữ nguyên.
 
-### `src/lib/demandSubscription.ts` (mới)
-- Định nghĩa gói:
-  ```
-  weekly  : 7 ngày  / 99 credit
-  monthly : 30 ngày / 299 credit
-  yearly  : 365 ngày / 1990 credit
-  ```
-- Lưu state vào `localStorage` (theo pattern `mockCredits.ts`):
-  - `{ tier: 'weekly'|'monthly'|'yearly', startedAt, expiresAt }`
-- Hàm:
-  - `getDemandSubscription()` → `{ status: 'NOT_SUBSCRIBED'|'ACTIVE'|'EXPIRED', tier, expiresAt }`
-  - `subscribeDemand(tier)` → trừ credit qua `mockCredits.addCredits(-cost)` (hoặc tạo `unlock_demand` transaction type), set state, emit event
-  - `subscribe(cb)` / `getState()` cho `useSyncExternalStore`
-- Mở rộng `mockCredits.ts`: thêm `TransactionType = 'subscribe_demand'` để log giao dịch.
+## Thiết kế chế độ Xem
 
-### `src/hooks/useDemandSubscription.tsx` (mới)
-- Hook trả về `{ status, tier, expiresAt, subscribe(tier), DEMAND_TIERS }`.
-- Reactive với localStorage qua `useSyncExternalStore`.
+### Section "Thông tin cơ bản"
+Hiển thị grid 2 cột các cặp **Nhãn → Giá trị**:
+- Họ tên
+- Số điện thoại (kèm badge "Đã xác thực" màu xanh nếu đã verify)
+- Vai trò (map từ `ROLE_OPTIONS` ra label tiếng Việt)
+- Tỉnh/Thành phố
+- Ngày sinh (format `dd/MM/yyyy`)
+- Giới tính (map từ `GENDER_OPTIONS`)
 
-### `src/lib/demandMatch.ts` (mới)
-- Hàm `matchListingToIntent(listing, intent)` → boolean, dựa trên:
-  - `asset_categories` ⊃ `listing.property_type_slug` (hoặc parent category)
-  - `regions` ⊃ `listing.address.province`
-  - `budget_range` chứa `listing.price`
-- Hàm `countMatches(listings, intent)` → number.
-- Hàm `hasIntent(intent)` → boolean (≥ 1 trường được điền).
+Trường nào chưa có giá trị → hiển thị "Chưa cập nhật" màu muted.
 
----
+### Section "Nhu cầu đấu giá"
+- Loại tài sản quan tâm: chip read-only (badge) liệt kê tên các category đã chọn
+- Khu vực quan tâm: badge liệt kê các tỉnh
+- Ngân sách / Kinh nghiệm / Mục tiêu / Nguồn biết đến: cặp Nhãn → Giá trị
 
-## 2. UI components mới
+Giữ nguyên `matchBanner` (banner số lượng tài sản phù hợp) ở chế độ Xem để user vẫn thấy kết quả sau khi vừa lưu.
 
-### `src/components/demand/DemandPaywallDialog.tsx`
-Modal chọn gói:
-- Title: "Theo dõi nhu cầu — Không bỏ lỡ tài sản phù hợp"
-- 3 thẻ gói (tuần / tháng / năm) với giá credit, badge "Phổ biến" cho monthly, "Tiết kiệm" cho yearly
-- Hiển thị số dư credit, cảnh báo nếu không đủ + CTA "Mua thêm credit" (→ `/profile?tab=credits`)
-- Nút "Đăng ký" → `subscribeDemand(tier)` → toast thành công + đóng modal
-- Value props: "Không cần tìm lại mỗi ngày", "Tự động thông báo khi có tài sản mới phù hợp", "Hủy bất cứ lúc nào"
+## Header section (cả 2 section)
 
-### `src/components/demand/DemandUpsellBanner.tsx`
-Banner hiển thị trong `/listings` (row 2, dưới quick filters) khi:
-- User authed + có intent + status = NOT_SUBSCRIBED + matchCount > 0
-- Title: "Bạn có thể bỏ lỡ tài sản phù hợp mà không hề biết"
-- Sub: "Hệ thống tự động theo dõi và thông báo khi có tài sản đúng nhu cầu của bạn"
-- Optional: "Có {matchCount} tài sản phù hợp với nhu cầu hiện tại"
-- CTA: "Theo dõi nhu cầu này" → mở `DemandPaywallDialog`
-- Nút X dismiss (sessionStorage)
+Bên phải tiêu đề, ngoài badge trạng thái thưởng hiện có, thêm nút **Chỉnh sửa** (`variant="outline"`, icon `Pencil`) khi đang ở chế độ Xem. Khi vào chế độ Sửa, nút này ẩn đi.
 
-### `src/components/demand/DemandEmptyMatch.tsx`
-Hiển thị khi user đã apply intent filter nhưng không có asset match:
-- Icon + title: "Hiện chưa có tài sản phù hợp với nhu cầu của bạn"
-- Sub: "Nhưng các tài sản mới vẫn được đăng mỗi ngày"
-- CTA mạnh: "Theo dõi để không bỏ lỡ" → paywall
-- Nếu đã subscribed: chuyển sang reassurance "Chúng tôi sẽ thông báo ngay khi có tài sản mới"
+## Footer chế độ Sửa
 
-### `src/components/demand/DemandStatusBadge.tsx`
-Badge nhỏ:
-- ACTIVE: "Đang theo dõi nhu cầu · còn {n} ngày" (màu primary)
-- EXPIRED: "Đã hết hạn — Gia hạn" → mở paywall
+Thay block footer hiện tại bằng:
+- Bên trái: giữ text "Đã đủ thông tin" / "Điền đầy đủ để mở khóa thưởng".
+- Bên phải: nút **Hủy** (`variant="ghost"`, reset state về giá trị server snapshot) + nút **Lưu** (giữ logic hiện tại). Sau khi `handleSave` thành công → tự chuyển về chế độ Xem.
 
----
+## Chi tiết kỹ thuật
 
-## 3. Tích hợp vào pages
+- Thêm state `mode: "view" | "edit"` (mặc định `"view"`) vào mỗi section.
+- Khi `agentInfo` thay đổi (load lần đầu) — giữ ở chế độ Xem.
+- Hàm `handleCancel`: reset toàn bộ state form về giá trị từ `basic`/`intent` snapshot, rồi `setMode("view")`.
+- `handleSave`: ở cuối nhánh thành công, gọi `setMode("view")` (sau khi setShowClaim).
+- Nếu user mới (chưa có dữ liệu nào) → vẫn vào chế độ Xem, hiển thị placeholder "Chưa cập nhật" để CTA Chỉnh sửa rõ ràng. (Không auto vào edit mode để giữ hành vi nhất quán.)
+- Map hiển thị: tạo helper `labelOf(options, value)` để lấy `label` từ các array `ROLE_OPTIONS`/`GENDER_OPTIONS`/`BUDGET_OPTIONS`/`EXPERIENCE_OPTIONS`/`GOAL_OPTIONS`/`SOURCE_OPTIONS`, và `categoryNameOf(slug)` từ `ASSET_CATEGORIES`.
+- Không thay đổi schema DB, không đụng `useOnboardingTasks`, `RewardClaimDialog`, `PhoneOtpDialog`.
 
-### `src/pages/Listings.tsx`
-- Lấy `intent` từ `useOnboardingTasks()`, `subscription` từ `useDemandSubscription()`.
-- Tính `intentMatchCount` qua `countMatches(filteredListings, intent)`.
-- Render dưới sticky filters (Trigger B):
-  - NOT_SUBSCRIBED + intent có ≥ 1 match → `<DemandUpsellBanner />`
-  - ACTIVE → `<DemandStatusBadge />` inline với header
-- Khi `filteredListings.length === 0` và user có intent → render `<DemandEmptyMatch />` thay cho empty state hiện tại (Trigger D).
-
-### `src/components/profile/sections/ProfileIntentSection.tsx`
-- Sau khi save intent thành công (sau `RewardClaimDialog` close), nếu match > 0:
-  - Hiển thị toast/inline: "Hiện có {X} tài sản phù hợp với nhu cầu của bạn" + button "Xem ngay" → `/listings` (Trigger A).
-
-### `src/components/profile/tabs/NotificationsTab.tsx`
-- Thêm card "Theo dõi nhu cầu":
-  - NOT_SUBSCRIBED + có intent: card upsell với CTA mở paywall
-  - ACTIVE: card hiển thị tier, ngày hết hạn, button "Gia hạn"
-  - EXPIRED: card cảnh báo + "Gia hạn ngay"
-  - Không có intent: prompt "Khai báo nhu cầu trước" → link `/profile?tab=info#intent`
-
----
-
-## 4. Acceptance criteria
-
-- [ ] User chưa subscribe + có intent + vào `/listings` thấy banner upsell (Trigger B)
-- [ ] Click "Theo dõi nhu cầu này" → mở modal 3 gói, trừ credit thành công, banner biến mất, badge "Đang theo dõi" xuất hiện
-- [ ] Credit không đủ → modal hiển thị CTA "Mua credit"
-- [ ] User có intent nhưng `/listings` không match → hiển thị empty state mạnh với CTA paywall (Trigger D)
-- [ ] Sau khi subscribe → empty state chuyển reassurance, banner ẩn
-- [ ] Sau khi save intent ở profile + có match → toast "Có X tài sản phù hợp" với link xem (Trigger A)
-- [ ] Tab Thông báo có card quản lý subscription (xem hạn / gia hạn)
-- [ ] Khi `expiresAt < now()` → status = EXPIRED, hiển thị lại upsell
-
----
-
-## 5. Lưu ý kỹ thuật
-
-- **Mock subscription** lưu localStorage giống `mockCredits` — không tạo bảng DB ở giai đoạn này. Dễ swap sang Supabase sau.
-- **Match logic** chỉ chạy client-side trên kết quả `useAuctionListings()` đã có, không thêm DB query.
-- **Notification thật sự** (gửi email/push khi có asset mới) **không nằm trong scope giai đoạn 1** — chỉ UI flow đăng ký. Sẽ làm sau khi có edge function + cron.
-- **Trigger C (scroll), E (miss detection), F (detail page)** không triển khai ở giai đoạn này.
-- Reuse pattern paywall hiện có (`AssetPaywallDialog`, `OwnerPaywallDialog`) cho UI tương đồng.
-- Dùng design tokens hiện có (primary, muted, card) — không hard-code màu.
-
-## 6. Files thay đổi
-
-**Mới:**
-- `src/lib/demandSubscription.ts`
-- `src/lib/demandMatch.ts`
-- `src/hooks/useDemandSubscription.tsx`
-- `src/components/demand/DemandPaywallDialog.tsx`
-- `src/components/demand/DemandUpsellBanner.tsx`
-- `src/components/demand/DemandEmptyMatch.tsx`
-- `src/components/demand/DemandStatusBadge.tsx`
-
-**Sửa:**
-- `src/lib/mockCredits.ts` (thêm transaction type)
-- `src/pages/Listings.tsx` (banner + empty state + badge)
-- `src/components/profile/sections/ProfileIntentSection.tsx` (Trigger A toast)
-- `src/components/profile/tabs/NotificationsTab.tsx` (card subscription)
+## Không thay đổi
+- Logic trigger reward / matchBanner.
+- Tab Credit, Mật khẩu, Thông báo, Saved Assets.
+- Avatar upload (vẫn ở `ProfileInfoTab`, luôn editable qua icon camera).

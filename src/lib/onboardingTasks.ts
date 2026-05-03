@@ -13,6 +13,9 @@ export type Experience = "new" | "1-3y" | "over-3y" | "pro";
 export type IntentGoal = "live-in" | "invest" | "flip" | "other";
 export type SourceChannel = "facebook" | "google" | "friend" | "other";
 
+export type SessionStatusKey = "registration_open" | "upcoming" | "ongoing";
+export type LegalCategoryKey = "thi-hanh-an" | "no-xau" | "thanh-ly" | "pha-san" | "khac";
+
 export interface OnboardingBasic {
   phone?: string;
   phone_verified?: boolean;
@@ -25,14 +28,44 @@ export interface OnboardingBasic {
   gender?: Gender;
 }
 
+export interface IntentRegion {
+  province: string;
+  districts?: string[];
+}
+
 export interface OnboardingIntent {
+  /** Flat list of category slugs (parent or child). */
   asset_categories?: string[];
-  regions?: string[];
+  /** Region selections with optional districts per province. */
+  regions?: IntentRegion[];
+  /** Use địa chỉ sau sáp nhập. */
+  merged_address?: boolean;
+  /** Giá khởi điểm range (VNĐ). */
+  price_min?: number | null;
+  price_max?: number | null;
+  /** Tiền đặt trước range (VNĐ). */
+  deposit_min?: number | null;
+  deposit_max?: number | null;
+  /** Multi-select pháp lý. */
+  legal_categories?: LegalCategoryKey[];
+  /** Multi-select trạng thái phiên. */
+  session_statuses?: SessionStatusKey[];
+
+  /** @deprecated cũ – không còn dùng cho matching */
   budget_range?: BudgetRange;
+  /** @deprecated */
   experience?: Experience;
+  /** @deprecated */
   goal?: IntentGoal;
+  /** @deprecated */
   source?: SourceChannel;
 }
+
+export const DEFAULT_SESSION_STATUSES: SessionStatusKey[] = [
+  "registration_open",
+  "upcoming",
+  "ongoing",
+];
 
 export interface OnboardingRewards {
   basic_completed_at?: number | null;

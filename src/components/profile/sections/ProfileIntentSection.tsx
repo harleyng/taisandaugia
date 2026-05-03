@@ -2,47 +2,69 @@ import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Save, CheckCircle2, Coins, ChevronsUpDown, Check, X, MapPin, Sparkles, BellRing, ArrowRight, Pencil } from "lucide-react";
+  Loader2,
+  Save,
+  CheckCircle2,
+  Coins,
+  X,
+  MapPin,
+  Sparkles,
+  BellRing,
+  ArrowRight,
+  Pencil,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuctionListings } from "@/hooks/useAuctionListings";
 import { countMatches } from "@/lib/demandMatch";
 import {
-  BUDGET_OPTIONS,
-  EXPERIENCE_OPTIONS,
-  GOAL_OPTIONS,
-  SOURCE_OPTIONS,
   isIntentComplete,
   AgentInfoShape,
-  BudgetRange,
-  Experience,
-  IntentGoal,
-  SourceChannel,
+  IntentRegion,
+  LegalCategoryKey,
+  SessionStatusKey,
+  DEFAULT_SESSION_STATUSES,
   REWARD_INTENT_CREDITS,
 } from "@/lib/onboardingTasks";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { vietnamProvinces } from "@/constants/vietnam-locations";
+import { LEGAL_CATEGORIES, STATUS_OPTIONS } from "@/types/auction-filters.types";
 import { notifyProfileUpdated, useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import { RewardClaimDialog } from "@/components/onboarding/RewardClaimDialog";
 import { cn } from "@/lib/utils";
 
-const labelOf = (options: { value: string; label: string }[], value: string) =>
-  options.find((o) => o.value === value)?.label ?? "";
+const categoryNameOf = (slug: string): string => {
+  for (const c of ASSET_CATEGORIES) {
+    if (c.slug === slug) return c.name;
+    const child = c.children.find((ch) => ch.slug === slug);
+    if (child) return child.name;
+  }
+  return slug;
+};
 
-const categoryNameOf = (slug: string) =>
-  ASSET_CATEGORIES.find((c) => c.slug === slug)?.name ?? slug;
+const legalLabelOf = (key: string) =>
+  LEGAL_CATEGORIES.find((l) => l.value === key)?.label ?? key;
+const statusLabelOf = (key: string) =>
+  STATUS_OPTIONS.find((s) => s.value === key)?.label ?? key;
+
+const fmtVnd = (n: number | null | undefined) =>
+  n == null ? "" : new Intl.NumberFormat("vi-VN").format(n);
+
+const parseVnd = (v: string): number | null => {
+  const cleaned = v.replace(/[^0-9]/g, "");
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+};
 
 export const ProfileIntentSection = () => {
   const { agentInfo, tasks, refresh } = useOnboardingTasks();
@@ -52,24 +74,47 @@ export const ProfileIntentSection = () => {
 
   const intent = agentInfo?.intent ?? {};
   const [mode, setMode] = useState<"view" | "edit">("view");
+
   const [categories, setCategories] = useState<string[]>(intent.asset_categories ?? []);
-  const [regions, setRegions] = useState<string[]>(intent.regions ?? []);
-  const [budget, setBudget] = useState<BudgetRange | "">((intent.budget_range as BudgetRange) ?? "");
-  const [experience, setExperience] = useState<Experience | "">((intent.experience as Experience) ?? "");
-  const [goal, setGoal] = useState<IntentGoal | "">((intent.goal as IntentGoal) ?? "");
-  const [source, setSource] = useState<SourceChannel | "">((intent.source as SourceChannel) ?? "");
+  const [regions, setRegions] = useState<IntentRegion[]>(intent.regions ?? []);
+  const [mergedAddress, setMergedAddress] = useState<boolean>(intent.merged_address ?? false);
+  const [priceMin, setPriceMin] = useState<string>(
+    intent.price_min != null ? String(intent.price_min) : ""
+  );
+  const [priceMax, setPriceMax] = useState<string>(
+    intent.price_max != null ? String(intent.price_max) : ""
+  );
+  const [depositMin, setDepositMin] = useState<string>(
+    intent.deposit_min != null ? String(intent.deposit_min) : ""
+  );
+  const [depositMax, setDepositMax] = useState<string>(
+    intent.deposit_max != null ? String(intent.deposit_max) : ""
+  );
+  const [legalCategories, setLegalCategories] = useState<LegalCategoryKey[]>(
+    intent.legal_categories ?? []
+  );
+  const [sessionStatuses, setSessionStatuses] = useState<SessionStatusKey[]>(
+    intent.session_statuses ?? DEFAULT_SESSION_STATUSES
+  );
+
   const [saving, setSaving] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
-  const [regionsOpen, setRegionsOpen] = useState(false);
   const [matchBanner, setMatchBanner] = useState<{ count: number } | null>(null);
+
+  // UI helpers
+  const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [expandedProv, setExpandedProv] = useState<string | null>(null);
 
   const resetFromSnapshot = () => {
     setCategories(intent.asset_categories ?? []);
     setRegions(intent.regions ?? []);
-    setBudget((intent.budget_range as BudgetRange) ?? "");
-    setExperience((intent.experience as Experience) ?? "");
-    setGoal((intent.goal as IntentGoal) ?? "");
-    setSource((intent.source as SourceChannel) ?? "");
+    setMergedAddress(intent.merged_address ?? false);
+    setPriceMin(intent.price_min != null ? String(intent.price_min) : "");
+    setPriceMax(intent.price_max != null ? String(intent.price_max) : "");
+    setDepositMin(intent.deposit_min != null ? String(intent.deposit_min) : "");
+    setDepositMax(intent.deposit_max != null ? String(intent.deposit_max) : "");
+    setLegalCategories(intent.legal_categories ?? []);
+    setSessionStatuses(intent.session_statuses ?? DEFAULT_SESSION_STATUSES);
   };
 
   useEffect(() => {
@@ -86,16 +131,44 @@ export const ProfileIntentSection = () => {
   const intentTask = tasks.find((t) => t.key === "intent");
   const status = intentTask?.status ?? "todo";
 
+  // Category toggles (parent or child)
   const toggleCategory = (slug: string) => {
     setCategories((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
   };
-  const toggleRegion = (name: string) => {
-    setRegions((prev) => (prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name]));
+
+  // Region toggles
+  const toggleProvince = (name: string) => {
+    setRegions((prev) => {
+      const exists = prev.find((r) => r.province === name);
+      if (exists) return prev.filter((r) => r.province !== name);
+      return [...prev, { province: name, districts: [] }];
+    });
+  };
+  const toggleDistrict = (province: string, district: string) => {
+    setRegions((prev) => {
+      const exists = prev.find((r) => r.province === province);
+      if (!exists) return [...prev, { province, districts: [district] }];
+      return prev.map((r) => {
+        if (r.province !== province) return r;
+        const ds = r.districts ?? [];
+        const next = ds.includes(district) ? ds.filter((d) => d !== district) : [...ds, district];
+        return { ...r, districts: next };
+      });
+    });
   };
 
-  const filledOk = Boolean(
-    categories.length > 0 && regions.length > 0 && budget && experience && goal && source
-  );
+  const toggleLegal = (key: LegalCategoryKey) => {
+    setLegalCategories((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+  const toggleStatus = (key: SessionStatusKey) => {
+    setSessionStatuses((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  const filledOk = categories.length > 0 && regions.length > 0;
 
   const handleCancel = () => {
     resetFromSnapshot();
@@ -114,10 +187,13 @@ export const ProfileIntentSection = () => {
     const nextIntent = {
       asset_categories: categories,
       regions,
-      budget_range: (budget || undefined) as BudgetRange | undefined,
-      experience: (experience || undefined) as Experience | undefined,
-      goal: (goal || undefined) as IntentGoal | undefined,
-      source: (source || undefined) as SourceChannel | undefined,
+      merged_address: mergedAddress,
+      price_min: priceMin ? Number(priceMin) : null,
+      price_max: priceMax ? Number(priceMax) : null,
+      deposit_min: depositMin ? Number(depositMin) : null,
+      deposit_max: depositMax ? Number(depositMax) : null,
+      legal_categories: legalCategories,
+      session_statuses: sessionStatuses,
     };
 
     const willBeComplete = isIntentComplete(nextIntent);
@@ -148,22 +224,19 @@ export const ProfileIntentSection = () => {
     toast.success("Đã lưu nhu cầu");
     notifyProfileUpdated();
     await refresh();
-
     setMode("view");
 
     if (willBeComplete) {
       setTimeout(() => setShowClaim(true), 300);
     }
 
-    if (willBeComplete && allListings) {
+    if (allListings) {
       const matches = countMatches(allListings, nextIntent);
       setMatchBanner({ count: matches });
     } else {
       setMatchBanner(null);
     }
   };
-
-  const removeRegion = (name: string) => setRegions((prev) => prev.filter((p) => p !== name));
 
   const renderBadge = () => {
     if (status === "claimed") {
@@ -195,15 +268,25 @@ export const ProfileIntentSection = () => {
   );
 
   const empty = <span className="text-muted-foreground italic">Chưa cập nhật</span>;
+
   const savedCategories = intent.asset_categories ?? [];
-  const savedRegions = intent.regions ?? [];
+  const savedRegions: IntentRegion[] = intent.regions ?? [];
+  const savedLegal = intent.legal_categories ?? [];
+  const savedStatuses = intent.session_statuses ?? [];
+
+  const renderPriceRange = (min?: number | null, max?: number | null) => {
+    if (min == null && max == null) return empty;
+    const a = min != null ? `${fmtVnd(min)}đ` : "0đ";
+    const b = max != null ? `${fmtVnd(max)}đ` : "Không giới hạn";
+    return <>{a} – {b}</>;
+  };
 
   return (
     <Card ref={sectionRef} id="intent" className="p-6 scroll-mt-24">
       <div className="flex items-start justify-between gap-3 mb-5">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Nhu cầu đấu giá</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Giúp chúng tôi gợi ý tài sản phù hợp với bạn</p>
+          <p className="text-xs text-muted-foreground mt-0.5">7 tiêu chí khớp 1-1 với bộ lọc tài sản đấu giá</p>
         </div>
         <div className="flex items-center gap-2">
           {renderBadge()}
@@ -226,182 +309,302 @@ export const ProfileIntentSection = () => {
                   </Badge>
                 ))}
               </div>
-            ) : (
-              empty
-            )}
+            ) : empty}
           </ViewField>
 
           <ViewField label="Khu vực quan tâm">
             {savedRegions.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
-                {savedRegions.map((name) => (
-                  <Badge key={name} variant="secondary" className="gap-1 font-normal">
+                {savedRegions.map((r) => (
+                  <Badge key={r.province} variant="secondary" className="gap-1 font-normal">
                     <MapPin className="h-3 w-3" />
-                    {name}
+                    {r.province}
+                    {r.districts && r.districts.length > 0 && (
+                      <span className="text-muted-foreground">· {r.districts.length} Q/H</span>
+                    )}
                   </Badge>
                 ))}
               </div>
-            ) : (
-              empty
-            )}
+            ) : empty}
           </ViewField>
 
           <div className="grid gap-5 md:grid-cols-2">
-            <ViewField label="Ngân sách">{intent.budget_range ? labelOf(BUDGET_OPTIONS, intent.budget_range) : empty}</ViewField>
-            <ViewField label="Kinh nghiệm">{intent.experience ? labelOf(EXPERIENCE_OPTIONS, intent.experience) : empty}</ViewField>
-            <ViewField label="Mục tiêu">{intent.goal ? labelOf(GOAL_OPTIONS, intent.goal) : empty}</ViewField>
-            <ViewField label="Bạn biết đến qua">{intent.source ? labelOf(SOURCE_OPTIONS, intent.source) : empty}</ViewField>
+            <ViewField label="Địa chỉ sau sáp nhập">
+              {intent.merged_address ? "Bật" : "Tắt"}
+            </ViewField>
+            <ViewField label="Giá khởi điểm">
+              {renderPriceRange(intent.price_min, intent.price_max)}
+            </ViewField>
+            <ViewField label="Tiền đặt trước">
+              {renderPriceRange(intent.deposit_min, intent.deposit_max)}
+            </ViewField>
+            <ViewField label="Danh mục pháp lý">
+              {savedLegal.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {savedLegal.map((k) => (
+                    <Badge key={k} variant="secondary" className="font-normal">{legalLabelOf(k)}</Badge>
+                  ))}
+                </div>
+              ) : empty}
+            </ViewField>
+            <ViewField label="Trạng thái phiên">
+              {savedStatuses.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {savedStatuses.map((k) => (
+                    <Badge key={k} variant="secondary" className="font-normal">{statusLabelOf(k)}</Badge>
+                  ))}
+                </div>
+              ) : empty}
+            </ViewField>
           </div>
         </div>
       ) : (
         <div className="space-y-5">
+          {/* 1. Loại tài sản 2 cấp */}
           <div>
             <Label className="mb-2 block">Loại tài sản quan tâm</Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="border rounded-md p-2 space-y-0.5 max-h-72 overflow-auto">
               {ASSET_CATEGORIES.map((cat) => {
-                const active = categories.includes(cat.slug);
+                const isExpanded = expandedCat === cat.slug;
+                const parentChecked = categories.includes(cat.slug);
                 return (
-                  <button
-                    key={cat.slug}
-                    type="button"
-                    onClick={() => toggleCategory(cat.slug)}
+                  <div key={cat.slug}>
+                    <div className="flex items-center gap-2 px-1 py-1">
+                      <Checkbox
+                        id={`cat-${cat.slug}`}
+                        checked={parentChecked}
+                        onCheckedChange={() => toggleCategory(cat.slug)}
+                      />
+                      <Label htmlFor={`cat-${cat.slug}`} className="text-sm cursor-pointer flex-1 inline-flex items-center gap-1.5">
+                        <cat.icon className="h-3.5 w-3.5" />
+                        {cat.name}
+                      </Label>
+                      {cat.children.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCat(isExpanded ? null : cat.slug)}
+                          className="p-1 hover:bg-muted rounded"
+                          aria-label="Mở rộng"
+                        >
+                          {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
+                    </div>
+                    {isExpanded && cat.children.length > 0 && (
+                      <div className="ml-7 space-y-0.5 pb-1">
+                        {cat.children.map((child) => (
+                          <div key={child.slug} className="flex items-center gap-2 px-1 py-0.5">
+                            <Checkbox
+                              id={`cat-${child.slug}`}
+                              checked={categories.includes(child.slug)}
+                              onCheckedChange={() => toggleCategory(child.slug)}
+                            />
+                            <Label htmlFor={`cat-${child.slug}`} className="text-sm cursor-pointer text-muted-foreground">
+                              {child.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {categories.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {categories.map((slug) => (
+                  <Badge key={slug} variant="secondary" className="gap-1 font-normal">
+                    {categoryNameOf(slug)}
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(slug)}
+                      className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 2. Khu vực 2 cấp */}
+          <div>
+            <Label className="mb-2 block">Khu vực quan tâm</Label>
+            <div className="border rounded-md">
+              <ScrollArea className="h-72">
+                <div className="p-2 space-y-0.5">
+                  {vietnamProvinces.map((p) => {
+                    const isExpanded = expandedProv === p.name;
+                    const selected = regions.find((r) => r.province === p.name);
+                    return (
+                      <div key={p.name}>
+                        <div className="flex items-center gap-2 px-1 py-1">
+                          <Checkbox
+                            id={`prov-${p.name}`}
+                            checked={!!selected}
+                            onCheckedChange={() => toggleProvince(p.name)}
+                          />
+                          <Label htmlFor={`prov-${p.name}`} className="text-sm cursor-pointer flex-1">
+                            {p.name}
+                            {selected?.districts && selected.districts.length > 0 && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                ({selected.districts.length} Q/H)
+                              </span>
+                            )}
+                          </Label>
+                          {p.districts.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedProv(isExpanded ? null : p.name)}
+                              className="p-1 hover:bg-muted rounded"
+                              aria-label="Mở rộng"
+                            >
+                              {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                            </button>
+                          )}
+                        </div>
+                        {isExpanded && p.districts.length > 0 && (
+                          <div className="ml-7 space-y-0.5 pb-1">
+                            {p.districts.map((d) => {
+                              const checked = selected?.districts?.includes(d.name) ?? false;
+                              return (
+                                <div key={d.name} className="flex items-center gap-2 px-1 py-0.5">
+                                  <Checkbox
+                                    id={`dist-${p.name}-${d.name}`}
+                                    checked={checked}
+                                    onCheckedChange={() => toggleDistrict(p.name, d.name)}
+                                  />
+                                  <Label
+                                    htmlFor={`dist-${p.name}-${d.name}`}
+                                    className="text-sm cursor-pointer text-muted-foreground"
+                                  >
+                                    {d.name}
+                                  </Label>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+            {regions.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-1.5">Đã chọn {regions.length} tỉnh/thành</p>
+            )}
+          </div>
+
+          {/* 3. Địa chỉ sau sáp nhập */}
+          <div className="flex items-center justify-between border rounded-md p-3">
+            <div>
+              <Label htmlFor="merged-addr" className="cursor-pointer">Địa chỉ sau sáp nhập</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Áp dụng đơn vị hành chính mới sau sáp nhập</p>
+            </div>
+            <Switch id="merged-addr" checked={mergedAddress} onCheckedChange={setMergedAddress} />
+          </div>
+
+          {/* 4. Giá khởi điểm */}
+          <div>
+            <Label className="mb-2 block">Giá khởi điểm (VNĐ)</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                inputMode="numeric"
+                placeholder="Từ"
+                value={priceMin ? fmtVnd(Number(priceMin)) : ""}
+                onChange={(e) => {
+                  const n = parseVnd(e.target.value);
+                  setPriceMin(n != null ? String(n) : "");
+                }}
+              />
+              <Input
+                inputMode="numeric"
+                placeholder="Đến"
+                value={priceMax ? fmtVnd(Number(priceMax)) : ""}
+                onChange={(e) => {
+                  const n = parseVnd(e.target.value);
+                  setPriceMax(n != null ? String(n) : "");
+                }}
+              />
+            </div>
+          </div>
+
+          {/* 5. Tiền đặt trước */}
+          <div>
+            <Label className="mb-2 block">Tiền đặt trước (VNĐ)</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                inputMode="numeric"
+                placeholder="Từ"
+                value={depositMin ? fmtVnd(Number(depositMin)) : ""}
+                onChange={(e) => {
+                  const n = parseVnd(e.target.value);
+                  setDepositMin(n != null ? String(n) : "");
+                }}
+              />
+              <Input
+                inputMode="numeric"
+                placeholder="Đến"
+                value={depositMax ? fmtVnd(Number(depositMax)) : ""}
+                onChange={(e) => {
+                  const n = parseVnd(e.target.value);
+                  setDepositMax(n != null ? String(n) : "");
+                }}
+              />
+            </div>
+          </div>
+
+          {/* 6. Danh mục pháp lý */}
+          <div>
+            <Label className="mb-2 block">Danh mục pháp lý</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {LEGAL_CATEGORIES.map((opt) => {
+                const checked = legalCategories.includes(opt.value as LegalCategoryKey);
+                return (
+                  <label
+                    key={opt.value}
                     className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card text-foreground border-border hover:bg-muted"
+                      "flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer text-sm",
+                      checked && "border-primary bg-primary/5"
                     )}
                   >
-                    {cat.name}
-                  </button>
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleLegal(opt.value as LegalCategoryKey)}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
                 );
               })}
             </div>
           </div>
 
+          {/* 7. Trạng thái phiên */}
           <div>
-            <Label className="mb-2 block">Khu vực quan tâm</Label>
-            <Popover open={regionsOpen} onOpenChange={setRegionsOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={regionsOpen}
-                  className={cn(
-                    "w-full justify-between font-normal h-auto min-h-10 py-2",
-                    regions.length === 0 && "text-muted-foreground"
-                  )}
-                >
-                  {regions.length === 0 ? (
-                    <span className="inline-flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      Chọn tỉnh/thành (có thể chọn nhiều)
-                    </span>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5 items-center text-left">
-                      {regions.map((name) => (
-                        <Badge key={name} variant="secondary" className="gap-1 pr-1 font-normal">
-                          {name}
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Bỏ ${name}`}
-                            className="rounded-full hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              removeRegion(name);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                removeRegion(name);
-                              }
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </span>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Tìm tỉnh/thành..." />
-                  <CommandList>
-                    <CommandEmpty>Không tìm thấy tỉnh/thành.</CommandEmpty>
-                    <CommandGroup>
-                      {vietnamProvinces.map((p) => {
-                        const active = regions.includes(p.name);
-                        return (
-                          <CommandItem key={p.name} value={p.name} onSelect={() => toggleRegion(p.name)}>
-                            <Check className={cn("mr-2 h-4 w-4", active ? "opacity-100" : "opacity-0")} />
-                            {p.name}
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            {regions.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-1.5">Đã chọn {regions.length} khu vực</p>
-            )}
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="i-budget">Ngân sách</Label>
-              <Select value={budget} onValueChange={(v) => setBudget(v as BudgetRange)}>
-                <SelectTrigger id="i-budget"><SelectValue placeholder="Chọn ngân sách" /></SelectTrigger>
-                <SelectContent>
-                  {BUDGET_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="i-exp">Kinh nghiệm</Label>
-              <Select value={experience} onValueChange={(v) => setExperience(v as Experience)}>
-                <SelectTrigger id="i-exp"><SelectValue placeholder="Chọn kinh nghiệm" /></SelectTrigger>
-                <SelectContent>
-                  {EXPERIENCE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="i-goal">Mục tiêu</Label>
-              <Select value={goal} onValueChange={(v) => setGoal(v as IntentGoal)}>
-                <SelectTrigger id="i-goal"><SelectValue placeholder="Chọn mục tiêu" /></SelectTrigger>
-                <SelectContent>
-                  {GOAL_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="i-source">Bạn biết đến qua</Label>
-              <Select value={source} onValueChange={(v) => setSource(v as SourceChannel)}>
-                <SelectTrigger id="i-source"><SelectValue placeholder="Chọn nguồn" /></SelectTrigger>
-                <SelectContent>
-                  {SOURCE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Label className="mb-2 block">Trạng thái phiên</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {STATUS_OPTIONS.filter((o) =>
+                ["registration_open", "upcoming", "ongoing"].includes(o.value)
+              ).map((opt) => {
+                const checked = sessionStatuses.includes(opt.value as SessionStatusKey);
+                return (
+                  <label
+                    key={opt.value}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer text-sm",
+                      checked && "border-primary bg-primary/5"
+                    )}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleStatus(opt.value as SessionStatusKey)}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -461,7 +664,7 @@ export const ProfileIntentSection = () => {
                 <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Đã đủ thông tin
               </>
             ) : (
-              "Điền đầy đủ để mở khóa thưởng"
+              "Chọn ít nhất 1 loại tài sản và 1 khu vực để mở khóa thưởng"
             )}
           </p>
           <div className="flex items-center gap-2">

@@ -572,33 +572,6 @@ export const ProfileIntentSection = () => {
             </div>
           </div>
 
-          {/* 7. Trạng thái phiên */}
-          <div>
-            <Label className="mb-2 block">Trạng thái phiên</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {STATUS_OPTIONS.filter((o) =>
-                ["registration_open", "upcoming", "ongoing"].includes(o.value)
-              ).map((opt) => {
-                const checked = sessionStatuses.includes(opt.value as SessionStatusKey);
-                return (
-                  <label
-                    key={opt.value}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer text-sm",
-                      checked && "border-primary bg-primary/5"
-                    )}
-                  >
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={() => toggleStatus(opt.value as SessionStatusKey)}
-                    />
-                    <span>{opt.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        </div>
       )}
 
       {matchBanner && (

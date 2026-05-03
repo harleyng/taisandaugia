@@ -193,7 +193,7 @@ export const ProfileIntentSection = () => {
       deposit_min: depositMin ? Number(depositMin) : null,
       deposit_max: depositMax ? Number(depositMax) : null,
       legal_categories: legalCategories,
-      session_statuses: sessionStatuses,
+      session_statuses: [],
     };
 
     const willBeComplete = isIntentComplete(nextIntent);

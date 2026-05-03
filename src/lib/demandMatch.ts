@@ -1,17 +1,13 @@
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
-import type { OnboardingIntent, BudgetRange } from "./onboardingTasks";
-
-const BUDGET_RANGES: Record<BudgetRange, { min: number; max: number }> = {
-  "under-1b": { min: 0, max: 1_000_000_000 },
-  "1-3b": { min: 1_000_000_000, max: 3_000_000_000 },
-  "3-10b": { min: 3_000_000_000, max: 10_000_000_000 },
-  "over-10b": { min: 10_000_000_000, max: Number.POSITIVE_INFINITY },
-};
+import { getSessionStatus, type AuctionListing } from "@/hooks/useAuctionListings";
+import type { OnboardingIntent } from "./onboardingTasks";
 
 interface ListingLike {
   property_type_slug?: string | null;
   price?: number | null;
-  address?: { province?: string | null } | null;
+  address?: { province?: string | null; district?: string | null } | null;
+  custom_attributes?: any;
+  status?: string;
 }
 
 export const hasIntent = (intent?: OnboardingIntent | null): boolean => {
@@ -19,7 +15,12 @@ export const hasIntent = (intent?: OnboardingIntent | null): boolean => {
   return Boolean(
     (intent.asset_categories && intent.asset_categories.length > 0) ||
       (intent.regions && intent.regions.length > 0) ||
-      intent.budget_range
+      intent.price_min != null ||
+      intent.price_max != null ||
+      intent.deposit_min != null ||
+      intent.deposit_max != null ||
+      (intent.legal_categories && intent.legal_categories.length > 0) ||
+      (intent.session_statuses && intent.session_statuses.length > 0)
   );
 };
 
@@ -33,28 +34,68 @@ const matchesCategory = (listingSlug: string, selected: string[]): boolean => {
   return false;
 };
 
+const matchesRegion = (
+  province: string | null | undefined,
+  district: string | null | undefined,
+  regions: NonNullable<OnboardingIntent["regions"]>
+): boolean => {
+  if (!regions || regions.length === 0) return true;
+  if (!province) return false;
+  const r = regions.find((x) => x.province === province);
+  if (!r) return false;
+  if (!r.districts || r.districts.length === 0) return true;
+  if (!district) return false;
+  return r.districts.includes(district);
+};
+
+const numberFromCa = (v: unknown): number | null => {
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = Number(v.replace(/[^0-9.-]/g, ""));
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
+
 export const matchListingToIntent = (
   listing: ListingLike,
   intent?: OnboardingIntent | null
 ): boolean => {
   if (!intent) return false;
-  // Categories
+
   if (intent.asset_categories && intent.asset_categories.length > 0) {
     if (!listing.property_type_slug) return false;
     if (!matchesCategory(listing.property_type_slug, intent.asset_categories)) return false;
   }
-  // Regions
+
   if (intent.regions && intent.regions.length > 0) {
-    const province = listing.address?.province;
-    if (!province) return false;
-    if (!intent.regions.includes(province)) return false;
+    if (!matchesRegion(listing.address?.province, listing.address?.district, intent.regions)) {
+      return false;
+    }
   }
-  // Budget
-  if (intent.budget_range) {
-    const range = BUDGET_RANGES[intent.budget_range];
-    const price = listing.price ?? 0;
-    if (price < range.min || price > range.max) return false;
+
+  const price = listing.price ?? 0;
+  if (intent.price_min != null && price < intent.price_min) return false;
+  if (intent.price_max != null && price > intent.price_max) return false;
+
+  const deposit = numberFromCa(listing.custom_attributes?.deposit_amount);
+  if (intent.deposit_min != null) {
+    if (deposit == null || deposit < intent.deposit_min) return false;
   }
+  if (intent.deposit_max != null) {
+    if (deposit == null || deposit > intent.deposit_max) return false;
+  }
+
+  if (intent.legal_categories && intent.legal_categories.length > 0) {
+    const lc = listing.custom_attributes?.legal_category as string | undefined;
+    if (!lc || !intent.legal_categories.includes(lc as any)) return false;
+  }
+
+  if (intent.session_statuses && intent.session_statuses.length > 0) {
+    const status = getSessionStatus(listing as AuctionListing);
+    if (!intent.session_statuses.includes(status as any)) return false;
+  }
+
   return true;
 };
 

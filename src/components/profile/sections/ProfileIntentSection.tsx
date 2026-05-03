@@ -571,7 +571,7 @@ export const ProfileIntentSection = () => {
               })}
             </div>
           </div>
-
+        </div>
       )}
 
       {matchBanner && (

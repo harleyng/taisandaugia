@@ -143,11 +143,7 @@ export const isIntentComplete = (intent?: OnboardingIntent): boolean => {
     intent.asset_categories &&
       intent.asset_categories.length > 0 &&
       intent.regions &&
-      intent.regions.length > 0 &&
-      intent.budget_range &&
-      intent.experience &&
-      intent.goal &&
-      intent.source
+      intent.regions.length > 0
   );
 };
 

@@ -347,15 +347,6 @@ export const ProfileIntentSection = () => {
                 </div>
               ) : empty}
             </ViewField>
-            <ViewField label="Trạng thái phiên">
-              {savedStatuses.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {savedStatuses.map((k) => (
-                    <Badge key={k} variant="secondary" className="font-normal">{statusLabelOf(k)}</Badge>
-                  ))}
-                </div>
-              ) : empty}
-            </ViewField>
           </div>
         </div>
       ) : (

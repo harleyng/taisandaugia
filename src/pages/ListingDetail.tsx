@@ -257,6 +257,7 @@ const ListingDetail = () => {
                 price={listing.price}
                 priceUnit={listing.price_unit}
                 customAttributes={customAttributes}
+                isLoggedIn={isLoggedIn}
               />
 
               {/* Organization Contact */}

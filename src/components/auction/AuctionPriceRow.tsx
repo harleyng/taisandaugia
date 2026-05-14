@@ -51,7 +51,9 @@ export const AuctionPriceRow = ({
   price,
   customAttributes: ca,
   isUnlocked = true,
+  isLoggedIn = true,
   onLockedClick,
+  onLoginClick,
 }: AuctionPriceRowProps) => {
   const fmt = (v: number | undefined | null) =>
     v != null ? formatPrice(v, "TOTAL") : "–";
@@ -60,11 +62,11 @@ export const AuctionPriceRow = ({
   const winPrice = ca.winning_price ?? ca.win_price;
 
   const cells = [
-    { label: "Khởi điểm", rawValue: price, gated: false },
-    { label: "Đặt trước", rawValue: ca.deposit_amount, gated: false },
-    { label: "Hồ sơ", rawValue: ca.document_fee, gated: false },
-    { label: "Bước giá", rawValue: bidStep, gated: false },
-    { label: "Giá trúng", rawValue: winPrice, gated: true, highlight: true },
+    { label: "Khởi điểm", rawValue: price, gated: false, loginRequired: false },
+    { label: "Đặt trước", rawValue: ca.deposit_amount, gated: false, loginRequired: false },
+    { label: "Hồ sơ", rawValue: ca.document_fee, gated: false, loginRequired: true },
+    { label: "Bước giá", rawValue: bidStep, gated: false, loginRequired: true },
+    { label: "Giá trúng", rawValue: winPrice, gated: true, loginRequired: false, highlight: true },
   ];
 
   return (
@@ -72,7 +74,7 @@ export const AuctionPriceRow = ({
       <div className="grid grid-cols-3 lg:grid-cols-5">
         {cells.map((cell, i) => {
           const noData = cell.rawValue == null;
-          const hidden = !noData && cell.gated && !isUnlocked;
+          const hidden = !noData && ((cell.gated && !isUnlocked) || (cell.loginRequired && !isLoggedIn));
 
           return (
             <div
@@ -85,6 +87,7 @@ export const AuctionPriceRow = ({
                 isHidden={hidden}
                 highlight={cell.highlight}
                 onClick={onLockedClick}
+                onLoginClick={onLoginClick}
               />
             </div>
           );

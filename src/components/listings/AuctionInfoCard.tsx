@@ -13,9 +13,10 @@ interface AuctionInfoCardProps {
     auction_location?: string;
     registration_deadline?: string;
   };
+  isLoggedIn?: boolean;
 }
 
-export const AuctionInfoCard = ({ price, priceUnit, customAttributes }: AuctionInfoCardProps) => {
+export const AuctionInfoCard = ({ price, priceUnit, customAttributes, isLoggedIn = true }: AuctionInfoCardProps) => {
   const {
     bid_step,
     deposit_amount,
@@ -58,7 +59,7 @@ export const AuctionInfoCard = ({ price, priceUnit, customAttributes }: AuctionI
         <div className="h-px bg-border" />
 
         {/* Bước giá */}
-        {bid_step != null && (
+        {bid_step != null && isLoggedIn && (
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground flex items-center gap-1.5">
               <TrendingUp className="w-4 h-4" />

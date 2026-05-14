@@ -25,6 +25,8 @@ const ListingDetail = () => {
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [session, setSession] = useState<any>(null);
+  const isLoggedIn = !!session;
 
   const { data: contactData, isLoading: contactLoading } = useListingContact(id || "");
   const contactInfo = contactData?.contact_info as { name: string; phone: string; email: string } | null;
@@ -56,6 +58,10 @@ const ListingDetail = () => {
       }
     };
     fetchListing();
+
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
+    return () => subscription.unsubscribe();
   }, [id]);
 
   if (!id || error) {
@@ -251,6 +257,7 @@ const ListingDetail = () => {
                 price={listing.price}
                 priceUnit={listing.price_unit}
                 customAttributes={customAttributes}
+                isLoggedIn={isLoggedIn}
               />
 
               {/* Organization Contact */}

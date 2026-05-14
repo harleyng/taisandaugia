@@ -16,25 +16,27 @@ const PriceCell = ({
   value,
   isHidden,
   onClick,
+  onLoginClick,
   highlight,
 }: {
   label: string;
   value: string;
   isHidden?: boolean;
   onClick?: () => void;
+  onLoginClick?: () => void;
   highlight?: boolean;
 }) => (
   isHidden ? (
     <button
       type="button"
-      onClick={onClick}
-      aria-label={`Mở khóa để xem ${label}`}
+      onClick={onLoginClick ?? onClick}
+      aria-label={`Đăng nhập để xem ${label}`}
       className={`flex flex-col items-center text-center px-2 py-3 w-full h-full transition-colors hover:bg-primary/10 ${highlight ? "bg-primary/5" : ""}`}
     >
       <span className="text-xs text-muted-foreground mb-1">{label}</span>
       <span className="inline-flex items-center gap-1 text-sm font-bold text-primary">
         <Lock className="w-3.5 h-3.5" />
-        Mở khóa
+        Đăng nhập
       </span>
     </button>
   ) : (

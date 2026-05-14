@@ -292,7 +292,9 @@ const AuctionDetail = () => {
               price={listing.price}
               customAttributes={ca}
               isUnlocked={isUnlocked}
+              isLoggedIn={isLoggedIn}
               onLockedClick={() => openAssetPaywall(listing.id, listing.title)}
+              onLoginClick={() => openAuthDialog(() => openAssetPaywall(listing.id, listing.title))}
             />
 
             {/* 2b. Chủ tài sản (clickable card) */}

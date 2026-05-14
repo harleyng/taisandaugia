@@ -58,6 +58,10 @@ const ListingDetail = () => {
       }
     };
     fetchListing();
+
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
+    return () => subscription.unsubscribe();
   }, [id]);
 
   if (!id || error) {

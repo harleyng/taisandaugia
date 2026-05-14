@@ -16,7 +16,7 @@ interface AuctionInfoCardProps {
   isLoggedIn?: boolean;
 }
 
-export const AuctionInfoCard = ({ price, priceUnit, customAttributes }: AuctionInfoCardProps) => {
+export const AuctionInfoCard = ({ price, priceUnit, customAttributes, isLoggedIn = true }: AuctionInfoCardProps) => {
   const {
     bid_step,
     deposit_amount,

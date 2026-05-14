@@ -6,7 +6,9 @@ interface AuctionPriceRowProps {
   price: number;
   customAttributes: any;
   isUnlocked?: boolean;
+  isLoggedIn?: boolean;
   onLockedClick?: () => void;
+  onLoginClick?: () => void;
 }
 
 const PriceCell = ({

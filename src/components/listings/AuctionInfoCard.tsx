@@ -13,6 +13,7 @@ interface AuctionInfoCardProps {
     auction_location?: string;
     registration_deadline?: string;
   };
+  isLoggedIn?: boolean;
 }
 
 export const AuctionInfoCard = ({ price, priceUnit, customAttributes }: AuctionInfoCardProps) => {

@@ -24,6 +24,8 @@ import MarketReportCategory from "./pages/MarketReportCategory";
 import MarketReportOutcomes from "./pages/MarketReportOutcomes";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfUse from "./pages/TermsOfUse";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 
 const queryClient = new QueryClient();
@@ -49,6 +51,8 @@ const App = () => (
             <Route path="/install" element={<PWAInstall />} />
             <Route path="/lien-he" element={<Contact />} />
             <Route path="/gioi-thieu" element={<About />} />
+            <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicy />} />
+            <Route path="/dieu-khoan-su-dung" element={<TermsOfUse />} />
 
             {/* Credits */}
             <Route path="/buy-credits" element={<BuyCredits />} />

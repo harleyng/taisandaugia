@@ -51,8 +51,8 @@ export const Footer = () => {
             <h3 className="font-semibold text-background mb-4 text-sm">Chính sách</h3>
             <ul className="space-y-2 text-sm text-background/60">
               <li><Link to="#" className="hover:text-background transition-colors">Quy chế đấu giá</Link></li>
-              <li><Link to="#" className="hover:text-background transition-colors">Chính sách bảo mật</Link></li>
-              <li><Link to="#" className="hover:text-background transition-colors">Điều khoản sử dụng</Link></li>
+              <li><Link to="/chinh-sach-bao-mat" className="hover:text-background transition-colors">Chính sách bảo mật</Link></li>
+              <li><Link to="/dieu-khoan-su-dung" className="hover:text-background transition-colors">Điều khoản sử dụng</Link></li>
               <li><Link to="#" className="hover:text-background transition-colors">Hướng dẫn tham gia đấu giá</Link></li>
             </ul>
           </div>

@@ -1,5 +1,6 @@
 import { ArrowRight, Clock, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdvertisementBlock } from "@/components/AdvertisementBlock";
 import apartmentSample from "@/assets/apartment-sample.jpg";
 import houseSample from "@/assets/house-sample.jpg";
 import penthouseSample from "@/assets/penthouse-sample.jpg";
@@ -127,7 +128,8 @@ export const NewsSection = () => {
 
         {/* Side articles */}
         <div className="flex flex-col gap-4 justify-between">
-          {sideArticles.map((article) => (
+          {/* First 2 small articles */}
+          {sideArticles.slice(0, 2).map((article) => (
             <div key={article.id} className="group flex gap-3 cursor-pointer">
               <div className="relative rounded-lg overflow-hidden w-28 h-20 md:w-36 md:h-24 flex-shrink-0">
                 <img
@@ -142,9 +144,7 @@ export const NewsSection = () => {
               </div>
               <div className="flex flex-col justify-start min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-primary">
-                    {article.category}
-                  </span>
+                  <span className="text-xs font-medium text-primary">{article.category}</span>
                   <span className="text-xs text-muted-foreground">• {article.readTime}</span>
                 </div>
                 <h4 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
@@ -160,6 +160,31 @@ export const NewsSection = () => {
               </div>
             </div>
           ))}
+
+          {/* Merged last 2 articles — compact text-only list */}
+          <div className="border border-border rounded-xl px-4 py-3 flex flex-col gap-2.5">
+            {sideArticles.slice(2).map((article, i) => (
+              <div key={article.id}>
+                {i > 0 && <div className="border-t border-border mb-2.5" />}
+                <div className="group cursor-pointer flex flex-col gap-1">
+                  <span className="text-xs font-medium text-primary">{article.category}</span>
+                  <h4 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                    {article.title}
+                  </h4>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <img src={sourceLogos[article.source]} alt={article.source} className="h-3.5 w-3.5 rounded-sm" />
+                    <span className="font-medium text-foreground/70">{article.source}</span>
+                    <span>•</span>
+                    <Clock className="h-3 w-3" />
+                    {article.date}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Advertisement slot */}
+          <AdvertisementBlock inline />
         </div>
       </div>
     </section>

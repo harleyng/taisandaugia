@@ -22,6 +22,8 @@ import VnpayCheckout from "./pages/VnpayCheckout";
 import MarketReport from "./pages/MarketReport";
 import MarketReportCategory from "./pages/MarketReportCategory";
 import MarketReportOutcomes from "./pages/MarketReportOutcomes";
+import Contact from "./pages/Contact";
+import About from "./pages/About";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 
 const queryClient = new QueryClient();
@@ -45,6 +47,8 @@ const App = () => (
             <Route path="/report/:slug" element={<MarketReportCategory />} />
             <Route path="/report/deep/outcomes" element={<MarketReportOutcomes />} />
             <Route path="/install" element={<PWAInstall />} />
+            <Route path="/lien-he" element={<Contact />} />
+            <Route path="/gioi-thieu" element={<About />} />
 
             {/* Credits */}
             <Route path="/buy-credits" element={<BuyCredits />} />

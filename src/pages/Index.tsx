@@ -6,12 +6,13 @@ import { MarketReportTeaser } from "@/components/MarketReportTeaser";
 import { CompletedAuctions } from "@/components/CompletedAuctions";
 import { FeaturedProjects } from "@/components/FeaturedProjects";
 import { PopularAreas } from "@/components/PopularAreas";
-
 import { NewsSection } from "@/components/NewsSection";
 import { HomepageRewardBanner } from "@/components/HomepageRewardBanner";
+import { CollaborationDialog } from "@/components/CollaborationDialog";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, Home, LandPlot, MapPin, Building, Landmark } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Handshake, Building2, Home, LandPlot, MapPin, Building, Landmark } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useState } from "react";
 import heroImage from "@/assets/hero-image.jpg";
 
 const auctionCategories = [
@@ -24,7 +25,7 @@ const auctionCategories = [
 
 
 const Index = () => {
-  const navigate = useNavigate();
+  const [collabOpen, setCollabOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -157,14 +158,16 @@ const Index = () => {
               <Button
                 size="lg"
                 className="bg-background text-foreground hover:bg-background/90 shadow-lg shadow-black/20"
-                onClick={() => navigate("/listings")}>
-                Khám phá tài sản
-                <ArrowRight className="ml-2 h-4 w-4" strokeWidth={1.5} />
+                onClick={() => setCollabOpen(true)}>
+                <Handshake className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                Đăng ký hợp tác
               </Button>
             </div>
           </div>
         </div>
       </section>
+
+      <CollaborationDialog open={collabOpen} onOpenChange={setCollabOpen} />
 
       <Footer />
     </div>);

@@ -1,6 +1,5 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { SearchBar } from "@/components/SearchBar";
 import { AuctionSection } from "@/components/AuctionSection";
 import { MarketReportTeaser } from "@/components/MarketReportTeaser";
 import { CompletedAuctions } from "@/components/CompletedAuctions";
@@ -10,10 +9,31 @@ import { NewsSection } from "@/components/NewsSection";
 import { HomepageRewardBanner } from "@/components/HomepageRewardBanner";
 import { CollaborationDialog } from "@/components/CollaborationDialog";
 import { Button } from "@/components/ui/button";
-import { Handshake, Building2, Home, LandPlot, MapPin, Building, Landmark } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Handshake, Building2, Home, LandPlot, MapPin, Building, Landmark, Search, Package, Users } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, type ElementType } from "react";
 import heroImage from "@/assets/hero-image.jpg";
+
+const heroLocations = [
+  { value: "all", label: "Toàn quốc" },
+  { value: "Hà Nội", label: "Hà Nội" },
+  { value: "TP. HCM", label: "TP. HCM" },
+  { value: "Đà Nẵng", label: "Đà Nẵng" },
+  { value: "Bình Dương", label: "Bình Dương" },
+  { value: "Đồng Nai", label: "Đồng Nai" },
+];
+
+const heroPropertyTypes = [
+  { value: "all", label: "Tất cả" },
+  { value: "quyen-su-dung-dat", label: "Quyền sử dụng đất" },
+  { value: "nha-rieng-le", label: "Nhà riêng lẻ" },
+  { value: "can-ho", label: "Căn hộ" },
+  { value: "dat-du-an", label: "Đất dự án" },
+  { value: "thi-hanh-an", label: "Thi hành án" },
+  { value: "tai-san-cong", label: "Tài sản công" },
+];
 
 const auctionCategories = [
 { label: "Quyền sử dụng đất", slug: "quyen-su-dung-dat", icon: LandPlot },
@@ -24,22 +44,91 @@ const auctionCategories = [
 { label: "Tài sản công", slug: "tai-san-cong", icon: Building }];
 
 
+type HeroTab = "tai-san" | "cong-ty" | "chu-tai-san";
+
+const heroTabs: { key: HeroTab; label: string; icon: ElementType }[] = [
+  { key: "tai-san", label: "Tài sản", icon: Package },
+  { key: "cong-ty", label: "Công ty đấu giá", icon: Building2 },
+  { key: "chu-tai-san", label: "Chủ tài sản", icon: Users },
+];
+
+const analyticsStats = [
+  {
+    icon: Home,
+    iconBg: "bg-[#1a3a6b]",
+    value: "12.450+",
+    label: "Tài sản đang đấu giá",
+    sub: "Cập nhật mỗi ngày",
+  },
+  {
+    icon: () => (
+      <span className="text-white font-bold text-base leading-none">₫</span>
+    ),
+    iconBg: "bg-[#2d6a4f]",
+    value: "58.300+",
+    label: "Tỷ đồng giá trị tài sản",
+    sub: "Tổng giá trị ước tính",
+  },
+  {
+    icon: Building,
+    iconBg: "bg-[#8b4513]",
+    value: "230+",
+    label: "Công ty đấu giá",
+    sub: "Đang hoạt động trên toàn quốc",
+  },
+];
+
 const Index = () => {
+  const navigate = useNavigate();
   const [collabOpen, setCollabOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<HeroTab>("tai-san");
+  const [assetQuery, setAssetQuery] = useState("");
+  const [assetLocation, setAssetLocation] = useState("all");
+  const [assetType, setAssetType] = useState("all");
+  const [companyQuery, setCompanyQuery] = useState("");
+  const [companyLocation, setCompanyLocation] = useState("all");
+  const [companyType, setCompanyType] = useState("all");
+  const [ownerQuery, setOwnerQuery] = useState("");
+  const [ownerLocation, setOwnerLocation] = useState("all");
+  const [ownerType, setOwnerType] = useState("all");
+
+  const handleSearch = () => {
+    if (activeTab === "tai-san") {
+      const params = new URLSearchParams();
+      params.set("purpose", "auction");
+      if (assetQuery) params.set("q", assetQuery);
+      if (assetLocation && assetLocation !== "all") params.set("location", assetLocation);
+      if (assetType && assetType !== "all") params.set("propertyType", assetType);
+      navigate(`/listings?${params.toString()}`);
+    } else if (activeTab === "cong-ty") {
+      const params = new URLSearchParams();
+      if (companyQuery) params.set("q", companyQuery);
+      if (companyLocation && companyLocation !== "all") params.set("location", companyLocation);
+      if (companyType && companyType !== "all") params.set("propertyType", companyType);
+      navigate(`/listings?${params.toString()}`);
+    } else {
+      const params = new URLSearchParams();
+      if (ownerQuery) params.set("owner", ownerQuery);
+      if (ownerLocation && ownerLocation !== "all") params.set("location", ownerLocation);
+      if (ownerType && ownerType !== "all") params.set("propertyType", ownerType);
+      navigate(`/listings?${params.toString()}`);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
-      {/* Hero Section - gradient background with integrated search */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden">
         <img
           src={heroImage}
           alt="Bất động sản"
           className="absolute inset-0 w-full h-full object-cover" />
-        
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="relative container px-4 pt-32 pb-36 md:pt-44 md:pb-52">
+        <div className="absolute inset-0 bg-black/55" />
+
+        <div className="relative container px-4 pt-28 pb-10 md:pt-36 md:pb-14">
+          {/* Title */}
           <div className="text-center mb-8 md:mb-10">
             <h1 className="text-[40px] md:text-[56px] font-bold text-white mb-3 leading-tight">
               Săn tài sản đấu giá toàn quốc
@@ -48,15 +137,210 @@ const Index = () => {
               Tra cứu nhanh – Thông tin minh bạch – Cập nhật liên tục
             </p>
           </div>
-          <div className="max-w-4xl mx-auto">
-            <SearchBar variant="hero" />
+
+          {/* Search card */}
+          <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200">
+              {heroTabs.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-medium transition-colors relative ${
+                      active
+                        ? "text-[#1a3a6b] bg-white"
+                        : "text-gray-500 bg-gray-50 hover:text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                    {tab.label}
+                    {active && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1a3a6b]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Search inputs */}
+            <div className="p-4 md:p-5">
+              {activeTab === "tai-san" && (
+                <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      value={assetQuery}
+                      onChange={(e) => setAssetQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      placeholder="Tìm theo tài sản, mã tài sản, địa điểm..."
+                      className="pl-9 h-11 border-gray-200"
+                    />
+                  </div>
+                  <Select value={assetLocation} onValueChange={setAssetLocation}>
+                    <SelectTrigger className="h-11 w-full md:w-40 border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
+                        <SelectValue placeholder="Địa điểm" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {heroLocations.map((l) => (
+                        <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={assetType} onValueChange={setAssetType}>
+                    <SelectTrigger className="h-11 w-full md:w-44 border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4 text-gray-400 shrink-0" />
+                        <SelectValue placeholder="Loại tài sản" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {heroPropertyTypes.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleSearch}
+                    className="h-11 px-8 bg-[#1a3a6b] hover:bg-[#152d54] text-white font-medium rounded-lg shrink-0"
+                  >
+                    Tra cứu
+                  </Button>
+                </div>
+              )}
+
+              {activeTab === "cong-ty" && (
+                <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      value={companyQuery}
+                      onChange={(e) => setCompanyQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      placeholder="Tìm tên công ty đấu giá..."
+                      className="pl-9 h-11 border-gray-200"
+                    />
+                  </div>
+                  <Select value={companyLocation} onValueChange={setCompanyLocation}>
+                    <SelectTrigger className="h-11 w-full md:w-40 border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
+                        <SelectValue placeholder="Địa điểm" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {heroLocations.map((l) => (
+                        <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={companyType} onValueChange={setCompanyType}>
+                    <SelectTrigger className="h-11 w-full md:w-44 border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4 text-gray-400 shrink-0" />
+                        <SelectValue placeholder="Loại tài sản" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {heroPropertyTypes.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleSearch}
+                    className="h-11 px-8 bg-[#1a3a6b] hover:bg-[#152d54] text-white font-medium rounded-lg shrink-0"
+                  >
+                    Tra cứu
+                  </Button>
+                </div>
+              )}
+
+              {activeTab === "chu-tai-san" && (
+                <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      value={ownerQuery}
+                      onChange={(e) => setOwnerQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      placeholder="Tìm tên chủ tài sản, tổ chức..."
+                      className="pl-9 h-11 border-gray-200"
+                    />
+                  </div>
+                  <Select value={ownerLocation} onValueChange={setOwnerLocation}>
+                    <SelectTrigger className="h-11 w-full md:w-40 border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
+                        <SelectValue placeholder="Địa điểm" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {heroLocations.map((l) => (
+                        <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={ownerType} onValueChange={setOwnerType}>
+                    <SelectTrigger className="h-11 w-full md:w-44 border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4 text-gray-400 shrink-0" />
+                        <SelectValue placeholder="Loại tài sản" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {heroPropertyTypes.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleSearch}
+                    className="h-11 px-8 bg-[#1a3a6b] hover:bg-[#152d54] text-white font-medium rounded-lg shrink-0"
+                  >
+                    Tra cứu
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
+
         </div>
+
         {/* Curved bottom edge */}
         <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none">
           <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-[50px] md:h-[80px]" preserveAspectRatio="none">
             <path d="M0,120 L0,60 Q720,0 1440,60 L1440,120 Z" fill="hsl(var(--background))" />
           </svg>
+        </div>
+      </section>
+
+      {/* Analytics stats */}
+      <section className="container px-4 -mt-6 md:-mt-10 relative z-20">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {analyticsStats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div
+                key={stat.label}
+                className="flex items-center gap-4 bg-card border border-border rounded-2xl px-5 py-4 shadow-md"
+              >
+                <div className={`${stat.iconBg} rounded-xl shrink-0 flex items-center justify-center w-12 h-12`}>
+                  <Icon className="h-6 w-6 text-white" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-foreground leading-none mb-1">{stat.value}</div>
+                  <div className="text-sm font-medium text-foreground">{stat.label}</div>
+                  <div className="text-xs text-muted-foreground">{stat.sub}</div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 

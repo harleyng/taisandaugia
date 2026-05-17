@@ -11,9 +11,14 @@ import { CollaborationDialog } from "@/components/CollaborationDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Handshake, Building2, Home, LandPlot, MapPin, Building, Landmark, Search, Package, Users } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Handshake, Building2, Home, LandPlot, MapPin, Building, Landmark, Search, Package, Users, ChevronsUpDown, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, type ElementType } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-image.jpg";
 
 const heroLocations = [
@@ -55,26 +60,23 @@ const heroTabs: { key: HeroTab; label: string; icon: ElementType }[] = [
 const analyticsStats = [
   {
     icon: Home,
-    iconBg: "bg-[#1a3a6b]",
     value: "12.450+",
     label: "Tài sản đang đấu giá",
-    sub: "Cập nhật mỗi ngày",
   },
   {
-    icon: () => (
-      <span className="text-white font-bold text-base leading-none">₫</span>
-    ),
-    iconBg: "bg-[#2d6a4f]",
+    icon: Building2,
     value: "58.300+",
     label: "Tỷ đồng giá trị tài sản",
-    sub: "Tổng giá trị ước tính",
   },
   {
-    icon: Building,
-    iconBg: "bg-[#8b4513]",
+    icon: Landmark,
     value: "230+",
-    label: "Công ty đấu giá",
-    sub: "Đang hoạt động trên toàn quốc",
+    label: "Công ty đấu giá tham gia",
+  },
+  {
+    icon: LandPlot,
+    value: "1.280+",
+    label: "Phiên đấu giá đang diễn ra",
   },
 ];
 
@@ -85,12 +87,26 @@ const Index = () => {
   const [assetQuery, setAssetQuery] = useState("");
   const [assetLocation, setAssetLocation] = useState("all");
   const [assetType, setAssetType] = useState("all");
-  const [companyQuery, setCompanyQuery] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [companyOpen, setCompanyOpen] = useState(false);
   const [companyLocation, setCompanyLocation] = useState("all");
   const [companyType, setCompanyType] = useState("all");
   const [ownerQuery, setOwnerQuery] = useState("");
   const [ownerLocation, setOwnerLocation] = useState("all");
   const [ownerType, setOwnerType] = useState("all");
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ["auction-organizations-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("auction_organizations")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
 
   const handleSearch = () => {
     if (activeTab === "tai-san") {
@@ -102,7 +118,7 @@ const Index = () => {
       navigate(`/listings?${params.toString()}`);
     } else if (activeTab === "cong-ty") {
       const params = new URLSearchParams();
-      if (companyQuery) params.set("q", companyQuery);
+      if (companyId) params.set("organization", companyId);
       if (companyLocation && companyLocation !== "all") params.set("location", companyLocation);
       if (companyType && companyType !== "all") params.set("propertyType", companyType);
       navigate(`/listings?${params.toString()}`);
@@ -134,7 +150,7 @@ const Index = () => {
               Săn tài sản đấu giá toàn quốc
             </h1>
             <p className="text-lg md:text-2xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-              Tra cứu nhanh – Thông tin minh bạch – Cập nhật liên tục
+              Săn đúng tài sản - Ra quyết định hiệu quả - Tối ưu lợi nhuận đấu giá
             </p>
           </div>
 
@@ -216,16 +232,41 @@ const Index = () => {
 
               {activeTab === "cong-ty" && (
                 <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      value={companyQuery}
-                      onChange={(e) => setCompanyQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      placeholder="Tìm tên công ty đấu giá..."
-                      className="pl-9 h-11 border-gray-200"
-                    />
-                  </div>
+                  <Popover open={companyOpen} onOpenChange={setCompanyOpen}>
+                    <PopoverTrigger asChild>
+                      <button className="flex-1 flex items-center justify-between h-11 px-3 rounded-md border border-gray-200 bg-white text-sm text-left hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        <span className={companyId ? "text-foreground" : "text-gray-400"}>
+                          {companyId
+                            ? companies.find((c) => c.id === companyId)?.name
+                            : "Chọn công ty đấu giá..."}
+                        </span>
+                        <ChevronsUpDown className="h-4 w-4 text-gray-400 shrink-0 ml-2" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start">
+                      <Command>
+                        <CommandInput placeholder="Tìm tên công ty..." />
+                        <CommandList>
+                          <CommandEmpty>Không tìm thấy công ty.</CommandEmpty>
+                          <CommandGroup>
+                            {companies.map((c) => (
+                              <CommandItem
+                                key={c.id}
+                                value={c.name}
+                                onSelect={() => {
+                                  setCompanyId(c.id === companyId ? "" : c.id);
+                                  setCompanyOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", companyId === c.id ? "opacity-100" : "opacity-0")} />
+                                {c.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <Select value={companyLocation} onValueChange={setCompanyLocation}>
                     <SelectTrigger className="h-11 w-full md:w-40 border-gray-200">
                       <div className="flex items-center gap-2">
@@ -322,25 +363,23 @@ const Index = () => {
 
       {/* Analytics stats */}
       <section className="container px-4 -mt-6 md:-mt-10 relative z-20">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {analyticsStats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={stat.label}
-                className="flex items-center gap-4 bg-card border border-border rounded-2xl px-5 py-4 shadow-md"
-              >
-                <div className={`${stat.iconBg} rounded-xl shrink-0 flex items-center justify-center w-12 h-12`}>
-                  <Icon className="h-6 w-6 text-white" strokeWidth={1.5} />
+        <div className="bg-card border border-border rounded-2xl shadow-lg px-6 py-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 divide-y-2 md:divide-y-0 md:divide-x divide-border">
+            {analyticsStats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div key={stat.label} className="flex items-center gap-3 pt-4 md:pt-0 first:pt-0 md:px-6 first:pl-0 last:pr-0">
+                  <div className="bg-primary/10 rounded-full shrink-0 flex items-center justify-center w-12 h-12">
+                    <Icon className="h-6 w-6 text-primary" strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-primary leading-none mb-0.5">{stat.value}</div>
+                    <div className="text-xs text-muted-foreground leading-snug">{stat.label}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-foreground leading-none mb-1">{stat.value}</div>
-                  <div className="text-sm font-medium text-foreground">{stat.label}</div>
-                  <div className="text-xs text-muted-foreground">{stat.sub}</div>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </section>
 

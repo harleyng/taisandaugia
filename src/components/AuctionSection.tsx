@@ -38,6 +38,36 @@ export const AuctionSection = () => {
     },
   });
 
+  const { data: sessionCounts } = useQuery({
+    queryKey: ["auction-session-counts"],
+    queryFn: async () => {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+      const day7End = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7).toISOString();
+      const day14End = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 14).toISOString();
+
+      const { data, error } = await supabase
+        .from("listings")
+        .select("custom_attributes")
+        .eq("status", "ACTIVE");
+      if (error) throw error;
+
+      const rows = data || [];
+      let today = 0, day7 = 0, day14 = 0;
+      for (const row of rows) {
+        const attrs = (row.custom_attributes || {}) as Record<string, any>;
+        const t = attrs.auction_time ?? attrs.auction_date;
+        if (!t) continue;
+        const ts = new Date(t).toISOString();
+        if (ts >= todayStart && ts < todayEnd) today++;
+        if (ts >= todayStart && ts < day7End) day7++;
+        if (ts >= todayStart && ts < day14End) day14++;
+      }
+      return { today, day7, day14 };
+    },
+  });
+
   const orgIds = Array.from(new Set(auctions.map((a) => a.auction_org_id).filter(Boolean) as string[]));
   const { data: orgs = [] } = useQuery({
     queryKey: ["auction-orgs-by-ids", orgIds.sort().join(",")],
@@ -74,9 +104,23 @@ export const AuctionSection = () => {
             <h2 className="text-xl md:text-3xl font-medium text-white mb-1">
               Phiên sắp diễn ra
             </h2>
-            <p className="text-xs md:text-sm text-white/70">
+            <p className="text-xs md:text-sm text-white/70 mb-3">
               Các bất động sản đang mở đăng ký với giá tốt nhất
             </p>
+            <div className="flex gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
+                <span className="text-white font-semibold text-sm">{sessionCounts?.today ?? "—"}</span>
+                <span className="text-white/70 text-xs">phiên hôm nay</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
+                <span className="text-white font-semibold text-sm">{sessionCounts?.day7 ?? "—"}</span>
+                <span className="text-white/70 text-xs">phiên trong 7 ngày</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
+                <span className="text-white font-semibold text-sm">{sessionCounts?.day14 ?? "—"}</span>
+                <span className="text-white/70 text-xs">phiên trong 14 ngày</span>
+              </div>
+            </div>
           </div>
           <Link to="/listings?purpose=auction" className="hidden sm:block">
             <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10 text-sm">

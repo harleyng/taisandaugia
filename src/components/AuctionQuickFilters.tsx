@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, SlidersHorizontal, ChevronDown, X } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronDown, X, Building2 } from "lucide-react";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { vietnamProvinces } from "@/constants/vietnam-locations";
 import {
@@ -11,20 +11,56 @@ import {
   PRICE_RANGES,
   countActiveFilters,
 } from "@/types/auction-filters.types";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
 
 interface AuctionQuickFiltersProps {
   filters: AuctionFilters;
   onFiltersChange: (filters: AuctionFilters) => void;
   onOpenAdvanced: () => void;
+  companies?: { id: string; name: string }[];
+  suggestions?: string[];
 }
 
-export function AuctionQuickFilters({ filters, onFiltersChange, onOpenAdvanced }: AuctionQuickFiltersProps) {
+export function AuctionQuickFilters({
+  filters,
+  onFiltersChange,
+  onOpenAdvanced,
+  companies = [],
+  suggestions = [],
+}: AuctionQuickFiltersProps) {
+  const navigate = useNavigate();
   const activeCount = countActiveFilters(filters);
   const update = (key: keyof AuctionFilters, value: any) => {
     onFiltersChange({ ...filters, [key]: value });
   };
+
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchWrapRef = useRef<HTMLDivElement>(null);
+  const query = filters.searchQuery;
+
+  const matchedCompanies = query.trim()
+    ? companies.filter((c) => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 3)
+    : [];
+
+  const filteredSuggestions = query.trim()
+    ? suggestions
+        .filter((s) => s.toLowerCase().includes(query.toLowerCase()) && s.toLowerCase() !== query.toLowerCase())
+        .slice(0, 6)
+    : [];
+
+  const showDropdown = searchFocused && query.trim().length > 0 && (matchedCompanies.length > 0 || filteredSuggestions.length > 0);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+        setSearchFocused(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const categoryLabel = filters.category
     ? ASSET_CATEGORIES.find(c => c.slug === filters.category)?.name
@@ -43,15 +79,57 @@ export function AuctionQuickFilters({ filters, onFiltersChange, onOpenAdvanced }
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {/* Search */}
-      <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Search with suggestions */}
+      <div ref={searchWrapRef} className="relative flex-1 min-w-[200px] max-w-[300px]">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
         <Input
           placeholder="Tìm mã phiên, địa chỉ..."
           value={filters.searchQuery}
           onChange={(e) => update("searchQuery", e.target.value)}
+          onFocus={() => setSearchFocused(true)}
+          onKeyDown={(e) => { if (e.key === "Escape") setSearchFocused(false); }}
           className="pl-9 h-9 text-sm"
         />
+        {showDropdown && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+            {/* Company rows */}
+            {matchedCompanies.map((c) => (
+              <button
+                key={c.id}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setSearchFocused(false);
+                  navigate(`/auction-org/${c.id}`);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-muted transition-colors text-left"
+              >
+                <Building2 className="h-4 w-4 text-primary shrink-0" />
+                <span>
+                  Tìm công ty <span className="font-medium">"{c.name}"</span>
+                </span>
+              </button>
+            ))}
+            {/* Divider */}
+            {matchedCompanies.length > 0 && filteredSuggestions.length > 0 && (
+              <div className="border-t border-border" />
+            )}
+            {/* Keyword suggestions */}
+            {filteredSuggestions.map((s) => (
+              <button
+                key={s}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  update("searchQuery", s);
+                  setSearchFocused(false);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-muted transition-colors text-left text-foreground"
+              >
+                <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Advanced filter button */}

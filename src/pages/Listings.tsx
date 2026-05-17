@@ -5,7 +5,7 @@ import { AuctionQuickFilters } from "@/components/AuctionQuickFilters";
 import { AuctionFilterDialog } from "@/components/AuctionFilterDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Map, Search, Megaphone, Loader2, LogIn } from "lucide-react";
+import { Map, Search, Megaphone, Loader2, LogIn, FileText, Coins, Building2, RefreshCw } from "lucide-react";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useAuctionListings, getSessionStatus } from "@/hooks/useAuctionListings";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { type AuctionFilters, defaultAuctionFilters } from "@/types/auction-filters.types";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import { useAuctionOrgNames } from "@/hooks/useAuctionOrgNames";
+import { useQuery } from "@tanstack/react-query";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import { useDemandSubscription } from "@/hooks/useDemandSubscription";
 import { countMatches, hasIntent } from "@/lib/demandMatch";
@@ -24,7 +25,7 @@ import { DemandUpsellBanner } from "@/components/demand/DemandUpsellBanner";
 import { DemandEmptyMatch } from "@/components/demand/DemandEmptyMatch";
 import { DemandStatusBadge } from "@/components/demand/DemandStatusBadge";
 
-type SortMode = "newest" | "price-asc" | "price-desc";
+type SortMode = "newest" | "price-asc" | "price-desc" | "upcoming";
 
 const ITEMS_PER_PAGE = 30;
 const GUEST_VISIBLE_ITEMS = 11;
@@ -70,6 +71,19 @@ const Listings = () => {
   const userHasIntent = hasIntent(intent);
   const [session, setSession] = useState<any>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  const { data: allCompanies = [] } = useQuery({
+    queryKey: ["auction-organizations-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("auction_organizations")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -167,17 +181,60 @@ const Listings = () => {
     result.sort((a, b) => {
       if (sortMode === "price-asc") return a.price - b.price;
       if (sortMode === "price-desc") return b.price - a.price;
+      if (sortMode === "upcoming") {
+        const aTime = (a.custom_attributes as any)?.auction_time ?? (a.custom_attributes as any)?.auction_date;
+        const bTime = (b.custom_attributes as any)?.auction_time ?? (b.custom_attributes as any)?.auction_date;
+        if (!aTime && !bTime) return 0;
+        if (!aTime) return 1;
+        if (!bTime) return -1;
+        return new Date(aTime).getTime() - new Date(bTime).getTime();
+      }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
     return result;
   }, [listings, filters, sortMode]);
 
+  const searchStats = useMemo(() => {
+    const count = filteredListings.length;
+    const totalValue = filteredListings.reduce((sum, l) => sum + (l.price || 0), 0);
+    const uniqueOrgs = new Set(filteredListings.map((l) => l.auction_org_id).filter(Boolean)).size;
+    return { count, totalValue, uniqueOrgs };
+  }, [filteredListings]);
+
+  const lastUpdated = useMemo(() => {
+    if (!listings || listings.length === 0) return null;
+    const max = listings.reduce((latest, l) => {
+      const t = new Date((l as any).updated_at || l.created_at).getTime();
+      return t > latest ? t : latest;
+    }, 0);
+    return max ? new Date(max) : null;
+  }, [listings]);
+
   const isGuest = !session;
   const maxVisible = isGuest ? Math.min(visibleCount, GUEST_VISIBLE_ITEMS) : visibleCount;
   const visibleListings = filteredListings.slice(0, maxVisible);
   const hasMore = !isGuest && visibleCount < filteredListings.length;
   const showLoginGate = isGuest && filteredListings.length > GUEST_VISIBLE_ITEMS;
+
+  const searchSuggestions = useMemo(() => {
+    if (!listings) return [];
+    const seen = new Set<string>();
+    const results: string[] = [];
+    for (const l of listings) {
+      const words = l.title.split(/[\s,–-]+/).filter((w) => w.length > 3);
+      for (const w of words) {
+        const lower = w.toLowerCase();
+        if (!seen.has(lower)) {
+          seen.add(lower);
+          results.push(w);
+        }
+        if (results.length >= 100) break;
+      }
+      if (results.length >= 100) break;
+    }
+    return results;
+  }, [listings]);
 
   const handleFiltersChange = useCallback((f: AuctionFilters) => {
     setFilters(f);
@@ -212,15 +269,71 @@ const Listings = () => {
         {/* Page Header */}
         <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Danh Sách Tài Sản Đấu Giá</h1>
-            <p className="text-muted-foreground mt-1">
-              Tìm thấy <span className="font-semibold text-foreground">{filteredListings.length}</span> tài sản
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Danh sách tài sản đấu giá</h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Khám phá hàng ngàn tài sản đấu giá từ các đơn vị uy tín trên toàn quốc
             </p>
           </div>
-          {session && userHasIntent && demandStatus !== "NOT_SUBSCRIBED" && (
-            <DemandStatusBadge />
-          )}
+          <div className="flex items-center gap-3">
+            {lastUpdated && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <RefreshCw className="h-3 w-3" />
+                Cập nhật mới nhất:{" "}
+                {lastUpdated.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}{" "}
+                {lastUpdated.toLocaleDateString("vi-VN")}
+              </p>
+            )}
+            {session && userHasIntent && demandStatus !== "NOT_SUBSCRIBED" && (
+              <DemandStatusBadge />
+            )}
+          </div>
         </div>
+
+        {/* Search Stats Bar */}
+        {!isLoading && (
+          <div className="grid grid-cols-3 gap-3 mb-4 border border-border rounded-xl bg-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Kết quả tìm kiếm</p>
+                <p className="text-xl font-bold text-foreground leading-tight">
+                  {searchStats.count.toLocaleString("vi-VN")}{" "}
+                  <span className="text-sm font-normal text-muted-foreground">tài sản</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 border-x border-border px-4">
+              <div className="shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Coins className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Tổng giá trị</p>
+                <p className="text-xl font-bold text-foreground leading-tight">
+                  {searchStats.totalValue >= 1000
+                    ? (searchStats.totalValue / 1000).toLocaleString("vi-VN", { maximumFractionDigits: 1 })
+                    : searchStats.totalValue.toLocaleString("vi-VN", { maximumFractionDigits: 0 })}{" "}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {searchStats.totalValue >= 1000 ? "nghìn tỷ" : "tỷ đồng"}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Đơn vị đấu giá</p>
+                <p className="text-xl font-bold text-foreground leading-tight">
+                  {searchStats.uniqueOrgs.toLocaleString("vi-VN")}{" "}
+                  <span className="text-sm font-normal text-muted-foreground">công ty</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick Filters + Sort bar */}
         <div className="flex items-center justify-between gap-3 mb-4 sticky top-16 z-10 bg-background/80 backdrop-blur-sm py-2 -mt-2 overflow-x-auto">
@@ -228,6 +341,8 @@ const Listings = () => {
             filters={filters}
             onFiltersChange={handleFiltersChange}
             onOpenAdvanced={() => setAdvancedOpen(true)}
+            companies={allCompanies}
+            suggestions={searchSuggestions}
           />
           <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
             <SelectTrigger className="w-[180px] shrink-0 h-9">
@@ -235,6 +350,7 @@ const Listings = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="newest">Mới nhất</SelectItem>
+              <SelectItem value="upcoming">Sắp diễn ra</SelectItem>
               <SelectItem value="price-asc">Giá: Thấp → Cao</SelectItem>
               <SelectItem value="price-desc">Giá: Cao → Thấp</SelectItem>
             </SelectContent>

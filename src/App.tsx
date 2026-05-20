@@ -74,10 +74,6 @@ const App = () => (
               <Route index element={<AssetOwnerDetail />} />
             </Route>
 
-            {/* Admin */}
-            <Route path="/admin" element={<AdminRoute />}>
-              <Route path="kyc" element={<AdminKYCPage />} />
-            </Route>
 
             {/* 404 Catch-all */}
             <Route path="*" element={<NotFound />} />

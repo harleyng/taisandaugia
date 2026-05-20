@@ -15,7 +15,7 @@ const CompanyOnboarding = () => {
     });
   }, []);
 
-  const handleComplete = () => {
+  const handleComplete = (companyId: string) => {
     setDone(true);
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user?.id) return;
@@ -32,7 +32,7 @@ const CompanyOnboarding = () => {
             .update({
               agent_info: {
                 ...agentInfo,
-                basic: { ...basic, role: "company" },
+                basic: { ...basic, role: "company", auction_org_id: companyId },
               } as never,
             })
             .eq("id", session.user.id);

@@ -26,6 +26,7 @@ import Contact from "./pages/Contact";
 import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
+import CompanyOnboarding from "./pages/CompanyOnboarding";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/gioi-thieu" element={<About />} />
             <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicy />} />
             <Route path="/dieu-khoan-su-dung" element={<TermsOfUse />} />
+            <Route path="/dang-ky-to-chuc" element={<CompanyOnboarding />} />
 
             {/* Credits */}
             <Route path="/buy-credits" element={<BuyCredits />} />

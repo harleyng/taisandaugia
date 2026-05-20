@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2 } from "lucide-react";
 import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
@@ -252,13 +252,25 @@ export const Header = () => {
               </DropdownMenu>
             </>
           ) : (
-            <Button
-              onClick={() => openAuthDialog()}
-              className="hidden sm:inline-flex bg-foreground hover:bg-foreground/90 text-background"
-            >
-              <User className="mr-2 h-4 w-4" />
-              Đăng nhập
-            </Button>
+            <div className="hidden sm:flex items-center gap-2">
+              <Button
+                variant="outline"
+                asChild
+                className={transparent ? "border-white/40 text-white hover:bg-white/10 hover:text-white" : ""}
+              >
+                <Link to="/dang-ky-to-chuc">
+                  <Building2 className="mr-2 h-4 w-4" />
+                  Đăng ký tổ chức
+                </Link>
+              </Button>
+              <Button
+                onClick={() => openAuthDialog()}
+                className="bg-foreground hover:bg-foreground/90 text-background"
+              >
+                <User className="mr-2 h-4 w-4" />
+                Đăng nhập
+              </Button>
+            </div>
           )}
 
           {/* Mobile Menu */}
@@ -367,6 +379,12 @@ export const Header = () => {
                   </>
                 ) : (
                   <div className="pt-4 space-y-2">
+                    <Button asChild variant="outline" className="w-full justify-start">
+                      <Link to="/dang-ky-to-chuc">
+                        <Building2 className="mr-2 h-5 w-5" />
+                        Đăng ký tổ chức
+                      </Link>
+                    </Button>
                     <Button
                       onClick={() => openAuthDialog()}
                       className="w-full bg-primary hover:bg-primary-hover text-primary-foreground justify-start"

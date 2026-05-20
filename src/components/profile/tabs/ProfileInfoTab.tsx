@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, Zap, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ProfileBasicSection } from "@/components/profile/sections/ProfileBasicSection";
 import { ProfileIntentSection } from "@/components/profile/sections/ProfileIntentSection";
+import { DepositCard } from "@/components/company-onboarding/DepositCard";
 
 interface Props {
   name: string;
@@ -17,6 +20,16 @@ interface Props {
 
 export const ProfileInfoTab = ({ name, email, avatarUrl, onNameChange, onAvatarChange }: Props) => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [activated, setActivated] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        setActivated(localStorage.getItem(`activated_${session.user.id}`) === "true");
+      }
+    });
+  }, []);
   const initials = name ? name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() : "U";
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,6 +73,36 @@ export const ProfileInfoTab = ({ name, email, avatarUrl, onNameChange, onAvatarC
 
   return (
     <div className="space-y-4">
+      {/* Personal activation banner */}
+      {!activated ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <Zap className="h-4 w-4 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-900">Tài khoản chưa kích hoạt</p>
+            <p className="text-xs text-amber-700">Nạp 1$ vào ví cá nhân để mở đầy đủ tính năng</p>
+          </div>
+          <Button size="sm" className="flex-shrink-0 text-xs" onClick={() => setDepositOpen(true)}>
+            Kích hoạt ngay
+          </Button>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-3 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+          <p className="text-sm font-medium text-green-800">Tài khoản đã kích hoạt</p>
+        </div>
+      )}
+
+      <Dialog open={depositOpen} onOpenChange={setDepositOpen}>
+        <DialogContent className="max-w-md p-0 border-0 bg-transparent shadow-none">
+          <DepositCard
+            context="personal"
+            onComplete={() => { setActivated(true); setDepositOpen(false); }}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Avatar header */}
       <Card className="p-6">
         <div className="flex items-center gap-5">

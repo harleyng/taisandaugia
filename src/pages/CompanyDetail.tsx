@@ -11,7 +11,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, ChevronRight, Search, Gavel, Trophy, Percent, Phone, Mail, MapPin, Lock, Sparkles } from "lucide-react";
+import { Building2, ChevronRight, Search, Gavel, Trophy, Percent, Phone, Mail, MapPin, Lock, Sparkles, X } from "lucide-react";
+import { MOCK_AUCTION_COMPANIES } from "@/lib/mockAuctionCompanies";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
@@ -31,6 +32,7 @@ const CompanyDetail = () => {
   const { openCompanyPaywall } = usePaywall();
   const access = id ? companyAccess(id) : { isUnlocked: false, tier: null, expiresAt: null };
   const isCompanyUnlocked = access.isUnlocked;
+  const [showClaimBanner, setShowClaimBanner] = useState(false);
 
   const { data: org, isLoading: orgLoading } = useQuery({
     queryKey: ["auction-org", id],
@@ -92,6 +94,27 @@ const CompanyDetail = () => {
   }, [enrichedListings, searchQuery, statusFilter]);
 
   const isLoading = orgLoading || listingsLoading;
+
+  useEffect(() => {
+    if (localStorage.getItem("org.claim.banner.dismissed")) return;
+    const mockOrg = MOCK_AUCTION_COMPANIES.find((c) => c.id === id);
+    if (mockOrg?.linkedAccountId) return;
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user?.id) { setShowClaimBanner(true); return; }
+      const { data } = await supabase
+        .from("profiles")
+        .select("agent_info")
+        .eq("id", session.user.id)
+        .single();
+      const role = (data?.agent_info as any)?.basic?.role;
+      if (role !== "company") setShowClaimBanner(true);
+    });
+  }, [id]);
+
+  const dismissClaimBanner = () => {
+    localStorage.setItem("org.claim.banner.dismissed", "true");
+    setShowClaimBanner(false);
+  };
 
   if (!id) return null;
 
@@ -183,6 +206,28 @@ const CompanyDetail = () => {
                 </div>
               </div>
             </Card>
+
+            {showClaimBanner && (
+              <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3.5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Building2 className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Bạn là công ty đấu giá?</p>
+                  <p className="text-xs text-muted-foreground">Xác thực để thiết lập hồ sơ năng lực trên nền tảng.</p>
+                </div>
+                <Link to="/dang-ky-to-chuc">
+                  <Button size="sm" className="whitespace-nowrap shrink-0">Bắt đầu xác thực</Button>
+                </Link>
+                <button
+                  onClick={dismissClaimBanner}
+                  className="text-muted-foreground hover:text-foreground transition-colors ml-1 flex-shrink-0"
+                  aria-label="Ẩn thông báo"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
 
             {isCompanyUnlocked ? (
               <>

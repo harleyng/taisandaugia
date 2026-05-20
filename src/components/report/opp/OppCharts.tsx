@@ -327,7 +327,7 @@ export const OppCharts = ({ locked, hasBds, unit }: OppChartsProps) => (
         <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-lg px-4 py-2.5 mt-2">
           <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs flex-shrink-0">★</span>
           <span className="text-xs text-primary font-medium">
-            <strong>Phân tích chuyên sâu bất động sản</strong> · 3 biểu đồ bên dưới chỉ áp dụng cho nhóm BĐS (25 phiên). Bỏ "Bất động sản" khỏi bộ lọc để ẩn.
+            <strong>Phân tích chuyên sâu bất động sản</strong> · 3 biểu đồ bên dưới chỉ áp dụng cho nhóm BĐS (25 phiên)
           </span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -188,7 +188,6 @@ export const KYCForm = ({ accountEmail, onSubmit }: KYCFormProps) => {
   const [idNumber, setIdNumber] = useState("");
   const [idFront, setIdFront] = useState(false);
   const [idBack, setIdBack] = useState(false);
-  const [selfie, setSelfie] = useState(false);
   const [phone, setPhone] = useState("");
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [contactEmail, setContactEmail] = useState(accountEmail);
@@ -218,7 +217,7 @@ export const KYCForm = ({ accountEmail, onSubmit }: KYCFormProps) => {
     idNumber,
     idFront,
     idBack,
-    selfie,
+    selfie: true,
     phoneVerified,
     emailVerified,
     doc_dkdn: docDkdn,
@@ -426,9 +425,9 @@ export const KYCForm = ({ accountEmail, onSubmit }: KYCFormProps) => {
               {/* Photo uploads */}
               <div className="space-y-1.5">
                 <Label className="text-xs">
-                  Ảnh {idType === "cccd" ? "CCCD" : "Hộ chiếu"} + selfie
+                  Ảnh {idType === "cccd" ? "CCCD" : "Hộ chiếu"}
                 </Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <UploadZone
                     label="Mặt trước"
                     uploaded={idFront}
@@ -438,11 +437,6 @@ export const KYCForm = ({ accountEmail, onSubmit }: KYCFormProps) => {
                     label="Mặt sau"
                     uploaded={idBack}
                     onUpload={() => handleSimUpload(setIdBack)}
-                  />
-                  <UploadZone
-                    label="Selfie kèm GT"
-                    uploaded={selfie}
-                    onUpload={() => handleSimUpload(setSelfie)}
                   />
                 </div>
               </div>

@@ -6,6 +6,26 @@ import { Step5PendingReview } from "@/components/company-onboarding/M2/Step5Pend
 import { supabase } from "@/integrations/supabase/client";
 import type { AuctionCompany } from "@/lib/mockAuctionCompanies";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+async function dbFetch(path: string, token: string, options: RequestInit = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+      Authorization: `Bearer ${token}`,
+      Prefer: "return=minimal",
+      ...(options.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`${res.status}: ${body}`);
+  }
+  return res;
+}
+
 type Stage = "form" | "pending";
 
 const CompanyOnboarding = () => {
@@ -14,43 +34,61 @@ const CompanyOnboarding = () => {
   const [pendingCompany, setPendingCompany] = useState<AuctionCompany | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setAccountEmail(session.user.email ?? "");
-    });
+    const PROJECT_REF = "bcusbpkfnydqcvxxjvew";
+    const raw = localStorage.getItem(`sb-${PROJECT_REF}-auth-token`);
+    const session = raw ? JSON.parse(raw) : null;
+    if (session?.user?.email) setAccountEmail(session.user.email);
   }, []);
 
   const handleComplete = async (companyId: string, companyName: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
+    // Read session directly from localStorage — avoids supabase client network hang
+    const PROJECT_REF = "bcusbpkfnydqcvxxjvew";
+    const raw = localStorage.getItem(`sb-${PROJECT_REF}-auth-token`);
+    const session = raw ? JSON.parse(raw) : null;
+    const userId: string | undefined = session?.user?.id;
+    const token: string | undefined = session?.access_token;
 
-    const userId = session.user.id;
+    console.log("[handleComplete] userId:", userId, "token:", token ? "ok" : "missing");
+    if (!userId || !token) {
+      console.warn("[handleComplete] No valid session — aborting");
+      return;
+    }
 
     // 1. Insert organizations row with PENDING_KYC
-    await supabase.from("organizations").insert({
-      name: companyName,
-      owner_id: userId,
-      kyc_status: "PENDING_KYC",
-      license_info: { auction_org_id: companyId } as never,
+    await dbFetch("organizations", token, {
+      method: "POST",
+      body: JSON.stringify({
+        name: companyName,
+        owner_id: userId,
+        kyc_status: "PENDING_KYC",
+        license_info: { auction_org_id: companyId },
+      }),
     });
 
-    // 2. Mark profile as company_pending so CompanyTab knows a submission exists
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("agent_info")
-      .eq("id", userId)
-      .single();
-
+    // 2. Read current agent_info then patch it
+    const profileRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=agent_info`,
+      {
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.pgrst.object+json",
+        },
+      }
+    );
+    const profile = profileRes.ok ? await profileRes.json() : null;
     const agentInfo = (profile?.agent_info as Record<string, unknown>) || {};
     const basic = (agentInfo.basic as Record<string, unknown>) || {};
-    await supabase
-      .from("profiles")
-      .update({
+
+    await dbFetch(`profiles?id=eq.${userId}`, token, {
+      method: "PATCH",
+      body: JSON.stringify({
         agent_info: {
           ...agentInfo,
           basic: { ...basic, role: "company_pending", auction_org_id: companyId },
-        } as never,
-      })
-      .eq("id", userId);
+        },
+      }),
+    });
 
     // 3. Show pending screen
     setPendingCompany({ id: companyId, name: companyName, taxCode: "", address: "", province: "", phone: "", linkedAccountId: null });

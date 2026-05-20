@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2 } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2 } from "lucide-react";
 import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
@@ -114,6 +114,18 @@ export const Header = () => {
           {/* Desktop Mega Menu */}
           <NavigationMenu className="hidden md:flex">
             <NavigationMenuList>
+              <NavigationMenuItem>
+                <Link
+                  to="/report"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    transparent
+                      ? "text-white/90 hover:text-white hover:bg-white/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Báo cáo
+                </Link>
+              </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuTrigger
                   className={`gap-1.5 ${transparent ? "bg-transparent text-white/90 hover:text-white hover:bg-white/10 data-[state=open]:bg-white/10" : ""}`}
@@ -290,6 +302,13 @@ export const Header = () => {
                   >
                     <Home className="h-5 w-5" />
                     Trang chủ
+                  </Link>
+                  <Link
+                    to="/report"
+                    className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                  >
+                    <BarChart2 className="h-5 w-5" />
+                    Báo cáo cơ hội
                   </Link>
                 </div>
 

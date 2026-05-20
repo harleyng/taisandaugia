@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Building2, CheckCircle2, Plus, X, PhoneCall } from "lucide-react";
 import { AuctionCompany, mapOrgRow } from "@/lib/mockAuctionCompanies";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 interface CompanyTypeaheadProps {
   value: AuctionCompany | null;
@@ -24,19 +26,26 @@ export const CompanyTypeahead = ({ value, onSelect }: CompanyTypeaheadProps) => 
     setLoading(true);
     setLoadError(false);
 
-    supabase
-      .from("auction_organizations")
-      .select("id, name, tax_code, address, province, phone")
-      .order("name")
-      .limit(200)
-      .then(({ data, error }) => {
+    fetch(
+      `${SUPABASE_URL}/rest/v1/auction_organizations?select=id,name,tax_code,address,province,phone&order=name&limit=200`,
+      {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+        },
+      }
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: any[]) => {
         if (cancelled) return;
-        if (error) {
-          setLoadError(true);
-        } else {
-          setAllCompanies((data ?? []).map((row) => mapOrgRow(row)));
-        }
+        setAllCompanies(data.map((row) => mapOrgRow(row)));
         setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) { setLoadError(true); setLoading(false); }
       });
 
     return () => { cancelled = true; };

@@ -20,18 +20,24 @@ export const OwnerPaywallDialog = ({ open, onOpenChange, ownerId, ownerLabel, re
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selected, setSelected] = useState<OwnerTierKey>("30d");
+  const [pending, setPending] = useState(false);
 
   const tier = OWNER_TIERS.find((t) => t.key === selected)!;
   const enough = balance >= tier.cost;
 
-  const handleUnlock = () => {
-    if (!ownerId) return;
-    const r = unlockOwner(ownerId, selected, ownerLabel);
-    if (r.ok) {
-      toast({ title: "Đã mở khóa hồ sơ chủ tài sản", description: `Truy cập ${tier.label}. Đã trừ ${tier.cost} credit.` });
-      onOpenChange(false);
-    } else {
-      toast({ title: "Không đủ credit", variant: "destructive" });
+  const handleUnlock = async () => {
+    if (!ownerId || pending) return;
+    setPending(true);
+    try {
+      const r = await unlockOwner(ownerId, selected, ownerLabel);
+      if (r.ok) {
+        toast({ title: "Đã mở khóa hồ sơ chủ tài sản", description: `Truy cập ${tier.label}. Đã trừ ${tier.cost} credit.` });
+        onOpenChange(false);
+      } else {
+        toast({ title: "Không đủ credit", variant: "destructive" });
+      }
+    } finally {
+      setPending(false);
     }
   };
 
@@ -100,7 +106,9 @@ export const OwnerPaywallDialog = ({ open, onOpenChange, ownerId, ownerLabel, re
             <p className={`text-lg font-bold ${enough ? "text-foreground" : "text-destructive"}`}>{balance} credit</p>
           </div>
           {enough ? (
-            <Button onClick={handleUnlock} size="lg">Dùng credit để mở</Button>
+            <Button onClick={handleUnlock} size="lg" disabled={pending}>
+              {pending ? "Đang xử lý..." : "Dùng credit để mở"}
+            </Button>
           ) : (
             <Button onClick={handleBuy} size="lg">Mua credit</Button>
           )}

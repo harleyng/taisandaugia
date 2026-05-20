@@ -1,6 +1,6 @@
-// Mock demand subscription system. Persisted in localStorage.
-// Trừ credit từ mockCredits khi đăng ký.
-import { CREDIT_PACKAGES } from "./mockCredits";
+// Demand subscription system. Subscription state persisted in localStorage.
+// Credit deduction uses the Supabase-backed credits system.
+import { CREDIT_PACKAGES } from "./credits";
 
 const KEY = "demandSubscription.v1";
 const EVT = "demandSubscription:change";
@@ -137,76 +137,40 @@ if (typeof window !== "undefined") {
   window.addEventListener("storage", invalidateSnapshot);
 }
 
-// Imports: lấy mockCredits read/write trực tiếp để trừ + log transaction.
-import {
-  getState as getCreditsState,
-} from "./mockCredits";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchCreditState } from "./credits";
 
-// Để giữ tách biệt, ta thao tác qua localStorage của mockCredits.
-const CREDITS_KEY = "mockCredits.v1";
-const CREDITS_EVT = "mockCredits:change";
-
-interface MockCreditsRaw {
-  balance: number;
-  transactions: { id: string; type: string; description: string; creditDelta: number; at: number }[];
-  [k: string]: unknown;
-}
-
-const readCredits = (): MockCreditsRaw | null => {
-  try {
-    const raw = localStorage.getItem(CREDITS_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as MockCreditsRaw;
-  } catch {
-    return null;
-  }
-};
-
-const writeCredits = (s: MockCreditsRaw) => {
-  localStorage.setItem(CREDITS_KEY, JSON.stringify(s));
-  window.dispatchEvent(new CustomEvent(CREDITS_EVT));
-};
-
-const genId = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-export const subscribeDemand = (
+export const subscribeDemand = async (
   tierKey: DemandTierKey
-): { ok: boolean; reason?: "insufficient" | "invalid" } => {
+): Promise<{ ok: boolean; reason?: "insufficient" | "invalid" }> => {
   const tier = DEMAND_TIERS.find((t) => t.key === tierKey);
   if (!tier) return { ok: false, reason: "invalid" };
 
-  const balance = getCreditsState().balance;
-  if (balance < tier.cost) return { ok: false, reason: "insufficient" };
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+  if (!userId) return { ok: false, reason: "insufficient" };
 
-  const credits = readCredits() ?? {
-    balance: 0,
-    transactions: [],
-    assetUnlocks: [],
-    companyUnlocks: {},
-    ownerUnlocks: {},
-    deepReportUnlocks: [],
-  };
-  credits.balance -= tier.cost;
-  credits.transactions = [
-    {
-      id: genId(),
+  const state = await fetchCreditState(userId);
+  if (state.balance < tier.cost) return { ok: false, reason: "insufficient" };
+
+  // Deduct credits via DB (addCredits with negative amount acts as deduction)
+  const { data } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
+  const current = data?.balance ?? 0;
+  await Promise.all([
+    supabase.from("user_credits").update({ balance: current - tier.cost, updated_at: new Date().toISOString() }).eq("user_id", userId),
+    supabase.from("credit_transactions").insert({
+      user_id: userId,
       type: "subscribe_demand",
       description: `Theo dõi nhu cầu ${tier.label}`,
-      creditDelta: -tier.cost,
-      at: Date.now(),
-    },
-    ...credits.transactions,
-  ];
-  writeCredits(credits);
+      credit_delta: -tier.cost,
+    }),
+  ]);
 
-  // Cộng dồn nếu đang còn hạn
-  const current = read();
+  // Subscription state stays in localStorage (TODO: move to DB in a follow-up task)
+  const currentSub = read();
   const now = Date.now();
-  const base = current && current.expiresAt > now ? current.expiresAt : now;
-  const startedAt = current && current.expiresAt > now ? current.startedAt : now;
+  const base = currentSub && currentSub.expiresAt > now ? currentSub.expiresAt : now;
+  const startedAt = currentSub && currentSub.expiresAt > now ? currentSub.startedAt : now;
   write({
     tier: tierKey,
     startedAt,
@@ -217,6 +181,3 @@ export const subscribeDemand = (
 };
 
 export const cancelDemandSubscription = () => write(null);
-
-// re-export để tránh unused import warning
-void CREDIT_PACKAGES;

@@ -3,8 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronRight, QrCode, Landmark, CreditCard, Smartphone, ShieldCheck, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CREDIT_PACKAGES } from "@/hooks/useCredits";
-import { addCredits as addCreditsImpl } from "@/lib/mockCredits";
+import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
 import { cn } from "@/lib/utils";
 
 type Method = "qr" | "atm" | "intl" | "app";
@@ -27,6 +26,7 @@ const buildQrDataUrl = (text: string) => {
 const VnpayCheckout = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { addCredits } = useCredits();
 
   const packageKey = params.get("package") || "";
   const returnPath = params.get("return") || "";
@@ -51,9 +51,9 @@ const VnpayCheckout = () => {
 
   if (!pkg) return null;
 
-  const goToResult = (status: "success" | "failed") => {
+  const goToResult = async (status: "success" | "failed") => {
     if (status === "success") {
-      addCreditsImpl(pkg.credits, pkg.key, pkg.priceVnd);
+      await addCredits(pkg.credits, pkg.key);
     }
     const sp = new URLSearchParams();
     sp.set("status", status);

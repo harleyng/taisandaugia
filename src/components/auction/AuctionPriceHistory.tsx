@@ -15,6 +15,7 @@ import {
   Legend,
 } from "recharts";
 import { generateMockSessions } from "@/lib/mockAuctionSessions";
+import { useListingPriceSessions } from "@/hooks/useListingPriceSessions";
 import {
   buildInsightModeA,
   buildInsightModeB,
@@ -125,12 +126,15 @@ export const AuctionPriceHistory = ({
   const predMinPerSqm = hasPrediction ? predMin! / listing.area / 1_000_000 : 0;
   const predMaxPerSqm = hasPrediction ? predMax! / listing.area / 1_000_000 : 0;
 
-  // Generate 12M sessions deterministically (always — for background analytics)
+  // Fetch real sessions from DB; fall back to mock generator if none exist
+  const { data: dbSessions = [] } = useListingPriceSessions(listing.id);
+
   const sessions12M: RawSession[] = useMemo(() => {
     if (!isRealEstate || pricePerSqm <= 0) return [];
+    if (dbSessions.length > 0) return dbSessions;
     const seed = `${listing.id || "seed"}-${listing.property_type_slug || ""}-${listing.address?.district || ""}`;
     return generateMockSessions(seed, { anchor: pricePerSqm, months: 12, anchorArea: listing.area || 0 });
-  }, [listing.id, listing.property_type_slug, listing.address?.district, pricePerSqm, isRealEstate, listing.area]);
+  }, [dbSessions, listing.id, listing.property_type_slug, listing.address?.district, pricePerSqm, isRealEstate, listing.area]);
 
   const analytics12M: AnalyticsResult | null = useMemo(
     () => (sessions12M.length ? computeAnalytics(sessions12M, listing.area || 0) : null),

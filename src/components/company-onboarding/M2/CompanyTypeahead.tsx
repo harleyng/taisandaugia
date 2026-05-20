@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Building2, CheckCircle2, Plus, X, PhoneCall } from "lucide-react";
-import { MOCK_AUCTION_COMPANIES, AuctionCompany } from "@/lib/mockAuctionCompanies";
+import { AuctionCompany, mapOrgRow } from "@/lib/mockAuctionCompanies";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface CompanyTypeaheadProps {
@@ -14,16 +16,35 @@ interface CompanyTypeaheadProps {
 export const CompanyTypeahead = ({ value, onSelect }: CompanyTypeaheadProps) => {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const results = MOCK_AUCTION_COMPANIES.filter((c) => {
-    if (!q.trim()) return true;
-    const lq = q.toLowerCase();
-    return (
-      c.name.toLowerCase().includes(lq) ||
-      c.taxCode.includes(q) ||
-      c.address.toLowerCase().includes(lq) ||
-      c.province.toLowerCase().includes(lq)
-    );
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedQ(q), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [q]);
+
+  const { data: results = [], isFetching } = useQuery({
+    queryKey: ["auction-org-search", debouncedQ],
+    queryFn: async () => {
+      let query = supabase
+        .from("auction_organizations")
+        .select("id, name, tax_code, address, province, phone")
+        .limit(20);
+
+      if (debouncedQ.trim()) {
+        query = query.or(
+          `name.ilike.%${debouncedQ}%,tax_code.ilike.%${debouncedQ}%,address.ilike.%${debouncedQ}%,province.ilike.%${debouncedQ}%`
+        );
+      }
+
+      const { data, error } = await query.order("name");
+      if (error) throw error;
+      return (data ?? []).map((row) => mapOrgRow(row));
+    },
+    enabled: open,
+    staleTime: 30_000,
   });
 
   if (value) {
@@ -114,9 +135,11 @@ export const CompanyTypeahead = ({ value, onSelect }: CompanyTypeaheadProps) => 
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-xl border border-border bg-popover shadow-lg overflow-hidden">
           <div className="max-h-60 overflow-y-auto">
-            {results.length === 0 ? (
+            {isFetching ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">Đang tìm...</div>
+            ) : results.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                Không có kết quả cho &ldquo;{q}&rdquo;
+                {debouncedQ ? `Không có kết quả cho "${debouncedQ}"` : "Nhập để tìm kiếm công ty"}
               </div>
             ) : (
               results.map((c) => (

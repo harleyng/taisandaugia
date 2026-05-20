@@ -22,7 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { addCredits as addCreditsImpl, getInvoiceInfo, saveInvoiceInfo, type InvoiceInfo, type Transaction, type TransactionType } from "@/lib/mockCredits";
+import { getInvoiceInfo, saveInvoiceInfo, type InvoiceInfo, type Transaction, type TransactionType } from "@/lib/credits";
 import packStarter from "@/assets/credits/pack-starter.jpg";
 import packPopular from "@/assets/credits/pack-popular.jpg";
 import packValue from "@/assets/credits/pack-value.jpg";
@@ -113,6 +113,7 @@ export const CreditsTab = () => {
   const [showVnpay, setShowVnpay] = useState(false);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
 
+  const [userId, setUserId] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
   const [wantInvoice, setWantInvoice] = useState(false);
   const [hasSavedInvoice, setHasSavedInvoice] = useState(false);
@@ -129,9 +130,13 @@ export const CreditsTab = () => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!mounted) return;
+      const uid = session?.user?.id ?? "";
       const email = session?.user?.email ?? "";
+      setUserId(uid);
       setUserEmail(email);
-      const saved = getInvoiceInfo();
+      if (!uid) return;
+      const saved = await getInvoiceInfo(uid);
+      if (!mounted) return;
       if (saved) {
         setInvoice(saved);
         setHasSavedInvoice(true);
@@ -164,16 +169,18 @@ export const CreditsTab = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const confirmVnpayPay = () => {
+  const confirmVnpayPay = async () => {
     if (!pendingKey) return;
     if (wantInvoice) {
       if (!validateInvoice()) return;
-      saveInvoiceInfo({
-        companyName: invoice.companyName.trim(),
-        taxCode: invoice.taxCode.trim(),
-        address: invoice.address.trim(),
-        email: invoice.email.trim(),
-      });
+      if (userId) {
+        await saveInvoiceInfo(userId, {
+          companyName: invoice.companyName.trim(),
+          taxCode: invoice.taxCode.trim(),
+          address: invoice.address.trim(),
+          email: invoice.email.trim(),
+        });
+      }
       setHasSavedInvoice(true);
     }
     setShowVnpay(false);

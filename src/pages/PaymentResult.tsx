@@ -5,13 +5,12 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Coins } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
-import { unlockAsset, unlockCompany, unlockOwner, unlockDeepReportPeriod, CompanyTierKey, OwnerTierKey } from "@/lib/mockCredits";
+import { CREDIT_PACKAGES, useCredits, CompanyTierKey, OwnerTierKey } from "@/hooks/useCredits";
 
 const PaymentResult = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { balance } = useCredits();
+  const { balance, addCredits, unlockAsset, unlockCompany, unlockOwner, unlockDeepReportPeriod } = useCredits();
   const status = params.get("status");
   const packageKey = params.get("package");
   const returnPath = params.get("return");
@@ -24,7 +23,15 @@ const PaymentResult = () => {
   useEffect(() => {
     if (ranRef.current) return;
     ranRef.current = true;
-    if (status === "success" && unlockParam) {
+    if (status !== "success") return;
+
+    (async () => {
+      // Add credits first if a package was purchased
+      if (pkg) {
+        await addCredits(pkg.credits, pkg.key);
+      }
+
+      if (!unlockParam) return;
       // Format `deep:{slug}:{periodId}` — periodId chứa dấu `-` nên cần parse riêng
       if (unlockParam.startsWith("deep:")) {
         const rest = unlockParam.slice("deep:".length);
@@ -32,23 +39,23 @@ const PaymentResult = () => {
         if (sepIdx > 0) {
           const slug = rest.slice(0, sepIdx);
           const periodId = rest.slice(sepIdx + 1);
-          const r = unlockDeepReportPeriod(slug, periodId);
+          const r = await unlockDeepReportPeriod(slug, periodId);
           if (r.ok) setAutoUnlocked("deep_report");
         }
       } else {
         const [type, id, tier] = unlockParam.split(":");
         if (type === "asset" && id) {
-          const r = unlockAsset(id);
+          const r = await unlockAsset(id);
           if (r.ok) setAutoUnlocked("asset");
         } else if (type === "company" && id && tier) {
-          const r = unlockCompany(id, tier as CompanyTierKey);
+          const r = await unlockCompany(id, tier as CompanyTierKey);
           if (r.ok) setAutoUnlocked("company");
         } else if (type === "owner" && id && tier) {
-          const r = unlockOwner(id, tier as OwnerTierKey);
+          const r = await unlockOwner(id, tier as OwnerTierKey);
           if (r.ok) setAutoUnlocked("owner");
         }
       }
-    }
+    })();
   }, [status, unlockParam]);
 
   const handleContinue = () => {

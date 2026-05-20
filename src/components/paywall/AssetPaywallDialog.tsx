@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Lock, Coins, Sparkles } from "lucide-react";
@@ -23,16 +24,22 @@ export const AssetPaywallDialog = ({
   const { balance, unlockAsset } = useCredits();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [pending, setPending] = useState(false);
   const enough = balance >= ASSET_COST;
 
-  const handleUnlock = () => {
-    if (!listingId) return;
-    const r = unlockAsset(listingId, listingLabel);
-    if (r.ok) {
-      toast({ title: "Đã mở khóa tài sản", description: `Đã trừ ${ASSET_COST} credit.` });
-      onOpenChange(false);
-    } else {
-      toast({ title: "Không đủ credit", variant: "destructive" });
+  const handleUnlock = async () => {
+    if (!listingId || pending) return;
+    setPending(true);
+    try {
+      const r = await unlockAsset(listingId, listingLabel);
+      if (r.ok) {
+        toast({ title: "Đã mở khóa tài sản", description: `Đã trừ ${ASSET_COST} credit.` });
+        onOpenChange(false);
+      } else {
+        toast({ title: "Không đủ credit", variant: "destructive" });
+      }
+    } finally {
+      setPending(false);
     }
   };
 
@@ -85,8 +92,8 @@ export const AssetPaywallDialog = ({
           </div>
 
           {enough ? (
-            <Button onClick={handleUnlock} className="w-full" size="lg">
-              Dùng credit để mở
+            <Button onClick={handleUnlock} className="w-full" size="lg" disabled={pending}>
+              {pending ? "Đang xử lý..." : "Dùng credit để mở"}
             </Button>
           ) : (
             <Button onClick={handleBuy} className="w-full" size="lg">

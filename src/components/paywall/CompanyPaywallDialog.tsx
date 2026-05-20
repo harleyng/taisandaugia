@@ -1,10 +1,10 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Lock, Coins, Check } from "lucide-react";
 import { useCredits, COMPANY_TIERS, CompanyTierKey } from "@/hooks/useCredits";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface CompanyPaywallDialogProps {
@@ -20,18 +20,24 @@ export const CompanyPaywallDialog = ({ open, onOpenChange, orgId, orgLabel, retu
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selected, setSelected] = useState<CompanyTierKey>("30d");
+  const [pending, setPending] = useState(false);
 
   const tier = COMPANY_TIERS.find((t) => t.key === selected)!;
   const enough = balance >= tier.cost;
 
-  const handleUnlock = () => {
-    if (!orgId) return;
-    const r = unlockCompany(orgId, selected, orgLabel);
-    if (r.ok) {
-      toast({ title: "Đã mở khóa hồ sơ đơn vị", description: `Truy cập ${tier.label}. Đã trừ ${tier.cost} credit.` });
-      onOpenChange(false);
-    } else {
-      toast({ title: "Không đủ credit", variant: "destructive" });
+  const handleUnlock = async () => {
+    if (!orgId || pending) return;
+    setPending(true);
+    try {
+      const r = await unlockCompany(orgId, selected, orgLabel);
+      if (r.ok) {
+        toast({ title: "Đã mở khóa hồ sơ đơn vị", description: `Truy cập ${tier.label}. Đã trừ ${tier.cost} credit.` });
+        onOpenChange(false);
+      } else {
+        toast({ title: "Không đủ credit", variant: "destructive" });
+      }
+    } finally {
+      setPending(false);
     }
   };
 
@@ -100,7 +106,9 @@ export const CompanyPaywallDialog = ({ open, onOpenChange, orgId, orgLabel, retu
             <p className={`text-lg font-bold ${enough ? "text-foreground" : "text-destructive"}`}>{balance} credit</p>
           </div>
           {enough ? (
-            <Button onClick={handleUnlock} size="lg">Dùng credit để mở</Button>
+            <Button onClick={handleUnlock} size="lg" disabled={pending}>
+              {pending ? "Đang xử lý..." : "Dùng credit để mở"}
+            </Button>
           ) : (
             <Button onClick={handleBuy} size="lg">Mua credit</Button>
           )}

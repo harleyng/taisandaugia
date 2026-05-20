@@ -21,6 +21,7 @@ import {
 import { formatPrice } from "@/utils/formatters";
 import { generateMockSessions } from "@/lib/mockAuctionSessions";
 import { computeAnalytics, pickBucket } from "@/lib/auctionPriceAnalytics";
+import { useListingPriceSessions } from "@/hooks/useListingPriceSessions";
 
 interface AuctionPricePredictionProps {
   listing: any;
@@ -75,6 +76,8 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
   const ca = listing.custom_attributes || {};
   const seed = hashFromId(listing.id);
 
+  const { data: dbSessions = [] } = useListingPriceSessions(listing.id);
+
   // Predicted range
   const minMultiplier = 1.1 + seed * 0.05;
   const maxMultiplier = 1.22 + seed * 0.08;
@@ -95,20 +98,20 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
   const now = new Date();
   const start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
-  // Trend from analytics (mock-driven, but consistent with history block)
   const trend3M = useMemo(() => {
     const pricePerSqm = listing.area > 0 ? listing.price / listing.area / 1_000_000 : 0;
     if (pricePerSqm <= 0) return 0;
-    const seedStr = `${listing.id || "seed"}-${listing.property_type_slug || ""}-${listing.address?.district || ""}`;
-    const sessions = generateMockSessions(seedStr, {
-      anchor: pricePerSqm,
-      months: 12,
-      anchorArea: listing.area || 0,
-    });
+    let sessions;
+    if (dbSessions.length > 0) {
+      sessions = dbSessions;
+    } else {
+      const seedStr = `${listing.id || "seed"}-${listing.property_type_slug || ""}-${listing.address?.district || ""}`;
+      sessions = generateMockSessions(seedStr, { anchor: pricePerSqm, months: 12, anchorArea: listing.area || 0 });
+    }
     if (!sessions.length) return 0;
     const a = computeAnalytics(sessions, listing.area || 0);
     return a.trend3M || 0;
-  }, [listing.id, listing.price, listing.area, listing.property_type_slug, listing.address?.district]);
+  }, [dbSessions, listing.id, listing.price, listing.area, listing.property_type_slug, listing.address?.district]);
 
   const tBadge = trendBadge(trend3M);
   const TrendIcon = tBadge.icon;

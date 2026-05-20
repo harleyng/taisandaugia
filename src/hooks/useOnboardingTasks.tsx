@@ -11,7 +11,7 @@ import {
   REWARD_BASIC_TOKENS,
   REWARD_INTENT_TOKENS,
 } from "@/lib/onboardingTasks";
-import { addCredits } from "@/lib/mockCredits";
+import { addCredits } from "@/lib/credits";
 
 interface ProfileSnapshot {
   name: string | null;
@@ -130,8 +130,8 @@ export const useOnboardingTasks = () => {
 
       if (error) return { ok: false, credits: 0, tokens: 0 };
 
-      // Tặng credit qua mockCredits store
-      addCredits(credits);
+      // Tặng credit
+      await addCredits(userId, credits);
 
       // Refresh
       await fetchProfile(userId);

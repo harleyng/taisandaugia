@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Coins, FileText, Lock, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ export const DeepReportPaywallDialog = ({
   const { balance, unlockDeepReportPeriod, DEEP_REPORT_PERIOD_PRICES } = useCredits();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [pending, setPending] = useState(false);
 
   const parsed = periodId ? parsePeriod(periodId) : null;
   if (!parsed) {
@@ -51,16 +53,22 @@ export const DeepReportPaywallDialog = ({
   const periodLabel = formatPeriodLabel(periodId!);
   const kindLabel = formatPeriodKindLabel(parsed.kind);
 
-  const handleUnlock = () => {
-    const r = unlockDeepReportPeriod(reportSlug, periodId!, reportLabel);
-    if (r.ok) {
-      toast({
-        title: "Đã mở khóa báo cáo",
-        description: `${periodLabel} — ${reportLabel}. Đã trừ ${cost.toLocaleString("vi-VN")} credit.`,
-      });
-      onOpenChange(false);
-    } else if (r.reason === "insufficient") {
-      toast({ title: "Không đủ credit", variant: "destructive" });
+  const handleUnlock = async () => {
+    if (pending) return;
+    setPending(true);
+    try {
+      const r = await unlockDeepReportPeriod(reportSlug, periodId!, reportLabel);
+      if (r.ok) {
+        toast({
+          title: "Đã mở khóa báo cáo",
+          description: `${periodLabel} — ${reportLabel}. Đã trừ ${cost.toLocaleString("vi-VN")} credit.`,
+        });
+        onOpenChange(false);
+      } else if (r.reason === "insufficient") {
+        toast({ title: "Không đủ credit", variant: "destructive" });
+      }
+    } finally {
+      setPending(false);
     }
   };
 
@@ -146,8 +154,8 @@ export const DeepReportPaywallDialog = ({
         </div>
 
         {enough ? (
-          <Button onClick={handleUnlock} size="lg" className="w-full">
-            Dùng credit để mở khóa
+          <Button onClick={handleUnlock} size="lg" className="w-full" disabled={pending}>
+            {pending ? "Đang xử lý..." : "Dùng credit để mở khóa"}
           </Button>
         ) : (
           <Button onClick={handleBuy} size="lg" className="w-full">

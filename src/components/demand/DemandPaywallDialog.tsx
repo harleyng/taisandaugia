@@ -34,7 +34,7 @@ export const DemandPaywallDialog = ({ open, onOpenChange, title, onSubscribed }:
       return;
     }
     setSubmitting(true);
-    const r = subscribeDemand(selected);
+    const r = await subscribeDemand(selected);
     setSubmitting(false);
     if (r.ok) {
       toast.success(

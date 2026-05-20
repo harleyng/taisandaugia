@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, ChevronRight, Search, Gavel, Trophy, Percent, Phone, Mail, MapPin, Lock, Sparkles, X } from "lucide-react";
-import { MOCK_AUCTION_COMPANIES } from "@/lib/mockAuctionCompanies";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
@@ -97,19 +96,24 @@ const CompanyDetail = () => {
 
   useEffect(() => {
     if (localStorage.getItem("org.claim.banner.dismissed")) return;
-    const mockOrg = MOCK_AUCTION_COMPANIES.find((c) => c.id === id);
-    if (mockOrg?.linkedAccountId) return;
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user?.id) { setShowClaimBanner(true); return; }
-      const { data } = await supabase
+      // Check if any organization has already claimed this auction org
+      const { data: linked } = await supabase
+        .from("organizations")
+        .select("id")
+        .eq("name", org?.name ?? "")
+        .maybeSingle();
+      if (linked) return; // already claimed — hide banner
+      const { data: profile } = await supabase
         .from("profiles")
         .select("agent_info")
         .eq("id", session.user.id)
         .single();
-      const role = (data?.agent_info as any)?.basic?.role;
+      const role = (profile?.agent_info as any)?.basic?.role;
       if (role !== "company") setShowClaimBanner(true);
     });
-  }, [id]);
+  }, [id, org?.name]);
 
   const dismissClaimBanner = () => {
     localStorage.setItem("org.claim.banner.dismissed", "true");

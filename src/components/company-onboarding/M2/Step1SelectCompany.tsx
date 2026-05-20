@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Building2, MapPin, Hash, ArrowRight, PhoneCall, AlertTriangle } from "lucide-react";
-import { MOCK_AUCTION_COMPANIES, AuctionCompany } from "@/lib/mockAuctionCompanies";
+import { AuctionCompany, mapOrgRow } from "@/lib/mockAuctionCompanies";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Step1SelectCompanyProps {
   onNext: (company: AuctionCompany) => void;
@@ -11,17 +13,36 @@ interface Step1SelectCompanyProps {
 
 export const Step1SelectCompany = ({ onNext }: Step1SelectCompanyProps) => {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selected, setSelected] = useState<AuctionCompany | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filtered = query.trim().length < 2
-    ? MOCK_AUCTION_COMPANIES
-    : MOCK_AUCTION_COMPANIES.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query.toLowerCase()) ||
-          c.address.toLowerCase().includes(query.toLowerCase()) ||
-          c.province.toLowerCase().includes(query.toLowerCase()) ||
-          c.taxCode.includes(query)
-      );
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query]);
+
+  const { data: companies = [], isFetching } = useQuery({
+    queryKey: ["auction-org-search", debouncedQuery],
+    queryFn: async () => {
+      let q = supabase
+        .from("auction_organizations")
+        .select("id, name, tax_code, address, province, phone")
+        .limit(50);
+
+      if (debouncedQuery.trim().length >= 2) {
+        q = q.or(
+          `name.ilike.%${debouncedQuery}%,tax_code.ilike.%${debouncedQuery}%,address.ilike.%${debouncedQuery}%,province.ilike.%${debouncedQuery}%`
+        );
+      }
+
+      const { data, error } = await q.order("name");
+      if (error) throw error;
+      return (data ?? []).map((row) => mapOrgRow(row));
+    },
+    staleTime: 30_000,
+  });
 
   const isLinked = selected?.linkedAccountId != null;
 
@@ -47,12 +68,14 @@ export const Step1SelectCompany = ({ onNext }: Step1SelectCompanyProps) => {
 
       {/* List */}
       <div className="border border-border rounded-xl overflow-hidden max-h-72 overflow-y-auto">
-        {filtered.length === 0 ? (
+        {isFetching ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">Đang tải...</div>
+        ) : companies.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            Không tìm thấy công ty phù hợp
+            {debouncedQuery.trim().length >= 2 ? "Không tìm thấy công ty phù hợp" : "Nhập ít nhất 2 ký tự để tìm kiếm"}
           </div>
         ) : (
-          filtered.map((company) => (
+          companies.map((company) => (
             <button
               key={company.id}
               onClick={() => setSelected(company)}

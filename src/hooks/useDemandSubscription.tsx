@@ -10,7 +10,10 @@ import {
 
 export const useDemandSubscription = () => {
   const state = useSyncExternalStore(subscribe, getState, getState);
-  const subscribeDemand = useCallback((tier: DemandTierKey) => subscribeDemandImpl(tier), []);
+  const subscribeDemand = useCallback(
+    (tier: DemandTierKey) => subscribeDemandImpl(tier),
+    [],
+  );
   const cancel = useCallback(() => cancelImpl(), []);
   return { ...state, subscribeDemand, cancel, DEMAND_TIERS };
 };

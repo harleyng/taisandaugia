@@ -74,47 +74,6 @@ export type Database = {
         }
         Relationships: []
       }
-      listing_price_sessions: {
-        Row: {
-          area: number | null
-          created_at: string
-          district: string | null
-          id: string
-          listing_id: string
-          price: number
-          property_type: string | null
-          session_date: string
-        }
-        Insert: {
-          area?: number | null
-          created_at?: string
-          district?: string | null
-          id?: string
-          listing_id: string
-          price: number
-          property_type?: string | null
-          session_date: string
-        }
-        Update: {
-          area?: number | null
-          created_at?: string
-          district?: string | null
-          id?: string
-          listing_id?: string
-          price?: number
-          property_type?: string | null
-          session_date?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "listing_price_sessions_listing_id_fkey"
-            columns: ["listing_id"]
-            isOneToOne: false
-            referencedRelation: "listings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       listing_contacts: {
         Row: {
           contact_info: Json
@@ -478,7 +437,6 @@ export type Database = {
           email: string
           free_unlock_tokens: number
           id: string
-          invoice_info: Json | null
           kyc_status: Database["public"]["Enums"]["kyc_status"]
           name: string | null
           notifications_enabled: boolean
@@ -491,7 +449,6 @@ export type Database = {
           email: string
           free_unlock_tokens?: number
           id: string
-          invoice_info?: Json | null
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           name?: string | null
           notifications_enabled?: boolean
@@ -504,7 +461,6 @@ export type Database = {
           email?: string
           free_unlock_tokens?: number
           id?: string
-          invoice_info?: Json | null
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           name?: string | null
           notifications_enabled?: boolean
@@ -512,195 +468,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      user_credits: {
-        Row: {
-          balance: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          balance?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          balance?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_credits_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      credit_transactions: {
-        Row: {
-          created_at: string
-          credit_delta: number
-          description: string
-          id: string
-          type: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          credit_delta: number
-          description: string
-          id?: string
-          type: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          credit_delta?: number
-          description?: string
-          id?: string
-          type?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "credit_transactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_asset_unlocks: {
-        Row: {
-          created_at: string
-          id: string
-          listing_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          listing_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          listing_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_asset_unlocks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_company_unlocks: {
-        Row: {
-          created_at: string
-          expires_at: string
-          id: string
-          org_id: string
-          tier: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at: string
-          id?: string
-          org_id: string
-          tier: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string
-          id?: string
-          org_id?: string
-          tier?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_company_unlocks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_owner_unlocks: {
-        Row: {
-          created_at: string
-          expires_at: string
-          id: string
-          owner_id: string
-          tier: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at: string
-          id?: string
-          owner_id: string
-          tier: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string
-          id?: string
-          owner_id?: string
-          tier?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_owner_unlocks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_report_unlocks: {
-        Row: {
-          created_at: string
-          id: string
-          unlock_key: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          unlock_key: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          unlock_key?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_report_unlocks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       property_types: {
         Row: {

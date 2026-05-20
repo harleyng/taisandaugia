@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,7 @@ const mockEmail = (to: string, subject: string, body: string) => {
 };
 
 export default function AdminKYCPage() {
+  const navigate = useNavigate();
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
   const [tab, setTab] = useState<Tab>("all");
   const [loading, setLoading] = useState(true);
@@ -134,8 +136,8 @@ export default function AdminKYCPage() {
   const countFor = (key: Tab) => key === "all" ? orgs.length : orgs.filter((o) => o.kyc_status === key).length;
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <>
+    <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -195,7 +197,12 @@ export default function AdminKYCPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <span className="font-medium text-foreground">{org.name}</span>
+                        <button
+                          onClick={() => navigate(`/admin/kyc/${org.id}`)}
+                          className="font-medium text-foreground hover:text-primary hover:underline text-left"
+                        >
+                          {org.name}
+                        </button>
                       </div>
                       {org.rejection_reason && (
                         <p className="text-[11px] text-red-600 mt-0.5 ml-6 line-clamp-1">{org.rejection_reason}</p>
@@ -308,6 +315,6 @@ export default function AdminKYCPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

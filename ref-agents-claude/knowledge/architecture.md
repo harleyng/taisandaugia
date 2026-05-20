@@ -1,4 +1,4 @@
-# Architecture — EduLMS
+# Architecture — Tài Sản Đấu Giá
 
 > Living document. Updated when architecture patterns are established or changed.
 
@@ -7,235 +7,260 @@
 ## Project Structure
 
 ```
-lovable/
-├── vsf-lms/          # Admin Portal (React 18, port 8080)
-├── vsf-learner/      # Learner Portal (React 19, port 5173)
-└── CLAUDE.md          # Root-level guidelines
+taisandaugia/
+├── src/                   # Single-portal React app
+├── supabase/
+│   ├── config.toml        # Project ID: bcusbpkfnydqcvxxjvew
+│   └── migrations/        # 56 migrations (Oct 2024–May 2026)
+├── CLAUDE.md              # Root project guide
+└── ref-agents-claude/     # Agent knowledge base (this folder)
 ```
 
-Both portals share a single Supabase PostgreSQL database.
+Single portal. No dual-schema versioning. No learner portal.
 
 ---
 
 ## Tech Stack
 
-| Layer | Admin Portal (`vsf-lms`) | Learner Portal (`vsf-learner`) |
-|-------|--------------------------|-------------------------------|
-| Framework | React 18 + TypeScript + Vite | React 19 + TypeScript + Vite |
-| UI | shadcn-ui + Tailwind CSS + Radix | shadcn-ui + Tailwind CSS + Radix |
-| State | TanStack Query v5 + Zustand | TanStack Query v5 |
-| Forms | React Hook Form + Zod | React Hook Form + Zod |
-| i18n | i18next (Vietnamese default) | i18next (Vietnamese default) |
-| Editor | Tiptap (rich text) | None |
-| DnD | @dnd-kit | None |
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 18 + TypeScript + Vite |
+| UI | shadcn-ui + Tailwind CSS + Radix primitives |
+| State | TanStack React Query v5 (server), React Hook Form + Zod (forms) |
+| Router | React Router v6 |
+| Database | Supabase PostgreSQL (single `public` schema) |
+| Auth | Supabase Auth + `@lovable.dev/cloud-auth-js` |
+| Maps | Leaflet + Mapbox GL |
+| Charts | Recharts v2 |
+| PWA | vite-plugin-pwa |
+| Toasts | sonner + shadcn toast |
+| i18n | None — Vietnamese UI strings are hardcoded |
 
 ---
 
-## Version Management System (Admin Portal Only)
+## Supabase Integration
 
-Dual-schema architecture for parallel development:
-- **public** schema = Current/Stable version
-- **v2** schema = New/Dev version
-
-### ⚠️ CRITICAL: Versioned Client Pattern
+### ⚠️ CRITICAL: Single Client Pattern
 
 ```typescript
-// ✅ ALWAYS use in hooks
-import { useVersionedSupabase } from "@/integrations/supabase/versionedClient";
-import { useVersionedQueryKey } from "@/lib/versionedQueryKeys";
-
-const versionedSupabase = useVersionedSupabase();
-const queryKey = useVersionedQueryKey(["entity"]);
-
-// ❌ NEVER use raw client
+// ✅ ALWAYS use — there is only one client
 import { supabase } from "@/integrations/supabase/client";
+
+const { data, error } = await supabase
+  .from("auction_organizations")
+  .select("*");
+
+// ❌ NEVER use a versioned client — this project has none
 ```
 
-### File Editing Rule
-- Default: edit `.new.tsx` files
-- `.current.tsx` only if user explicitly requests
+The client uses `localStorage` for session persistence with `autoRefreshToken: true`.
+
+### Type Regeneration
+
+After any schema migration:
+```bash
+npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integrations/supabase/types.ts
+```
+
+Never edit `src/integrations/supabase/types.ts` manually.
 
 ---
 
 ## Key Patterns
 
 ### React Query
-- Query keys: `["entity"]` for lists, `["entity", id]` for single items
-- Always version-prefix: `useVersionedQueryKey(["entity"])`
-- Mutations invalidate queries on success + show toast
 
-### Supabase Integration
 ```typescript
-// Query with relations
-const { data } = await versionedSupabase
-  .from("programs")
-  .select(`*, category:categories(id, name)`)
-  .order("updated_at", { ascending: false });
+// Lists
+const { data } = useQuery({
+  queryKey: ["auction_organizations"],
+  queryFn: async () => { /* supabase query */ },
+  staleTime: 30_000,
+});
+
+// Mutations — always invalidate + toast
+const mutation = useMutation({
+  mutationFn: async (payload) => { /* supabase write */ },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["auction_organizations"] });
+    toast.success("Thành công");
+  },
+});
 ```
+
+Query keys: `["entity"]` for lists, `["entity", id]` for detail, `["user-credits", userId]` for credit state.
 
 ### Forms
-- Zod schema → `useForm({ resolver: zodResolver(schema) })`
-- Pattern: define schema separately, validate client-side
 
-### Rich Text
-- Tiptap editor (admin portal only) with DOMPurify sanitization via `sanitizeHtml()` from `@/lib/sanitize`
-
-### i18n
-- `useTranslation(["namespace"])` in components
-- Files: `src/i18n/locales/{vi,en}/` with namespaced JSON
-- Vietnamese is default AND fallback
-- Language stored in localStorage key `ui_lang`
-
----
-
-## Supabase CLI Commands
-
-Run from `vsf-lms/`:
-
-```bash
-npx supabase db push                    # Apply pending migrations
-npx supabase db push --include-all      # Apply all including out-of-order
-npx supabase migration list             # Check migration status
-npx supabase db diff                    # Show schema differences
-npx supabase gen types typescript --project-id neszdqqqnouawsysbxrn > src/integrations/supabase/types.ts
-```
-
----
-
-## Key Modules (Admin Portal)
-
-| Module | Description |
-|--------|-----------|
-| Content Management | Subjects, programs, asset library, exam library, categories |
-| Training | Courses, classes, sessions with QR attendance |
-| Exams | Question banks, exam papers, events, grading workspace |
-| Training Plans | Plan creation, goal/KPI management |
-| Users | CRUD, groups (static/dynamic criteria), SAP sync |
-| Certificates | Template management, issuance |
-
-## Zustand Stores
-
-| Store | Purpose |
-|-------|---------|
-| `versionStore` | Version state (current/new) |
-| `dialogStore` | Shared confirm dialog state (`useConfirmDialog`) |
-| `breadcrumbStore` | Dynamic breadcrumb titles |
-| `filtersStore` | List page filter state |
-| `uiStore` | General UI state |
-| `sessionsViewStore` | Sessions hub view preferences |
-| `appChangelogStore` | App changelog display |
-| `schemaChangelogStore` | Schema changelog tracking |
-
----
-
-## Services
-
-| Service | Purpose |
-|---------|---------|
-| `deliveryModeService.ts` | `supportsSelfPaced()`, delivery mode logic |
-| `courseCloneService.ts` | Course clone/version operations |
-| `lib/training/programFinalResult.ts` | Client-side program final-result compute (2026-04-14 — avoids server RPC for UI-only aggregation) |
-
----
-
-## Testing
-
-| Aspect | Admin Portal | Learner Portal |
-|--------|-------------|----------------|
-| Location | Centralized: `src/tests/` | Co-located: next to source |
-| Runner | Vitest + v8 coverage | Vitest + v8 coverage |
-| Coverage target | 100% lines | 100% lines |
-| Hook testing | `renderHook` + mock `useVersionedSupabase` | `renderHook` |
-
-### Test Structure (Admin)
-```
-src/tests/
-├── unit/       # lib/, services/, stores/
-├── hooks/      # Custom hooks
-├── components/ # Component render tests
-├── mocks/      # Shared mock modules
-├── fixtures/   # Test data factories
-└── utils/      # testWrapper.tsx, etc.
-```
-
-### Hook Test Mocks
 ```typescript
-vi.mock('@/integrations/supabase/versionedClient', () => ({
-  useVersionedSupabase: () => ({ from: mockFrom, rpc: vi.fn() }),
-}));
-vi.mock('@/stores/versionStore', () => ({ ... }));
-vi.mock('@/lib/versionedQueryKeys', () => ({ ... }));
+const schema = z.object({ name: z.string().min(3) });
+const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
+```
+
+### Auth (global modal)
+
+```typescript
+import { useAuthDialog } from "@/contexts/AuthDialogContext";
+
+const { openAuthDialog } = useAuthDialog();
+openAuthDialog(() => doSomethingAfterLogin());
+```
+
+Never mount `<AuthDialog>` manually — it is a global singleton mounted once in `App.tsx`.
+
+### Credits (always via hook)
+
+```typescript
+import { useCredits } from "@/hooks/useCredits";
+
+const { balance, assetUnlocked, unlockAsset, companyAccess, COMPANY_TIERS } = useCredits();
+```
+
+Never call `src/lib/credits.ts` functions directly from components — always go through the hook.
+
+### Paywall
+
+```typescript
+import { usePaywall } from "@/contexts/PaywallContext";
+const { openPaywall } = usePaywall();
+```
+
+### Button Navigation
+
+```tsx
+// ❌ NEVER — button silently disappears from DOM
+<Button asChild><Link to="/path">Label</Link></Button>
+
+// ✅ ALWAYS
+const navigate = useNavigate();
+<Button onClick={() => navigate("/path")}>Label</Button>
+```
+
+---
+
+## Context Provider Order (App.tsx)
+
+Do not reorder — `PaywallProvider` requires Router context:
+
+```
+QueryClientProvider
+  TooltipProvider
+    AuthDialogProvider
+      <Toaster /> <Sonner /> <AuthDialog />   ← global singletons
+      BrowserRouter
+        PaywallProvider
+          <Routes>
+```
+
+---
+
+## Directory Structure
+
+```
+src/
+├── components/
+│   ├── ui/                      # shadcn-ui primitives — DO NOT EDIT
+│   ├── company-onboarding/      # KYC 3-milestone flow
+│   │   ├── M1AccountCreation.tsx
+│   │   ├── M2KYC.tsx
+│   │   ├── M2/                  # KYCForm + sub-sections A/B/C/D
+│   │   ├── M3Deposit.tsx
+│   │   └── MilestoneProgress.tsx
+│   ├── auction/                 # Auction detail sub-components
+│   ├── listings/                # Listing detail sub-components
+│   ├── paywall/                 # Credit & paywall dialogs
+│   ├── report/                  # Market report (bds/, opp/, outcomes/)
+│   ├── profile/                 # Profile page tabs & sections
+│   ├── auth/                    # AuthDialog
+│   └── demand/                  # Demand tracking
+├── pages/                       # Route page components (23 pages)
+├── hooks/                       # Custom React hooks
+├── lib/                         # Credits logic, mock data, report periods, utils
+├── contexts/                    # AuthDialogContext, PaywallContext
+├── integrations/supabase/       # client.ts + auto-generated types.ts
+├── constants/                   # Category slugs, Vietnam locations
+├── types/                       # TypeScript type definitions
+└── utils/                       # Formatters
 ```
 
 ---
 
 ## Routing
 
-80+ routes in `App.tsx` under:
-`/content/*`, `/training/*`, `/training-plans/*`, `/exams/*`, `/surveys/*`, `/users/*`, `/organization/*`, `/settings/*`, `/certificates/*`, `/reports/*`
-
-### Learner Portal Routing
-`/` (dashboard), `/my-classes`, `/my-classes/:id`, `/my-classes/:classId/lesson/:lessonId`, `/exams`, `/surveys`, `/certificates`, `/reports`, `/profile`
-
----
-
-## Learner Portal Specifics
-
-- **No version system** — single schema (`public`), no `.current.tsx`/`.new.tsx`, no versioned client
-- **Lesson types:** video, audio, text, document, link, SCORM, assignment (quiz/essay/upload subtypes)
-- **Layout:** `<MainLayout>` for most pages; `LessonPlayer` uses custom full-screen layout
-- **Tests co-located** next to source files (not centralized like admin)
-- **Primary color:** teal (`hsl(168, 76%, 32%)`)
-- **React 19** (admin is React 18)
-
----
-
-## Database
-
-- Supabase PostgreSQL with auto-generated types
-- Types: `src/integrations/supabase/types.ts` (public), `types-v2.ts` (v2)
-- **Never edit types.ts directly** — regenerate with `npx supabase gen types typescript`
-- Migrations: `vsf-lms/supabase/migrations/` (225+)
-- Key tables: `categories`, `programs`, `subjects`, `courses`, `class_sections`, `enrollments`, `departments`, `users`, `certificates`, `certificate_templates`, and junction tables
-- **PK convention:** UUID for new tables. Exception: Learning Paths tables use BIGINT PK (decided 2026-04-11) — do not change to UUID.
-
----
-
-## Workforce App Reframing (2026-04-24)
-
-`vsf-learner` is no longer "the learner portal" — it is the **workforce app**:
-
-- Hosts every non-back-office field persona (Learner today, Mentor for OJT today, future Teacher/Instructor and Observer).
-- Navigation is **role-gated** — Mentor sees the OJT work queue, Learner sees courses; both run from the same app shell.
-- `vsf-lms` stays back-office desktop-only (Admin, Manager, Content Creator, Reporting).
-
-When adding a new field persona, ship it under `vsf-learner` with a role nav guard, not a new repo. See `decisions-log.md → 2026-04-24 — vsf-learner Reframed as the Workforce App`.
-
----
-
-## Mobile Design System (Learner Portal Only)
-
-Mobile support in `vsf-learner` uses **sibling files**, not responsive variants:
-
 ```
-src/pages/foo/
-├── Foo.tsx           # tiny dispatcher: viewport → mobile or desktop
-├── Foo.desktop.tsx
-└── Foo.mobile.tsx
+/                        → Index
+/listings                → Listings
+/listings/:id            → ListingDetail
+/auctions/:id            → AuctionDetail
+/report                  → MarketReport
+/report/:slug            → MarketReportCategory
+/report/deep/outcomes    → MarketReportOutcomes
+/auction-org/:id         → CompanyDetail
+/asset-owner/:id         → AssetOwnerDetail (protected)
+/dang-ky-to-chuc         → CompanyOnboarding (KYC)
+/profile                 → ProfilePage (protected)
+/buy-credits             → BuyCredits
+/payment/vnpay           → VnpayCheckout
+/payment-result          → PaymentResult
+/auth                    → Auth
 ```
 
-- Mobile design tokens cover safe-area insets, 44px minimum touch targets, mobile font scale.
-- Lives only in `vsf-learner`. `vsf-lms` is desktop-only — do not introduce mobile patterns there.
-- See `vsf-learner/docs/mobile-design-system.md` for the token list and `decisions-log.md → 2026-04-24 — Mobile Design System v1` for rationale.
+Protected routes use `<ProtectedRoute>` wrapper (redirects to auth if no session).
 
 ---
 
-## OJT Module
+## Database Key Tables
 
-OJT is a **first-class `program_item`** (alongside `course`), not a `course_activity`. Driven by NĐ 44/2016 audit-record requirements.
+| Table | Purpose |
+|-------|---------|
+| `profiles` | Auth-linked user rows; `invoice_info JSONB` for billing |
+| `auction_organizations` | Auction company registry |
+| `organizations` | KYC onboarding records (`kyc_status`) |
+| `organization_roles` | 3 built-in roles: Owner / Manager / Agent |
+| `user_credits` | Per-user credit balance (PK = `user_id`) |
+| `credit_transactions` | Append-only ledger |
+| `user_asset_unlocks` | Permanent asset unlocks per user |
+| `user_company_unlocks` | Time-limited company access |
+| `user_owner_unlocks` | Time-limited owner access |
+| `user_report_unlocks` | Permanent deep-report period unlocks |
+| `listing_price_sessions` | Price session history per listing |
 
-Key tables (both `public` and `v2`): `ojt_templates`, `ojt_template_areas`, `ojt_template_items`, `ojt_assignments`, `ojt_assignment_areas`, `ojt_assignment_items`, `ojt_item_evaluations`, `ojt_assignment_reviews`.
+All credit/unlock tables have `"own rows"` RLS: `USING (auth.uid() = user_id)`.
 
-- Assignments are **eager-created** at enrollment time (trigger on `learner_classes` insert).
-- Mentor work-queue lives in `vsf-learner` (workforce app); admin views in `vsf-lms` are read-only.
-- See `business-rules.md → OJT (On-the-Job Training)` for lifecycle, lock model, and UI rules.
+---
+
+## Supabase CLI Commands
+
+```bash
+npx supabase db push                    # Apply pending migrations
+npx supabase db push --include-all      # Apply all including out-of-order
+npx supabase migration list             # Check migration status
+npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integrations/supabase/types.ts
+```
+
+Always run migrations yourself — never ask the user to run them.
+
+---
+
+## Environment Variables
+
+```
+VITE_SUPABASE_URL=<url>
+VITE_SUPABASE_PUBLISHABLE_KEY=<anon_key>
+VITE_SUPABASE_PROJECT_ID=bcusbpkfnydqcvxxjvew
+```
+
+---
+
+## Mock Data
+
+Located in `src/lib/`. Used while APIs were being built — do not rely on them for new features.
+
+| File | Contents |
+|------|----------|
+| `mockAuctionSessions.ts` | Sample auction sessions |
+| `mockAuctionCompanies.ts` | Sample auction companies |
+| `mockBdsReport.ts` | Real estate market report data |
+| `mockOppReport.ts` | Opportunity report data |
+| `mockOutcomesReport.ts` | Auction outcomes data |
+| `mockCredits.ts` | Sample credit transactions |

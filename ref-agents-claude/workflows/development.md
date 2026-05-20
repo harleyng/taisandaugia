@@ -1,86 +1,73 @@
 ---
-description: 4-phase development workflow for EduLMS. Must follow for every coding task.
+description: 4-phase development workflow for Tài Sản Đấu Giá. Follow for every coding task.
 ---
 
 # Development Workflow (MANDATORY)
 
 **CRITICAL:** Follow this workflow for EVERY coding task. Do NOT skip to coding — always start with analysis.
 
-### Cross-Agent Compatibility
-
-This workflow references "delegating to agents" (e.g., `cpo`, `ld-expert`, `cto`, `ui-ux`, `data-analyst`, `qa`). Different AI coding tools implement this differently:
-
-| AI Tool | How to Execute "Delegate to Agent X" |
-|---------|--------------------------------------|
-| **Claude Code** | Spawn a sub-agent using Claude's native agent delegation |
-| **Antigravity (Gemini)** | Read `.agents/skills/{agent}/SKILL.md`, adopt the expert's perspective, and produce their structured assessment inline |
-| **Other tools** | Read the SKILL.md file and simulate the expert's analysis |
-
-The output quality should be identical regardless of mechanism — same expert knowledge, same structured assessments, same quality gates.
-
 ---
 
 ## Task Sizing (Determine First)
 
-Before starting any task, classify its size. This determines which phases and agents are required.
-
-| Tier | Examples | Required Phases | Agents |
-|------|----------|----------------|--------|
-| **Trivial** | Typo fix, add translation key, rename variable, fix lint error, update comment | Phase 3 → Phase 4 only | QA in Phase 4 only |
-| **Small** | Single component bugfix, add field to existing form, simple style change, add missing test | Phase 1 (self-analysis, no agents) → Phase 3 → Phase 4 | QA in Phase 4 only |
-| **Medium** | New component, new hook, modify feature, add page section | Full 4-phase | Phase 1: CPO + L&D Expert. Phase 2: CTO + UI/UX. Phase 4: QA |
-| **Medium (analytics)** | New report hook, dashboard widget, chart implementation | Full 4-phase | Phase 1: CPO + L&D Expert. Phase 2: CTO + UI/UX + Data Analyst. Phase 4: QA |
-| **Large** | New feature, schema change, cross-portal work, new module | Full 4-phase + System Architect | Phase 1: CPO + L&D Expert. Phase 2: CTO + UI/UX + System Architect. Phase 4: QA |
-| **Large (analytics)** | New report page, metrics redesign, sample-to-real-data migration | Full 4-phase + System Architect | Phase 1: CPO + L&D Expert + Data Analyst. Phase 2: CTO + UI/UX + System Architect + Data Analyst. Phase 4: QA |
+| Tier | Examples | Phases | Agents |
+|------|----------|--------|--------|
+| **Trivial** | Typo fix, rename variable, lint error, update comment | Phase 3 → 4 only | QA in Phase 4 only |
+| **Small** | Single component bugfix, add form field, simple style change | Phase 1 (self, no agents) → 3 → 4 | QA in Phase 4 only |
+| **Medium** | New component, new hook, modify feature, add page section | Full 4-phase | Phase 1: CPO + Domain Expert. Phase 2: CTO + UI/UX. Phase 4: QA |
+| **Medium (analytics)** | New report hook, dashboard widget, chart implementation | Full 4-phase | Phase 1: CPO. Phase 2: CTO + UI/UX + Data Analyst. Phase 4: QA |
+| **Large** | New feature, schema change, credits/KYC modification, new page | Full 4-phase + System Architect | Phase 1: CPO + Domain Expert. Phase 2: CTO + UI/UX + System Architect. Phase 4: QA |
 
 **Rules:**
-- Default to **Medium** when uncertain — it's safer to over-analyze than to miss something
+- Default to **Medium** when uncertain
 - User can override: "treat this as trivial" or "full analysis please"
-- If user says "skip analysis" or "just do it" → treat as Trivial
-- **Phase 4 (verification) is ALWAYS required** regardless of tier — lint and build must pass. Tests and coverage are no longer gated; run them on demand.
+- **Phase 4 (verification) is ALWAYS required** — lint and build must pass
 
 ---
 
-## Phase 1: Analysis (via CPO + L&D Expert Agents)
+## Phase 1: Analysis
 
-**For Medium/Large tasks:** ALWAYS delegate to `cpo` and `ld-expert` agents **in parallel** at the start of Phase 1.
-**For Small tasks:** Perform a brief self-analysis (use cases, impact) without spawning agents.
+**For Medium/Large tasks:** Delegate to `cpo` and `domain-expert` agents **in parallel**.
+**For Small tasks:** Self-analysis only (no agents needed).
 **For Trivial tasks:** Skip to Phase 3.
 
-1. **Delegate to `cpo` and `ld-expert` agents in parallel:**
-   - **CPO** analyzes: problem definition, user personas, strategic fit, MVP scope, RICE prioritization
-   - **L&D Expert** validates: learning outcomes, compliance requirements, pedagogy, domain correctness
-2. **Synthesize expert results** using the Conflict Resolution Rules in root CLAUDE.md
-3. **Then deepen the analysis yourself:**
-   - **Map use cases:** main flow, alternative flows, edge cases, error states
-   - **Analyze impact on other modules** — check status conventions, business rules, cross-portal effects
-   - **Check existing patterns** — search the codebase for similar functionality to reuse
-   - **Consider data flow** — DB tables, status transitions, RLS policies involved
+### CPO analyzes:
+- Who benefits? (anonymous visitor / authenticated buyer / auction company rep)
+- What outcome does the user get?
+- What's the simplest version? MVP scope vs. v2?
+- What are we explicitly NOT doing?
 
-**MANDATORY:** Present the synthesized expert analysis + your own analysis to the user before proceeding. Show:
-- CPO assessment (strategic fit, priority, MVP scope)
-- L&D Expert assessment (learning impact, compliance, domain validation)
-- Your use cases (main flow, alternatives, edge cases)
-- Impact analysis on other modules
-- Any concerns or open questions
+### Domain Expert analyzes:
+- Does this match how Vietnamese real estate auctions actually work?
+- Are there regulatory / compliance considerations?
+- What edge cases exist in the auction / credit / KYC domain?
+
+### Self-analysis (all Medium/Large):
+- Map use cases: main flow → alternative flows → edge cases → error states
+- Check impact on: auth gate, paywall/credits, KYC flow, other pages
+- Search codebase for existing patterns to reuse (check `component-registry.md`)
+- Identify DB tables and RLS policies involved
+
+**MANDATORY:** Present synthesis to user before proceeding. Show:
+- CPO assessment (who benefits, MVP scope)
+- Domain Expert assessment (domain correctness, edge cases)
+- Use cases (main flow, alternatives, edge cases)
+- Impact analysis
 
 **Do NOT start coding until the user confirms the analysis.**
 
 ---
 
-## Phase 2: Solution Design (with Expert Review)
+## Phase 2: Solution Design
 
 After analysis is confirmed:
 
-1. **Propose the approach** — Outline which files to create/modify and why
-2. **Component design** — Prioritize reusability, single responsibility, keep pages under 300 lines by extracting components
-3. **Data model changes** — Plan any migrations, type regeneration, or schema updates
-4. **Identify test cases upfront** — Based on the use cases from Phase 1, list what tests need to be written
-5. **Delegate design review to `cto` and `ui-ux` agents in parallel:**
-   - **CTO** reviews architecture, data layer, scalability, and versioned client compliance
-   - **UI/UX** reviews component composition, accessibility, and design system consistency
-   - **If the task involves reports, dashboards, metrics, or analytics:** Also delegate to `data-analyst` in parallel. The Data Analyst reviews metric definitions, query architecture, and visualization design
-6. **Present the design to the user for approval before implementation**
+1. Outline files to create/modify and why
+2. Follow component design guidelines (single responsibility, pages < 300 lines)
+3. Plan DB migrations if needed
+4. Identify test cases upfront based on Phase 1 use cases
+5. Delegate design review to `cto` and `ui-ux` in parallel (add `data-analyst` for analytics tasks; add `system-architect` for Large tasks)
+6. Present design to user for approval before implementation
 
 ---
 
@@ -88,67 +75,33 @@ After analysis is confirmed:
 
 After design is approved:
 
-1. Write code following the patterns in the portal-specific `CLAUDE.md`
-2. Write tests **alongside** code — not as an afterthought
-3. Every new/modified hook, utility, service, or store must have corresponding tests. Tests are optional for components and pages.
-4. **Admin Portal specific:** ALL hooks must use `useVersionedSupabase()` and `useVersionedQueryKey()` — NEVER the raw `supabase` client
-5. **Admin Portal specific:** Default to editing `.new.tsx` files unless told otherwise
-6. **Learner Portal specific:** Tests are co-located next to source files (not centralized)
-7. **i18n (MANDATORY):** ALL user-facing text MUST use `t()` with proper i18n keys. When adding any new component or modifying UI text:
-   - Add translation keys to BOTH `vi/*.json` and `en/*.json` locale files
-   - Use the correct namespace (e.g., `content`, `training`, `common`)
-   - Never hardcode UI text strings — always use translation functions
-   - Check that any reused components (like `SkillsSelector`, `TagsInput`) have their i18n keys present in the relevant locale files
+1. Write code following patterns in the root `CLAUDE.md` and `ref-agents-claude/knowledge/`
+2. All UI strings in Vietnamese — match existing tone
+3. Credits via `useCredits()` hook only
+4. Auth modal via `useAuthDialog()` context only
+5. Navigation via `useNavigate()` — never `<Button asChild><Link>`
+6. No versioned client — always `import { supabase } from "@/integrations/supabase/client"`
 
 ---
 
-## Phase 4: Verification (via QA Agent)
+## Phase 4: Verification
 
-After implementation, delegate to the `qa` agent for verification. For cross-portal changes, QA runs both portals.
-
-Run these checks for the affected portal(s):
-
-**Admin Portal (`vsf-lms/`):**
 ```bash
-// turbo-all
-npm run lint              # 1. Run linter
-npm run build             # 2. Verify production build
+npm run lint    # Must pass
+npm run build   # Must pass
 ```
 
-**Learner Portal (`vsf-learner/`):**
-```bash
-// turbo-all
-npm run lint              # 1. Run linter
-npm run build             # 2. Verify production build
-```
-
-**Both steps must pass before considering the change complete.**
-
-`npm run test` and `npm run test:coverage` are no longer Phase 4 gates. Run them on demand when you want to verify specific test suites or check coverage — they are not required to ship a change.
+Both must pass before considering the change complete.
 
 ---
 
-## Test Coverage Requirements
+## When Agents Are Involved
 
-- **Aspirational target: 100% line coverage** for hooks, utils, services, and stores. This is no longer a Phase 4 gate — run `npm run test:coverage` on demand when you want to check.
-- Coverage measured by Vitest + v8 provider
-- **Excluded:** `src/components/ui/**`, `*.stories.tsx`, test infra, `*.test.{ts,tsx}`, `src/types/**`, auto-generated Supabase types, bootstrap files, `src/i18n/**`
-- Components and pages are not held to a coverage target.
+Different AI tools implement agent delegation differently:
 
-## Test Location Conventions
+| AI Tool | How to "delegate to agent X" |
+|---------|------------------------------|
+| **Claude Code** | Spawn a sub-agent using native agent delegation |
+| **Other tools** | Read the SKILL.md file and simulate the expert's analysis inline |
 
-| Portal | Convention | Example |
-|--------|-----------|---------|
-| **Admin** (`vsf-lms`) | Centralized in `src/tests/` | `src/hooks/useX.ts` → `src/tests/hooks/useX.test.ts` |
-| **Learner** (`vsf-learner`) | Co-located next to source | `src/hooks/useX.ts` → `src/hooks/useX.test.ts` |
-
-## UI File Editing Rule
-
-When pages have version-specific files (`.current.tsx` and `.new.tsx`):
-
-| Action | Which File to Edit |
-|--------|-------------------|
-| **Default** (any edit request) | `.new.tsx` (New Version) |
-| User explicitly requests Current | `.current.tsx` |
-| Merge New → Current | Copy `.new.tsx` content to `.current.tsx` |
-| Critical production bug | `.current.tsx` (user must confirm) |
+Output quality should be identical regardless of mechanism.

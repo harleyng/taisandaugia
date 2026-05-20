@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const contactInfo = [
   {
@@ -32,6 +34,7 @@ const contactInfo = [
 
 const Contact = () => {
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -46,8 +49,21 @@ const Contact = () => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (!form.name || !form.phone || !form.message) return;
+    setIsSubmitting(true);
+    const { error } = await supabase.from("contact_submissions").insert({
+      name: form.name,
+      phone: form.phone,
+      email: form.email || null,
+      subject: form.subject || null,
+      message: form.message,
+    });
+    setIsSubmitting(false);
+    if (error) {
+      toast.error("Không thể gửi tin nhắn. Vui lòng thử lại.");
+      return;
+    }
     setSubmitted(true);
   };
 
@@ -112,12 +128,12 @@ const Contact = () => {
                 <p className="text-sm text-muted-foreground max-w-sm">
                   Chúng tôi đã nhận được tin nhắn của bạn và sẽ phản hồi sớm nhất có thể.
                 </p>
-                <Button variant="outline" onClick={() => setSubmitted(false)}>
+                <Button variant="outline" onClick={() => { setSubmitted(false); setForm({ name: "", phone: "", email: "", subject: "", message: "" }); }}>
                   Gửi tin nhắn khác
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <form className="flex flex-col gap-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="name">Họ và tên <span className="text-destructive">*</span></Label>
@@ -180,9 +196,9 @@ const Contact = () => {
                   />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full sm:w-auto sm:self-end">
+                <Button type="button" size="lg" className="w-full sm:w-auto sm:self-end" disabled={isSubmitting} onClick={handleSubmit}>
                   <Send className="mr-2 h-4 w-4" strokeWidth={1.5} />
-                  Gửi tin nhắn
+                  {isSubmitting ? "Đang gửi..." : "Gửi tin nhắn"}
                 </Button>
               </form>
             )}

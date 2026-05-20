@@ -430,6 +430,75 @@ export type Database = {
           },
         ]
       }
+      contact_submissions: {
+        Row: {
+          id: string
+          name: string
+          phone: string
+          email: string | null
+          subject: string | null
+          message: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          phone: string
+          email?: string | null
+          subject?: string | null
+          message: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          phone?: string
+          email?: string | null
+          subject?: string | null
+          message?: string
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      partnership_registrations: {
+        Row: {
+          contact_name: string
+          created_at: string
+          email: string
+          id: string
+          note: string | null
+          org_name: string
+          phone: string
+          province: string
+          status: string
+        }
+        Insert: {
+          contact_name: string
+          created_at?: string
+          email: string
+          id?: string
+          note?: string | null
+          org_name: string
+          phone: string
+          province: string
+          status?: string
+        }
+        Update: {
+          contact_name?: string
+          created_at?: string
+          email?: string
+          id?: string
+          note?: string | null
+          org_name?: string
+          phone?: string
+          province?: string
+          status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           agent_info: Json | null

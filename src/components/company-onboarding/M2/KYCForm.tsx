@@ -19,9 +19,25 @@ import { ReviewPanel } from "./ReviewPanel";
 import { TrustSignals } from "./TrustSignals";
 import { sectionStatus, KYCFormData } from "./sectionStatus";
 
+export interface KYCSubmitData {
+  companyId: string;
+  companyName: string;
+  role: "legal_rep" | "authorized_person" | "";
+  fullName: string;
+  idType: "cccd" | "passport";
+  idNumber: string;
+  phone: string;
+  contactEmail: string;
+  idFront: boolean;
+  idBack: boolean;
+  docDkdn: boolean;
+  docLicense: boolean;
+  docAuth: boolean;
+}
+
 interface KYCFormProps {
   accountEmail: string;
-  onSubmit: (companyId: string, companyName: string) => void;
+  onSubmit: (data: KYCSubmitData) => void;
 }
 
 type IdType = "cccd" | "passport";
@@ -583,7 +599,21 @@ export const KYCForm = ({ accountEmail, onSubmit }: KYCFormProps) => {
                   disabled={!status.all || !acceptedTerms || submitting}
                   onClick={() => {
                     setSubmitting(true);
-                    onSubmit(company!.id, company!.name);
+                    onSubmit({
+                      companyId: company!.id,
+                      companyName: company!.name,
+                      role,
+                      fullName,
+                      idType,
+                      idNumber,
+                      phone,
+                      contactEmail,
+                      idFront,
+                      idBack,
+                      docDkdn,
+                      docLicense,
+                      docAuth,
+                    });
                   }}
                 >
                   {submitting ? "Đang xử lý..." : "Nộp hồ sơ KYC"}

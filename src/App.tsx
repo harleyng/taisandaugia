@@ -6,6 +6,13 @@ import { AuthDialog } from "@/components/auth/AuthDialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
+import AdminLayout from "@/components/admin/AdminLayout";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminKYCPage from "@/pages/AdminKYCPage";
+import AdminKYCDetail from "@/pages/admin/AdminKYCDetail";
+import AdminCollaborationPage from "@/pages/admin/AdminCollaborationPage";
+import AdminContactsPage from "@/pages/admin/AdminContactsPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Listings from "./pages/Listings";
@@ -74,6 +81,17 @@ const App = () => (
               <Route index element={<AssetOwnerDetail />} />
             </Route>
 
+
+            {/* Admin Portal */}
+            <Route path="/admin" element={<AdminRoute />}>
+              <Route element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="kyc" element={<AdminKYCPage />} />
+                <Route path="collaboration" element={<AdminCollaborationPage />} />
+                <Route path="kyc/:id" element={<AdminKYCDetail />} />
+                <Route path="contacts" element={<AdminContactsPage />} />
+              </Route>
+            </Route>
 
             {/* 404 Catch-all */}
             <Route path="*" element={<NotFound />} />

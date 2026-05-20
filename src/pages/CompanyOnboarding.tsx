@@ -5,6 +5,7 @@ import { M2KYC } from "@/components/company-onboarding/M2KYC";
 import { Step5PendingReview } from "@/components/company-onboarding/M2/Step5PendingReview";
 import { supabase } from "@/integrations/supabase/client";
 import type { AuctionCompany } from "@/lib/mockAuctionCompanies";
+import type { KYCSubmitData } from "@/components/company-onboarding/M2/KYCForm";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -40,7 +41,8 @@ const CompanyOnboarding = () => {
     if (session?.user?.email) setAccountEmail(session.user.email);
   }, []);
 
-  const handleComplete = async (companyId: string, companyName: string) => {
+  const handleComplete = async (data: KYCSubmitData) => {
+    const { companyId, companyName, role, fullName, idType, idNumber, phone, contactEmail, idFront, idBack, docDkdn, docLicense, docAuth } = data;
     // Read session directly from localStorage — avoids supabase client network hang
     const PROJECT_REF = "bcusbpkfnydqcvxxjvew";
     const raw = localStorage.getItem(`sb-${PROJECT_REF}-auth-token`);
@@ -61,7 +63,20 @@ const CompanyOnboarding = () => {
         name: companyName,
         owner_id: userId,
         kyc_status: "PENDING_KYC",
-        license_info: { auction_org_id: companyId },
+        license_info: {
+          auction_org_id: companyId,
+          representative_role: role,
+          full_name: fullName,
+          id_type: idType,
+          id_number: idNumber,
+          phone,
+          contact_email: contactEmail,
+          id_front_uploaded: idFront,
+          id_back_uploaded: idBack,
+          doc_dkdn: docDkdn,
+          doc_license: docLicense,
+          doc_auth: docAuth,
+        },
       }),
     });
 
@@ -91,7 +106,7 @@ const CompanyOnboarding = () => {
     });
 
     // 3. Show pending screen
-    setPendingCompany({ id: companyId, name: companyName, taxCode: "", address: "", province: "", phone: "", linkedAccountId: null });
+    setPendingCompany({ id: companyId, name: companyName, taxCode: "", address: "", province: "", phone: phone || "", linkedAccountId: null });
     setStage("pending");
   };
 

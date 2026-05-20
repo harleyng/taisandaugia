@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Handshake, CheckCircle2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -60,8 +61,21 @@ export function CollaborationDialog({ open, onOpenChange }: CollaborationDialogP
   });
 
   const onSubmit = async (values: FormValues) => {
-    // TODO: wire up to Supabase or an API endpoint
-    console.log("Collaboration request:", values);
+    const { error } = await supabase
+      .from("partnership_registrations")
+      .insert({
+        org_name: values.orgName,
+        contact_name: values.contactName,
+        phone: values.phone,
+        email: values.email,
+        province: values.province,
+        note: values.note ?? null,
+      });
+
+    if (error) {
+      toast({ title: "Gửi thất bại", description: "Vui lòng thử lại sau.", variant: "destructive" });
+      return;
+    }
     setSubmitted(true);
   };
 
@@ -199,7 +213,11 @@ export function CollaborationDialog({ open, onOpenChange }: CollaborationDialogP
                   <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                     Huỷ
                   </Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting}>
+                  <Button
+                    type="button"
+                    disabled={form.formState.isSubmitting}
+                    onClick={form.handleSubmit(onSubmit)}
+                  >
                     Gửi đăng ký
                   </Button>
                 </div>

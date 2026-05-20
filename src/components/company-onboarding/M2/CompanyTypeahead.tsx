@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,36 +15,42 @@ interface CompanyTypeaheadProps {
 export const CompanyTypeahead = ({ value, onSelect }: CompanyTypeaheadProps) => {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [debouncedQ, setDebouncedQ] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [allCompanies, setAllCompanies] = useState<AuctionCompany[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedQ(q), 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [q]);
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
 
-  const { data: results = [], isFetching } = useQuery({
-    queryKey: ["auction-org-search", debouncedQ],
-    queryFn: async () => {
-      let query = supabase
-        .from("auction_organizations")
-        .select("id, name, tax_code, address, province, phone")
-        .limit(20);
+    supabase
+      .from("auction_organizations")
+      .select("id, name, tax_code, address, province, phone")
+      .order("name")
+      .limit(200)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setLoadError(true);
+        } else {
+          setAllCompanies((data ?? []).map((row) => mapOrgRow(row)));
+        }
+        setLoading(false);
+      });
 
-      if (debouncedQ.trim()) {
-        query = query.or(
-          `name.ilike.%${debouncedQ}%,tax_code.ilike.%${debouncedQ}%,address.ilike.%${debouncedQ}%,province.ilike.%${debouncedQ}%`
-        );
-      }
+    return () => { cancelled = true; };
+  }, []);
 
-      const { data, error } = await query.order("name");
-      if (error) throw error;
-      return (data ?? []).map((row) => mapOrgRow(row));
-    },
-    enabled: open,
-    staleTime: 30_000,
-  });
+  const needle = q.trim().toLowerCase();
+  const results = needle.length === 0
+    ? allCompanies
+    : allCompanies.filter((c) =>
+        c.name.toLowerCase().includes(needle) ||
+        c.taxCode.toLowerCase().includes(needle) ||
+        c.address.toLowerCase().includes(needle) ||
+        c.province.toLowerCase().includes(needle)
+      );
 
   if (value) {
     const isLinked = value.linkedAccountId != null;
@@ -135,11 +140,15 @@ export const CompanyTypeahead = ({ value, onSelect }: CompanyTypeaheadProps) => 
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-xl border border-border bg-popover shadow-lg overflow-hidden">
           <div className="max-h-60 overflow-y-auto">
-            {isFetching ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">Đang tìm...</div>
+            {loading ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">Đang tải danh sách...</div>
+            ) : loadError ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Không thể tải danh sách công ty. Vui lòng thử lại.
+              </div>
             ) : results.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                {debouncedQ ? `Không có kết quả cho "${debouncedQ}"` : "Nhập để tìm kiếm công ty"}
+                {needle ? `Không có kết quả cho "${q}"` : "Chưa có công ty nào trong hệ thống"}
               </div>
             ) : (
               results.map((c) => (

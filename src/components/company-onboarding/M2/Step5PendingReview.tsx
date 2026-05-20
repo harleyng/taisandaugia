@@ -1,15 +1,13 @@
-import { Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuctionCompany } from "@/lib/mockAuctionCompanies";
 
-export type ReviewOutcome = "approved" | "rejected" | "needs_more_info";
-
 interface Step5PendingReviewProps {
   company: AuctionCompany;
-  onSimulateOutcome: (outcome: ReviewOutcome) => void;
 }
 
-export const Step5PendingReview = ({ company, onSimulateOutcome }: Step5PendingReviewProps) => {
+export const Step5PendingReview = ({ company }: Step5PendingReviewProps) => {
   return (
     <div className="space-y-6">
       {/* Status display */}
@@ -57,42 +55,9 @@ export const Step5PendingReview = ({ company, onSimulateOutcome }: Step5PendingR
         Chúng tôi sẽ thông báo kết quả qua email sau khi hoàn tất kiểm duyệt. Thời gian xử lý thông thường là <strong>1–3 ngày làm việc</strong>.
       </div>
 
-      {/* Demo controls */}
-      <div className="border-2 border-dashed border-muted-foreground/20 rounded-xl p-4 space-y-3">
-        <p className="text-xs font-semibold text-muted-foreground text-center uppercase tracking-wide">
-          Demo Controls (chỉ hiện trong prototype)
-        </p>
-        <p className="text-xs text-muted-foreground text-center">Chọn kết quả duyệt để xem giao diện tương ứng:</p>
-        <div className="grid grid-cols-3 gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-green-300 text-green-700 hover:bg-green-50 text-xs flex-col h-auto py-2.5 gap-1"
-            onClick={() => onSimulateOutcome("approved")}
-          >
-            <CheckCircle className="h-4 w-4" />
-            Duyệt
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-red-300 text-red-700 hover:bg-red-50 text-xs flex-col h-auto py-2.5 gap-1"
-            onClick={() => onSimulateOutcome("rejected")}
-          >
-            <XCircle className="h-4 w-4" />
-            Từ chối
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-amber-300 text-amber-700 hover:bg-amber-50 text-xs flex-col h-auto py-2.5 gap-1"
-            onClick={() => onSimulateOutcome("needs_more_info")}
-          >
-            <AlertCircle className="h-4 w-4" />
-            Cần thêm
-          </Button>
-        </div>
-      </div>
+      <Button asChild variant="outline" className="w-full">
+        <Link to="/">Về trang chủ</Link>
+      </Button>
     </div>
   );
 };

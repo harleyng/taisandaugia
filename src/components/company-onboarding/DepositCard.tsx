@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, Info, ArrowRight, User, Building2, CheckCircle2, Gavel, Bell, Heart, CreditCard, Rocket } from "lucide-react";
+import { Wallet, Info, ArrowRight, User, Building2, CheckCircle2, FileText, BarChart2, Bell, Rocket } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,10 +30,9 @@ const COPY = {
 };
 
 const PERSONAL_FEATURES = [
-  { icon: Gavel, label: "Tham gia đấu giá", desc: "Đặt giá cho tài sản trên toàn nền tảng" },
-  { icon: CreditCard, label: "Đặt cọc tài sản", desc: "Giữ chỗ tài sản yêu thích trước phiên đấu giá" },
-  { icon: Bell, label: "Thông báo realtime", desc: "Cập nhật trạng thái đấu giá tức thì" },
-  { icon: Heart, label: "Lưu tài sản yêu thích", desc: "Theo dõi danh mục quan tâm" },
+  { icon: FileText, label: "Truy cập đầy đủ thông tin tài sản", desc: "Mở khóa tiền đặt cọc, tài liệu đính kèm và nhiều hơn nữa..." },
+  { icon: BarChart2, label: "Quyết định dựa trên dữ liệu thật", desc: "Báo cáo thị trường tổng hợp từ hàng trăm nghìn phiên đấu giá" },
+  { icon: Bell, label: "Theo dõi cơ hội của bạn 24/7", desc: "Thông báo realtime khi tài sản quan tâm có thay đổi hoặc có tài sản mới" },
 ];
 
 const PersonalSuccessView = ({ onContinue }: { onContinue: () => void }) => {

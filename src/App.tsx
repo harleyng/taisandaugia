@@ -27,6 +27,8 @@ import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import CompanyOnboarding from "./pages/CompanyOnboarding";
+import AdminKYCPage from "./pages/AdminKYCPage";
+import { AdminRoute } from "./components/AdminRoute";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 
 const queryClient = new QueryClient();
@@ -72,6 +74,11 @@ const App = () => (
             <Route path="/auction-org/:id" element={<CompanyDetail />} />
             <Route path="/asset-owner/:id" element={<ProtectedRoute />}>
               <Route index element={<AssetOwnerDetail />} />
+            </Route>
+
+            {/* Admin */}
+            <Route path="/admin" element={<AdminRoute />}>
+              <Route path="kyc" element={<AdminKYCPage />} />
             </Route>
 
             {/* 404 Catch-all */}

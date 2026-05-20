@@ -21,7 +21,7 @@ import { sectionStatus, KYCFormData } from "./sectionStatus";
 
 interface KYCFormProps {
   accountEmail: string;
-  onSubmit: (companyId: string) => void;
+  onSubmit: (companyId: string, companyName: string) => void;
 }
 
 type IdType = "cccd" | "passport";
@@ -589,7 +589,7 @@ export const KYCForm = ({ accountEmail, onSubmit }: KYCFormProps) => {
                   disabled={!status.all || !acceptedTerms || submitting}
                   onClick={() => {
                     setSubmitting(true);
-                    onSubmit(company!.id);
+                    onSubmit(company!.id, company!.name);
                   }}
                 >
                   {submitting ? "Đang xử lý..." : "Nộp hồ sơ KYC"}

@@ -27,8 +27,6 @@ import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import CompanyOnboarding from "./pages/CompanyOnboarding";
-import AdminKYCPage from "./pages/AdminKYCPage";
-import { AdminRoute } from "./components/AdminRoute";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 
 const queryClient = new QueryClient();

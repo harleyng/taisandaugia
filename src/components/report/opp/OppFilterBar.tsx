@@ -188,11 +188,6 @@ interface OppFilterBarProps {
   setAreaMin: (v: string) => void;
   areaMax: string;
   setAreaMax: (v: string) => void;
-  matchCount: number;
-  isStale: boolean;
-  balance: number;
-  onGenerate: () => void;
-  hasGenerated: boolean;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -205,8 +200,6 @@ export const OppFilterBar = forwardRef<HTMLDivElement, OppFilterBarProps>(
     priceRange, setPriceRange,
     areaMin, setAreaMin,
     areaMax, setAreaMax,
-    matchCount, isStale,
-    onGenerate, hasGenerated,
   }, ref) => {
     const [advancedOpen, setAdvancedOpen] = useState(false);
     const [customDateFrom, setCustomDateFrom] = useState("");
@@ -375,32 +368,6 @@ export const OppFilterBar = forwardRef<HTMLDivElement, OppFilterBarProps>(
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-4 px-5 py-3.5 border-t border-border bg-muted/40 flex-wrap">
-          <div className="flex items-center gap-3">
-            <span className="font-serif text-3xl font-semibold text-primary leading-none">{matchCount}</span>
-            <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold">phiên đấu giá khớp tiêu chí</span>
-              <span className="text-xs text-muted-foreground">
-                <span className="text-primary font-semibold">Xem trước miễn phí</span> · cập nhật tức thì khi đổi bộ lọc
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5">
-            {isStale && (
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-md">
-                ⏳ Bộ lọc đã thay đổi
-              </span>
-            )}
-            <button
-              onClick={onGenerate}
-              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-lg shadow hover:opacity-90 active:scale-[0.98] transition-all"
-            >
-              {hasGenerated && isStale ? "Cập nhật báo cáo" : "Tạo báo cáo"}
-              <span className="font-mono text-[11px] bg-white/20 px-2 py-0.5 rounded">⊛1 credit</span>
-            </button>
-          </div>
-        </div>
       </div>
     );
   },

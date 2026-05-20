@@ -151,11 +151,6 @@ const MarketReport = () => {
           priceRange={priceRange} setPriceRange={handleSetPriceRange}
           areaMin={areaMin} setAreaMin={handleSetAreaMin}
           areaMax={areaMax} setAreaMax={handleSetAreaMax}
-          matchCount={MATCH_COUNT}
-          isStale={isStale}
-          balance={balance}
-          onGenerate={handleGenerate}
-          hasGenerated={hasGenerated}
         />
 
         {/* Results */}

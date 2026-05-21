@@ -433,11 +433,11 @@ const Index = () => {
 
 
 
-      {/* News Section */}
-      <NewsSection />
-
       {/* Partners */}
       <PartnersSection />
+
+      {/* News Section */}
+      <NewsSection />
 
       {/* Route B — B2B entry for auction company owners (hidden) */}
 

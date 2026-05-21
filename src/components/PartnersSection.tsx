@@ -174,23 +174,6 @@ function AdSlotCard() {
           Tiếp cận hàng chục nghìn nhà đầu tư bất động sản trên nền tảng đấu giá hàng đầu. Vị trí độc quyền theo quý.
         </p>
 
-        {/* stats */}
-        <div
-          className="grid grid-cols-3 gap-x-4 gap-y-3 py-4 mt-1"
-          style={{ borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}
-        >
-          {[
-            { label: "Lượt xem/tháng", value: "80K+" },
-            { label: "Nhà đầu tư",     value: "12K+" },
-            { label: "Quan tâm",       value: "6" },
-          ].map((s) => (
-            <div key={s.label} className="flex flex-col gap-1">
-              <span className="text-[9px] tracking-widest uppercase" style={{ color: C.muted }}>{s.label}</span>
-              <span className="text-base font-bold" style={{ color: C.ink }}>{s.value}</span>
-            </div>
-          ))}
-        </div>
-
         {/* bottom */}
         <div className="flex items-end justify-between mt-auto pt-2">
           <div>

@@ -8,6 +8,7 @@ import { PopularAreas } from "@/components/PopularAreas";
 import { NewsSection } from "@/components/NewsSection";
 import { HomepageRewardBanner } from "@/components/HomepageRewardBanner";
 import { CollaborationDialog } from "@/components/CollaborationDialog";
+import { PartnersSection } from "@/components/PartnersSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -435,70 +436,10 @@ const Index = () => {
       {/* News Section */}
       <NewsSection />
 
-      {/* Route B — B2B entry for auction company owners */}
-      <section className="container px-4 py-8 md:py-10">
-        <div className="relative rounded-2xl overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/5">
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-primary/8 blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="relative grid md:grid-cols-2 gap-8 items-center p-6 md:p-10">
-            {/* Left */}
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                <Building2 className="h-3.5 w-3.5" />
-                Dành cho công ty đấu giá
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                Bạn đại diện công ty đấu giá?
-              </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Đưa hoạt động đấu giá của công ty lên nền tảng số — tiếp cận hàng nghìn người mua tiềm năng trên toàn quốc.
-              </p>
-              <div className="space-y-2.5">
-                {[
-                  { icon: BarChart3, text: "Dashboard phân tích và quản lý phiên đấu giá" },
-                  { icon: Shield, text: "KYC doanh nghiệp chuẩn pháp lý, bảo mật cao" },
-                  { icon: Zap, text: "Kích hoạt nhanh — bắt đầu đăng tài sản trong vài ngày" },
-                ].map(({ icon: Icon, text }, i) => (
-                  <div key={i} className="flex items-center gap-2.5 text-sm text-foreground">
-                    <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Icon className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    {text}
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* Partners */}
+      <PartnersSection />
 
-            {/* Right */}
-            <div className="flex flex-col gap-3">
-              <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-3">
-                <p className="text-sm font-semibold text-foreground">Bắt đầu ngay hôm nay</p>
-                <p className="text-xs text-muted-foreground">
-                  Quy trình đăng ký 3 bước: tạo tài khoản → KYC công ty → nạp tiền kích hoạt (≥1$).
-                </p>
-                <Link
-                  to="/dang-ky-to-chuc"
-                  className="flex items-center justify-center gap-2 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  Đăng ký tổ chức
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  to="/lien-he"
-                  className="flex items-center justify-center gap-2 w-full rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
-                >
-                  Tìm hiểu thêm
-                </Link>
-              </div>
-              <p className="text-xs text-center text-muted-foreground">
-                Đã có tài khoản?{" "}
-                <Link to="/dang-ky-to-chuc" className="text-primary underline">
-                  Đăng nhập và bắt đầu KYC
-                </Link>
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Route B — B2B entry for auction company owners (hidden) */}
 
       {/* CTA Section */}
       <section className="container px-4 py-8 md:py-12">

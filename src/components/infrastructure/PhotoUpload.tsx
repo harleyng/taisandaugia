@@ -1,11 +1,12 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import imageCompression from 'browser-image-compression'
-import { ImagePlus, Loader2, Upload } from 'lucide-react'
+import { FolderOpen, Loader2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/integrations/supabase/client'
 import { saveDocument, listFolders, seedDefaultFolders } from '@/lib/documents/storage'
+import { DocumentPickerDialog } from './DocumentPickerDialog'
 import type { PhotoAttachment } from '@/types/infrastructure'
 
 const ACCEPTED = {
@@ -15,7 +16,7 @@ const ACCEPTED = {
   'image/heic': ['.heic'],
 }
 
-const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_SIZE = 10 * 1024 * 1024
 const BUCKET = 'org-documents'
 
 interface Props {
@@ -27,14 +28,15 @@ interface Props {
   onAdd: (photo: PhotoAttachment) => void
 }
 
-async function getInfraFolderId(): Promise<string | null> {
+function getInfraFolderId(): string | null {
   seedDefaultFolders()
-  const folders = listFolders()
-  return folders.find((f) => f.name === 'Cơ sở vật chất')?.id ?? null
+  return listFolders().find((f) => f.name === 'Cơ sở vật chất')?.id ?? null
 }
 
 export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAdd }: Props) {
   const [uploading, setUploading] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const processFile = useCallback(
     async (file: File) => {
@@ -42,16 +44,13 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
         toast.error(`${file.name}: vượt quá 10MB`)
         return
       }
-
       try {
-        // Compress
         const compressed = await imageCompression(file, {
           maxSizeMB: 0.2,
           maxWidthOrHeight: 1200,
           useWebWorker: true,
         })
 
-        // Get image dimensions
         const blobUrl = URL.createObjectURL(compressed)
         const dims = await new Promise<{ width: number; height: number }>((resolve) => {
           const img = new Image()
@@ -64,37 +63,25 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
         const ext = file.name.split('.').pop() ?? 'jpg'
         const storagePath = `infrastructure/${sectionId}/${photoId}.${ext}`
 
-        // Upload to Supabase Storage
         const { error: uploadError } = await supabase.storage
           .from(BUCKET)
           .upload(storagePath, compressed, { upsert: true })
 
         if (uploadError) throw new Error(uploadError.message)
 
-        // Get signed URL (24h)
         const { data: signedData } = await supabase.storage
           .from(BUCKET)
           .createSignedUrl(storagePath, 86400)
 
-        const signedUrl = signedData?.signedUrl
-
-        // Create Document record in Tủ tài liệu
-        const folderId = await getInfraFolderId()
         const now = new Date().toISOString()
         const docId = crypto.randomUUID()
 
         saveDocument({
           id: docId,
-          folderId,
+          folderId: getInfraFolderId(),
           displayName: file.name,
           tags: ['Cơ sở vật chất'],
-          linkedEntities: [
-            {
-              type: 'INFRASTRUCTURE_SECTION',
-              id: sectionId,
-              label: sectionLabel,
-            },
-          ],
+          linkedEntities: [{ type: 'INFRASTRUCTURE_SECTION', id: sectionId, label: sectionLabel }],
           isStarred: false,
           versions: [{ version: 1, storagePath, sizeBytes: compressed.size, uploadedAt: now }],
           currentVersion: 1,
@@ -110,7 +97,7 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
           id: photoId,
           documentId: docId,
           storagePath,
-          url: signedUrl ?? undefined,
+          url: signedData?.signedUrl ?? undefined,
           fileName: file.name,
           fileSize: compressed.size,
           uploadedAt: now,
@@ -141,7 +128,12 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
     accept: ACCEPTED,
     maxSize: MAX_SIZE,
     disabled: uploading,
+    noClick: true,
   })
+
+  function handleSelectFromPicker(picked: PhotoAttachment[]) {
+    picked.forEach((p) => onAdd(p))
+  }
 
   return (
     <div className="space-y-3">
@@ -156,28 +148,57 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
 
       <div
         {...getRootProps()}
-        className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+        className={`border-2 border-dashed rounded-xl p-5 transition-colors ${
           isDragActive
             ? 'border-primary bg-primary/5'
-            : 'border-border hover:border-primary/40 hover:bg-secondary/40'
-        } ${uploading ? 'opacity-60 cursor-not-allowed' : ''}`}
+            : 'border-border'
+        } ${uploading ? 'opacity-60' : ''}`}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} ref={inputRef} />
+
         {uploading ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-7 w-7 animate-spin text-primary" />
+          <div className="flex items-center justify-center gap-2 py-2">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Đang tải lên...</p>
           </div>
+        ) : isDragActive ? (
+          <div className="flex flex-col items-center gap-1 py-2">
+            <Upload className="h-6 w-6 text-primary" />
+            <p className="text-sm font-medium text-primary">Thả ảnh vào đây...</p>
+          </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-2">
-              <Upload className="h-6 w-6 text-muted-foreground" />
-              <ImagePlus className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-sm font-medium">
-              {isDragActive ? 'Thả ảnh vào đây...' : 'Kéo & thả ảnh hoặc nhấn để chọn'}
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-xs text-muted-foreground">
+              Kéo & thả ảnh vào đây, hoặc chọn từ bên dưới
             </p>
-            <p className="text-xs text-muted-foreground">JPG, PNG, WEBP, HEIC — tối đa 10MB/ảnh</p>
+            <p className="text-[11px] text-muted-foreground">
+              JPG, PNG, WEBP, HEIC — tối đa 10MB/ảnh
+            </p>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={uploading}
+                onClick={() => inputRef.current?.click()}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Tải lên từ thiết bị
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setPickerOpen(true)}
+              >
+                <FolderOpen className="h-3.5 w-3.5" />
+                Chọn từ Tủ tài liệu
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -189,23 +210,12 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
         </p>
       )}
 
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => {
-            const input = document.querySelector<HTMLInputElement>(
-              `[data-section="${sectionId}"] input[type="file"]`,
-            )
-            input?.click()
-          }}
-        >
-          <Upload className="h-3.5 w-3.5" />
-          Tải lên
-        </Button>
-      </div>
+      <DocumentPickerDialog
+        open={pickerOpen}
+        alreadyLinked={photos.map((p) => p.documentId)}
+        onClose={() => setPickerOpen(false)}
+        onSelect={handleSelectFromPicker}
+      />
     </div>
   )
 }

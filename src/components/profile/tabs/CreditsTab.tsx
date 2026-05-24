@@ -105,7 +105,7 @@ const TransactionRow = ({ tx }: { tx: Transaction }) => {
   );
 };
 
-export const CreditsTab = () => {
+export const CreditsTab = ({ defaultReturnPath }: { defaultReturnPath?: string } = {}) => {
   const { transactions } = useCredits();
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -149,7 +149,7 @@ export const CreditsTab = () => {
     };
   }, []);
 
-  const returnPath = params.get("return") || "";
+  const returnPath = params.get("return") || defaultReturnPath || "";
   const unlockParam = params.get("unlock") || "";
 
   const handleBuy = (key: string) => {

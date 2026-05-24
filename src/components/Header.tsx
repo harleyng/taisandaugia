@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2 } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard } from "lucide-react";
 import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
@@ -56,6 +56,7 @@ export const Header = () => {
     .filter((t) => t.status !== "claimed")
     .reduce((sum, t) => sum + t.credits, 0);
   const [rewardOpen, setRewardOpen] = useState(false);
+  const [isVerifiedCompany, setIsVerifiedCompany] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -69,6 +70,7 @@ export const Header = () => {
     if (!session) {
       setProfileName(null);
       setAvatarUrl(null);
+      setIsVerifiedCompany(false);
       return;
     }
     supabase
@@ -81,6 +83,14 @@ export const Header = () => {
         const agentInfo = (data?.agent_info as any) || {};
         setAvatarUrl(agentInfo?.profile_picture_url || null);
       });
+    supabase
+      .from("organizations")
+      .select("id")
+      .eq("owner_id", session.user.id)
+      .eq("kyc_status", "APPROVED")
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setIsVerifiedCompany(!!data));
   }, [session]);
 
   const displayName = resolveDisplayName(profileName, session?.user.id);
@@ -255,6 +265,20 @@ export const Header = () => {
                     </DropdownMenuItem>
                   </div>
 
+                  {isVerifiedCompany && (
+                    <>
+                      <DropdownMenuSeparator className="my-0" />
+                      <div className="py-1">
+                        <DropdownMenuLabel className="px-4 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Công ty
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => navigate("/portal")} className="px-4 py-2.5 cursor-pointer">
+                          <LayoutDashboard className="mr-3 h-4 w-4" />
+                          Company Portal
+                        </DropdownMenuItem>
+                      </div>
+                    </>
+                  )}
                   <DropdownMenuSeparator className="my-0" />
                   <DropdownMenuItem onClick={handleLogout} className="px-4 py-2.5 cursor-pointer text-destructive focus:text-destructive">
                     <LogOut className="mr-3 h-4 w-4" />
@@ -388,6 +412,15 @@ export const Header = () => {
                         <Heart className="h-5 w-5" />
                         Tài sản đang theo dõi
                       </Link>
+                      {isVerifiedCompany && (
+                        <Link
+                          to="/portal"
+                          className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                        >
+                          <LayoutDashboard className="h-5 w-5" />
+                          Company Portal
+                        </Link>
+                      )}
                     </div>
                     <div className="pt-4 space-y-2">
                       <Button onClick={handleLogout} variant="outline" className="w-full justify-start">

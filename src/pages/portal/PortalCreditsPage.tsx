@@ -1,9 +1,19 @@
-import { ComingSoon } from '@/components/portal/ComingSoon'
+import { CreditsTab } from '@/components/profile/tabs/CreditsTab'
+import { CreditBalanceChip } from '@/components/paywall/CreditBalanceChip'
+
 export default function PortalCreditsPage() {
   return (
-    <ComingSoon
-      title="Credit & Thanh toán"
-      description="Số dư, mua thêm credit, lịch sử giao dịch và lịch sử sử dụng"
-    />
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Credit & Thanh toán</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Mua credit để mở khóa thông tin tài sản, tổ chức và báo cáo thị trường
+          </p>
+        </div>
+        <CreditBalanceChip />
+      </div>
+      <CreditsTab defaultReturnPath="/portal/credits" />
+    </div>
   )
 }

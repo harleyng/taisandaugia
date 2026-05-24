@@ -12,7 +12,7 @@ const OPTIONS: { value: ExportFormat; icon: React.ReactNode; title: string; desc
   {
     value: 'SEPARATED',
     icon: <FileStack className="h-5 w-5 text-primary" />,
-    title: 'Tách rời (3 file)',
+    title: 'Tách rời (2 file)',
     description: '01_Hồ sơ năng lực · 02_Phương án đấu giá — đóng thành 2 quyển riêng, nộp kèm nhau',
   },
   {

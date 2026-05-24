@@ -102,7 +102,8 @@ export function Section5Export({ app, profile, onFormatChange, onExported }: Pro
           open={previewOpen}
           onOpenChange={setPreviewOpen}
           format={app.exportFormat}
-          ownerName={app.announcement.ownerName}
+          app={app}
+          profile={profile}
         />
       )}
     </Card>

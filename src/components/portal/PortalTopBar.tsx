@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -12,7 +12,19 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useCredits } from '@/hooks/useCredits'
 import { supabase } from '@/integrations/supabase/client'
-import { CreditCard, LogOut, User, Menu, Plus } from 'lucide-react'
+import { CreditCard, LogOut, Menu, Plus, ChevronRight, ArrowLeft } from 'lucide-react'
+
+const PAGE_META: Record<string, { title: string; parent?: string }> = {
+  '/portal/dashboard': { title: 'Tổng quan' },
+  '/portal/nang-luc/thong-tin-chung': { title: 'Thông tin chung', parent: 'Hồ sơ năng lực' },
+  '/portal/nang-luc/dau-gia-vien': { title: 'Đấu giá viên', parent: 'Hồ sơ năng lực' },
+  '/portal/nang-luc/co-so-vat-chat': { title: 'Cơ sở vật chất', parent: 'Hồ sơ năng lực' },
+  '/portal/nang-luc/lich-su-dau-gia': { title: 'Lịch sử đấu giá', parent: 'Hồ sơ năng lực' },
+  '/portal/nang-luc/tai-chinh': { title: 'Tài chính & Thuế', parent: 'Hồ sơ năng lực' },
+  '/portal/ho-so-du-tuyen': { title: 'Hồ sơ dự tuyển' },
+  '/portal/ho-so-du-tuyen/new': { title: 'Lập hồ sơ dự tuyển', parent: 'Hồ sơ dự tuyển' },
+  '/portal/credits': { title: 'Credit & Thanh toán' },
+}
 
 interface Props {
   onMenuClick: () => void  // open mobile drawer
@@ -20,28 +32,35 @@ interface Props {
 
 export function PortalTopBar({ onMenuClick }: Props) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { balance } = useCredits()
-  const [displayName, setDisplayName] = useState('')
-  const [email, setEmail] = useState('')
+  const page = PAGE_META[location.pathname]
+  const [companyName, setCompanyName] = useState('')
+  const [companyIdentifier, setCompanyIdentifier] = useState('')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return
-      setEmail(session.user.email ?? session.user.phone ?? '')
       supabase
-        .from('profiles')
-        .select('name')
-        .eq('id', session.user.id)
+        .from('organizations')
+        .select('name, license_info')
+        .eq('owner_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single()
         .then(({ data }) => {
-          setDisplayName(data?.name ?? '')
+          if (data) {
+            setCompanyName(data.name)
+            const info = data.license_info as Record<string, string> | null
+            setCompanyIdentifier(info?.tax_code ?? info?.registrationCode ?? '')
+          }
         })
     })
   }, [])
 
-  const initials = displayName
-    ? displayName.trim().split(' ').slice(-1)[0].slice(0, 2).toUpperCase()
-    : email.slice(0, 2).toUpperCase()
+  const initials = companyName
+    ? companyName.trim().split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
+    : 'TC'
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -59,8 +78,18 @@ export function PortalTopBar({ onMenuClick }: Props) {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Desktop: empty left side (sidebar has logo) */}
-      <div className="hidden lg:block" />
+      {/* Desktop: page breadcrumb */}
+      <nav className="hidden lg:flex items-center gap-1 text-sm min-w-0">
+        {page?.parent && (
+          <>
+            <span className="text-muted-foreground truncate">{page.parent}</span>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          </>
+        )}
+        {page?.title && (
+          <span className="font-medium text-foreground truncate">{page.title}</span>
+        )}
+      </nav>
 
       {/* Right: credit balance + user menu */}
       <div className="flex items-center gap-3">
@@ -86,15 +115,17 @@ export function PortalTopBar({ onMenuClick }: Props) {
               </Avatar>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="font-normal">
-              <p className="text-sm font-medium truncate">{displayName || 'Tổ chức đấu giá'}</p>
-              <p className="text-xs text-muted-foreground truncate">{email}</p>
+              <p className="text-sm font-medium truncate">{companyName || 'Tổ chức đấu giá'}</p>
+              {companyIdentifier && (
+                <p className="text-xs text-muted-foreground truncate">MST: {companyIdentifier}</p>
+              )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
-              <User className="h-4 w-4 mr-2" />
-              Hồ sơ cá nhân
+            <DropdownMenuItem onClick={() => navigate('/')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Quay lại Marketplace
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/portal/credits')}>
               <CreditCard className="h-4 w-4 mr-2" />

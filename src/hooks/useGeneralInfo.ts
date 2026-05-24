@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { loadGeneralInfo, saveGeneralInfo } from '@/lib/general-info/storage'
 import { calcYearsOfOperation, calcMucIV5, calcCompletionPercentage } from '@/lib/general-info/scoring'
 import type { OrgGeneralInfo, Branch, BankAccount } from '@/types/general-info'
+import { getCapacityProfile, saveCapacityProfile } from '@/lib/applications/storage'
 
 function generateId(): string {
   return Math.random().toString(36).slice(2, 10)
@@ -38,6 +39,17 @@ export function useGeneralInfo() {
     }
     saveGeneralInfo(updated)
     setGeneralInfo(updated)
+    if (updated.foundedDate) {
+      const yrs = calcYearsOfOperation(updated.foundedDate)
+      const iv5 = calcMucIV5(yrs.years)
+      const profile = getCapacityProfile()
+      saveCapacityProfile({
+        ...profile,
+        scoreIV5: iv5,
+        yearsActive: yrs.years,
+        totalCapacityScore: profile.totalCapacityScore - profile.scoreIV5 + iv5,
+      })
+    }
   }, [])
 
   const addBranch = useCallback((branch: Omit<Branch, 'id'>) => {

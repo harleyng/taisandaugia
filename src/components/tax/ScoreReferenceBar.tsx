@@ -1,5 +1,3 @@
-import { previewScore } from '@/lib/tax/scoring'
-
 interface Props {
   amountVnd: number
 }
@@ -11,7 +9,6 @@ const TIERS = [
 ]
 
 export function ScoreReferenceBar({ amountVnd }: Props) {
-  const score = previewScore(amountVnd)
   const millions = amountVnd / 1_000_000
 
   function isActive(tier: (typeof TIERS)[0]) {
@@ -40,12 +37,6 @@ export function ScoreReferenceBar({ amountVnd }: Props) {
           )
         })}
       </div>
-      {amountVnd > 0 && score > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Điểm dự kiến:{' '}
-          <span className="font-semibold text-foreground">{score}/3đ</span>
-        </p>
-      )}
     </div>
   )
 }

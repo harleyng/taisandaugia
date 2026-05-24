@@ -1,8 +1,6 @@
 import { useState } from 'react'
-import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Lightbulb, ClipboardCopy } from 'lucide-react'
 import { SuggestionsModal } from './SuggestionsModal'
 import { SuggestionSection } from '@/lib/applications/suggestions'
@@ -37,18 +35,16 @@ export function AuctionPlanSubsection({
 
   return (
     <>
-      <Card className="p-4 border border-violet-100 bg-violet-50/20">
+      <div className="py-5 border-b border-border last:border-0">
         <div className="flex items-start justify-between gap-2 mb-3">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-foreground">{title}</h3>
-              <Badge variant="outline" className="text-xs">
-                {maxScore}đ
-              </Badge>
+              <h3 className="text-xs font-semibold text-foreground">{title}</h3>
+              <span className="text-[10px] text-muted-foreground border border-border rounded px-1 py-px">{maxScore}đ</span>
             </div>
-            {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+            {subtitle && <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{subtitle}</p>}
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               type="button"
               variant="ghost"
@@ -100,7 +96,7 @@ export function AuctionPlanSubsection({
             <span className="text-xs text-emerald-600 font-medium">✓ Đủ</span>
           )}
         </div>
-      </Card>
+      </div>
 
       <SuggestionsModal
         open={suggestOpen}

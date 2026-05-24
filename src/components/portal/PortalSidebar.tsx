@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { NAV_SECTIONS, NavItem } from './nav-config'
 import { useCapacityProfile } from '@/hooks/useCapacityProfile'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 interface Props {
@@ -32,6 +32,7 @@ function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
 
 export function PortalSidebar({ onNavigate }: Props) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { profile } = useCapacityProfile()
 
   // Sections with children default to open if any child is active
@@ -110,7 +111,7 @@ export function PortalSidebar({ onNavigate }: Props) {
 
                   {/* Capacity score badge */}
                   {section.scoreBadge && (
-                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
                       {profile.totalCapacityScore}/76
                     </span>
                   )}
@@ -135,9 +136,16 @@ export function PortalSidebar({ onNavigate }: Props) {
         })}
       </nav>
 
-      {/* Bottom: version */}
-      <div className="border-t border-border px-4 py-2.5 shrink-0">
-        <p className="text-[10px] text-muted-foreground">TT 19/2024/TT-BTP</p>
+      {/* Bottom: back to marketplace + version */}
+      <div className="border-t border-border px-3 py-2.5 shrink-0 space-y-2">
+        <button
+          onClick={() => { onNavigate?.(); navigate('/') }}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+          Quay lại Marketplace
+        </button>
+        <p className="px-3 text-[10px] text-muted-foreground">TT 19/2024/TT-BTP</p>
       </div>
     </aside>
   )

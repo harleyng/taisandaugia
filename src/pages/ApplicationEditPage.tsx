@@ -1,29 +1,29 @@
 import { useState, useCallback, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import { useParams } from 'react-router-dom'
 import { useApplication } from '@/hooks/useApplication'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useCapacityProfile } from '@/hooks/useCapacityProfile'
-import { ApplicationScoreHeader } from '@/components/applications/ApplicationScoreHeader'
+import { Badge } from '@/components/ui/badge'
 import { Section1Announcement } from '@/components/applications/sections/Section1Announcement'
 import { Section2CapacitySummary } from '@/components/applications/sections/Section2CapacitySummary'
 import { Section3AuctionPlan } from '@/components/applications/sections/Section3AuctionPlan/Section3AuctionPlan'
 import { Section4SectionVCriteria } from '@/components/applications/sections/Section4Criteria/Section4SectionVCriteria'
 import { Section5Export } from '@/components/applications/sections/Section5Export/Section5Export'
 import { CopyFromPreviousModal } from '@/components/applications/CopyFromPreviousModal'
+import { ApplicationSummaryBox } from '@/components/applications/ApplicationSummaryBox'
+import { validateForExport } from '@/lib/applications/validation'
 import { AuctionPlan, ExportFormat } from '@/types/application'
-import { ArrowLeft } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 
 export default function ApplicationEditPage() {
   const { id } = useParams<{ id?: string }>()
-  const navigate = useNavigate()
   const applicationId = id ?? 'new'
 
-  const { app, isLoading, isDirty, updateAnnouncement, updateAuctionPlan, updateCriteria, setExportFormat, addExportedFile, refreshCapacity, save } =
+  const { app, isLoading, isDirty, updateAnnouncement, updateAuctionPlan, updateCriteria, setExportFormat, refreshCapacity, save } =
     useApplication(applicationId)
 
   const { profile } = useCapacityProfile()
-  const { statusLabel } = useAutoSave(app, save, isDirty)
+  useAutoSave(app, save, isDirty)
 
   const [copyOpen, setCopyOpen] = useState(false)
 
@@ -47,8 +47,7 @@ export default function ApplicationEditPage() {
   // Navigate to the persisted URL when a new application is created
   useEffect(() => {
     if (applicationId === 'new' && app?.id && app.id !== 'new') {
-      // App was just created — update URL without remounting
-      window.history.replaceState(null, '', `/ho-so-du-tuyen/${app.id}`)
+      window.history.replaceState(null, '', `/portal/ho-so-du-tuyen/${app.id}`)
     }
   }, [applicationId, app?.id])
 
@@ -59,87 +58,70 @@ export default function ApplicationEditPage() {
     [updateAuctionPlan]
   )
 
-  const handleExported = useCallback(() => {
-    addExportedFile({
-      url: '',
-      name: `HoSo-${new Date().toISOString().slice(0, 10)}.${app?.exportFormat === 'SEPARATED' ? 'zip' : 'docx'}`,
-      exportedAt: new Date().toISOString(),
-    })
-  }, [addExportedFile, app?.exportFormat])
-
   if (isLoading || !app) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <p className="text-muted-foreground text-sm">Đang tải...</p>
       </div>
     )
   }
 
+  const errors = validateForExport(app)
+  const sec1Done = !errors.some((e) => e.section === 'Section 1')
+  const sec3Done = !errors.some((e) => e.section.startsWith('Mục III'))
+  const sec4Done = !errors.some((e) => e.section === 'Mục V')
+  const sec5Done = !errors.some((e) => e.section === 'Section 5')
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Score header — sticky */}
-      <ApplicationScoreHeader app={app} statusLabel={statusLabel} />
+    <div className="max-w-5xl mx-auto px-4 py-6 pb-16">
+      <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-6 lg:items-start">
+        {/* Left: sections */}
+        <div className="space-y-4">
+          <div id="section-1">
+            <SectionCard number={1} title="Thông tin cuộc đấu giá" done={sec1Done}>
+              <Section1Announcement announcement={app.announcement} onChange={updateAnnouncement} />
+            </SectionCard>
+          </div>
 
-      {/* Page header */}
-      <div className="max-w-4xl mx-auto px-4 pt-5 pb-3">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-muted-foreground"
-            onClick={() => navigate('/portal/ho-so-du-tuyen')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Danh sách hồ sơ
-          </Button>
-        </div>
-        <h1 className="text-base font-bold text-foreground mt-2">Lập hồ sơ dự tuyển đấu giá</h1>
-        <p className="text-xs text-muted-foreground">Theo Thông tư 19/2024/TT-BTP — Phụ lục I</p>
-      </div>
+          <div id="section-2">
+            <SectionCard number={2} title="Năng lực tổ chức" subtitle="Auto · 76 điểm" done={true}>
+              <Section2CapacitySummary profile={profile} />
+            </SectionCard>
+          </div>
 
-      {/* Sections */}
-      <div className="max-w-4xl mx-auto px-4 pb-16 space-y-4">
-        {/* Section 1 */}
-        <div>
-          <SectionLabel number={1} title="Thông tin thông báo lựa chọn" />
-          <Section1Announcement announcement={app.announcement} onChange={updateAnnouncement} />
-        </div>
+          <div id="section-3">
+            <SectionCard number={3} title="Phương án đấu giá" subtitle="Mục III · 16 điểm" done={sec3Done}>
+              <Section3AuctionPlan
+                auctionPlan={app.auctionPlan}
+                onChange={updateAuctionPlan}
+                onCopyFromPrevious={() => setCopyOpen(true)}
+              />
+            </SectionCard>
+          </div>
 
-        {/* Section 2 */}
-        <div>
-          <SectionLabel number={2} title="Năng lực tổ chức" subtitle="(Auto · 76 điểm)" />
-          <Section2CapacitySummary profile={profile} />
-        </div>
+          <div id="section-4">
+            <SectionCard number={4} title="Tiêu chí khác" subtitle="Mục V · tối đa 8 điểm" done={sec4Done}>
+              <Section4SectionVCriteria criteria={app.sectionVCriteria} onChange={updateCriteria} />
+            </SectionCard>
+          </div>
 
-        {/* Section 3 */}
-        <div>
-          <SectionLabel number={3} title="Phương án đấu giá" subtitle="(Mục III · 16 điểm)" />
-          <Section3AuctionPlan
-            auctionPlan={app.auctionPlan}
-            onChange={updateAuctionPlan}
-            onCopyFromPrevious={() => setCopyOpen(true)}
-          />
+          <div id="section-5">
+            <SectionCard number={5} title="Kiểm tra & Xuất file" done={sec5Done}>
+              <Section5Export
+                app={app}
+                profile={profile}
+                onFormatChange={(f: ExportFormat) => setExportFormat(f)}
+              />
+            </SectionCard>
+          </div>
         </div>
 
-        {/* Section 4 */}
-        <div>
-          <SectionLabel number={4} title="Tiêu chí khác" subtitle="(Mục V · tối đa 8 điểm)" />
-          <Section4SectionVCriteria criteria={app.sectionVCriteria} onChange={updateCriteria} />
-        </div>
-
-        {/* Section 5 */}
-        <div>
-          <SectionLabel number={5} title="Kiểm tra & Xuất file" />
-          <Section5Export
-            app={app}
-            profile={profile}
-            onFormatChange={(f: ExportFormat) => setExportFormat(f)}
-            onExported={handleExported}
-          />
+        {/* Right: summary box (desktop only, sticky below portal topbar) */}
+        <div className="hidden lg:block sticky top-[56px]">
+          <ApplicationSummaryBox app={app} />
         </div>
       </div>
 
-      {/* Copy from previous modal */}
       <CopyFromPreviousModal
         open={copyOpen}
         onOpenChange={setCopyOpen}
@@ -151,22 +133,42 @@ export default function ApplicationEditPage() {
   )
 }
 
-function SectionLabel({
+function SectionCard({
   number,
   title,
   subtitle,
+  done,
+  children,
 }: {
   number: number
   title: string
   subtitle?: string
+  done: boolean
+  children: React.ReactNode
 }) {
   return (
-    <div className="flex items-center gap-2 mb-2 px-1">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shrink-0">
-        {number}
-      </span>
-      <span className="text-sm font-semibold text-foreground">{title}</span>
-      {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 px-1">
+        <div
+          className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold ${
+            done ? 'bg-green-100' : 'bg-primary/10'
+          }`}
+        >
+          {done ? (
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+          ) : (
+            <span className="text-primary">{number}</span>
+          )}
+        </div>
+        <span className="text-sm font-semibold text-foreground">{title}</span>
+        {subtitle && <span className="text-xs text-muted-foreground">· {subtitle}</span>}
+        {done && (
+          <Badge variant="outline" className="ml-auto border-green-300 text-green-600 text-[10px]">
+            Hoàn thành
+          </Badge>
+        )}
+      </div>
+      {children}
     </div>
   )
 }

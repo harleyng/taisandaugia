@@ -97,7 +97,7 @@ export function ImportPreviewStep({ validation, onBack, onExecute }: Props) {
 
       <div className="flex justify-between pt-2">
         <Button variant="outline" size="sm" onClick={onBack} className="gap-1.5">
-          <ArrowLeft className="h-4 w-4" />Sửa mapping
+          <ArrowLeft className="h-4 w-4" />Quay lại
         </Button>
         <Button
           size="sm"

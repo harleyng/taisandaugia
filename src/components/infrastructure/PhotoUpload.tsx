@@ -1,12 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import imageCompression from 'browser-image-compression'
-import { FolderOpen, Loader2, Upload } from 'lucide-react'
+import { Loader2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/integrations/supabase/client'
 import { saveDocument, listFolders, seedDefaultFolders } from '@/lib/documents/storage'
-import { DocumentPickerDialog } from './DocumentPickerDialog'
 import type { PhotoAttachment } from '@/types/infrastructure'
 
 const ACCEPTED = {
@@ -35,7 +34,6 @@ function getInfraFolderId(): string | null {
 
 export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAdd }: Props) {
   const [uploading, setUploading] = useState(false)
-  const [pickerOpen, setPickerOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const processFile = useCallback(
@@ -131,10 +129,6 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
     noClick: true,
   })
 
-  function handleSelectFromPicker(picked: PhotoAttachment[]) {
-    picked.forEach((p) => onAdd(p))
-  }
-
   return (
     <div className="space-y-3">
       {label && (
@@ -188,16 +182,6 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
                 Tải lên từ thiết bị
               </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => setPickerOpen(true)}
-              >
-                <FolderOpen className="h-3.5 w-3.5" />
-                Chọn từ Tủ tài liệu
-              </Button>
             </div>
           </div>
         )}
@@ -210,12 +194,6 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
         </p>
       )}
 
-      <DocumentPickerDialog
-        open={pickerOpen}
-        alreadyLinked={photos.map((p) => p.documentId)}
-        onClose={() => setPickerOpen(false)}
-        onSelect={handleSelectFromPicker}
-      />
     </div>
   )
 }

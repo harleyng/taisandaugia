@@ -67,10 +67,8 @@ export function AuctioneerTable({ auctioneers, onEdit, onDelete }: Props) {
           value={sourceFilter}
           options={[
             { value: 'ALL', label: 'Tất cả nguồn' },
-            { value: 'VERIFIED', label: '🔒 Verified' },
-            { value: 'MANUAL', label: '✏️ Thủ công' },
-            { value: 'MODIFIED', label: '⚠️ Đã sửa' },
-            { value: 'CONFLICT', label: '🔄 Conflict' },
+            { value: 'AUTO', label: 'Tự động' },
+            { value: 'USER_VERIFIED', label: 'Đã xác thực' },
           ]}
           onChange={(v) => setSourceFilter(v as SourceFilter)}
         />

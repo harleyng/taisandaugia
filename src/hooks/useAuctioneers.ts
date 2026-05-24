@@ -17,10 +17,22 @@ import {
   setStoredTaxCode,
 } from '@/lib/auctioneers/storage'
 import { calcAuctioneerScore } from '@/lib/auctioneers/scoring'
+import { getCapacityProfile, saveCapacityProfile } from '@/lib/applications/storage'
 import { createFromCrawled, mergeWithExisting } from '@/lib/auctioneers/merge'
 import type { CrawledAuctioneer } from '@/lib/auctioneers/merge'
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'no_data' | 'bot_protection'
+
+function syncAuctioneerScore(auctioneers: Auctioneer[]): void {
+  const detail = calcAuctioneerScore(auctioneers)
+  const profile = getCapacityProfile()
+  saveCapacityProfile({
+    ...profile,
+    scoreIV6to8: detail.total,
+    auctioneerCount: detail.activeCount,
+    totalCapacityScore: profile.totalCapacityScore - profile.scoreIV6to8 + detail.total,
+  })
+}
 
 export function useAuctioneers() {
   const [auctioneers, setAuctioneers] = useState<Auctioneer[]>(() => listAuctioneers())
@@ -109,17 +121,23 @@ export function useAuctioneers() {
 
   const addAuctioneer = useCallback((a: Auctioneer) => {
     upsertAuctioneer(a)
-    setAuctioneers(listAuctioneers())
+    const updated = listAuctioneers()
+    setAuctioneers(updated)
+    syncAuctioneerScore(updated)
   }, [])
 
   const updateAuctioneer = useCallback((a: Auctioneer) => {
     upsertAuctioneer(a)
-    setAuctioneers(listAuctioneers())
+    const updated = listAuctioneers()
+    setAuctioneers(updated)
+    syncAuctioneerScore(updated)
   }, [])
 
   const removeAuctioneer = useCallback((id: string) => {
     deleteFromStorage(id)
-    setAuctioneers(listAuctioneers())
+    const updated = listAuctioneers()
+    setAuctioneers(updated)
+    syncAuctioneerScore(updated)
   }, [])
 
   const resolveConflict = useCallback(

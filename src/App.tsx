@@ -44,7 +44,6 @@ import DauGiaVienPage from "./pages/portal/nang-luc/DauGiaVienPage";
 import CoSoVatChatPage from "./pages/portal/nang-luc/CoSoVatChatPage";
 import LichSuDauGiaPage from "./pages/portal/nang-luc/LichSuDauGiaPage";
 import TaiChinhPage from "./pages/portal/nang-luc/TaiChinhPage";
-import TuTaiLieuPage from "./pages/portal/nang-luc/TuTaiLieuPage";
 import PortalCreditsPage from "./pages/portal/PortalCreditsPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
 import ApplicationEditPage from "./pages/ApplicationEditPage";
@@ -112,18 +111,15 @@ const App = () => (
                 <Route path="nang-luc/co-so-vat-chat" element={<CoSoVatChatPage />} />
                 <Route path="nang-luc/lich-su-dau-gia" element={<LichSuDauGiaPage />} />
                 <Route path="nang-luc/tai-chinh" element={<TaiChinhPage />} />
-                <Route path="nang-luc/tu-tai-lieu" element={<TuTaiLieuPage />} />
 
-                {/* Hồ sơ dự tuyển — list view inside layout */}
+                {/* Hồ sơ dự tuyển */}
                 <Route path="ho-so-du-tuyen" element={<ApplicationsPage />} />
+                <Route path="ho-so-du-tuyen/new" element={<ApplicationEditPage />} />
+                <Route path="ho-so-du-tuyen/:id" element={<ApplicationEditPage />} />
 
                 {/* Credit */}
                 <Route path="credits" element={<PortalCreditsPage />} />
               </Route>
-
-              {/* Edit page: full-screen, no sidebar */}
-              <Route path="ho-so-du-tuyen/new" element={<ApplicationEditPage />} />
-              <Route path="ho-so-du-tuyen/:id" element={<ApplicationEditPage />} />
             </Route>
 
             {/* Public company pages */}

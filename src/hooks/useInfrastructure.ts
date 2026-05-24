@@ -9,6 +9,7 @@ import { calcMucII, totalFromBreakdown, getSectionsNeedingUpdate } from '@/lib/i
 import { generateSuggestions, type Suggestion } from '@/lib/infrastructure/suggestions'
 import { listAuctionRecords } from '@/lib/auction-history/storage'
 import type { AuctionRecord } from '@/types/auction-record'
+import { getCapacityProfile, saveCapacityProfile } from '@/lib/applications/storage'
 
 type SaveStatus = 'idle' | 'saving' | 'saved'
 
@@ -46,6 +47,12 @@ export function useInfrastructure() {
       completionPercentage: Math.round((totalScore / 19) * 100),
     }
     saveInfrastructure(updated)
+    const profile = getCapacityProfile()
+    saveCapacityProfile({
+      ...profile,
+      scoreII: totalScore,
+      totalCapacityScore: profile.totalCapacityScore - profile.scoreII + totalScore,
+    })
     setSaveStatus('saved')
     setLastSavedAt(new Date())
   }, [infra, totalScore, scoreBreakdown])

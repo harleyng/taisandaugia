@@ -7,33 +7,32 @@ import { BulkActionBar } from './BulkActionBar'
 import type { AuctionRecordWithComputed } from '@/types/auction-record'
 import { History } from 'lucide-react'
 
-type TabKey = 'all' | 'complete' | 'needs_fill' | 'failed'
+type TabKey = 'all' | 'successful' | 'needs_fill' | 'failed'
 
 interface Props {
   records: AuctionRecordWithComputed[]
   activeTab: TabKey
   onTabChange: (tab: TabKey) => void
-  onEdit: (record: AuctionRecordWithComputed) => void
   onQuickFill: (record: AuctionRecordWithComputed) => void
   onDelete: (id: string) => void
   onBulkDelete: (ids: string[]) => void
   onOpenDetail: (record: AuctionRecordWithComputed) => void
 }
 
-const DEFAULT_FILTERS: AuctionFilters = { search: '', year: 'all', assetCategory: 'all', source: 'all', status: 'all' }
+const DEFAULT_FILTERS: AuctionFilters = { search: '', dateFrom: '', dateTo: '', assetCategory: 'all', legalStatus: 'all', source: 'all' }
 
-export function AuctionTable({ records, activeTab, onTabChange, onEdit, onQuickFill, onDelete, onBulkDelete, onOpenDetail }: Props) {
+export function AuctionTable({ records, activeTab, onTabChange, onQuickFill, onDelete, onBulkDelete, onOpenDetail }: Props) {
   const [filters, setFilters] = useState<AuctionFilters>(DEFAULT_FILTERS)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-  const availableYears = useMemo(() => {
-    const years = new Set(records.map((r) => new Date(r.auctionDate).getFullYear()))
-    return Array.from(years).sort((a, b) => b - a)
+  const availableLegalStatuses = useMemo(() => {
+    const statuses = new Set(records.map((r) => r.legalStatus).filter(Boolean) as string[])
+    return Array.from(statuses).sort()
   }, [records])
 
   const byTab: Record<TabKey, AuctionRecordWithComputed[]> = useMemo(() => ({
     all: records,
-    complete: records.filter((r) => r.enrichmentStatus.hasWinningPrice && r.enrichmentStatus.hasFormat),
+    successful: records.filter((r) => r.isSuccessful === true),
     needs_fill: records.filter((r) => !r.enrichmentStatus.hasWinningPrice && r.isSuccessful !== false),
     failed: records.filter((r) => r.isSuccessful === false),
   }), [records])
@@ -44,17 +43,11 @@ export function AuctionTable({ records, activeTab, onTabChange, onEdit, onQuickF
         const q = filters.search.toLowerCase()
         if (!r.assetDescription.toLowerCase().includes(q) && !r.ownerName.toLowerCase().includes(q)) return false
       }
-      if (filters.year !== 'all' && new Date(r.auctionDate).getFullYear() !== Number(filters.year)) return false
+      if (filters.dateFrom && r.auctionDate < filters.dateFrom) return false
+      if (filters.dateTo && r.auctionDate > filters.dateTo) return false
       if (filters.assetCategory !== 'all' && r.assetCategory !== filters.assetCategory) return false
-      if (filters.source !== 'all') {
-        const src = r.source.startsWith('CRAWLED') ? 'CRAWLED' : r.source
-        if (src !== filters.source) return false
-      }
-      if (filters.status !== 'all') {
-        if (filters.status === 'successful' && r.isSuccessful !== true) return false
-        if (filters.status === 'failed' && r.isSuccessful !== false) return false
-        if (filters.status === 'unknown' && r.isSuccessful !== undefined) return false
-      }
+      if (filters.legalStatus !== 'all' && r.legalStatus !== filters.legalStatus) return false
+      if (filters.source !== 'all' && r.badgeSource !== filters.source) return false
       return true
     })
   }, [byTab, activeTab, filters])
@@ -80,13 +73,13 @@ export function AuctionTable({ records, activeTab, onTabChange, onEdit, onQuickF
       <Tabs value={activeTab} onValueChange={(v) => { onTabChange(v as TabKey); setSelectedIds(new Set()) }}>
         <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="all" className="text-xs">{tabLabel('all', 'Tất cả')}</TabsTrigger>
-          <TabsTrigger value="complete" className="text-xs">{tabLabel('complete', 'Đầy đủ')}</TabsTrigger>
           <TabsTrigger value="needs_fill" className="text-xs">{tabLabel('needs_fill', 'Cần bổ sung')}</TabsTrigger>
+          <TabsTrigger value="successful" className="text-xs">{tabLabel('successful', 'Thành')}</TabsTrigger>
           <TabsTrigger value="failed" className="text-xs">{tabLabel('failed', 'Không thành')}</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <AuctionFilterBar filters={filters} onFiltersChange={setFilters} availableYears={availableYears} />
+      <AuctionFilterBar filters={filters} onFiltersChange={setFilters} availableLegalStatuses={availableLegalStatuses} />
 
       <BulkActionBar
         selectedCount={selectedIds.size}
@@ -111,14 +104,12 @@ export function AuctionTable({ records, activeTab, onTabChange, onEdit, onQuickF
                     onCheckedChange={toggleAll}
                   />
                 </th>
-                <th className="px-3 py-2">STT</th>
                 <th className="px-3 py-2">Ngày</th>
-                <th className="px-3 py-2">Tài sản</th>
+                <th className="px-3 py-2">Cuộc đấu giá</th>
                 <th className="px-3 py-2">Người có TS</th>
                 <th className="px-3 py-2 text-right">Giá KĐ</th>
                 <th className="px-3 py-2 text-right">Giá trúng</th>
                 <th className="px-3 py-2 text-right">Chênh lệch</th>
-                <th className="px-3 py-2">Hình thức</th>
                 <th className="px-3 py-2">Nguồn</th>
                 <th className="px-3 py-2 w-10"></th>
               </tr>
@@ -128,10 +119,8 @@ export function AuctionTable({ records, activeTab, onTabChange, onEdit, onQuickF
                 <AuctionRow
                   key={r.id}
                   record={r}
-                  index={i}
                   selected={selectedIds.has(r.id)}
                   onSelect={toggleSelect}
-                  onEdit={onEdit}
                   onQuickFill={onQuickFill}
                   onDelete={onDelete}
                   onOpenDetail={onOpenDetail}

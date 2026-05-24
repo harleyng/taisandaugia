@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Upload, FileSpreadsheet, Download } from 'lucide-react'
-import { generateExcelTemplate } from '@/lib/auction-history/import-parser'
-import { parseExcelFile } from '@/lib/auction-history/import-parser'
+import { generateExcelTemplate, parseExcelFile, validateTemplateHeaders } from '@/lib/auction-history/import-parser'
 
 interface Props {
   onFile: (file: File, headers: string[], rows: Record<string, unknown>[]) => void
@@ -29,6 +28,8 @@ export function ImportUploadStep({ onFile }: Props) {
       const { headers, rows } = await parseExcelFile(file)
       if (rows.length === 0) { setError('File không có dữ liệu'); return }
       if (rows.length > 5000) { setError('File tối đa 5000 dòng'); return }
+      const templateError = validateTemplateHeaders(headers)
+      if (templateError) { setError(templateError); return }
       onFile(file, headers, rows)
     } catch {
       setError('Không thể đọc file. Vui lòng kiểm tra định dạng.')

@@ -1,4 +1,3 @@
-import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -46,7 +45,7 @@ export function CriterionCard({ criterion, onChange, onDelete }: Props) {
     criterion.meets === true ? 'Đáp ứng' : criterion.meets === false ? 'Không đáp ứng' : 'Chưa xác định'
 
   return (
-    <Card className="p-4 border border-emerald-100">
+    <div className="py-4 border-b border-border last:border-0">
       {/* Header */}
       <div className="flex items-start gap-2 mb-3">
         <div className="flex-1 min-w-0">
@@ -140,6 +139,6 @@ export function CriterionCard({ criterion, onChange, onDelete }: Props) {
         placeholder="Bằng chứng, căn cứ để đáp ứng tiêu chí này..."
         className="text-sm resize-none"
       />
-    </Card>
+    </div>
   )
 }

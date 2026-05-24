@@ -155,7 +155,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 space-y-10">
+    <div className="px-6 py-8 space-y-10">
       {/* Page header */}
       <div>
         <h1 className="text-xl font-bold text-foreground">Tổng quan</h1>

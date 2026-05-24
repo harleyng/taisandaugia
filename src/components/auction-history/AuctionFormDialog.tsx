@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
 import type { AuctionRecord } from '@/types/auction-record'
-import { ASSET_CATEGORY_LABELS, AUCTION_FORMAT_LABELS, type AssetCategory, type AuctionFormat } from '@/types/auction-record'
+import { ASSET_CATEGORY_LABELS, AUCTION_FORMAT_LABELS, BIDDING_METHOD_LABELS, type AssetCategory, type AuctionFormat, type BiddingMethod } from '@/types/auction-record'
 import { classifyAsset } from '@/lib/auction-history/classify'
 
 const schema = z.object({
@@ -29,6 +29,7 @@ const schema = z.object({
   isSuccessful: z.string().optional(),
   failureReason: z.string().optional(),
   auctionFormat: z.string().optional(),
+  biddingMethod: z.string().optional(),
   bidStep: z.string().optional(),
   maxRounds: z.string().optional(),
   actualRounds: z.string().optional(),
@@ -66,6 +67,7 @@ function toFormValues(r: AuctionRecord): FormValues {
     isSuccessful: r.isSuccessful === true ? 'true' : r.isSuccessful === false ? 'false' : '',
     failureReason: r.failureReason ?? '',
     auctionFormat: r.auctionFormat ?? '',
+    biddingMethod: r.biddingMethod ?? '',
     bidStep: r.bidStep ? r.bidStep.toLocaleString('vi-VN') : '',
     maxRounds: r.maxRounds ? String(r.maxRounds) : '',
     actualRounds: r.actualRounds ? String(r.actualRounds) : '',
@@ -111,6 +113,7 @@ export function AuctionFormDialog({ open, onClose, record, onSave }: Props) {
       isSuccessful: values.isSuccessful === 'true' ? true : values.isSuccessful === 'false' ? false : undefined,
       failureReason: values.failureReason || undefined,
       auctionFormat: (values.auctionFormat as AuctionFormat) || undefined,
+      biddingMethod: (values.biddingMethod as BiddingMethod) || undefined,
       bidStep: parseNum(values.bidStep),
       maxRounds: values.maxRounds ? Number(values.maxRounds) : undefined,
       actualRounds: values.actualRounds ? Number(values.actualRounds) : undefined,
@@ -235,6 +238,17 @@ export function AuctionFormDialog({ open, onClose, record, onSave }: Props) {
                       <FormControl><SelectTrigger><SelectValue placeholder="Chọn..." /></SelectTrigger></FormControl>
                       <SelectContent>
                         {(Object.entries(AUCTION_FORMAT_LABELS) as [AuctionFormat, string][]).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select></FormItem>
+                )} />
+                <FormField control={form.control} name="biddingMethod" render={({ field }) => (
+                  <FormItem><FormLabel className="text-xs">Phương thức đấu giá ★</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Chọn..." /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {(Object.entries(BIDDING_METHOD_LABELS) as [BiddingMethod, string][]).map(([k, v]) => (
                           <SelectItem key={k} value={k}>{v}</SelectItem>
                         ))}
                       </SelectContent>

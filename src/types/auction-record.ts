@@ -17,9 +17,11 @@ export type AuctionFormat =
   | 'HYBRID'
   | 'SEALED_BID'
 
+export type BiddingMethod = 'ASCENDING' | 'DESCENDING'
+
 export type FieldSource = 'PUBLIC' | 'USER' | 'IMPORTED' | 'USER_OVERRIDE'
 
-export type AuctionBadgeSource = 'VERIFIED' | 'MANUAL' | 'IMPORTED' | 'MODIFIED' | 'CONFLICT'
+export type AuctionBadgeSource = 'AUTO' | 'USER_VERIFIED'
 
 export const ASSET_CATEGORY_LABELS: Record<AssetCategory, string> = {
   LAND_USE_RIGHT: 'Quyền sử dụng đất',
@@ -38,6 +40,11 @@ export const AUCTION_FORMAT_LABELS: Record<AuctionFormat, string> = {
   ONLINE: 'Trực tuyến',
   HYBRID: 'Kết hợp',
   SEALED_BID: 'Bỏ phiếu kín',
+}
+
+export const BIDDING_METHOD_LABELS: Record<BiddingMethod, string> = {
+  ASCENDING: 'Trả giá lên',
+  DESCENDING: 'Đặt giá xuống',
 }
 
 export interface OverrideRecord {
@@ -65,6 +72,7 @@ export interface AuctionRecord {
   assetCategory: AssetCategory
   assetCategoryConfidence?: number
   assetLocation?: string
+  legalStatus?: string
 
   ownerName: string
   contractNumber?: string
@@ -79,6 +87,7 @@ export interface AuctionRecord {
   failureReason?: string
 
   auctionFormat?: AuctionFormat
+  biddingMethod?: BiddingMethod
   bidStep?: number
   bidStepPercentage?: number
   maxRounds?: number
@@ -91,6 +100,7 @@ export interface AuctionRecord {
 
   overrides: OverrideRecord[]
 
+  auctioneer?: string
   internalNotes?: string
   attachedDocuments: string[]
   tags?: string[]
@@ -186,13 +196,7 @@ export function computeEnrichmentStatus(record: AuctionRecord): EnrichmentStatus
   }
 }
 
-export function getAuctionBadgeSource(
-  record: AuctionRecord,
-  hasConflict: boolean,
-): AuctionBadgeSource {
-  if (hasConflict) return 'CONFLICT'
-  if (record.source === 'MANUAL') return 'MANUAL'
-  if (record.source === 'IMPORTED') return 'IMPORTED'
-  if (record.overrides.length > 0) return 'MODIFIED'
-  return 'VERIFIED'
+export function getAuctionBadgeSource(record: AuctionRecord): AuctionBadgeSource {
+  if (record.source === 'CRAWLED' && record.overrides.length === 0) return 'AUTO'
+  return 'USER_VERIFIED'
 }

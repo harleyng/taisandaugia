@@ -1,28 +1,30 @@
 import { useState, useEffect } from 'react'
-import { format, parseISO, isValid } from 'date-fns'
-import { Button } from '@/components/ui/button'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Pencil, AlertTriangle } from 'lucide-react'
+import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useGeneralInfo } from '@/hooks/useGeneralInfo'
+import { ScoreInlineBar } from '@/components/portal/ScoreInlineBar'
+import { ScoreBreakdownDialog } from '@/components/portal/ScoreBreakdownDialog'
+import { MUC_IV5_BREAKDOWN } from '@/lib/portal/scoreBreakdowns'
 import { CompanyProfileCard } from '@/components/general-info/CompanyProfileCard'
-import { MOJDirectoryStatusCard } from '@/components/general-info/MOJDirectoryStatusCard'
-import { OperationYearsCard } from '@/components/general-info/OperationYearsCard'
+import { GeneralInfoSuggestionsCard } from '@/components/general-info/GeneralInfoSuggestionsCard'
 import { EstablishmentDocumentsCard } from '@/components/general-info/EstablishmentDocumentsCard'
+import { ProfileEditCard } from '@/components/general-info/ProfileEditCard'
+import { DocsEditCard } from '@/components/general-info/DocsEditCard'
 import { BranchesCard } from '@/components/general-info/BranchesCard'
-import { BankAccountsCard } from '@/components/general-info/BankAccountsCard'
 import { BranchFormDialog } from '@/components/general-info/BranchFormDialog'
-import { BankAccountFormDialog } from '@/components/general-info/BankAccountFormDialog'
-import { EditInfoSheet } from '@/components/general-info/EditInfoSheet'
-import type { OrgGeneralInfo, Branch, BankAccount, OrgType } from '@/types/general-info'
+import { editSchema, buildDefaults } from '@/components/general-info/EditInfoSheet'
 import type { EditFormValues } from '@/components/general-info/EditInfoSheet'
+import type { OrgGeneralInfo, Branch, OrgType } from '@/types/general-info'
 
-// Map auction_organizations.org_type (number) to our OrgType enum
+type EditingSection = 'profile' | 'docs' | null
+
 function mapOrgType(n: number | null): OrgType {
   if (n === 1) return 'TRUNG_TAM_DV'
   if (n === 3) return 'DN_TU_NHAN'
-  return 'CONG_TY_HOP_DANH' // default / 2
+  return 'CONG_TY_HOP_DANH'
 }
 
 async function fetchLinkedAuctionOrg(): Promise<Partial<OrgGeneralInfo> | null> {
@@ -37,7 +39,6 @@ async function fetchLinkedAuctionOrg(): Promise<Partial<OrgGeneralInfo> | null> 
     .limit(1)
 
   const org = orgs?.[0] ?? null
-
   if (!org?.license_info) return null
 
   const auctionOrgId = (org.license_info as Record<string, unknown>)?.auction_org_id as string | undefined
@@ -77,126 +78,152 @@ export default function ThongTinChungPage() {
     addBranch,
     updateBranch,
     removeBranch,
-    addBankAccount,
-    updateBankAccount,
-    removeBankAccount,
   } = useGeneralInfo()
 
-  const [editOpen, setEditOpen] = useState(false)
+  const [editingSection, setEditingSection] = useState<EditingSection>(null)
+  const [saving, setSaving] = useState(false)
   const [branchDialog, setBranchDialog] = useState<{ open: boolean; existing?: Branch }>({ open: false })
-  const [bankDialog, setBankDialog] = useState<{ open: boolean; existing?: BankAccount }>({ open: false })
   const [prefilling, setPrefilling] = useState(false)
   const [prefillDone, setPrefillDone] = useState(false)
 
-  // Auto-prefill from Supabase when no local data exists
+  const form = useForm<EditFormValues>({
+    resolver: zodResolver(editSchema),
+    defaultValues: buildDefaults(emptyInfo()),
+  })
+
+  // Sync form when generalInfo loads or changes
+  useEffect(() => {
+    if (generalInfo) form.reset(buildDefaults(generalInfo))
+  }, [generalInfo]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-prefill from Supabase on first load
   useEffect(() => {
     if (generalInfo !== null || prefillDone) return
     setPrefilling(true)
     fetchLinkedAuctionOrg()
-      .then((partial) => {
-        // Always initialize — with Supabase data if available, otherwise empty
-        save({ ...emptyInfo(), ...(partial ?? {}) } as OrgGeneralInfo)
-      })
-      .catch(() => {
-        save(emptyInfo())
-      })
-      .finally(() => {
-        setPrefilling(false)
-        setPrefillDone(true)
-      })
+      .then((partial) => { save({ ...emptyInfo(), ...(partial ?? {}) } as OrgGeneralInfo) })
+      .catch(() => { save(emptyInfo()) })
+      .finally(() => { setPrefilling(false); setPrefillDone(true) })
   }, [generalInfo, prefillDone, save])
 
-  const handleEditSave = (values: EditFormValues, branches: Branch[], bankAccounts: BankAccount[]) => {
-    save({
-      ...generalInfo!,
-      ...values,
-      isListedInMOJDirectory: true,
-      website: values.website || undefined,
-      alternativeEmail: values.alternativeEmail || undefined,
-      branches,
-      bankAccounts,
-    })
+  const handleSaveProfile = async () => {
+    const profileFields: (keyof EditFormValues)[] = [
+      'name', 'orgType', 'taxCode', 'address', 'province', 'phone', 'email', 'legalRepName',
+    ]
+    const isValid = await form.trigger(profileFields)
+    if (!isValid) return
+    setSaving(true)
+    try {
+      const v = form.getValues()
+      save({
+        ...generalInfo!,
+        name: v.name, shortName: v.shortName || undefined,
+        orgType: v.orgType, taxCode: v.taxCode,
+        registrationCode: v.registrationCode || undefined,
+        logoUrl: v.logoUrl || undefined,
+        address: v.address, ward: v.ward || undefined,
+        district: v.district || undefined, province: v.province,
+        phone: v.phone, alternativePhone: v.alternativePhone || undefined,
+        fax: v.fax || undefined, email: v.email,
+        alternativeEmail: v.alternativeEmail || undefined,
+        website: v.website || undefined,
+        legalRepName: v.legalRepName,
+        legalRepPosition: v.legalRepPosition || undefined,
+        legalRepIdNumber: v.legalRepIdNumber || undefined,
+        legalRepIdIssuedDate: v.legalRepIdIssuedDate || undefined,
+        legalRepIdIssuedPlace: v.legalRepIdIssuedPlace || undefined,
+        isListedInMOJDirectory: true,
+      })
+      toast.success('Đã lưu thông tin tổ chức')
+      setEditingSection(null)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  // Show skeleton while fetching Supabase
+  const handleSaveDocs = () => {
+    const v = form.getValues()
+    save({
+      ...generalInfo!,
+      foundedDate: v.foundedDate,
+      establishmentDecisionNumber: v.establishmentDecisionNumber || undefined,
+      establishmentDecisionDate: v.establishmentDecisionDate || undefined,
+      establishmentDecisionIssuer: v.establishmentDecisionIssuer || undefined,
+      establishmentDecisionFile: v.establishmentDecisionFile || undefined,
+      businessLicenseNumber: v.businessLicenseNumber || undefined,
+      businessLicenseDate: v.businessLicenseDate || undefined,
+      businessLicenseIssuer: v.businessLicenseIssuer || undefined,
+      businessLicenseFile: v.businessLicenseFile || undefined,
+      isListedInMOJDirectory: true,
+    })
+    toast.success('Đã lưu giấy tờ pháp lý')
+    setEditingSection(null)
+  }
+
   if (prefilling) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1.5">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-3 w-56" />
-          </div>
-          <Skeleton className="h-8 w-28" />
+      <div className="px-6 py-6 space-y-5">
+        <div className="space-y-1.5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-3 w-56" />
         </div>
         <Skeleton className="h-14 w-full rounded-xl" />
-        <Skeleton className="h-14 w-full rounded-xl" />
         <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
       </div>
     )
   }
 
   if (!generalInfo) return null
 
-  // Compute missing fields for the alert banner
-  const missingFields: string[] = []
-  if (!generalInfo.legalRepName) missingFields.push('Đại diện pháp lý')
-  if (!generalInfo.foundedDate) missingFields.push('Ngày thành lập')
-  if (!generalInfo.address) missingFields.push('Địa chỉ')
-  if (!generalInfo.phone) missingFields.push('Số điện thoại')
-  if (!generalInfo.establishmentDecisionFile) missingFields.push('Quyết định thành lập')
-  if (!generalInfo.businessLicenseFile) missingFields.push('Giấy đăng ký hoạt động')
-
-  const lastUpdated = generalInfo.updatedAt
-    ? (() => { try { const d = parseISO(generalInfo.updatedAt); return isValid(d) ? format(d, 'dd/MM/yyyy') : null } catch { return null } })()
-    : null
-
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-base font-bold text-foreground">Thông tin chung</h1>
-          {lastUpdated && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Cập nhật lần cuối: {lastUpdated}
-              {generalInfo.lastUpdatedBy ? ` bởi ${generalInfo.lastUpdatedBy}` : ''}
-            </p>
-          )}
+    <div className="px-6 py-6 space-y-5">
+      <div>
+        <h1 className="text-xl font-semibold text-foreground">Thông tin chung</h1>
+        <div className="flex items-center gap-1.5">
+          <ScoreInlineBar label="Mục IV.5" score={mucIV5Score} max={4} />
+          <ScoreBreakdownDialog data={MUC_IV5_BREAKDOWN} />
         </div>
-        <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setEditOpen(true)}>
-          <Pencil className="h-3.5 w-3.5" />
-          Sửa thông tin
-        </Button>
       </div>
 
-      {/* Missing info alert */}
-      {missingFields.length > 0 && (
-        <Alert variant="destructive" className="border-warning/40 bg-warning/5 text-warning-foreground [&>svg]:text-warning">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            <span className="font-medium">Hồ sơ chưa đầy đủ</span> — còn thiếu:{' '}
-            <span className="font-medium">{missingFields.join(', ')}</span>.{' '}
-            Nhấn <strong>Sửa thông tin</strong> để bổ sung.
-          </AlertDescription>
-        </Alert>
-      )}
+      <GeneralInfoSuggestionsCard
+        info={generalInfo}
+        yearsOfOperation={yearsOfOperation}
+        mucIV5Score={mucIV5Score}
+        onEdit={(section) => {
+          setEditingSection(section)
+          setTimeout(() => {
+            document.getElementById(`section-${section}`)?.scrollIntoView({ behavior: 'smooth' })
+          }, 50)
+        }}
+      />
 
-      {/* MOJ confirmed status */}
-      <MOJDirectoryStatusCard />
+      <div id="section-profile">
+        {editingSection === 'profile' ? (
+          <ProfileEditCard
+            form={form}
+            saving={saving}
+            onSave={handleSaveProfile}
+            onCancel={() => setEditingSection(null)}
+          />
+        ) : (
+          <CompanyProfileCard info={generalInfo} onEdit={() => setEditingSection('profile')} />
+        )}
+      </div>
 
-      {/* Operation years / IV.5 score */}
-      {yearsOfOperation && (
-        <OperationYearsCard yearsOfOperation={yearsOfOperation} score={mucIV5Score} />
-      )}
+      <div id="section-docs">
+        {editingSection === 'docs' ? (
+          <DocsEditCard
+            form={form}
+            saving={saving}
+            onSave={handleSaveDocs}
+            onCancel={() => setEditingSection(null)}
+          />
+        ) : (
+          <EstablishmentDocumentsCard info={generalInfo} onEdit={() => setEditingSection('docs')} />
+        )}
+      </div>
 
-      {/* Main company info card */}
-      <CompanyProfileCard info={generalInfo} onEdit={() => setEditOpen(true)} />
-
-      {/* Establishment documents */}
-      <EstablishmentDocumentsCard info={generalInfo} />
-
-      {/* Branches */}
       <BranchesCard
         branches={generalInfo.branches}
         onAdd={() => setBranchDialog({ open: true })}
@@ -204,23 +231,6 @@ export default function ThongTinChungPage() {
         onRemove={removeBranch}
       />
 
-      {/* Bank accounts */}
-      <BankAccountsCard
-        accounts={generalInfo.bankAccounts}
-        onAdd={() => setBankDialog({ open: true })}
-        onEdit={(a) => setBankDialog({ open: true, existing: a })}
-        onRemove={removeBankAccount}
-      />
-
-      {/* Edit Sheet */}
-      <EditInfoSheet
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        info={generalInfo}
-        onSave={handleEditSave}
-      />
-
-      {/* Branch dialog (from view mode) */}
       <BranchFormDialog
         open={branchDialog.open}
         onOpenChange={(o) => setBranchDialog({ open: o })}
@@ -233,20 +243,6 @@ export default function ThongTinChungPage() {
           }
         }}
       />
-
-      {/* Bank account dialog (from view mode) */}
-      <BankAccountFormDialog
-        open={bankDialog.open}
-        onOpenChange={(o) => setBankDialog({ open: o })}
-        existing={bankDialog.existing}
-        onSave={(account) => {
-          if (bankDialog.existing) {
-            updateBankAccount({ ...account, id: bankDialog.existing.id })
-          } else {
-            addBankAccount(account)
-          }
-        }}
-      />
     </div>
   )
 }
@@ -254,20 +250,9 @@ export default function ThongTinChungPage() {
 function emptyInfo(): OrgGeneralInfo {
   const now = new Date().toISOString()
   return {
-    id: '',
-    name: '',
-    orgType: 'CONG_TY_HOP_DANH',
-    taxCode: '',
-    address: '',
-    province: '',
-    phone: '',
-    email: '',
-    legalRepName: '',
-    foundedDate: '',
-    isListedInMOJDirectory: true,
-    bankAccounts: [],
-    branches: [],
-    createdAt: now,
-    updatedAt: now,
+    id: '', name: '', orgType: 'CONG_TY_HOP_DANH',
+    taxCode: '', address: '', province: '', phone: '', email: '',
+    legalRepName: '', foundedDate: '', isListedInMOJDirectory: true,
+    bankAccounts: [], branches: [], createdAt: now, updatedAt: now,
   }
 }

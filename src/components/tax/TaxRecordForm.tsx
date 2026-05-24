@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -28,7 +28,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
-import { AlertTriangle, Plus, X } from 'lucide-react'
+import { AlertTriangle, Paperclip, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TaxRecord, TaxRecordType, SupportingDocument, DocType } from '@/types/tax'
 import { TAX_RECORD_TYPE_LABELS, DOC_TYPE_LABELS } from '@/types/tax'
@@ -95,6 +95,8 @@ export function TaxRecordForm({
   )
   const [newDocName, setNewDocName] = useState('')
   const [newDocType, setNewDocType] = useState<DocType>('TAX_RETURN')
+  const [docError, setDocError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Reset form khi dialog mở/đóng hoặc đổi record
   useEffect(() => {
@@ -110,6 +112,7 @@ export function TaxRecordForm({
       })
       setDocs(existing?.supportingDocuments ?? [])
       setNewDocName('')
+      setDocError('')
     }
   }, [open, existing?.id])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -120,8 +123,20 @@ export function TaxRecordForm({
   const amountMillion = watchedAmount > 0 ? (watchedAmount / 1_000_000).toFixed(1) : ''
   const coaching = nextThresholdText(watchedAmount)
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setNewDocName(file.name)
+      setDocError('')
+    }
+    e.target.value = ''
+  }
+
   const addDoc = () => {
-    if (!newDocName.trim()) return
+    if (!newDocName.trim()) {
+      setDocError('Vui lòng chọn tệp trước khi thêm')
+      return
+    }
     setDocs((prev) => [
       ...prev,
       {
@@ -132,6 +147,7 @@ export function TaxRecordForm({
     ])
     setNewDocName('')
     setNewDocType('TAX_RETURN')
+    setDocError('')
   }
 
   const removeDoc = (docId: string) => {
@@ -361,31 +377,50 @@ export function TaxRecordForm({
                   </Button>
                 </div>
               ))}
-              <div className="flex gap-2">
-                <Select
-                  value={newDocType}
-                  onValueChange={(v) => setNewDocType(v as DocType)}
-                >
-                  <SelectTrigger className="w-44 shrink-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DOC_TYPES.map((dt) => (
-                      <SelectItem key={dt} value={dt}>
-                        {DOC_TYPE_LABELS[dt]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="Tên file..."
-                  value={newDocName}
-                  onChange={(e) => setNewDocName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addDoc())}
-                />
-                <Button type="button" size="icon" variant="outline" onClick={addDoc}>
-                  <Plus className="h-4 w-4" />
-                </Button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Select
+                    value={newDocType}
+                    onValueChange={(v) => { setNewDocType(v as DocType); setDocError('') }}
+                  >
+                    <SelectTrigger className="w-44 shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOC_TYPES.map((dt) => (
+                        <SelectItem key={dt} value={dt}>
+                          {DOC_TYPE_LABELS[dt]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-left hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className={newDocName ? 'text-foreground truncate' : 'text-muted-foreground'}>
+                      {newDocName || 'Chọn tệp PDF, JPG, PNG…'}
+                    </span>
+                  </button>
+                  <Button type="button" size="icon" variant="outline" onClick={addDoc}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {docError && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    {docError}
+                  </p>
+                )}
               </div>
             </div>
 

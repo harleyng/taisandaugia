@@ -213,7 +213,7 @@ export default function AdminKYCDetail() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      <div className="px-6 py-8 space-y-6">
         <Skeleton className="h-6 w-40" />
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
           <div className="space-y-4">
@@ -227,7 +227,7 @@ export default function AdminKYCDetail() {
 
   if (notFound || !org) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-8 text-center text-sm text-muted-foreground">
+      <div className="px-6 py-8 text-center text-sm text-muted-foreground">
         Không tìm thấy hồ sơ.
       </div>
     );
@@ -237,7 +237,7 @@ export default function AdminKYCDetail() {
 
   return (
     <>
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      <div className="px-6 py-8 space-y-6">
         {/* Back + Header */}
         <div className="space-y-1">
           <button

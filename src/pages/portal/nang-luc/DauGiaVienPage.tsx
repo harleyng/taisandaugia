@@ -3,6 +3,9 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { useAuctioneers } from '@/hooks/useAuctioneers'
 import type { Auctioneer } from '@/types/auctioneer'
+import { ScoreInlineBar } from '@/components/portal/ScoreInlineBar'
+import { ScoreBreakdownDialog } from '@/components/portal/ScoreBreakdownDialog'
+import { MUC_IV68_BREAKDOWN } from '@/lib/portal/scoreBreakdowns'
 import { AuctioneerStatsCards } from '@/components/auctioneers/AuctioneerStatsCards'
 import { AuctioneerWarnings } from '@/components/auctioneers/AuctioneerWarnings'
 import { AuctioneerTable } from '@/components/auctioneers/AuctioneerTable'
@@ -44,16 +47,15 @@ export default function DauGiaVienPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+    <div className="px-6 py-6 space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-base font-bold text-foreground">Đấu giá viên</h1>
-          {hasData && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {activeCount} đang hành nghề · {score.peopleWithFiveYears} người ≥ 5 năm
-            </p>
-          )}
+          <h1 className="text-xl font-semibold text-foreground">Đấu giá viên</h1>
+          <div className="flex items-center gap-1.5">
+            {hasData && <ScoreInlineBar label="Mục IV.6-8" score={score.total} max={13} />}
+            <ScoreBreakdownDialog data={MUC_IV68_BREAKDOWN} />
+          </div>
         </div>
         <Button size="sm" className="gap-1.5 shrink-0" onClick={handleAdd}>
           <Plus className="h-4 w-4" />

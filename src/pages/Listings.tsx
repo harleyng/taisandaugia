@@ -393,13 +393,14 @@ const Listings = () => {
 
                 const fallbackOrgName = listing.auction_org_id ? orgNameById.get(listing.auction_org_id) : "";
                 const orgName = ca.org_name || fallbackOrgName || "";
+                const displayTitle = ca.assets?.[0]?.title || listing.description || listing.title;
 
                   items.push(
                     <AuctionCard
                       key={listing.id}
                       id={listing.id}
                       imageUrl={listing.image_url}
-                      title={listing.title}
+                      title={displayTitle}
                       address={formatAddress(listing.address) || "Chưa cập nhật"}
                       startingPrice={listing.price}
                       stepPrice={ca.bid_step ?? ca.step_price}

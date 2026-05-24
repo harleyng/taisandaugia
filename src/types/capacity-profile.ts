@@ -1,4 +1,6 @@
 export interface CapacityProfile {
+  companyName?: string
+
   // Mục I: Listed in Ministry of Justice registry
   onMinistryList: boolean
 
@@ -14,7 +16,7 @@ export interface CapacityProfile {
   scoreIV5: number
   yearsActive: number
 
-  // Mục IV.6-8: Auctioneers /9
+  // Mục IV.6-8: Auctioneers /13
   scoreIV6to8: number
   auctioneerCount: number
 

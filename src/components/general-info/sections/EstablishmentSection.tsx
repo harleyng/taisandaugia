@@ -4,6 +4,7 @@ import { FormField, FormControl, FormItem, FormLabel, FormMessage } from '@/comp
 import { Input } from '@/components/ui/input'
 import { CheckCircle2 } from 'lucide-react'
 import { calcYearsOfOperation, calcMucIV5, mucIV5NextThreshold } from '@/lib/general-info/scoring'
+import { DocFileUpload } from '../DocFileUpload'
 import type { EditFormValues } from '../EditInfoSheet'
 
 const ISSUERS = ['Bộ Tư pháp', 'Sở Tư pháp TP.HCM', 'Sở Tư pháp Hà Nội', 'Sở Tư pháp Đà Nẵng', 'UBND Tỉnh/TP']
@@ -81,11 +82,15 @@ export function EstablishmentSection({ form }: EstablishmentSectionProps) {
 
         <FormField control={form.control} name="establishmentDecisionFile" render={({ field }) => (
           <FormItem>
-            <FormLabel>Tên file (stub)</FormLabel>
-            <FormControl><Input {...field} placeholder="VD: QD_thanh_lap_2010.pdf" /></FormControl>
-            <p className="text-xs text-muted-foreground">
-              📎 Sẽ được liên kết vào Tủ tài liệu (Pháp lý công ty)
-            </p>
+            <FormLabel>File đính kèm</FormLabel>
+            <FormControl>
+              <DocFileUpload
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                fieldId="establishment-decision"
+                label="Quyết định thành lập"
+              />
+            </FormControl>
           </FormItem>
         )} />
       </div>
@@ -121,11 +126,15 @@ export function EstablishmentSection({ form }: EstablishmentSectionProps) {
 
         <FormField control={form.control} name="businessLicenseFile" render={({ field }) => (
           <FormItem>
-            <FormLabel>Tên file (stub)</FormLabel>
-            <FormControl><Input {...field} placeholder="VD: GDKHD_2010.pdf" /></FormControl>
-            <p className="text-xs text-muted-foreground">
-              📎 Sẽ được liên kết vào Tủ tài liệu (Pháp lý công ty)
-            </p>
+            <FormLabel>File đính kèm</FormLabel>
+            <FormControl>
+              <DocFileUpload
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                fieldId="business-license"
+                label="Giấy đăng ký hoạt động"
+              />
+            </FormControl>
           </FormItem>
         )} />
       </div>

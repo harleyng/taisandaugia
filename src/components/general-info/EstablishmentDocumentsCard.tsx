@@ -1,11 +1,13 @@
-import { FileText, Paperclip } from 'lucide-react'
+import { FileText, Paperclip, Pencil } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { format, parseISO, isValid } from 'date-fns'
 import type { OrgGeneralInfo } from '@/types/general-info'
 
 interface EstablishmentDocumentsCardProps {
   info: OrgGeneralInfo
+  onEdit?: () => void
 }
 
 function fmtDate(d?: string) {
@@ -53,16 +55,26 @@ function DocRow({ title, number, date, issuer, file }: DocRowProps) {
   )
 }
 
-export function EstablishmentDocumentsCard({ info }: EstablishmentDocumentsCardProps) {
+export function EstablishmentDocumentsCard({ info, onEdit }: EstablishmentDocumentsCardProps) {
   return (
     <Card>
       <Accordion type="single" collapsible defaultValue="">
         <AccordionItem value="docs" className="border-0">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <FileText className="h-4 w-4" />
+            <span className="flex items-center gap-2 text-sm font-semibold flex-1 min-w-0">
+              <FileText className="h-4 w-4 shrink-0" />
               Giấy tờ pháp lý
             </span>
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 text-xs text-muted-foreground mr-2"
+                onClick={(e) => { e.stopPropagation(); onEdit() }}
+              >
+                <Pencil className="h-3 w-3" />Sửa
+              </Button>
+            )}
           </AccordionTrigger>
           <AccordionContent>
             <CardContent className="pt-0 pb-4 space-y-4">

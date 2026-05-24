@@ -222,7 +222,7 @@ export function EditInfoSheet({ open, onOpenChange, info, onSave }: EditInfoShee
   )
 }
 
-function buildDefaults(info: OrgGeneralInfo): EditFormValues {
+export function buildDefaults(info: OrgGeneralInfo): EditFormValues {
   return {
     name: info.name ?? '',
     shortName: info.shortName ?? '',

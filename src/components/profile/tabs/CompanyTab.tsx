@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Building2, ArrowRight, CheckCircle2, Clock,
-  LayoutDashboard, FileText, Users, XCircle, AlertCircle,
+  FileText, XCircle, AlertCircle,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useCapacityProfile } from "@/hooks/useCapacityProfile";
 
 type AccountState = "none" | "in_progress" | "pending" | "approved_new" | "owner_active" | "rejected_new" | "rejected";
 
@@ -303,6 +304,11 @@ const PendingState = ({ org }: { org: OrgRow }) => {
 /* ─── OwnerActiveState ─── */
 const OwnerActiveState = ({ company, isNew }: { company: CompanyData | null; isNew: boolean }) => {
   const navigate = useNavigate();
+  const { profile } = useCapacityProfile();
+  const scorePercent = Math.round((profile.totalCapacityScore / 76) * 100);
+  const verifiedDate = company?.createdAt
+    ? format(new Date(company.createdAt), "dd/MM/yyyy")
+    : null;
 
   return (
     <div className="space-y-4">
@@ -319,95 +325,57 @@ const OwnerActiveState = ({ company, isNew }: { company: CompanyData | null; isN
         </div>
       )}
 
-      {/* Portal entry — only for VERIFIED */}
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <LayoutDashboard className="h-5 w-5 text-primary" />
+      {/* Company info card — display only, no CTA */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Building2 className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-foreground truncate">{company?.name ?? "Đang tải..."}</p>
+            {company?.taxCode && (
+              <p className="text-xs text-muted-foreground mt-0.5">MST: {company.taxCode}</p>
+            )}
+            <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
+              Đã xác thực qua Bộ Tư pháp
+              {verifiedDate && <span className="text-muted-foreground">· {verifiedDate}</span>}
+            </p>
+          </div>
         </div>
-        <div className="flex-1">
-          <p className="font-semibold text-foreground">Company Portal</p>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Quản lý hồ sơ năng lực, đấu giá viên, và dữ liệu kinh doanh của công ty.
-          </p>
-        </div>
-        <Button onClick={() => navigate("/portal")} className="flex-shrink-0">
-          Vào Portal
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
       </div>
 
-      {/* Company header card */}
-      <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <Building2 className="h-5 w-5 text-primary" />
+      {/* Portal CTA card */}
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
+        <div>
+          <p className="font-semibold text-foreground text-base">🚀 Company Portal</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Quản lý hồ sơ năng lực, đấu giá viên, dữ liệu kinh doanh và lập hồ sơ dự tuyển.
+          </p>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-foreground truncate">{company?.name ?? "Đang tải..."}</p>
+
+        {/* Capability progress */}
+        <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            {company?.taxCode ? `MST: ${company.taxCode}` : ""}
-            {company?.taxCode && company?.province ? " · " : ""}
-            {company?.province ?? ""}
+            Tiến độ năng lực:{" "}
+            <span className="font-semibold text-foreground">
+              {profile.totalCapacityScore}/76 điểm
+            </span>
           </p>
+          <div className="flex items-center gap-2">
+            <Progress value={scorePercent} className="h-2 flex-1" />
+            <span className="text-xs font-medium text-muted-foreground w-8 text-right">
+              {scorePercent}%
+            </span>
+          </div>
         </div>
-        <Badge className="text-[10px] bg-green-500 flex-shrink-0 gap-1">
-          <CheckCircle2 className="h-3 w-3" />
-          Đã xác thực qua Bộ Tư pháp
-        </Badge>
-      </div>
 
-      {/* Two feature cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-border bg-card p-5 flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <LayoutDashboard className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1 space-y-1">
-            <p className="font-semibold text-foreground">Hồ sơ năng lực</p>
-            <p className="text-sm text-muted-foreground">
-              Xây dựng hồ sơ năng lực để nâng điểm xếp hạng và tạo ấn tượng với chủ tài sản.
-            </p>
-          </div>
-          <Button size="sm" onClick={() => navigate("/portal/nang-luc/thong-tin-chung")}>
-            Cập nhật hồ sơ
-            <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+        <div className="flex justify-end">
+          <Button onClick={() => navigate("/portal")}>
+            Vào Portal
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
-
-        <div className="rounded-xl border border-border bg-card p-5 flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-            <FileText className="h-5 w-5 text-amber-600" />
-          </div>
-          <div className="flex-1 space-y-1">
-            <p className="font-semibold text-foreground">Hồ sơ dự tuyển</p>
-            <p className="text-sm text-muted-foreground">
-              Tạo và quản lý hồ sơ dự tuyển gửi tới chủ tài sản khi tham gia đấu thầu.
-            </p>
-          </div>
-          <Button size="sm" variant="outline" onClick={() => navigate("/portal/ho-so-du-tuyen")}>
-            Xem hồ sơ
-            <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Quick portal section links */}
-      <div className="rounded-xl border border-border bg-card px-4 py-3 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-muted-foreground mr-1">Cập nhật nhanh:</span>
-        {[
-          { label: "Đấu giá viên",    path: "/portal/nang-luc/dau-gia-vien",  Icon: Users },
-          { label: "Cơ sở vật chất",  path: "/portal/nang-luc/co-so-vat-chat", Icon: Building2 },
-          { label: "Tài chính & Thuế", path: "/portal/nang-luc/tai-chinh",    Icon: FileText },
-          { label: "Tủ tài liệu",     path: "/portal/nang-luc/tu-tai-lieu",   Icon: FileText },
-        ].map(({ label, path, Icon }) => (
-          <button
-            key={label}
-            onClick={() => navigate(path)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-          >
-            <Icon className="h-3 w-3 text-muted-foreground" />
-            {label}
-          </button>
-        ))}
       </div>
     </div>
   );

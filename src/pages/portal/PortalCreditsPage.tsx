@@ -3,7 +3,7 @@ import { CreditBalanceChip } from '@/components/paywall/CreditBalanceChip'
 
 export default function PortalCreditsPage() {
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="px-6 py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Credit & Thanh toán</h1>

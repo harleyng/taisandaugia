@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { SectionVCriterion } from '@/types/application'
 import { CriterionCard } from './CriterionCard'
@@ -32,29 +33,20 @@ export function Section4SectionVCriteria({ criteria, onChange }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-baseline justify-between gap-2">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Mục V: Tiêu chí khác</h2>
-          <p className="text-xs text-muted-foreground">
-            Thêm từng tiêu chí từ thông báo lựa chọn — tối đa 8 điểm (có thể vượt tùy thông báo)
-          </p>
-        </div>
-        {criteria.length > 0 && (
-          <span className="text-sm font-semibold text-emerald-600 shrink-0">
-            {totalScore}/{totalMax}đ
-          </span>
-        )}
-      </div>
-
       {criteria.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">
+        <Card className="p-8 text-center text-muted-foreground border-dashed">
           <p className="text-sm">Chưa có tiêu chí nào</p>
           <p className="text-xs mt-1">
             Thêm từng tiêu chí từ phần "Tiêu chí khác" trong thông báo lựa chọn
           </p>
-        </div>
+        </Card>
       ) : (
-        <div className="space-y-2.5">
+        <Card className="px-4 py-0 overflow-hidden">
+          {criteria.length > 0 && (
+            <div className="flex justify-end pt-3 pb-1">
+              <span className="text-xs font-semibold text-emerald-600">{totalScore}/{totalMax}đ</span>
+            </div>
+          )}
           {criteria.map((c, i) => (
             <CriterionCard
               key={c.id}
@@ -63,7 +55,7 @@ export function Section4SectionVCriteria({ criteria, onChange }: Props) {
               onDelete={() => handleDelete(i)}
             />
           ))}
-        </div>
+        </Card>
       )}
 
       <Button

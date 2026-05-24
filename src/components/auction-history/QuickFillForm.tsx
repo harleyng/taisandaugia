@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress'
 import { ChevronRight, SkipForward, Zap } from 'lucide-react'
 import type { AuctionRecord } from '@/types/auction-record'
-import { AUCTION_FORMAT_LABELS, type AuctionFormat } from '@/types/auction-record'
+import { AUCTION_FORMAT_LABELS, BIDDING_METHOD_LABELS, type AuctionFormat, type BiddingMethod } from '@/types/auction-record'
 import { format } from 'date-fns'
 
 interface Props {
@@ -22,6 +22,7 @@ export function QuickFillForm({ records, currentIndex, onSave, onSkip }: Props) 
   const [winningPrice, setWinningPrice] = useState('')
   const [isSuccessful, setIsSuccessful] = useState<string>('')
   const [auctionFormat, setAuctionFormat] = useState<AuctionFormat | ''>('')
+  const [biddingMethod, setBiddingMethod] = useState<BiddingMethod | ''>('')
   const [bidStep, setBidStep] = useState('')
   const [actualRounds, setActualRounds] = useState('')
 
@@ -38,6 +39,7 @@ export function QuickFillForm({ records, currentIndex, onSave, onSkip }: Props) 
       winningPrice: parseVND(winningPrice),
       isSuccessful: isSuccessful === 'true' ? true : isSuccessful === 'false' ? false : record.isSuccessful,
       auctionFormat: auctionFormat || record.auctionFormat,
+      biddingMethod: biddingMethod || record.biddingMethod,
       bidStep: parseVND(bidStep),
       actualRounds: actualRounds ? Number(actualRounds) : record.actualRounds,
       updatedAt: new Date().toISOString(),
@@ -46,6 +48,7 @@ export function QuickFillForm({ records, currentIndex, onSave, onSkip }: Props) 
     setWinningPrice('')
     setIsSuccessful('')
     setAuctionFormat('')
+    setBiddingMethod('')
     setBidStep('')
     setActualRounds('')
   }
@@ -54,6 +57,7 @@ export function QuickFillForm({ records, currentIndex, onSave, onSkip }: Props) 
   const startingPriceFmt = record.startingPrice.toLocaleString('vi-VN')
   const needsWinningPrice = record.winningPrice === undefined
   const needsFormat = record.auctionFormat === undefined
+  const needsBiddingMethod = record.biddingMethod === undefined
   const needsBidStep = record.bidStep === undefined
 
   return (
@@ -105,6 +109,22 @@ export function QuickFillForm({ records, currentIndex, onSave, onSkip }: Props) 
               </SelectTrigger>
               <SelectContent>
                 {(Object.entries(AUCTION_FORMAT_LABELS) as [AuctionFormat, string][]).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {needsBiddingMethod && (
+          <div>
+            <Label className="text-xs">Phương thức đấu giá</Label>
+            <Select value={biddingMethod} onValueChange={(v) => setBiddingMethod(v as BiddingMethod)}>
+              <SelectTrigger className="mt-1 h-8 text-sm">
+                <SelectValue placeholder="Chọn..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.entries(BIDDING_METHOD_LABELS) as [BiddingMethod, string][]).map(([k, v]) => (
                   <SelectItem key={k} value={k}>{v}</SelectItem>
                 ))}
               </SelectContent>

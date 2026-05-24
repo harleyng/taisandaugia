@@ -70,6 +70,7 @@ export interface ExportedFile {
 export interface Application {
   id: string
   orgId: string
+  name?: string   // user-set display name, takes priority over derived title
 
   announcement: Announcement
 

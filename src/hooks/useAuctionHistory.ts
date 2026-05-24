@@ -14,10 +14,10 @@ import {
 } from '@/lib/auction-history/storage'
 import { calcAuctionHistoryScore, getTargetYear } from '@/lib/auction-history/scoring'
 import { getCapacityProfile, saveCapacityProfile } from '@/lib/applications/storage'
-import type { ColumnMapping, ValidationResult } from '@/lib/auction-history/import-parser'
-import { validateRows, detectColumnMapping } from '@/lib/auction-history/import-parser'
+import type { ValidationResult } from '@/lib/auction-history/import-parser'
+import { validateRows, TEMPLATE_MAPPING } from '@/lib/auction-history/import-parser'
 
-export type ImportFlowStep = 'idle' | 'upload' | 'mapping' | 'preview' | 'progress' | 'done'
+export type ImportFlowStep = 'idle' | 'upload' | 'preview' | 'progress' | 'done'
 export type DuplicateStrategy = 'SKIP' | 'OVERWRITE' | 'DUPLICATE'
 
 // Keep CrawlState exported for any component that still imports it (compat shim)
@@ -83,17 +83,20 @@ function listingToRecord(listing: Record<string, unknown>, enrichments: Record<s
     assetDescription: (listing.title as string | null) ?? '',
     assetCategory: 'OTHER',
     assetLocation: ca.auction_location as string | undefined,
+    legalStatus: (listing.legal_status ?? ca.legal_status) as string | undefined,
     ownerName: (ca.asset_owner_name as string | undefined) ?? '',
     startingPrice: (listing.price as number | null) ?? 0,
-    winningPrice: enrichment.winningPrice ?? (ca.win_price as number | undefined),
+    winningPrice: enrichment.winningPrice ?? (ca.winning_price ?? ca.win_price) as number | undefined,
     isSuccessful: enrichment.isSuccessful ?? (listing.status === 'SOLD_RENTED' ? true : undefined),
     failureReason: enrichment.failureReason,
-    auctionFormat: enrichment.auctionFormat,
-    bidStep: enrichment.bidStep,
-    maxRounds: enrichment.maxRounds,
-    actualRounds: enrichment.actualRounds,
-    numberOfParticipants: enrichment.numberOfParticipants,
-    depositPercentage: enrichment.depositPercentage,
+    auctionFormat: enrichment.auctionFormat ?? (ca.auction_format as AuctionRecord['auctionFormat'] | undefined),
+    biddingMethod: enrichment.biddingMethod ?? (ca.bidding_method as AuctionRecord['biddingMethod'] | undefined),
+    auctioneer: enrichment.auctioneer,
+    bidStep: enrichment.bidStep ?? ((ca.bid_step ?? ca.step_price) as number | undefined),
+    maxRounds: enrichment.maxRounds ?? (ca.max_rounds as number | undefined),
+    actualRounds: enrichment.actualRounds ?? (ca.actual_rounds as number | undefined),
+    numberOfParticipants: enrichment.numberOfParticipants ?? (ca.number_of_participants as number | undefined),
+    depositPercentage: enrichment.depositPercentage ?? (ca.deposit_percentage as number | undefined),
     contractNumber: enrichment.contractNumber,
     internalNotes: enrichment.internalNotes,
     fieldSources: { auctionDate: 'PUBLIC', assetDescription: 'PUBLIC', ownerName: 'PUBLIC', startingPrice: 'PUBLIC' },
@@ -102,7 +105,7 @@ function listingToRecord(listing: Record<string, unknown>, enrichments: Record<s
     isVerifiedByUser: false,
     isDisputed: false,
     crawledAt: listing.created_at as string,
-    crawledFromUrl: undefined,
+    crawledFromUrl: (ca.source_urls as string[] | undefined)?.[0],
     importedAt: enrichment.importedAt,
     importBatchId: enrichment.importBatchId,
     createdAt: listing.created_at as string,
@@ -124,6 +127,7 @@ function syncCapacityProfile(records: AuctionRecord[]): void {
 export function useAuctionHistory() {
   const [isLoading, setIsLoading] = useState(true)
   const [records, setRecords] = useState<AuctionRecord[]>([])
+  const [rawListings, setRawListings] = useState<Record<string, Record<string, unknown>>>({})
   const [importSessions] = useState<ImportSession[]>(() => getImportSessions())
   const [lastImport, setLastImport] = useState<ImportSession | undefined>(() => getLastImportSession())
   const [importFlow, setImportFlow] = useState<ImportFlowState>({
@@ -159,14 +163,19 @@ export function useAuctionHistory() {
         // 3. Fetch all listings for this auction org
         const { data: listings } = await supabase
           .from('listings')
-          .select('id, title, price, status, custom_attributes, created_at, updated_at, auction_org_id')
+          .select('id, title, description, price, status, area, legal_status, asset_owner_id, custom_attributes, created_at, updated_at, auction_org_id')
           .eq('auction_org_id', auctionOrgId)
           .in('status', ['ACTIVE', 'SOLD_RENTED', 'INACTIVE'])
           .order('created_at', { ascending: false })
 
         if (cancelled) return
         const enrichments = loadEnrichments()
-        const mapped = (listings ?? []).map((l) => listingToRecord(l as Record<string, unknown>, enrichments))
+        const rawMap: Record<string, Record<string, unknown>> = {}
+        const mapped = (listings ?? []).map((l) => {
+          rawMap[l.id as string] = l as Record<string, unknown>
+          return listingToRecord(l as Record<string, unknown>, enrichments)
+        })
+        setRawListings(rawMap)
         setRecords(mapped)
         syncCapacityProfile(mapped)
       } catch {
@@ -184,7 +193,7 @@ export function useAuctionHistory() {
       ...r,
       ...computePriceDifference(r),
       enrichmentStatus: computeEnrichmentStatus(r),
-      badgeSource: getAuctionBadgeSource(r, false),
+      badgeSource: getAuctionBadgeSource(r),
     }))
   }, [records])
 
@@ -194,9 +203,9 @@ export function useAuctionHistory() {
   const updateRecord = useCallback((record: AuctionRecord) => {
     // Persist only enrichment fields in localStorage
     const enrichmentFields: (keyof AuctionRecord)[] = [
-      'winningPrice', 'isSuccessful', 'failureReason', 'auctionFormat',
+      'winningPrice', 'isSuccessful', 'failureReason', 'auctionFormat', 'biddingMethod',
       'bidStep', 'maxRounds', 'actualRounds', 'numberOfParticipants',
-      'depositPercentage', 'contractNumber', 'internalNotes', 'updatedAt',
+      'depositPercentage', 'contractNumber', 'auctioneer', 'internalNotes', 'updatedAt',
     ]
     const patch: Partial<AuctionRecord> = {}
     for (const k of enrichmentFields) {
@@ -233,17 +242,9 @@ export function useAuctionHistory() {
   }, [])
 
   const handleImportFile = useCallback((file: File, headers: string[], rows: Record<string, unknown>[]) => {
-    const mapping = detectColumnMapping(headers)
-    setImportFlow({ step: 'mapping', file, headers, rawRows: rows, mapping, duplicateStrategy: 'SKIP', progress: 0 })
-  }, [])
-
-  const confirmMapping = useCallback((mapping: ColumnMapping) => {
-    setImportFlow((prev) => {
-      const existing = records
-      const existingKeys = existing.map((r) => r.auctionDate + (r.ownerName ?? ''))
-      const validation = validateRows(prev.rawRows, mapping, existingKeys)
-      return { ...prev, step: 'preview', mapping, validation }
-    })
+    const existingKeys = records.map((r) => r.auctionDate + (r.ownerName ?? ''))
+    const validation = validateRows(rows, TEMPLATE_MAPPING, existingKeys)
+    setImportFlow({ step: 'preview', file, headers, rawRows: rows, mapping: TEMPLATE_MAPPING, validation, duplicateStrategy: 'SKIP', progress: 0 })
   }, [records])
 
   const executeImport = useCallback(
@@ -325,6 +326,7 @@ export function useAuctionHistory() {
 
   return {
     records: enriched,
+    rawListings,
     score,
     targetYear,
     isLoading,
@@ -336,7 +338,6 @@ export function useAuctionHistory() {
     openImport,
     closeImport,
     handleImportFile,
-    confirmMapping,
     executeImport,
     setImportDuplicateStrategy: (s: DuplicateStrategy) =>
       setImportFlow((prev) => ({ ...prev, duplicateStrategy: s })),

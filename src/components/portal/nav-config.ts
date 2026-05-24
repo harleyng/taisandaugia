@@ -6,7 +6,6 @@ import {
   Warehouse,
   History,
   Receipt,
-  FolderOpen,
   Target,
   CreditCard,
   type LucideIcon,
@@ -43,7 +42,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Cơ sở vật chất', href: '/portal/nang-luc/co-so-vat-chat', icon: Warehouse },
       { label: 'Lịch sử đấu giá', href: '/portal/nang-luc/lich-su-dau-gia', icon: History },
       { label: 'Tài chính & Thuế', href: '/portal/nang-luc/tai-chinh', icon: Receipt },
-      { label: 'Tủ tài liệu', href: '/portal/nang-luc/tu-tai-lieu', icon: FolderOpen },
     ],
   },
   {

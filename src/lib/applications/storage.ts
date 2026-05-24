@@ -9,8 +9,11 @@ const KEYS = {
   capacity: 'tsd:capacity:profile',
 }
 
-type ApplicationListItem = Pick<Application, 'id' | 'status' | 'createdAt' | 'updatedAt'> & {
-  title: string // derived: ownerName + assetCategory
+export type ApplicationListItem = Pick<Application, 'id' | 'status' | 'createdAt' | 'updatedAt'> & {
+  title: string       // derived: ownerName + assetDescription
+  ownerName: string   // announcement.ownerName
+  deadline: string    // announcement.deadline (ISO date)
+  totalScore: number  // /100
 }
 
 export function listApplications(): ApplicationListItem[] {
@@ -39,9 +42,19 @@ export function saveApplication(app: Application): void {
 
   // Update list index
   const list = listApplications()
-  const title = [app.announcement.ownerName, app.announcement.assetDescription]
-    .filter(Boolean)
-    .join(' — ') || 'Hồ sơ chưa đặt tên'
+
+  const CATEGORY_ABBR: Partial<Record<string, string>> = {
+    LAND_USE_RIGHT: 'QSDĐ',
+    ADMIN_VIOLATION: 'Tang vật',
+    ENFORCEMENT: 'THA',
+    MACHINERY: 'Máy móc',
+    VEHICLE: 'Phương tiện',
+  }
+  const assetShortName =
+    app.announcement.assetCategory && app.announcement.province
+      ? `${CATEGORY_ABBR[app.announcement.assetCategory] ?? 'Tài sản'} ${app.announcement.province}`
+      : app.announcement.assetDescription
+  const title = app.name?.trim() || assetShortName || 'Hồ sơ chưa đặt tên'
 
   const idx = list.findIndex((a) => a.id === app.id)
   const item: ApplicationListItem = {
@@ -50,6 +63,9 @@ export function saveApplication(app: Application): void {
     createdAt: app.createdAt,
     updatedAt: updated.updatedAt,
     title,
+    ownerName: app.announcement.ownerName ?? '',
+    deadline: app.announcement.deadline ?? '',
+    totalScore: app.totalScore ?? 0,
   }
 
   if (idx >= 0) {
@@ -120,6 +136,7 @@ export function saveCapacityProfile(profile: CapacityProfile): void {
 }
 
 const MOCK_CAPACITY_PROFILE: CapacityProfile = {
+  companyName: 'Công ty TNHH Đấu giá Hà Nội',
   onMinistryList: true,
   scoreII: 14,
   scoreIV1to4: 18,

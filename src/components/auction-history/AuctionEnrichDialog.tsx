@@ -14,7 +14,7 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { Lock } from 'lucide-react'
 import type { AuctionRecord } from '@/types/auction-record'
-import { AUCTION_FORMAT_LABELS, type AuctionFormat } from '@/types/auction-record'
+import { AUCTION_FORMAT_LABELS, BIDDING_METHOD_LABELS, type AuctionFormat, type BiddingMethod } from '@/types/auction-record'
 import { format } from 'date-fns'
 
 const schema = z.object({
@@ -23,6 +23,7 @@ const schema = z.object({
   isSuccessful: z.string().optional(),
   failureReason: z.string().optional(),
   auctionFormat: z.string().optional(),
+  biddingMethod: z.string().optional(),
   bidStep: z.string().optional(),
   maxRounds: z.string().optional(),
   actualRounds: z.string().optional(),
@@ -60,6 +61,7 @@ export function AuctionEnrichDialog({ open, onClose, record, onSave }: Props) {
         isSuccessful: record.isSuccessful === true ? 'true' : record.isSuccessful === false ? 'false' : '',
         failureReason: record.failureReason ?? '',
         auctionFormat: record.auctionFormat ?? '',
+        biddingMethod: record.biddingMethod ?? '',
         bidStep: record.bidStep ? record.bidStep.toLocaleString('vi-VN') : '',
         maxRounds: record.maxRounds ? String(record.maxRounds) : '',
         actualRounds: record.actualRounds ? String(record.actualRounds) : '',
@@ -82,6 +84,7 @@ export function AuctionEnrichDialog({ open, onClose, record, onSave }: Props) {
       isSuccessful: values.isSuccessful === 'true' ? true : values.isSuccessful === 'false' ? false : undefined,
       failureReason: values.failureReason || undefined,
       auctionFormat: (values.auctionFormat as AuctionFormat) || undefined,
+      biddingMethod: (values.biddingMethod as BiddingMethod) || undefined,
       bidStep: parseNum(values.bidStep),
       maxRounds: values.maxRounds ? Number(values.maxRounds) : undefined,
       actualRounds: values.actualRounds ? Number(values.actualRounds) : undefined,
@@ -166,11 +169,24 @@ export function AuctionEnrichDialog({ open, onClose, record, onSave }: Props) {
               <div className="grid grid-cols-2 gap-3">
                 <FormField control={form.control} name="auctionFormat" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Hình thức ★</FormLabel>
+                    <FormLabel className="text-xs">Hình thức đấu giá ★</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Chọn..." /></SelectTrigger></FormControl>
                       <SelectContent>
                         {(Object.entries(AUCTION_FORMAT_LABELS) as [AuctionFormat, string][]).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="biddingMethod" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Phương thức đấu giá ★</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Chọn..." /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {(Object.entries(BIDDING_METHOD_LABELS) as [BiddingMethod, string][]).map(([k, v]) => (
                           <SelectItem key={k} value={k}>{v}</SelectItem>
                         ))}
                       </SelectContent>

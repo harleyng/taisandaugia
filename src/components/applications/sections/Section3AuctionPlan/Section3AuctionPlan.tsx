@@ -11,12 +11,7 @@ interface Props {
 
 export function Section3AuctionPlan({ auctionPlan, onChange, onCopyFromPrevious }: Props) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-baseline gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Mục III: Phương án đấu giá</h2>
-        <span className="text-xs text-muted-foreground">16 điểm — bạn soạn trực tiếp</span>
-      </div>
-
+    <Card className="px-5 py-0 overflow-hidden">
       <AuctionPlanSubsection
         id="plan-format"
         title="III.1 — Hình thức, bước giá, số vòng"
@@ -64,6 +59,6 @@ export function Section3AuctionPlan({ auctionPlan, onChange, onCopyFromPrevious 
         onChange={(v) => onChange({ antiCollusionMeasures: v })}
         onCopyFromPrevious={onCopyFromPrevious}
       />
-    </div>
+    </Card>
   )
 }

@@ -28,7 +28,7 @@ export function ApplicationScoreHeader({ app, statusLabel }: Props) {
 
         {/* Progress bar */}
         <div className="flex-1">
-          <div className="flex h-2.5 rounded-full overflow-hidden bg-muted gap-px">
+          <div className="flex h-1.5 rounded-full overflow-hidden bg-muted gap-px">
             <div
               className="bg-primary transition-all duration-300"
               style={{ width: `${(bd.capacity.score / 100) * 100}%` }}
@@ -45,21 +45,9 @@ export function ApplicationScoreHeader({ app, statusLabel }: Props) {
               title={`Mục V: ${bd.mucV.score}/8`}
             />
           </div>
-          {/* Legend */}
-          <div className="flex gap-4 mt-1">
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-sm bg-primary" />
-              Năng lực {bd.capacity.score}/76
-            </span>
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-sm bg-amber-500" />
-              Mục III {bd.mucIII.score}/16
-            </span>
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-sm bg-emerald-500" />
-              Mục V {bd.mucV.score}/8
-            </span>
-          </div>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Năng lực {bd.capacity.score}/76 · Mục III {bd.mucIII.score}/16 · Mục V {bd.mucV.score}/8
+          </p>
         </div>
 
         {/* Save status */}

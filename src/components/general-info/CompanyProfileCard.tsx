@@ -1,6 +1,7 @@
-import { MapPin, Phone, User, CreditCard, Printer, Mail, Globe, Calendar } from 'lucide-react'
+import { MapPin, Phone, User, CreditCard, Printer, Mail, Globe, Calendar, Pencil } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { CompanyAvatar } from './CompanyAvatar'
 import { InfoField } from './InfoField'
@@ -34,9 +35,14 @@ export function CompanyProfileCard({ info, onEdit }: CompanyProfileCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          🏢 Đơn vị tổ chức đấu giá
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold">Đơn vị tổ chức đấu giá</CardTitle>
+          {onEdit && (
+            <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground" onClick={onEdit}>
+              <Pencil className="h-3 w-3" />Sửa
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Company identity header */}
@@ -63,12 +69,7 @@ export function CompanyProfileCard({ info, onEdit }: CompanyProfileCardProps) {
           <InfoField icon={Phone} label="Số điện thoại" value={info.phone} />
           <InfoField icon={Mail} label="Email" value={info.email} />
           <InfoField icon={User} label="Đại diện pháp lý" value={info.legalRepName} />
-          <InfoField
-            icon={Globe}
-            label="Website"
-            value={info.website}
-            onAdd={onEdit}
-          />
+          <InfoField icon={Globe} label="Website" value={info.website} />
           <InfoField icon={CreditCard} label="Mã định danh" value={info.registrationCode} />
           <InfoField
             icon={Calendar}

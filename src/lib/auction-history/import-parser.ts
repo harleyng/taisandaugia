@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
-import type { AssetCategory, AuctionFormat } from '@/types/auction-record'
+import type { AssetCategory, AuctionFormat, BiddingMethod } from '@/types/auction-record'
 import { classifyAsset } from './classify'
 
 export interface ParsedRow {
@@ -17,6 +17,7 @@ export interface ParsedRow {
   isSuccessful?: boolean
   failureReason?: string
   auctionFormat?: AuctionFormat
+  biddingMethod?: BiddingMethod
   bidStep?: number
   maxRounds?: number
   actualRounds?: number
@@ -76,6 +77,35 @@ const HEADER_ALIASES: Record<string, ColumnKey> = {
   'ghi chú': 'internalNotes',
 }
 
+export const TEMPLATE_MAPPING: ColumnMapping = {
+  auctionDate: '(*) Ngày đấu giá',
+  ownerName: '(*) Người có tài sản',
+  auctionNumber: 'Số phiên',
+  winningPrice: 'Giá trúng (VND)',
+  isSuccessful: 'Trạng thái',
+  auctionFormat: 'Hình thức đấu giá',
+  biddingMethod: 'Phương thức đấu giá',
+  bidStep: 'Bước giá (VND)',
+  maxRounds: 'Số vòng tối đa',
+  actualRounds: 'Số vòng thực tế',
+  numberOfParticipants: 'Số người tham gia',
+  depositPercentage: 'Tiền đặt trước (%)',
+  failureReason: 'Lý do không thành',
+  contractNumber: 'Số HĐ dịch vụ',
+  internalNotes: 'Ghi chú',
+}
+
+const REQUIRED_TEMPLATE_HEADERS = ['(*) Ngày đấu giá', '(*) Người có tài sản']
+
+export function validateTemplateHeaders(headers: string[]): string | null {
+  const headerSet = new Set(headers)
+  const missing = REQUIRED_TEMPLATE_HEADERS.filter((h) => !headerSet.has(h))
+  if (missing.length > 0) {
+    return `File không đúng template. Thiếu cột: ${missing.join(', ')}. Vui lòng tải file template mẫu.`
+  }
+  return null
+}
+
 const FORMAT_ALIASES: Record<string, AuctionFormat> = {
   'trực tiếp lời nói': 'DIRECT_VOICE',
   'lời nói': 'DIRECT_VOICE',
@@ -86,6 +116,13 @@ const FORMAT_ALIASES: Record<string, AuctionFormat> = {
   'kết hợp': 'HYBRID',
   'bỏ phiếu kín': 'SEALED_BID',
   'kín': 'SEALED_BID',
+}
+
+const BIDDING_METHOD_ALIASES: Record<string, BiddingMethod> = {
+  'trả giá lên': 'ASCENDING',
+  'ascending': 'ASCENDING',
+  'đặt giá xuống': 'DESCENDING',
+  'descending': 'DESCENDING',
 }
 
 const CATEGORY_ALIASES: Record<string, AssetCategory> = {
@@ -152,6 +189,12 @@ function parseFormat(val: unknown): AuctionFormat | undefined {
   return FORMAT_ALIASES[s]
 }
 
+function parseBiddingMethod(val: unknown): BiddingMethod | undefined {
+  if (!val) return undefined
+  const s = String(val).toLowerCase().trim()
+  return BIDDING_METHOD_ALIASES[s]
+}
+
 function parseCategory(val: unknown): AssetCategory | undefined {
   if (!val) return undefined
   const s = String(val).toLowerCase().trim()
@@ -197,6 +240,7 @@ export function mapRow(raw: Record<string, unknown>, mapping: ColumnMapping): Pa
     isSuccessful: parseBoolean(get('isSuccessful')),
     failureReason: get('failureReason') ? String(get('failureReason')) : undefined,
     auctionFormat: parseFormat(get('auctionFormat')),
+    biddingMethod: parseBiddingMethod(get('biddingMethod')),
     bidStep: parsePrice(get('bidStep')),
     maxRounds: get('maxRounds') ? Number(get('maxRounds')) : undefined,
     actualRounds: get('actualRounds') ? Number(get('actualRounds')) : undefined,
@@ -207,7 +251,7 @@ export function mapRow(raw: Record<string, unknown>, mapping: ColumnMapping): Pa
 }
 
 const ENRICHMENT_FIELDS: (keyof ParsedRow)[] = [
-  'winningPrice', 'isSuccessful', 'failureReason', 'auctionFormat',
+  'winningPrice', 'isSuccessful', 'failureReason', 'auctionFormat', 'biddingMethod',
   'bidStep', 'maxRounds', 'actualRounds', 'numberOfParticipants',
   'depositPercentage', 'contractNumber', 'internalNotes',
 ]
@@ -289,6 +333,7 @@ export function generateExcelTemplate(): void {
     ['- ★ Giá trúng (VND)', 'Số nguyên. Quan trọng nhất — ảnh hưởng điểm IV.3-4'],
     ['- ★ Trạng thái', '"Thành" hoặc "Không thành"'],
     ['- ★ Hình thức đấu giá', '"Trực tuyến" / "Lời nói" / "Phiếu" / "Kết hợp" / "Bỏ phiếu kín"'],
+    ['- ★ Phương thức đấu giá', '"Trả giá lên" / "Đặt giá xuống"'],
     ['- ★ Bước giá (VND)', 'Số nguyên VND'],
     ['- Số vòng tối đa', 'Số nguyên'],
     ['- Số vòng thực tế', 'Số nguyên'],
@@ -308,6 +353,7 @@ export function generateExcelTemplate(): void {
     'Giá trúng (VND)',
     'Trạng thái',
     'Hình thức đấu giá',
+    'Phương thức đấu giá',
     'Bước giá (VND)',
     'Số vòng tối đa',
     'Số vòng thực tế',

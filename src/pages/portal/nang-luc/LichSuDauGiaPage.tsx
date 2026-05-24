@@ -2,21 +2,23 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Upload, Loader2 } from 'lucide-react'
 import { useAuctionHistory } from '@/hooks/useAuctionHistory'
+import { ScoreInlineBar } from '@/components/portal/ScoreInlineBar'
+import { ScoreBreakdownDialog } from '@/components/portal/ScoreBreakdownDialog'
+import { MUC_IV14_BREAKDOWN } from '@/lib/portal/scoreBreakdowns'
 import { AuctionStatsCards } from '@/components/auction-history/AuctionStatsCards'
 import { EnrichmentAlertBanner } from '@/components/auction-history/EnrichmentAlertBanner'
 import { AuctionTable } from '@/components/auction-history/AuctionTable'
-import { QuickFillForm } from '@/components/auction-history/QuickFillForm'
-import { AuctionEnrichDialog } from '@/components/auction-history/AuctionEnrichDialog'
+import { AuctionRecordDialog } from '@/components/auction-history/AuctionRecordDialog'
 import { AuctionDetailDrawer } from '@/components/auction-history/AuctionDetailDrawer'
 import { ImportDialog } from '@/components/auction-history/import/ImportDialog'
 import type { AuctionRecordWithComputed, AuctionRecord } from '@/types/auction-record'
-import type { ColumnMapping } from '@/lib/auction-history/import-parser'
 
-type TabKey = 'all' | 'complete' | 'needs_fill' | 'failed'
+type TabKey = 'all' | 'successful' | 'needs_fill' | 'failed'
 
 export default function LichSuDauGiaPage() {
   const {
     records,
+    rawListings,
     score,
     isLoading,
     lastImport,
@@ -26,31 +28,29 @@ export default function LichSuDauGiaPage() {
     openImport,
     closeImport,
     handleImportFile,
-    confirmMapping,
     executeImport,
     setImportDuplicateStrategy,
   } = useAuctionHistory()
 
   const [activeTab, setActiveTab] = useState<TabKey>('all')
-  const [enrichOpen, setEnrichOpen] = useState(false)
-  const [editRecord, setEditRecord] = useState<AuctionRecord | undefined>()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogRecords, setDialogRecords] = useState<AuctionRecord[]>([])
+  const [dialogIndex, setDialogIndex] = useState(0)
   const [detailRecord, setDetailRecord] = useState<AuctionRecordWithComputed | null>(null)
-  const [quickFillIndex, setQuickFillIndex] = useState(0)
-  const [showQuickFill, setShowQuickFill] = useState(false)
+  const [detailListing, setDetailListing] = useState<Record<string, unknown> | null>(null)
 
   const needsFillRecords = records.filter((r) => !r.enrichmentStatus.hasWinningPrice && r.isSuccessful !== false)
   const missingPriceCount = needsFillRecords.length
   const successCount = records.filter((r) => r.isSuccessful === true).length
 
-  const handleOpenEnrich = (record: AuctionRecordWithComputed) => {
-    setEditRecord(record)
-    setEnrichOpen(true)
+  const handleOpenEdit = (record: AuctionRecord) => {
+    setDialogRecords([record])
+    setDialogIndex(0)
+    setDialogOpen(true)
   }
 
-  const handleSaveEnrich = (record: AuctionRecord) => {
+  const handleDialogSave = (record: AuctionRecord) => {
     updateRecord(record)
-    setEnrichOpen(false)
-    setEditRecord(undefined)
   }
 
   const handleDelete = (id: string) => {
@@ -63,46 +63,25 @@ export default function LichSuDauGiaPage() {
 
   const handleGoToNeedsFill = () => {
     setActiveTab('needs_fill')
-    setShowQuickFill(true)
-    setQuickFillIndex(0)
-  }
-
-  const handleQuickFillSave = (record: AuctionRecord) => {
-    updateRecord(record)
-    if (quickFillIndex < needsFillRecords.length - 1) {
-      setQuickFillIndex((i) => i + 1)
-    } else {
-      setShowQuickFill(false)
-    }
-  }
-
-  const handleQuickFillSkip = () => {
-    if (quickFillIndex < needsFillRecords.length - 1) {
-      setQuickFillIndex((i) => i + 1)
-    } else {
-      setShowQuickFill(false)
-    }
+    setDialogRecords(needsFillRecords)
+    setDialogIndex(0)
+    setDialogOpen(true)
   }
 
   const isImportOpen = importFlow.step !== 'idle'
 
   return (
-    <div className="space-y-5 pb-10">
+    <div className="px-6 py-6 space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <p className="text-xs text-muted-foreground">Hồ sơ năng lực › Lịch sử đấu giá</p>
-          <h1 className="text-xl font-semibold mt-0.5">Lịch sử đấu giá</h1>
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1.5">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />Đang tải dữ liệu...
-            </p>
-          ) : records.length > 0 && (
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {records.length} cuộc · {successCount} thành công
-              {missingPriceCount > 0 && ` · ${missingPriceCount} cần bổ sung`}
-            </p>
-          )}
+          <h1 className="text-xl font-semibold">Lịch sử đấu giá</h1>
+          <div className="flex items-center gap-1.5">
+            {!isLoading && records.length > 0 && (
+              <ScoreInlineBar label={`Mục IV.1-4 · Năm ${score.year}`} score={score.total} max={score.maxTotal} />
+            )}
+            <ScoreBreakdownDialog data={MUC_IV14_BREAKDOWN} />
+          </div>
         </div>
         <div className="flex gap-2 shrink-0">
           <Button
@@ -117,7 +96,7 @@ export default function LichSuDauGiaPage() {
         </div>
       </div>
 
-      {/* Stats (only when records exist) */}
+      {/* Stats breakdown */}
       {!isLoading && records.length > 0 && <AuctionStatsCards score={score} />}
 
       {/* Missing price alert */}
@@ -146,55 +125,36 @@ export default function LichSuDauGiaPage() {
 
       {/* Data view */}
       {!isLoading && records.length > 0 && (
-        <div className="space-y-4">
-          {activeTab === 'needs_fill' && showQuickFill && needsFillRecords.length > 0 && (
-            <QuickFillForm
-              records={needsFillRecords}
-              currentIndex={Math.min(quickFillIndex, needsFillRecords.length - 1)}
-              onSave={handleQuickFillSave}
-              onSkip={handleQuickFillSkip}
-            />
-          )}
-
-          <AuctionTable
-            records={records}
-            activeTab={activeTab}
-            onTabChange={(tab) => {
-              setActiveTab(tab)
-              if (tab === 'needs_fill') {
-                setQuickFillIndex(0)
-                setShowQuickFill(true)
-              } else {
-                setShowQuickFill(false)
-              }
-            }}
-            onEdit={handleOpenEnrich}
-            onQuickFill={(r) => {
-              const idx = needsFillRecords.findIndex((n) => n.id === r.id)
-              setQuickFillIndex(Math.max(0, idx))
-              setActiveTab('needs_fill')
-              setShowQuickFill(true)
-            }}
-            onDelete={handleDelete}
-            onBulkDelete={handleBulkDelete}
-            onOpenDetail={setDetailRecord}
-          />
-        </div>
+        <AuctionTable
+          records={records}
+          activeTab={activeTab}
+          onTabChange={(tab) => { setActiveTab(tab) }}
+          onQuickFill={(r) => {
+            setDialogRecords([r])
+            setDialogIndex(0)
+            setDialogOpen(true)
+          }}
+          onDelete={handleDelete}
+          onBulkDelete={handleBulkDelete}
+          onOpenDetail={(r) => { setDetailRecord(r); setDetailListing(rawListings[r.id] ?? null) }}
+        />
       )}
 
       {/* Dialogs */}
-      <AuctionEnrichDialog
-        open={enrichOpen}
-        onClose={() => { setEnrichOpen(false); setEditRecord(undefined) }}
-        record={editRecord}
-        onSave={handleSaveEnrich}
+      <AuctionRecordDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        records={dialogRecords}
+        initialIndex={Math.min(dialogIndex, Math.max(0, dialogRecords.length - 1))}
+        onSave={handleDialogSave}
       />
 
       <AuctionDetailDrawer
         open={!!detailRecord}
-        onClose={() => setDetailRecord(null)}
+        onClose={() => { setDetailRecord(null); setDetailListing(null) }}
         record={detailRecord}
-        onEdit={(r) => { setDetailRecord(null); handleOpenEnrich(r) }}
+        rawListing={detailListing}
+        onEdit={(r) => { setDetailRecord(null); setDetailListing(null); handleOpenEdit(r) }}
       />
 
       <ImportDialog
@@ -203,9 +163,8 @@ export default function LichSuDauGiaPage() {
         importFlow={importFlow}
         missingPriceCount={missingPriceCount}
         onFile={handleImportFile}
-        onConfirmMapping={(mapping: ColumnMapping) => confirmMapping(mapping)}
         onExecuteImport={executeImport}
-        onGoToMapping={openImport}
+        onBack={openImport}
         onEnrich={handleGoToNeedsFill}
         setDuplicateStrategy={setImportDuplicateStrategy}
       />

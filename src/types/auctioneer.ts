@@ -2,7 +2,7 @@ export type DataSource = 'CRAWLED' | 'MANUAL' | 'CRAWLED_USER_ENRICHED'
 export type Position = 'DIRECTOR' | 'DEPUTY_DIRECTOR' | 'AUCTIONEER'
 export type ContractType = 'OFFICIAL' | 'COLLABORATOR'
 export type FieldSource = 'PUBLIC' | 'USER' | 'USER_OVERRIDE'
-export type BadgeSource = 'VERIFIED' | 'MANUAL' | 'MODIFIED' | 'CONFLICT'
+export type BadgeSource = 'AUTO' | 'USER_VERIFIED'
 
 export const POSITION_LABELS: Record<Position, string> = {
   DIRECTOR: 'Giám đốc',
@@ -142,10 +142,8 @@ export function computeDaysUntilExpiry(licenseExpiryDate?: string): number | und
 }
 
 export function getBadgeSource(auctioneer: Auctioneer, hasConflict: boolean): BadgeSource {
-  if (hasConflict) return 'CONFLICT'
-  if (auctioneer.source === 'MANUAL') return 'MANUAL'
-  if (auctioneer.overrides.length > 0) return 'MODIFIED'
-  return 'VERIFIED'
+  if (auctioneer.source === 'MANUAL' || auctioneer.overrides.length > 0 || hasConflict) return 'USER_VERIFIED'
+  return 'AUTO'
 }
 
 export function makeDefaultFieldSources(src: FieldSource): Record<PublicFieldKey, FieldSource> {

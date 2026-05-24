@@ -10,8 +10,6 @@ import {
   Bell,
   BellRing,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
   ExternalLink,
   Eye,
   Search,
@@ -29,7 +27,6 @@ import {
 import { toast } from "sonner";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { AuctionQuickInfo } from "@/components/auction/AuctionQuickInfo";
-import { AuctionPriceRow } from "@/components/auction/AuctionPriceRow";
 import { AuctionOrganizerInfo } from "@/components/auction/AuctionOrganizerInfo";
 import { AuctionScheduleInfo } from "@/components/auction/AuctionScheduleInfo";
 import { AuctionAttachments } from "@/components/auction/AuctionAttachments";
@@ -38,7 +35,6 @@ import { AuctionPriceHistory } from "@/components/auction/AuctionPriceHistory";
 import { AuctionSimilarAssets } from "@/components/auction/AuctionSimilarAssets";
 import { Link } from "react-router-dom";
 import { formatAddress } from "@/utils/formatters";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
 import { useCredits } from "@/hooks/useCredits";
@@ -48,6 +44,7 @@ import { useCompanyViewTracker } from "@/hooks/useCompanyViewTracker";
 import { AuctionPricePrediction } from "@/components/auction/AuctionPricePrediction";
 import { Sparkles, X } from "lucide-react";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
+import { AuctionAssetCard, type AuctionAsset } from "@/components/auction/AuctionAssetCard";
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -56,7 +53,6 @@ const AuctionDetail = () => {
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [infoOpen, setInfoOpen] = useState(true);
   const [session, setSession] = useState<any>(null);
   const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
   const guardedNavigate = useAuthGuardedNavigate();
@@ -239,63 +235,53 @@ const AuctionDetail = () => {
               </div>
             </div>
 
-            {/* 1. Thông tin việc đấu giá — Collapsible */}
-            <Collapsible open={infoOpen} onOpenChange={setInfoOpen}>
-              <Card className="p-5 space-y-4">
-                <CollapsibleTrigger asChild>
-                  <button className="flex items-center justify-between w-full text-left">
-                    <h3 className="text-lg font-bold text-foreground">Thông tin tài sản đấu giá</h3>
-                    {infoOpen ? (
-                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-4">
-                  {/* Description */}
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
-                    {listing.description || "Chưa có mô tả"}
-                  </p>
+            {/* 1. Tài sản đấu giá (one or many) */}
+            {(() => {
+              const rawAssets: AuctionAsset[] = Array.isArray(ca.assets) && ca.assets.length > 0
+                ? ca.assets
+                : [{
+                    title: listing.title,
+                    description: listing.description || undefined,
+                    category: listing.property_types?.name,
+                    quantity: ca.quantity,
+                    area: listing.area || ca.area || undefined,
+                    location: addressText || undefined,
+                    legal_status: listing.legal_status || undefined,
+                    notes: ca.notes || undefined,
+                    starting_price: listing.price,
+                    deposit_amount: ca.deposit_amount,
+                    document_fee: ca.document_fee,
+                    bid_step: ca.bid_step ?? ca.step_price,
+                    winning_price: ca.winning_price ?? ca.win_price ?? null,
+                    auction_format: ca.auction_format,
+                    bidding_method: ca.bidding_method,
+                  }]
 
-                  {/* Metadata */}
-                  <div className="space-y-2 text-sm">
-                    {ca.quantity && (
-                      <div className="flex gap-2">
-                        <span className="text-muted-foreground min-w-[120px]">Số lượng:</span>
-                        <span className="text-foreground font-medium">{ca.quantity}</span>
-                      </div>
+              return (
+                <div className="space-y-3">
+                  <h3 className="text-base font-semibold text-foreground">
+                    Thông tin tài sản đấu giá
+                    {rawAssets.length > 1 && (
+                      <span className="ml-2 text-sm font-normal text-muted-foreground">
+                        ({rawAssets.length} tài sản)
+                      </span>
                     )}
-                    <div className="flex gap-2">
-                      <span className="text-muted-foreground min-w-[120px]">Loại BĐS:</span>
-                      <span className="text-foreground font-medium">{listing.property_types?.name || "BĐS"}</span>
-                    </div>
-                    {addressText && (
-                      <div className="flex gap-2">
-                        <span className="text-muted-foreground min-w-[120px]">Nơi có tài sản:</span>
-                        <span className="text-foreground font-medium">{addressText}</span>
-                      </div>
-                    )}
-                    {ca.notes && (
-                      <div className="flex gap-2">
-                        <span className="text-muted-foreground min-w-[120px]">Ghi chú:</span>
-                        <span className="text-foreground font-medium">{ca.notes}</span>
-                      </div>
-                    )}
-                  </div>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-
-            {/* 2. Price Row */}
-            <AuctionPriceRow
-              price={listing.price}
-              customAttributes={ca}
-              isUnlocked={isUnlocked}
-              isLoggedIn={isLoggedIn}
-              onLockedClick={() => openAssetPaywall(listing.id, listing.title)}
-              onLoginClick={() => openAuthDialog(() => openAssetPaywall(listing.id, listing.title))}
-            />
+                  </h3>
+                  {rawAssets.map((asset, i) => (
+                    <AuctionAssetCard
+                      key={i}
+                      asset={asset}
+                      index={i}
+                      defaultOpen={rawAssets.length === 1 || i === 0}
+                      isUnlocked={isUnlocked}
+                      isLoggedIn={isLoggedIn}
+                      onLockedClick={() => openAssetPaywall(listing.id, listing.title)}
+                      onLoginClick={() => openAuthDialog(() => openAssetPaywall(listing.id, listing.title))}
+                    />
+                  ))}
+                </div>
+              )
+            })()}
 
             {/* 2b. Chủ tài sản (clickable card) */}
             {listing.asset_owner_id && (

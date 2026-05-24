@@ -1,18 +1,15 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ImportUploadStep } from './ImportUploadStep'
-import { ColumnMappingStep } from './ColumnMappingStep'
 import { ImportPreviewStep } from './ImportPreviewStep'
 import { ImportProgressStep } from './ImportProgressStep'
 import { ImportSuccessStep } from './ImportSuccessStep'
 import type { ImportFlowState, DuplicateStrategy } from '@/hooks/useAuctionHistory'
-import type { ColumnMapping } from '@/lib/auction-history/import-parser'
 
 const STEP_LABELS: Record<string, string> = {
   upload: '1. Chọn file',
-  mapping: '2. Map cột',
-  preview: '3. Xem trước',
-  progress: '4. Đang cập nhật',
-  done: '5. Hoàn thành',
+  preview: '2. Xem trước',
+  progress: '3. Đang cập nhật',
+  done: '4. Hoàn thành',
 }
 
 interface Props {
@@ -21,9 +18,8 @@ interface Props {
   importFlow: ImportFlowState
   missingPriceCount: number
   onFile: (file: File, headers: string[], rows: Record<string, unknown>[]) => void
-  onConfirmMapping: (mapping: ColumnMapping) => void
   onExecuteImport: (strategy: DuplicateStrategy) => void
-  onGoToMapping: () => void
+  onBack: () => void
   onEnrich: () => void
   setDuplicateStrategy: (s: DuplicateStrategy) => void
 }
@@ -34,9 +30,8 @@ export function ImportDialog({
   importFlow,
   missingPriceCount,
   onFile,
-  onConfirmMapping,
   onExecuteImport,
-  onGoToMapping,
+  onBack,
   onEnrich,
 }: Props) {
   const { step } = importFlow
@@ -60,20 +55,10 @@ export function ImportDialog({
           <ImportUploadStep onFile={onFile} />
         )}
 
-        {step === 'mapping' && (
-          <ColumnMappingStep
-            headers={importFlow.headers}
-            mapping={importFlow.mapping}
-            onMappingChange={() => {}}
-            onBack={() => onGoToMapping()}
-            onNext={() => onConfirmMapping(importFlow.mapping)}
-          />
-        )}
-
         {step === 'preview' && importFlow.validation && (
           <ImportPreviewStep
             validation={importFlow.validation}
-            onBack={onGoToMapping}
+            onBack={onBack}
             onExecute={onExecuteImport}
           />
         )}

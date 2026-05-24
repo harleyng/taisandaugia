@@ -3,8 +3,9 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTaxRecords } from '@/hooks/useTaxRecords'
 import type { TaxRecord } from '@/types/tax'
-import { TaxScoreSummary } from '@/components/tax/TaxScoreSummary'
-import { TargetYearBanner } from '@/components/tax/TargetYearBanner'
+import { ScoreInlineBar } from '@/components/portal/ScoreInlineBar'
+import { ScoreBreakdownDialog } from '@/components/portal/ScoreBreakdownDialog'
+import { MUC_IV9_BREAKDOWN } from '@/lib/portal/scoreBreakdowns'
 import { YearListTimeline } from '@/components/tax/YearListTimeline'
 import { EmptyState } from '@/components/tax/EmptyState'
 import { TaxRecordForm } from '@/components/tax/TaxRecordForm'
@@ -53,28 +54,21 @@ export default function TaiChinhPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+    <div className="px-6 py-6 space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-base font-bold text-foreground">Tài chính & Thuế</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Mục IV.9 Phụ lục I · Tối đa 3 điểm · Năm tính điểm: {targetYear}
-          </p>
+          <h1 className="text-xl font-semibold text-foreground">Tài chính & Thuế</h1>
+          <div className="flex items-center gap-1.5">
+            <ScoreInlineBar label={`Mục IV.9 · Năm ${targetYear}`} score={scoreIV9} max={3} />
+            <ScoreBreakdownDialog data={MUC_IV9_BREAKDOWN} />
+          </div>
         </div>
         <Button size="sm" className="gap-1.5 shrink-0" onClick={handleAdd}>
           <Plus className="h-4 w-4" />
           Thêm số liệu
         </Button>
       </div>
-
-      <TargetYearBanner targetYear={targetYear} />
-
-      <TaxScoreSummary
-        score={scoreIV9}
-        targetYear={targetYear}
-        targetRecord={targetRecord}
-      />
 
       {hasData ? (
         <YearListTimeline

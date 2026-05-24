@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,6 +12,7 @@ import { Announcement } from '@/types/application'
 import { ASSET_CATEGORY_OPTIONS } from '@/lib/applications/labels'
 import { vietnamProvinces } from '@/constants/vietnam-locations'
 import { AnnouncementImport } from '@/components/applications/AnnouncementImport'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 const schema = z.object({
   ownerName: z.string().min(1, 'Bắt buộc'),
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export function Section1Announcement({ announcement, onChange }: Props) {
+  const [showOptional, setShowOptional] = useState(false)
   const { register, watch, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: announcement as FormValues,
@@ -67,14 +69,7 @@ export function Section1Announcement({ announcement, onChange }: Props) {
   )
 
   return (
-    <Card className="p-5 space-y-5">
-      <div>
-        <h2 className="text-sm font-semibold text-foreground">Thông tin thông báo lựa chọn</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Nhập thủ công hoặc trích xuất tự động từ link thông báo
-        </p>
-      </div>
-
+    <Card className="p-5 space-y-4">
       {/* Auto-import from URL */}
       <AnnouncementImport onFilled={handleImportFilled} />
 
@@ -187,27 +182,35 @@ export function Section1Announcement({ announcement, onChange }: Props) {
           />
         </div>
 
-        {/* Optional announcement info */}
-        <div className="md:col-span-2 pt-1">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Thông tin thông báo (tùy chọn)
-          </p>
-        </div>
+      </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="announcementNumber">Số thông báo</Label>
-          <Input id="announcementNumber" placeholder="TB-123/2026/..." {...register('announcementNumber')} />
-        </div>
+      {/* Optional announcement fields — collapsed by default */}
+      <div>
+        <button
+          type="button"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          onClick={() => setShowOptional((v) => !v)}
+        >
+          {showOptional ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          Thêm số & ngày thông báo, link lưu trữ
+        </button>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="announcementDate">Ngày thông báo</Label>
-          <Input id="announcementDate" type="date" {...register('announcementDate')} />
-        </div>
-
-        <div className="space-y-1.5 md:col-span-2">
-          <Label htmlFor="announcementUrl">Link thông báo (để lưu tham khảo)</Label>
-          <Input id="announcementUrl" type="url" placeholder="https://..." {...register('announcementUrl')} />
-        </div>
+        {showOptional && (
+          <div className="grid gap-3 md:grid-cols-2 mt-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="announcementNumber">Số thông báo</Label>
+              <Input id="announcementNumber" placeholder="TB-123/2026/..." {...register('announcementNumber')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="announcementDate">Ngày thông báo</Label>
+              <Input id="announcementDate" type="date" {...register('announcementDate')} />
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="announcementUrl">Link thông báo</Label>
+              <Input id="announcementUrl" type="url" placeholder="https://..." {...register('announcementUrl')} />
+            </div>
+          </div>
+        )}
       </div>
     </Card>
   )

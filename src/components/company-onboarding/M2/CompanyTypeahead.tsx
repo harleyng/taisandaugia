@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Building2, CheckCircle2, Plus, X, PhoneCall } from "lucide-react";
 import { AuctionCompany, mapOrgRow } from "@/lib/mockAuctionCompanies";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -26,7 +27,7 @@ export const CompanyTypeahead = ({ value, onSelect }: CompanyTypeaheadProps) => 
     setLoading(true);
     setLoadError(false);
 
-    fetch(
+    const companiesFetch = fetch(
       `${SUPABASE_URL}/rest/v1/auction_organizations?select=id,name,tax_code,address,province,phone&order=name&limit=200`,
       {
         headers: {
@@ -34,14 +35,31 @@ export const CompanyTypeahead = ({ value, onSelect }: CompanyTypeaheadProps) => 
           Authorization: `Bearer ${SUPABASE_KEY}`,
         },
       }
-    )
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
+    ).then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json() as Promise<{ id: string; name: string; tax_code: string; address: string; province: string; phone: string }[]>;
+    });
+
+    const linkedIdsFetch = supabase
+      .from("organizations")
+      .select("license_info")
+      .neq("kyc_status", "REJECTED")
+      .then(({ data }) => {
+        if (!data) return new Set<string>();
+        return new Set<string>(
+          data
+            .map((row) => (row.license_info as Record<string, unknown>)?.auction_org_id as string | undefined)
+            .filter((id): id is string => !!id)
+        );
       })
-      .then((data: any[]) => {
+      .catch(() => new Set<string>());
+
+    Promise.all([companiesFetch, linkedIdsFetch])
+      .then(([companies, linkedIds]) => {
         if (cancelled) return;
-        setAllCompanies(data.map((row) => mapOrgRow(row)));
+        setAllCompanies(
+          companies.map((row) => mapOrgRow(row, linkedIds.has(row.id) ? row.id : null))
+        );
         setLoading(false);
       })
       .catch(() => {

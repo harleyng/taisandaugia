@@ -1,0 +1,80 @@
+import { Application } from '@/types/application'
+
+export const MOCK_APPLICATION: Application = {
+  id: 'mock-001',
+  orgId: 'org-001',
+  announcement: {
+    ownerName: 'UBND Quận Long Biên, TP. Hà Nội',
+    assetDescription: 'Quyền sử dụng đất ở tại số 42 đường Ngô Gia Tự, phường Đức Giang, Quận Long Biên',
+    assetCategory: 'LAND_USE_RIGHT',
+    startingPrice: 4500000000,
+    assetLocation: '42 Ngô Gia Tự, Đức Giang, Long Biên, Hà Nội',
+    province: 'Hà Nội',
+    deadline: '2026-06-15',
+    announcementUrl: '',
+    announcementNumber: 'TB-123/2026/UBND-LB',
+    announcementDate: '2026-05-20',
+  },
+  capacitySnapshot: {
+    scoreI: 0,
+    scoreII: 14,
+    scoreIV1to4: 18,
+    scoreIV5: 5,
+    scoreIV6to8: 7,
+    scoreIV9: 5,
+    totalCapacityScore: 49,
+    warnings: ['3 cuộc đấu giá thiếu giá trúng — cần bổ sung kết quả'],
+    snapshotAt: '2026-05-24T08:00:00Z',
+  },
+  auctionPlan: {
+    format:
+      'Đề xuất hình thức đấu giá trực tiếp bằng lời nói, công khai tại phòng đấu giá của Trung tâm. Bước giá tối thiểu 50.000.000 đồng/lần trả giá. Tổ chức tối thiểu 5 vòng đấu, không giới hạn số lần trả giá trong mỗi vòng. Tiền đặt trước 10% giá khởi điểm (450.000.000 đồng). Phiên đấu giá dự kiến tổ chức ngày 20/6/2026 tại địa chỉ 15 Phố Huế, Hai Bà Trưng, Hà Nội.',
+    receptionPlan:
+      'Hồ sơ đăng ký tham gia đấu giá được phát hành và tiếp nhận tại văn phòng Trung tâm Dịch vụ Đấu giá tài sản Hà Nội, số 15 Phố Huế, trong giờ hành chính từ 8h–17h các ngày làm việc. Thời hạn nhận hồ sơ: 16h ngày 14/6/2026. Hồ sơ gồm: Đơn đăng ký theo mẫu, bản sao CCCD/hộ chiếu, chứng từ nộp tiền đặt trước.',
+    participantConditions:
+      'Mọi cá nhân, hộ gia đình là công dân Việt Nam có năng lực hành vi dân sự đầy đủ và đáp ứng điều kiện về đối tượng sử dụng đất theo Luật Đất đai 2024 đều có thể đăng ký tham gia. Không thuộc các trường hợp bị cấm tham gia đấu giá theo Điều 38 Luật Đấu giá tài sản 2016. Người tham gia phải nộp tiền đặt trước đúng hạn.',
+    antiCollusionMeasures:
+      'Trung tâm áp dụng các biện pháp đồng bộ để phòng chống thông đồng, dìm giá: (1) Lắp đặt camera giám sát toàn bộ khu vực đăng ký và phòng đấu giá, lưu trữ băng hình tối thiểu 90 ngày; (2) Yêu cầu tất cả người tham gia ký cam kết không thông đồng, dìm giá trước khi vào phòng; (3) Cách ly người tham gia tại khu vực chờ riêng, không được liên lạc với bên ngoài trong suốt phiên; (4) Phân công đấu giá viên không có quan hệ lợi ích với bất kỳ bên nào; (5) Mời đại diện người có tài sản và đại diện UBND giám sát độc lập.',
+    score: 14,
+  },
+  sectionVCriteria: [
+    {
+      id: 'crit-001',
+      label: 'Tổ chức đã từng đấu giá quyền sử dụng đất tại địa bàn Hà Nội',
+      maxPoints: 3,
+      nature: 'CAPACITY',
+      natureAutoDetected: true,
+      meets: true,
+      evidence: 'Đã tổ chức 23 cuộc đấu giá QSDĐ tại Hà Nội từ năm 2018 đến nay, có hồ sơ lưu trữ đầy đủ.',
+      attachedDocIds: [],
+      autoMatchResult: { matched: true, matchedItems: ['23 cuộc QSDĐ tại Hà Nội (2018–2026)'] },
+    },
+    {
+      id: 'crit-002',
+      label: 'Có trụ sở hoặc chi nhánh tại Hà Nội',
+      maxPoints: 2,
+      nature: 'CAPACITY',
+      natureAutoDetected: true,
+      meets: true,
+      evidence: 'Trụ sở chính tại 15 Phố Huế, Hai Bà Trưng, Hà Nội. Giấy phép hoạt động số 001/GP-BTP.',
+      attachedDocIds: [],
+    },
+    {
+      id: 'crit-003',
+      label: 'Cam kết tổ chức phiên đấu giá trực tuyến kết hợp trực tiếp',
+      maxPoints: 3,
+      nature: 'PROPOSAL',
+      natureAutoDetected: true,
+      meets: null,
+      evidence: '',
+      attachedDocIds: [],
+    },
+  ],
+  sectionVScore: 5,
+  exportFormat: 'SEPARATED',
+  totalScore: 68,
+  status: 'DRAFT',
+  exportedFiles: [],
+  createdAt: '2026-05-24T07:00:00Z',
+  updatedAt: '2026-05-24T08:30:00Z',
+}

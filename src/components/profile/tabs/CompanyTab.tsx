@@ -44,11 +44,13 @@ export const CompanyTab = () => {
       const userId = session.user.id;
 
       // Query organizations table as source of truth
-      const { data: orgRow } = await supabase
+      const { data: orgRows } = await supabase
         .from("organizations")
         .select("id, name, kyc_status, rejection_reason, license_info, updated_at")
         .eq("owner_id", userId)
-        .maybeSingle();
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const orgRow = orgRows?.[0] ?? null;
 
       if (!orgRow) {
         setState("none");

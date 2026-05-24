@@ -44,6 +44,14 @@ export const AuthDialog = () => {
   const isEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
   const isPhone = (val: string) => /^0\d{9,10}$/.test(val.replace(/\s/g, ""));
 
+  const withTimeout = <T,>(promise: Promise<T>, ms = 8000): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Hết thời gian chờ. Vui lòng thử lại.")), ms)
+      ),
+    ]);
+
   const handleIdentifierSubmit = async () => {
     const trimmed = identifier.trim();
     if (!trimmed) return;
@@ -58,19 +66,14 @@ export const AuthDialog = () => {
 
     try {
       if (detectedMode === "email") {
-        const { data, error } = await supabase.rpc("check_email_exists", { _email: trimmed });
+        const { data, error } = await withTimeout(supabase.rpc("check_email_exists", { _email: trimmed }));
         if (error) throw error;
         setStep(data ? "login" : "register-email");
       } else {
-        // Check if phone account already exists
         const fakeEmail = `${trimmed.replace(/\s/g, "")}@phone.local`;
-        const { data: exists, error: phoneErr } = await supabase.rpc("check_email_exists", { _email: fakeEmail });
+        const { data: exists, error: phoneErr } = await withTimeout(supabase.rpc("check_email_exists", { _email: fakeEmail }));
         if (phoneErr) throw phoneErr;
-        if (exists) {
-          setStep("login-phone");
-        } else {
-          setStep("register-phone-otp");
-        }
+        setStep(exists ? "login-phone" : "register-phone-otp");
       }
     } catch (err: any) {
       toast({ title: "Lỗi kiểm tra tài khoản", description: err.message, variant: "destructive" });

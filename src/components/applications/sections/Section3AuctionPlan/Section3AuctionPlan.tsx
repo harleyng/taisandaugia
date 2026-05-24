@@ -1,6 +1,5 @@
 import { Card } from '@/components/ui/card'
 import { AuctionPlan } from '@/types/application'
-import { AUCTION_PLAN_SUGGESTIONS } from '@/lib/applications/suggestions'
 import { AuctionPlanSubsection } from './AuctionPlanSubsection'
 
 interface Props {
@@ -19,7 +18,6 @@ export function Section3AuctionPlan({ auctionPlan, onChange, onCopyFromPrevious 
         maxScore={8}
         value={auctionPlan.format}
         minChars={100}
-        suggestion={AUCTION_PLAN_SUGGESTIONS.format}
         onChange={(v) => onChange({ format: v })}
         onCopyFromPrevious={onCopyFromPrevious}
       />
@@ -31,7 +29,6 @@ export function Section3AuctionPlan({ auctionPlan, onChange, onCopyFromPrevious 
         maxScore={2}
         value={auctionPlan.receptionPlan}
         minChars={50}
-        suggestion={AUCTION_PLAN_SUGGESTIONS.receptionPlan}
         onChange={(v) => onChange({ receptionPlan: v })}
         onCopyFromPrevious={onCopyFromPrevious}
       />
@@ -43,7 +40,6 @@ export function Section3AuctionPlan({ auctionPlan, onChange, onCopyFromPrevious 
         maxScore={3}
         value={auctionPlan.participantConditions}
         minChars={50}
-        suggestion={AUCTION_PLAN_SUGGESTIONS.participantConditions}
         onChange={(v) => onChange({ participantConditions: v })}
         onCopyFromPrevious={onCopyFromPrevious}
       />
@@ -55,7 +51,6 @@ export function Section3AuctionPlan({ auctionPlan, onChange, onCopyFromPrevious 
         maxScore={3}
         value={auctionPlan.antiCollusionMeasures}
         minChars={100}
-        suggestion={AUCTION_PLAN_SUGGESTIONS.antiCollusionMeasures}
         onChange={(v) => onChange({ antiCollusionMeasures: v })}
         onCopyFromPrevious={onCopyFromPrevious}
       />

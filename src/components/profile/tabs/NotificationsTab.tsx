@@ -3,6 +3,7 @@ import { Bell, BellRing, ChevronRight, Heart, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { InfoBox } from "@/components/shared/InfoBox";
 import { useState } from "react";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useDemandSubscription } from "@/hooks/useDemandSubscription";
@@ -72,7 +73,7 @@ export const NotificationsTab = () => {
               </Link>
             </Button>
           ) : status === "ACTIVE" ? (
-            <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 space-y-1">
+            <InfoBox variant="primary" className="space-y-1">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Gói hiện tại</span>
                 <span className="font-medium text-foreground">{tierInfo?.label}</span>
@@ -86,7 +87,7 @@ export const NotificationsTab = () => {
               <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => setPaywallOpen(true)}>
                 Gia hạn thêm
               </Button>
-            </div>
+            </InfoBox>
           ) : (
             <Button onClick={() => setPaywallOpen(true)} className="w-full">
               <Bell className="h-4 w-4" />

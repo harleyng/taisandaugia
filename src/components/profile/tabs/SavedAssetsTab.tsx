@@ -115,11 +115,9 @@ export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProp
                 orgName={orgName}
                 orgId={listing.auction_org_id || undefined}
                 isSaved
-                onToggleSave={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  toggleSave(listing.id);
-                  setListings((prev) => prev.filter((l) => l.id !== listing.id));
+                onToggleSave={(id) => {
+                  toggleSave(id);
+                  setListings((prev) => prev.filter((l) => l.id !== id));
                 }}
                 viewsCount={listing.views_count || 0}
               />

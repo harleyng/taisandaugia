@@ -1,10 +1,10 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Coins, UserCircle, KeyRound, Bell, LogOut, CreditCard, Building2 } from "lucide-react";
+import { Coins, UserCircle, KeyRound, Bell, LogOut, CreditCard, Building2, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCredits } from "@/hooks/useCredits";
 
-export type ProfileTab = "profile" | "saved" | "credits" | "password" | "notifications" | "company";
+export type ProfileTab = "profile" | "saved" | "credits" | "password" | "notifications" | "company" | "my-assets";
 
 interface Props {
   activeTab: ProfileTab;
@@ -17,6 +17,7 @@ interface Props {
 
 const NAV: { key: ProfileTab; label: string; icon: typeof UserCircle }[] = [
   { key: "profile", label: "Hồ sơ cá nhân", icon: UserCircle },
+  { key: "my-assets", label: "Tài sản của tôi", icon: Layers },
   { key: "company", label: "Công ty của tôi", icon: Building2 },
   { key: "notifications", label: "Thông báo", icon: Bell },
   { key: "credits", label: "Credit", icon: CreditCard },

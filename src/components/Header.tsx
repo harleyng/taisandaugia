@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard, Layers } from "lucide-react";
 import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
@@ -263,6 +263,10 @@ export const Header = () => {
                       <Heart className="mr-3 h-4 w-4" />
                       Tài sản đang theo dõi
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/profile?tab=my-assets")} className="px-4 py-2.5 cursor-pointer">
+                      <Layers className="mr-3 h-4 w-4" />
+                      Tài sản của tôi
+                    </DropdownMenuItem>
                   </div>
 
                   {isVerifiedCompany && (
@@ -411,6 +415,13 @@ export const Header = () => {
                       >
                         <Heart className="h-5 w-5" />
                         Tài sản đang theo dõi
+                      </Link>
+                      <Link
+                        to="/profile?tab=my-assets"
+                        className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <Layers className="h-5 w-5" />
+                        Tài sản của tôi
                       </Link>
                       {isVerifiedCompany && (
                         <Link

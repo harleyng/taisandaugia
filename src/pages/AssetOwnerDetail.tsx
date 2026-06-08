@@ -229,7 +229,7 @@ const AssetOwnerDetail = () => {
                           winPrice={ca.win_price ?? ca.winning_price}
                           orgName={ca.org_name}
                           isSaved={savedIds.has(listing.id)}
-                          onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
+                          onToggleSave={toggleSave}
                           saveCount={saveCounts.get(listing.id) || 0}
                           viewsCount={listing.views_count || 0}
                         />

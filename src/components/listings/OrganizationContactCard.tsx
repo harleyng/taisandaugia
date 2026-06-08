@@ -1,8 +1,9 @@
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, Phone, Mail, Eye } from "lucide-react";
 import { useState } from "react";
+import { SectionLabel } from "@/components/shared/SectionLabel";
+import { InfoCardShell } from "@/components/shared/InfoCardShell";
 
 interface ContactInfo {
   name: string;
@@ -27,13 +28,10 @@ export const OrganizationContactCard = ({ contactInfo, loading, customAttributes
   } : null);
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="bg-muted px-5 py-4 flex items-center gap-2">
-        <Building2 className="w-5 h-5 text-foreground" />
-        <h2 className="text-lg font-bold text-foreground">Tổ chức đấu giá</h2>
-      </div>
-
-      <div className="p-5">
+    <InfoCardShell
+      title="Tổ chức đấu giá"
+      icon={<Building2 className="w-5 h-5 text-foreground" />}
+    >
         {loading ? (
           <div className="space-y-3">
             <Skeleton className="h-5 w-3/4" />
@@ -43,12 +41,12 @@ export const OrganizationContactCard = ({ contactInfo, loading, customAttributes
         ) : effectiveContact ? (
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Tên tổ chức</p>
+              <SectionLabel>Tên tổ chức</SectionLabel>
               <p className="font-semibold text-foreground mt-0.5">{effectiveContact.name || "N/A"}</p>
             </div>
 
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Số điện thoại</p>
+              <SectionLabel>Số điện thoại</SectionLabel>
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="font-medium text-foreground">
                   {showPhone
@@ -67,7 +65,7 @@ export const OrganizationContactCard = ({ contactInfo, loading, customAttributes
             </div>
 
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
+              <SectionLabel>Email</SectionLabel>
               <p className="font-medium text-foreground text-sm mt-0.5">{effectiveContact.email || "N/A"}</p>
             </div>
 
@@ -96,7 +94,6 @@ export const OrganizationContactCard = ({ contactInfo, loading, customAttributes
             Không có thông tin tổ chức đấu giá
           </p>
         )}
-      </div>
-    </Card>
+    </InfoCardShell>
   );
 };

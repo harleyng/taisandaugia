@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuthState } from "@/hooks/useAuthState";
+import { useListingById } from "@/hooks/useListingById";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -50,10 +50,8 @@ const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { savedIds, toggleSave } = useAssetActions();
-  const [listing, setListing] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<any>(null);
+  const { session } = useAuthState();
+  const { data: listing, isLoading: loading, error } = useListingById(id);
   const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
   const guardedNavigate = useAuthGuardedNavigate();
   const { assetUnlocked, unlockAsset, lockAsset, addCredits, balance, ASSET_COST } = useCredits();
@@ -64,52 +62,12 @@ const AuctionDetail = () => {
   const isUnlocked = listing ? isLoggedIn && assetUnlocked(listing.id) : false;
   const ownerClick = listing?.asset_owner_id ? guardedNavigate(`/asset-owner/${listing.asset_owner_id}`) : undefined;
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const fetchListing = async () => {
-      if (!id) {
-        setError("ID không hợp lệ");
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        const { data, error: err } = await supabase.from("listings").select("*").eq("id", id).single();
-        if (err) throw err;
-        if (!data) {
-          setError("Không tìm thấy tài sản");
-          setLoading(false);
-          return;
-        }
-
-        const { data: pt } = await supabase
-          .from("property_types")
-          .select("name, slug")
-          .eq("slug", data.property_type_slug)
-          .single();
-
-        setListing({ ...data, property_types: pt || { name: "BĐS", slug: data.property_type_slug } });
-        setError(null);
-      } catch (e: any) {
-        setError(e.message || "Đã có lỗi xảy ra");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchListing();
-  }, [id]);
-
   if (!id || error) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold text-foreground">{error || "Không tìm thấy"}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{(error as Error)?.message || "Không tìm thấy"}</h1>
           <Button onClick={() => navigate("/listings")} className="mt-4">
             Quay lại
           </Button>

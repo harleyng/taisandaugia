@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuthState } from "@/hooks/useAuthState";
 import { useListingContact } from "@/hooks/useListingContact";
+import { useListingById } from "@/hooks/useListingById";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -22,54 +22,19 @@ import { formatPrice, formatDate, formatAddress } from "@/utils/formatters";
 const ListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [listing, setListing] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<any>(null);
+  const { session } = useAuthState();
   const isLoggedIn = !!session;
 
+  const { data: listing, isLoading: loading, error } = useListingById(id);
   const { data: contactData, isLoading: contactLoading } = useListingContact(id || "");
   const contactInfo = contactData?.contact_info as { name: string; phone: string; email: string } | null;
-
-  useEffect(() => {
-    const fetchListing = async () => {
-      if (!id) { setError("ID không hợp lệ"); setLoading(false); return; }
-      try {
-        setLoading(true);
-        const { data: listingData, error: listingError } = await supabase
-          .from("listings").select("*").eq("id", id).single();
-        if (listingError) throw listingError;
-        if (!listingData) { setError("Không tìm thấy tin đăng"); setLoading(false); return; }
-
-        const { data: propertyTypeData } = await supabase
-          .from("property_types").select("name, slug")
-          .eq("slug", listingData.property_type_slug).single();
-
-        setListing({
-          ...listingData,
-          property_types: propertyTypeData || { name: "BĐS", slug: listingData.property_type_slug },
-        });
-        setError(null);
-      } catch (err: any) {
-        console.error("Error fetching listing:", err);
-        setError(err.message || "Đã có lỗi xảy ra");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchListing();
-
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, [id]);
 
   if (!id || error) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold text-foreground">{error || "Không tìm thấy tin đăng"}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{(error as Error)?.message || "Không tìm thấy tin đăng"}</h1>
           <Button onClick={() => navigate("/listings")} className="mt-4">Quay lại danh sách</Button>
         </div>
         <Footer />
@@ -190,6 +155,7 @@ const ListingDetail = () => {
             <AssetOwnerCard
               name={customAttributes.asset_owner_name}
               address={customAttributes.asset_owner_address}
+              ownerId={listing.asset_owner_id}
             />
 
             {/* Property Details Grid */}

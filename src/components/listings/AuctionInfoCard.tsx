@@ -1,7 +1,7 @@
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Gavel, MapPin, Calendar, Clock, Banknote, TrendingUp } from "lucide-react";
 import { formatPrice, formatDate } from "@/utils/formatters";
+import { InfoCardShell } from "@/components/shared/InfoCardShell";
 
 interface AuctionInfoCardProps {
   price: number;
@@ -38,13 +38,13 @@ export const AuctionInfoCard = ({ price, priceUnit, customAttributes, isLoggedIn
   };
 
   return (
-    <Card className="p-0 overflow-hidden border-primary/20">
-      <div className="bg-primary px-5 py-4 flex items-center gap-2">
-        <Gavel className="w-5 h-5 text-primary-foreground" />
-        <h2 className="text-lg font-bold text-primary-foreground">Thông tin đấu giá</h2>
-      </div>
-
-      <div className="p-5 space-y-4">
+    <InfoCardShell
+      title="Thông tin đấu giá"
+      headerVariant="primary"
+      icon={<Gavel className="w-5 h-5 text-primary-foreground" />}
+      className="border-primary/20"
+      bodyClassName="space-y-4"
+    >
         {/* Giá khởi điểm */}
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
@@ -122,7 +122,6 @@ export const AuctionInfoCard = ({ price, priceUnit, customAttributes, isLoggedIn
             <p className="font-medium text-foreground">{auction_location}</p>
           </div>
         )}
-      </div>
-    </Card>
+    </InfoCardShell>
   );
 };

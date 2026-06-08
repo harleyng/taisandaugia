@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+/docs
+*.html
+.claude/launch.json
+.claude/settings.json
+.claude/settings.json

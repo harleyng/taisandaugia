@@ -31,6 +31,16 @@ export const formatDate = (dateString: string): string => {
   return date.toLocaleDateString("vi-VN");
 };
 
+export const formatDateISO = (dateStr?: string): string | null => {
+  if (!dateStr) return null;
+  try {
+    const [year, month, day] = dateStr.slice(0, 10).split("-");
+    return `${day}/${month}/${year}`;
+  } catch {
+    return null;
+  }
+};
+
 export const formatAddress = (address: any): string => {
   const parts = [
     address?.street,

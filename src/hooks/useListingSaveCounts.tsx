@@ -1,26 +1,26 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useListingSaveCounts(listingIds: string[]) {
-  const [counts, setCounts] = useState<Map<string, number>>(new Map());
+export function useListingSaveCounts(listingIds: string[]): Map<string, number> {
+  const sortedIds = useMemo(() => [...listingIds].sort(), [listingIds]);
 
-  useEffect(() => {
-    if (!listingIds.length) return;
-
-    const fetch = async () => {
+  const { data } = useQuery({
+    queryKey: ["listing-save-counts", sortedIds],
+    queryFn: async () => {
       const { data, error } = await supabase.rpc("get_listing_save_counts", {
-        listing_ids: listingIds,
+        listing_ids: sortedIds,
       });
-      if (error || !data) return;
+      if (error || !data) return new Map<string, number>();
       const map = new Map<string, number>();
       for (const row of data as { listing_id: string; save_count: number }[]) {
         map.set(row.listing_id, Number(row.save_count));
       }
-      setCounts(map);
-    };
+      return map;
+    },
+    enabled: sortedIds.length > 0,
+    staleTime: 60_000,
+  });
 
-    fetch();
-  }, [JSON.stringify(listingIds)]);
-
-  return counts;
+  return data ?? new Map();
 }

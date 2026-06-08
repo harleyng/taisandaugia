@@ -47,7 +47,10 @@ export type TransactionType =
   | "unlock_asset"
   | "unlock_company"
   | "unlock_owner"
-  | "unlock_deep_report";
+  | "unlock_deep_report"
+  | "owner_report_view";
+
+export const OWNER_REPORT_COST = 49;
 
 export interface Transaction {
   id: string;
@@ -284,6 +287,34 @@ export const unlockOwner = async (
       credit_delta: -tier.cost,
     }),
   ]);
+  return { ok: true };
+};
+
+export const chargeOwnerReport = async (
+  userId: string,
+  workspaceId: string,
+  filterCombo: object,
+  isDefault: boolean,
+): Promise<{ ok: boolean; reason?: "insufficient" }> => {
+  const cost = isDefault ? 0 : OWNER_REPORT_COST;
+  if (cost > 0) {
+    await ensureCreditsRow(userId);
+    const ok = await deductCredits(userId, cost);
+    if (!ok) return { ok: false, reason: "insufficient" };
+    await supabase.from("credit_transactions").insert({
+      user_id: userId,
+      type: "owner_report_view",
+      description: "Xem báo cáo chủ tài sản (bộ lọc tùy chỉnh)",
+      credit_delta: -cost,
+    });
+  }
+  await supabase.from("owner_report_views").insert({
+    workspace_id: workspaceId,
+    user_id: userId,
+    filter_combo: filterCombo,
+    is_default: isDefault,
+    credits_charged: cost,
+  });
   return { ok: true };
 };
 

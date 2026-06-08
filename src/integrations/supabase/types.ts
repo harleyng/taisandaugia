@@ -14,6 +14,288 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_owner_claims: {
+        Row: {
+          asset_owner_id: string | null
+          confidence_score: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          listing_id: string | null
+          match_basis: string | null
+          matched_name: string | null
+          rejection_reason: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          asset_owner_id?: string | null
+          confidence_score?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          match_basis?: string | null
+          matched_name?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          asset_owner_id?: string | null
+          confidence_score?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          match_basis?: string | null
+          matched_name?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          { foreignKeyName: "asset_owner_claims_asset_owner_id_fkey"; columns: ["asset_owner_id"]; referencedRelation: "asset_owners"; referencedColumns: ["id"] },
+          { foreignKeyName: "asset_owner_claims_listing_id_fkey"; columns: ["listing_id"]; referencedRelation: "listings"; referencedColumns: ["id"] },
+          { foreignKeyName: "asset_owner_claims_workspace_id_fkey"; columns: ["workspace_id"]; referencedRelation: "asset_owner_workspaces"; referencedColumns: ["id"] },
+        ]
+      }
+      asset_owner_kyc: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          id_back_url: string | null
+          id_front_url: string | null
+          id_number: string | null
+          id_type: string | null
+          phone: string | null
+          phone_verified: boolean
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          selfie_url: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          id_back_url?: string | null
+          id_front_url?: string | null
+          id_number?: string | null
+          id_type?: string | null
+          phone?: string | null
+          phone_verified?: boolean
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          id_back_url?: string | null
+          id_front_url?: string | null
+          id_number?: string | null
+          id_type?: string | null
+          phone?: string | null
+          phone_verified?: boolean
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          { foreignKeyName: "asset_owner_kyc_user_id_fkey"; columns: ["user_id"]; referencedRelation: "profiles"; referencedColumns: ["id"] },
+        ]
+      }
+      asset_owner_kyc_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          data: Json | null
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          data?: Json | null
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          data?: Json | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      asset_owner_org_kyc: {
+        Row: {
+          authorization_doc_url: string | null
+          created_at: string
+          created_by: string
+          email_domain: string | null
+          establishment_doc_url: string | null
+          id: string
+          linked_auction_org_id: string | null
+          official_email: string | null
+          org_name: string | null
+          org_type: string | null
+          registry_match_data: Json | null
+          registry_match_score: number | null
+          rejection_reason: string | null
+          rep_full_name: string | null
+          rep_id_back_url: string | null
+          rep_id_front_url: string | null
+          rep_id_number: string | null
+          rep_id_type: string | null
+          rep_selfie_url: string | null
+          rep_title: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          tax_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          authorization_doc_url?: string | null
+          created_at?: string
+          created_by: string
+          email_domain?: string | null
+          establishment_doc_url?: string | null
+          id?: string
+          linked_auction_org_id?: string | null
+          official_email?: string | null
+          org_name?: string | null
+          org_type?: string | null
+          registry_match_data?: Json | null
+          registry_match_score?: number | null
+          rejection_reason?: string | null
+          rep_full_name?: string | null
+          rep_id_back_url?: string | null
+          rep_id_front_url?: string | null
+          rep_id_number?: string | null
+          rep_id_type?: string | null
+          rep_selfie_url?: string | null
+          rep_title?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          tax_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          authorization_doc_url?: string | null
+          created_at?: string
+          created_by?: string
+          email_domain?: string | null
+          establishment_doc_url?: string | null
+          id?: string
+          linked_auction_org_id?: string | null
+          official_email?: string | null
+          org_name?: string | null
+          org_type?: string | null
+          registry_match_data?: Json | null
+          registry_match_score?: number | null
+          rejection_reason?: string | null
+          rep_full_name?: string | null
+          rep_id_back_url?: string | null
+          rep_id_front_url?: string | null
+          rep_id_number?: string | null
+          rep_id_type?: string | null
+          rep_selfie_url?: string | null
+          rep_title?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          tax_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "asset_owner_org_kyc_created_by_fkey"; columns: ["created_by"]; referencedRelation: "profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "asset_owner_org_kyc_linked_auction_org_id_fkey"; columns: ["linked_auction_org_id"]; referencedRelation: "auction_organizations"; referencedColumns: ["id"] },
+        ]
+      }
+      asset_owner_workspaces: {
+        Row: {
+          abbreviations: string[]
+          branch_names: string[]
+          created_at: string
+          id: string
+          last_matched_at: string | null
+          org_kyc_id: string
+          owner_user_id: string
+          primary_name: string
+          total_claimed: number
+          updated_at: string
+        }
+        Insert: {
+          abbreviations?: string[]
+          branch_names?: string[]
+          created_at?: string
+          id?: string
+          last_matched_at?: string | null
+          org_kyc_id: string
+          owner_user_id: string
+          primary_name: string
+          total_claimed?: number
+          updated_at?: string
+        }
+        Update: {
+          abbreviations?: string[]
+          branch_names?: string[]
+          created_at?: string
+          id?: string
+          last_matched_at?: string | null
+          org_kyc_id?: string
+          owner_user_id?: string
+          primary_name?: string
+          total_claimed?: number
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "asset_owner_workspaces_org_kyc_id_fkey"; columns: ["org_kyc_id"]; referencedRelation: "asset_owner_org_kyc"; referencedColumns: ["id"] },
+          { foreignKeyName: "asset_owner_workspaces_owner_user_id_fkey"; columns: ["owner_user_id"]; referencedRelation: "profiles"; referencedColumns: ["id"] },
+        ]
+      }
       asset_owners: {
         Row: {
           address: string | null

@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ClipboardCheck, LogOut, Handshake, MessageSquare } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, LogOut, Handshake, MessageSquare, Layers } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const NAV = [
   { to: "/admin", label: "Tổng quan", icon: LayoutDashboard, end: true },
-  { to: "/admin/kyc", label: "Duyệt KYC", icon: ClipboardCheck, end: false },
+  { to: "/admin/kyc", label: "Duyệt KYC Công ty", icon: ClipboardCheck, end: false },
+  { to: "/admin/chu-tai-san", label: "Duyệt Chủ tài sản", icon: Layers, end: false },
   { to: "/admin/collaboration", label: "Đăng ký hợp tác", icon: Handshake, end: false },
   { to: "/admin/contacts", label: "Liên hệ", icon: MessageSquare, end: false },
 ];

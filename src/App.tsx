@@ -5,55 +5,76 @@ import { AuthDialogProvider } from "@/contexts/AuthDialogContext";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import AdminLayout from "@/components/admin/AdminLayout";
-import AdminDashboard from "@/pages/admin/AdminDashboard";
-import AdminKYCPage from "@/pages/AdminKYCPage";
-import AdminKYCDetail from "@/pages/admin/AdminKYCDetail";
-import AdminCollaborationPage from "@/pages/admin/AdminCollaborationPage";
-import AdminContactsPage from "@/pages/admin/AdminContactsPage";
+import { PortalLayout } from "@/components/portal/PortalLayout";
+import { OwnerPortalLayout } from "@/components/owner-portal/OwnerPortalLayout";
+import { PaywallProvider } from "@/contexts/PaywallContext";
+
+// Critical path — eager
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Listings from "./pages/Listings";
 import ListingDetail from "./pages/ListingDetail";
 import AuctionDetail from "./pages/AuctionDetail";
 import NotFound from "./pages/NotFound";
-import ProfilePage from "./pages/ProfilePage";
-import PWAInstall from "./pages/PWAInstall";
-import CompanyDetail from "./pages/CompanyDetail";
-import AssetOwnerDetail from "./pages/AssetOwnerDetail";
-import BuyCredits from "./pages/BuyCredits";
-import PaymentResult from "./pages/PaymentResult";
-import VnpayCheckout from "./pages/VnpayCheckout";
-import MarketReport from "./pages/MarketReport";
-import MarketReportCategory from "./pages/MarketReportCategory";
-import MarketReportOutcomes from "./pages/MarketReportOutcomes";
-import Contact from "./pages/Contact";
-import About from "./pages/About";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfUse from "./pages/TermsOfUse";
-import CompanyOnboarding from "./pages/CompanyOnboarding";
-import { PaywallProvider } from "@/contexts/PaywallContext";
 
-// Portal (company portal) layout + pages
-import { PortalLayout } from "@/components/portal/PortalLayout";
-import DashboardPage from "./pages/portal/DashboardPage";
-import ThongTinChungPage from "./pages/portal/nang-luc/ThongTinChungPage";
-import DauGiaVienPage from "./pages/portal/nang-luc/DauGiaVienPage";
-import CoSoVatChatPage from "./pages/portal/nang-luc/CoSoVatChatPage";
-import LichSuDauGiaPage from "./pages/portal/nang-luc/LichSuDauGiaPage";
-import TaiChinhPage from "./pages/portal/nang-luc/TaiChinhPage";
-import PortalCreditsPage from "./pages/portal/PortalCreditsPage";
-import ApplicationsPage from "./pages/ApplicationsPage";
-import ApplicationEditPage from "./pages/ApplicationEditPage";
+// Admin pages — lazy
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminKYCPage = lazy(() => import("./pages/AdminKYCPage"));
+const AdminKYCDetail = lazy(() => import("./pages/admin/AdminKYCDetail"));
+const AdminAssetOwnerKYCPage = lazy(() => import("./pages/admin/AdminAssetOwnerKYCPage"));
+const AdminAssetOwnerKYCDetail = lazy(() => import("./pages/admin/AdminAssetOwnerKYCDetail"));
+const AdminCollaborationPage = lazy(() => import("./pages/admin/AdminCollaborationPage"));
+const AdminContactsPage = lazy(() => import("./pages/admin/AdminContactsPage"));
+
+// Protected pages — lazy
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const AssetOwnerDetail = lazy(() => import("./pages/AssetOwnerDetail"));
+
+// Portal pages — lazy
+const DashboardPage = lazy(() => import("./pages/portal/DashboardPage"));
+const ThongTinChungPage = lazy(() => import("./pages/portal/nang-luc/ThongTinChungPage"));
+const DauGiaVienPage = lazy(() => import("./pages/portal/nang-luc/DauGiaVienPage"));
+const CoSoVatChatPage = lazy(() => import("./pages/portal/nang-luc/CoSoVatChatPage"));
+const LichSuDauGiaPage = lazy(() => import("./pages/portal/nang-luc/LichSuDauGiaPage"));
+const TaiChinhPage = lazy(() => import("./pages/portal/nang-luc/TaiChinhPage"));
+const PortalCreditsPage = lazy(() => import("./pages/portal/PortalCreditsPage"));
+const ApplicationsPage = lazy(() => import("./pages/ApplicationsPage"));
+const ApplicationEditPage = lazy(() => import("./pages/ApplicationEditPage"));
+
+// Secondary public pages — lazy
+const CompanyDetail = lazy(() => import("./pages/CompanyDetail"));
+const MarketReport = lazy(() => import("./pages/MarketReport"));
+const MarketReportCategory = lazy(() => import("./pages/MarketReportCategory"));
+const MarketReportOutcomes = lazy(() => import("./pages/MarketReportOutcomes"));
+const CompanyOnboarding = lazy(() => import("./pages/CompanyOnboarding"));
+const AssetOwnerOnboarding = lazy(() => import("./pages/AssetOwnerOnboarding"));
+const OwnerAssetsPage = lazy(() => import("./pages/OwnerAssetsPage"));
+const OwnerDashboard = lazy(() => import("./pages/OwnerDashboard"));
+const OwnerBranchesPage = lazy(() => import("./pages/OwnerBranchesPage"));
+const OwnerReportPage = lazy(() => import("./pages/OwnerReportPage"));
+const BuyCredits = lazy(() => import("./pages/BuyCredits"));
+const VnpayCheckout = lazy(() => import("./pages/VnpayCheckout"));
+const PaymentResult = lazy(() => import("./pages/PaymentResult"));
+const PWAInstall = lazy(() => import("./pages/PWAInstall"));
+const Contact = lazy(() => import("./pages/Contact"));
+const About = lazy(() => import("./pages/About"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfUse = lazy(() => import("./pages/TermsOfUse"));
 
 function RedirectApplicationId() {
   const { id } = useParams<{ id: string }>()
   return <Navigate to={`/portal/ho-so-du-tuyen/${id}`} replace />
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 60_000, gcTime: 5 * 60_000, retry: 1 },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -62,86 +83,102 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthDialog />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <PaywallProvider>
-          <Routes>
-            {/* Public Marketplace */}
-            <Route path="/" element={<Index />} />
-            <Route path="/listings" element={<Listings />} />
-            <Route path="/listings/:id" element={<ListingDetail />} />
-            <Route path="/auctions/:id" element={<AuctionDetail />} />
-            <Route path="/report" element={<MarketReport />} />
-            <Route path="/report/:slug" element={<MarketReportCategory />} />
-            <Route path="/report/deep/outcomes" element={<MarketReportOutcomes />} />
-            <Route path="/install" element={<PWAInstall />} />
-            <Route path="/lien-he" element={<Contact />} />
-            <Route path="/gioi-thieu" element={<About />} />
-            <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicy />} />
-            <Route path="/dieu-khoan-su-dung" element={<TermsOfUse />} />
-            <Route path="/dang-ky-to-chuc" element={<CompanyOnboarding />} />
+          <Suspense fallback={<div className="min-h-screen bg-background" />}>
+            <Routes>
+              {/* Public Marketplace */}
+              <Route path="/" element={<Index />} />
+              <Route path="/listings" element={<Listings />} />
+              <Route path="/listings/:id" element={<ListingDetail />} />
+              <Route path="/auctions/:id" element={<AuctionDetail />} />
+              <Route path="/report" element={<MarketReport />} />
+              <Route path="/report/:slug" element={<MarketReportCategory />} />
+              <Route path="/report/deep/outcomes" element={<MarketReportOutcomes />} />
+              <Route path="/install" element={<PWAInstall />} />
+              <Route path="/lien-he" element={<Contact />} />
+              <Route path="/gioi-thieu" element={<About />} />
+              <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicy />} />
+              <Route path="/dieu-khoan-su-dung" element={<TermsOfUse />} />
+              <Route path="/dang-ky-to-chuc" element={<CompanyOnboarding />} />
+              <Route path="/tro-thanh-chu-tai-san" element={<AssetOwnerOnboarding />} />
 
-            {/* Credits */}
-            <Route path="/buy-credits" element={<BuyCredits />} />
-            <Route path="/payment/vnpay" element={<VnpayCheckout />} />
-            <Route path="/payment-result" element={<PaymentResult />} />
+              {/* Credits */}
+              <Route path="/buy-credits" element={<BuyCredits />} />
+              <Route path="/payment/vnpay" element={<VnpayCheckout />} />
+              <Route path="/payment-result" element={<PaymentResult />} />
 
-            {/* Auth */}
-            <Route path="/auth" element={<Auth />} />
+              {/* Auth */}
+              <Route path="/auth" element={<Auth />} />
 
-            {/* Redirects: old ho-so-du-tuyen paths → portal */}
-            <Route path="/ho-so-du-tuyen" element={<Navigate to="/portal/ho-so-du-tuyen" replace />} />
-            <Route path="/ho-so-du-tuyen/new" element={<Navigate to="/portal/ho-so-du-tuyen/new" replace />} />
-            <Route path="/ho-so-du-tuyen/:id" element={<RedirectApplicationId />} />
+              {/* Redirects: old ho-so-du-tuyen paths → portal */}
+              <Route path="/ho-so-du-tuyen" element={<Navigate to="/portal/ho-so-du-tuyen" replace />} />
+              <Route path="/ho-so-du-tuyen/new" element={<Navigate to="/portal/ho-so-du-tuyen/new" replace />} />
+              <Route path="/ho-so-du-tuyen/:id" element={<RedirectApplicationId />} />
 
-            {/* Protected: Profile */}
-            <Route path="/saved-assets" element={<Navigate to="/profile?tab=saved" replace />} />
-            <Route path="/profile" element={<ProtectedRoute />}>
-              <Route index element={<ProfilePage />} />
-            </Route>
-
-            {/* Protected: Company Portal — sidebar layout */}
-            <Route path="/portal" element={<ProtectedRoute />}>
-              <Route element={<PortalLayout />}>
-                <Route index element={<Navigate to="/portal/dashboard" replace />} />
-                <Route path="dashboard" element={<DashboardPage />} />
-
-                {/* Hồ sơ năng lực */}
-                <Route path="nang-luc/thong-tin-chung" element={<ThongTinChungPage />} />
-                <Route path="nang-luc/dau-gia-vien" element={<DauGiaVienPage />} />
-                <Route path="nang-luc/co-so-vat-chat" element={<CoSoVatChatPage />} />
-                <Route path="nang-luc/lich-su-dau-gia" element={<LichSuDauGiaPage />} />
-                <Route path="nang-luc/tai-chinh" element={<TaiChinhPage />} />
-
-                {/* Hồ sơ dự tuyển */}
-                <Route path="ho-so-du-tuyen" element={<ApplicationsPage />} />
-                <Route path="ho-so-du-tuyen/new" element={<ApplicationEditPage />} />
-                <Route path="ho-so-du-tuyen/:id" element={<ApplicationEditPage />} />
-
-                {/* Credit */}
-                <Route path="credits" element={<PortalCreditsPage />} />
+              {/* Protected: Profile */}
+              <Route path="/saved-assets" element={<Navigate to="/profile?tab=saved" replace />} />
+              <Route path="/profile" element={<ProtectedRoute />}>
+                <Route index element={<ProfilePage />} />
               </Route>
-            </Route>
 
-            {/* Public company pages */}
-            <Route path="/auction-org/:id" element={<CompanyDetail />} />
-            <Route path="/asset-owner/:id" element={<ProtectedRoute />}>
-              <Route index element={<AssetOwnerDetail />} />
-            </Route>
-
-            {/* Admin Portal */}
-            <Route path="/admin" element={<AdminRoute />}>
-              <Route element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="kyc" element={<AdminKYCPage />} />
-                <Route path="collaboration" element={<AdminCollaborationPage />} />
-                <Route path="kyc/:id" element={<AdminKYCDetail />} />
-                <Route path="contacts" element={<AdminContactsPage />} />
+              {/* Protected: Asset Owner Portal — sidebar layout */}
+              <Route path="/chu-tai-san" element={<ProtectedRoute />}>
+                <Route element={<OwnerPortalLayout />}>
+                  <Route index element={<Navigate to="/chu-tai-san/dashboard" replace />} />
+                  <Route path="dashboard" element={<OwnerDashboard />} />
+                  <Route path="tai-san" element={<OwnerAssetsPage />} />
+                  <Route path="chi-nhanh-amc" element={<OwnerBranchesPage />} />
+                  <Route path="bao-cao" element={<OwnerReportPage />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* 404 Catch-all */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* Protected: Company Portal — sidebar layout */}
+              <Route path="/portal" element={<ProtectedRoute />}>
+                <Route element={<PortalLayout />}>
+                  <Route index element={<Navigate to="/portal/dashboard" replace />} />
+                  <Route path="dashboard" element={<DashboardPage />} />
+
+                  {/* Hồ sơ năng lực */}
+                  <Route path="nang-luc/thong-tin-chung" element={<ThongTinChungPage />} />
+                  <Route path="nang-luc/dau-gia-vien" element={<DauGiaVienPage />} />
+                  <Route path="nang-luc/co-so-vat-chat" element={<CoSoVatChatPage />} />
+                  <Route path="nang-luc/lich-su-dau-gia" element={<LichSuDauGiaPage />} />
+                  <Route path="nang-luc/tai-chinh" element={<TaiChinhPage />} />
+
+                  {/* Hồ sơ dự tuyển */}
+                  <Route path="ho-so-du-tuyen" element={<ApplicationsPage />} />
+                  <Route path="ho-so-du-tuyen/new" element={<ApplicationEditPage />} />
+                  <Route path="ho-so-du-tuyen/:id" element={<ApplicationEditPage />} />
+
+                  {/* Credit */}
+                  <Route path="credits" element={<PortalCreditsPage />} />
+                </Route>
+              </Route>
+
+              {/* Public company pages */}
+              <Route path="/auction-org/:id" element={<CompanyDetail />} />
+              <Route path="/asset-owner/:id" element={<ProtectedRoute />}>
+                <Route index element={<AssetOwnerDetail />} />
+              </Route>
+
+              {/* Admin Portal */}
+              <Route path="/admin" element={<AdminRoute />}>
+                <Route element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="kyc" element={<AdminKYCPage />} />
+                  <Route path="collaboration" element={<AdminCollaborationPage />} />
+                  <Route path="kyc/:id" element={<AdminKYCDetail />} />
+                  <Route path="chu-tai-san" element={<AdminAssetOwnerKYCPage />} />
+                  <Route path="chu-tai-san/:type/:id" element={<AdminAssetOwnerKYCDetail />} />
+                  <Route path="contacts" element={<AdminContactsPage />} />
+                </Route>
+              </Route>
+
+              {/* 404 Catch-all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </PaywallProvider>
       </BrowserRouter>
       </AuthDialogProvider>

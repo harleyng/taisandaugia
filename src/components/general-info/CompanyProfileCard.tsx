@@ -7,21 +7,11 @@ import { CompanyAvatar } from './CompanyAvatar'
 import { InfoField } from './InfoField'
 import type { OrgGeneralInfo } from '@/types/general-info'
 import { ORG_TYPE_LABELS } from '@/types/general-info'
-import { format, parseISO, isValid } from 'date-fns'
+import { formatDateISO } from '@/utils/formatters'
 
 interface CompanyProfileCardProps {
   info: OrgGeneralInfo
   onEdit?: () => void
-}
-
-function formatDate(dateStr?: string): string | null {
-  if (!dateStr) return null
-  try {
-    const d = parseISO(dateStr)
-    return isValid(d) ? format(d, 'dd/MM/yyyy') : null
-  } catch {
-    return null
-  }
 }
 
 function buildFullAddress(info: OrgGeneralInfo): string {
@@ -74,7 +64,7 @@ export function CompanyProfileCard({ info, onEdit }: CompanyProfileCardProps) {
           <InfoField
             icon={Calendar}
             label="Ngày thành lập"
-            value={formatDate(info.foundedDate)}
+            value={formatDateISO(info.foundedDate)}
           />
         </div>
 

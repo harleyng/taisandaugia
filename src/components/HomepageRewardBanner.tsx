@@ -33,12 +33,15 @@ export const HomepageRewardBanner = () => {
   return (
     <>
       <section className="container px-4 pt-4">
-        <button
+        <div
           onClick={() => setDialogOpen(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && setDialogOpen(true)}
           className={cn(
             "group relative w-full overflow-hidden rounded-2xl border border-primary/30",
             "bg-gradient-to-r from-primary/15 via-primary/8 to-primary/15",
-            "px-5 py-4 md:px-6 md:py-5 text-left transition-all hover:border-primary/50 hover:shadow-md"
+            "px-5 py-4 md:px-6 md:py-5 text-left transition-all hover:border-primary/50 hover:shadow-md cursor-pointer"
           )}
         >
           <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
@@ -72,7 +75,7 @@ export const HomepageRewardBanner = () => {
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-        </button>
+        </div>
       </section>
 
       <RewardTasksDialog open={dialogOpen} onOpenChange={setDialogOpen} />

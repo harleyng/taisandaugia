@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionCard } from "@/components/AuctionCard";
 import { useAssetActions } from "@/hooks/useAssetActions";
@@ -84,7 +85,8 @@ export const AuctionSection = () => {
   });
   const orgNameById = new Map(orgs.map((o) => [o.id, o.name]));
 
-  const saveCounts = useListingSaveCounts(auctions.map((a) => a.id));
+  const auctionIds = useMemo(() => auctions.map((a) => a.id), [auctions]);
+  const saveCounts = useListingSaveCounts(auctionIds);
 
   if (!isLoading && auctions.length === 0) return null;
 
@@ -164,7 +166,7 @@ export const AuctionSection = () => {
                   orgName={orgName}
                   orgId={item.auction_org_id}
                   isSaved={savedIds.has(item.id)}
-                  onToggleSave={() => toggleSave(item.id)}
+                  onToggleSave={toggleSave}
                   saveCount={saveCounts.get(item.id) || 0}
                   viewsCount={item.views_count || 0}
                 />

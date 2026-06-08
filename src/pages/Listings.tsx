@@ -20,6 +20,7 @@ import { useAuctionOrgNames } from "@/hooks/useAuctionOrgNames";
 import { useQuery } from "@tanstack/react-query";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import { useDemandSubscription } from "@/hooks/useDemandSubscription";
+import { useAuthState } from "@/hooks/useAuthState";
 import { countMatches, hasIntent } from "@/lib/demandMatch";
 import { DemandUpsellBanner } from "@/components/demand/DemandUpsellBanner";
 import { DemandEmptyMatch } from "@/components/demand/DemandEmptyMatch";
@@ -61,15 +62,17 @@ const Listings = () => {
   const initialCategory = searchParams.get("category") || searchParams.get("sub") || "";
 
   const { data: listings, isLoading } = useAuctionListings();
-  const saveCounts = useListingSaveCounts((listings || []).map((l) => l.id));
-  const orgNameById = useAuctionOrgNames((listings || []).map((l) => l.auction_org_id));
+  const listingIds = useMemo(() => (listings || []).map((l) => l.id), [listings]);
+  const listingOrgIds = useMemo(() => (listings || []).map((l) => l.auction_org_id), [listings]);
+  const saveCounts = useListingSaveCounts(listingIds);
+  const orgNameById = useAuctionOrgNames(listingOrgIds);
   const { openAuthDialog } = useAuthDialog();
   const { savedIds, toggleSave } = useAssetActions();
   const { agentInfo } = useOnboardingTasks();
   const { status: demandStatus } = useDemandSubscription();
   const intent = agentInfo?.intent ?? null;
   const userHasIntent = hasIntent(intent);
-  const [session, setSession] = useState<any>(null);
+  const { session } = useAuthState();
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const { data: allCompanies = [] } = useQuery({
@@ -85,11 +88,6 @@ const Listings = () => {
     staleTime: 10 * 60 * 1000,
   });
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, []);
 
   const [filters, setFilters] = useState<AuctionFilters>({
     ...defaultAuctionFilters,
@@ -414,7 +412,7 @@ const Listings = () => {
                       orgName={orgName}
                       orgId={(listing as any).auction_org_id}
                       isSaved={savedIds.has(listing.id)}
-                      onToggleSave={(e) => { e.preventDefault(); e.stopPropagation(); toggleSave(listing.id); }}
+                      onToggleSave={toggleSave}
                       saveCount={saveCounts.get(listing.id) || 0}
                       viewsCount={listing.views_count || 0}
                     />

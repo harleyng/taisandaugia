@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, TrendingUp, Loader2, Heart, Eye, Maximize2 } from "lucide-react";
 import { formatPrice, formatAreaM2 } from "@/utils/formatters";
+import { SectionLabel } from "@/components/shared/SectionLabel";
+import { SessionStatusBadge } from "@/components/shared/SessionStatusBadge";
 
 const REAL_ESTATE_SLUGS = new Set([
   "dat-o", "dat-nen", "dat-nong-nghiep", "nha-pho", "nha-rieng",
@@ -29,28 +31,6 @@ interface AuctionQuickInfoProps {
   legalStatus?: string | null;
 }
 
-const statusConfig = {
-  registration_open: {
-    label: "Mở đăng ký",
-    variant: "default" as const,
-    className: "bg-[hsl(142,60%,40%)] text-white hover:bg-[hsl(142,60%,40%)]",
-  },
-  upcoming: {
-    label: "Sắp diễn ra",
-    variant: "default" as const,
-    className: "bg-[hsl(25,95%,53%)] text-white hover:bg-[hsl(25,95%,53%)]",
-  },
-  ongoing: {
-    label: "Đang diễn ra",
-    variant: "default" as const,
-    className: "bg-[hsl(205,65%,45%)] text-white hover:bg-[hsl(205,65%,45%)]",
-  },
-  ended: {
-    label: "Đã kết thúc",
-    variant: "default" as const,
-    className: "bg-muted text-muted-foreground hover:bg-muted",
-  },
-};
 
 function useCountdown(targetDate: string | null) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -89,7 +69,6 @@ export const AuctionQuickInfo = ({
 }: AuctionQuickInfoProps) => {
   const status = getSessionStatus(listing);
   const { openAuthDialog } = useAuthDialog();
-  const config = statusConfig[status];
 
   // For registration_open: countdown to registration deadline
   // For upcoming: no countdown (just show "sắp diễn ra" message)
@@ -108,7 +87,7 @@ export const AuctionQuickInfo = ({
       {/* Status + save count */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge className={config.className}>{config.label}</Badge>
+          <SessionStatusBadge status={status} />
           {propertyTypeName && (
             <Badge variant="secondary" className="font-medium">
               {propertyTypeName}
@@ -132,7 +111,7 @@ export const AuctionQuickInfo = ({
 
       {/* Giá khởi điểm */}
       <div>
-        <p className="text-xs text-muted-foreground uppercase tracking-wider">Giá khởi điểm</p>
+        <SectionLabel>Giá khởi điểm</SectionLabel>
         <p className="text-3xl font-bold text-primary mt-1">{formatPrice(price, "TOTAL")}</p>
       </div>
 
@@ -190,7 +169,7 @@ export const AuctionQuickInfo = ({
       {status === "ended" && winningPrice && (
         <div className="space-y-3">
           <div className="border border-border bg-muted/50 rounded-lg p-4 text-center space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Giá trúng đấu giá</p>
+            <SectionLabel>Giá trúng đấu giá</SectionLabel>
             <p className="text-2xl font-bold text-foreground">{formatPrice(winningPrice, "TOTAL")}</p>
             {growthPercent && (
               <div className="flex items-center justify-center gap-1 text-emerald-600">

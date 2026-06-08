@@ -1,5 +1,6 @@
 import { ValidationError } from '@/lib/applications/validation'
 import { AlertTriangle } from 'lucide-react'
+import { InfoBox } from '@/components/shared/InfoBox'
 
 interface Props {
   errors: ValidationError[]
@@ -9,7 +10,7 @@ export function WarningsList({ errors }: Props) {
   if (errors.length === 0) return null
 
   return (
-    <div className="rounded-lg bg-amber-50 border border-amber-200 p-3.5">
+    <InfoBox variant="amber" className="p-3.5">
       <div className="flex items-center gap-2 mb-2">
         <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
         <p className="text-sm font-medium text-amber-800">
@@ -24,6 +25,6 @@ export function WarningsList({ errors }: Props) {
           </li>
         ))}
       </ul>
-    </div>
+    </InfoBox>
   )
 }

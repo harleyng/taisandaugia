@@ -1,9 +1,11 @@
+import { memo } from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Hourglass, ImageOff, TrendingUp, ShieldCheck, Clock, Eye } from "lucide-react";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatPrice, formatDate } from "@/utils/formatters";
 import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
+import { SessionStatusBadge } from "@/components/shared/SessionStatusBadge";
 
 export type AuctionSessionStatus = "registration_open" | "upcoming" | "ongoing" | "ended";
 
@@ -28,18 +30,12 @@ export interface AuctionCardProps {
   orgId?: string;
   winPrice?: number;
   isSaved?: boolean;
-  onToggleSave?: (e: React.MouseEvent) => void;
+  onToggleSave?: (id: string) => void;
   /** @deprecated số lượt quan tâm — không còn hiển thị */
   saveCount?: number;
   viewsCount?: number;
 }
 
-const STATUS_CONFIG: Record<AuctionSessionStatus, { label: string; className: string }> = {
-  registration_open: { label: "Mở đăng ký", className: "bg-[hsl(142,60%,40%)] text-white" },
-  upcoming: { label: "Sắp diễn ra", className: "bg-[hsl(25,95%,53%)] text-white" },
-  ongoing: { label: "Đang diễn ra", className: "bg-[hsl(205,65%,45%)] text-white animate-pulse" },
-  ended: { label: "Đã kết thúc", className: "bg-muted-foreground text-white" },
-};
 
 function getCategoryLabel(categorySlug: string, subCategorySlug?: string, fullPath = false) {
   for (const cat of ASSET_CATEGORIES) {
@@ -63,13 +59,12 @@ function getOrgInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").slice(0, 3).toUpperCase();
 }
 
-export function AuctionCard({
+export const AuctionCard = memo(function AuctionCard({
   id, imageUrl, title, address, startingPrice, priceUnit = "TOTAL",
   stepPrice, depositAmount, auctionDate, registrationDeadline, sessionStatus, categorySlug,
   subCategorySlug, viewMode = "grid", variant = "default",
   countdown, orgName, orgId, winPrice, isSaved, onToggleSave, saveCount, viewsCount,
 }: AuctionCardProps) {
-  const status = STATUS_CONFIG[sessionStatus];
   const guardedNavigate = useAuthGuardedNavigate();
   const orgClick = orgId ? guardedNavigate(`/auction-org/${orgId}`) : undefined;
 
@@ -91,11 +86,10 @@ export function AuctionCard({
           <img
             src={imageUrl || "/placeholder.svg"}
             alt={title}
+            loading="lazy"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
-          <Badge className={`absolute top-2 left-2 text-xs ${status.className}`}>
-            {status.label}
-          </Badge>
+          <SessionStatusBadge status={sessionStatus} className="absolute top-2 left-2 text-xs" />
         </div>
         <div className="flex-1 py-3 pr-4 flex flex-col justify-between">
           <div>
@@ -143,6 +137,7 @@ export function AuctionCard({
             <img
               src={imageUrl}
               alt={title}
+              loading="lazy"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           ) : (
@@ -150,9 +145,7 @@ export function AuctionCard({
               <ImageOff className="w-10 h-10 text-muted-foreground/40" />
             </div>
           )}
-          <Badge className={`absolute top-3 left-3 text-xs ${status.className}`}>
-            {status.label}
-          </Badge>
+          <SessionStatusBadge status={sessionStatus} className="absolute top-3 left-3 text-xs" />
           {countdown && (
             <Badge className="absolute top-3 right-3 bg-slate-800/80 hover:bg-slate-800/80 text-white border-0 text-xs font-medium backdrop-blur-sm flex items-center gap-1.5">
               <Hourglass className="h-3 w-3" strokeWidth={1.5} />
@@ -239,6 +232,7 @@ export function AuctionCard({
           <img
             src={imageUrl}
             alt={title}
+            loading="lazy"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
@@ -246,9 +240,7 @@ export function AuctionCard({
             <ImageOff className="w-10 h-10 text-muted-foreground/40" />
           </div>
         )}
-        <Badge className={`absolute top-2 left-2 text-xs ${status.className}`}>
-          {status.label}
-        </Badge>
+        <SessionStatusBadge status={sessionStatus} className="absolute top-2 left-2 text-xs" />
       </div>
       <div className="p-3 md:p-4 flex flex-col flex-1">
         <h3 className="font-bold text-sm md:text-base text-foreground leading-snug mb-0.5 line-clamp-1 group-hover:text-primary transition-colors">
@@ -326,4 +318,4 @@ export function AuctionCard({
       </div>
     </Link>
   );
-}
+});

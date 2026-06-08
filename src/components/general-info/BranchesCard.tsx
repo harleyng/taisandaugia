@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { InfoBox } from '@/components/shared/InfoBox'
 import type { Branch } from '@/types/general-info'
 
 interface BranchesCardProps {
@@ -31,12 +32,12 @@ export function BranchesCard({ branches, onAdd, onEdit, onRemove }: BranchesCard
           <AccordionContent>
             <CardContent className="pt-0 pb-4 space-y-3">
               {/* Strategic hint */}
-              <div className="rounded-lg bg-primary/5 border border-primary/10 p-3 space-y-1">
+              <InfoBox variant="primary" className="space-y-1">
                 <p className="text-xs font-medium text-primary">💡 Vì sao thêm chi nhánh quan trọng?</p>
                 <p className="text-xs text-muted-foreground">
                   Khi lập hồ sơ cho tài sản ở tỉnh khác, chi nhánh tại đó có thể giúp đạt thêm điểm Mục V (tiêu chí khác).
                 </p>
-              </div>
+              </InfoBox>
 
               {branches.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-2">Chưa có chi nhánh hoặc văn phòng đại diện</p>

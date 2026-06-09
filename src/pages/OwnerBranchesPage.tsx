@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Loader2, GitBranch, Building2, Phone, Mail, FileText,
-  Pencil, Power, PowerOff, ExternalLink, AlertCircle,
+  Pencil, Power, PowerOff, ExternalLink, AlertCircle, Plus, Upload, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -29,7 +30,9 @@ import {
   useWorkspaceBranches,
   type WorkspaceBranch,
   type BranchPatch,
+  type BranchInput,
 } from "@/hooks/useWorkspaceBranches";
+import { BranchImportDialog } from "@/components/owner-branches/BranchImportDialog";
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -45,8 +48,11 @@ const OwnerBranchesPage = () => {
   }, []);
 
   const { workspace, wsLoading } = useAssetOwnerWorkspace(userId);
-  const { branches, branchesLoading, metrics, syncFromClaims, updateBranch, toggleActive } =
+  const { branches, branchesLoading, metrics, syncFromClaims, createBranch, bulkCreateBranches, deleteBranch, updateBranch, toggleActive } =
     useWorkspaceBranches(workspace?.id ?? null);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Auto-sync on first load if no branches yet
   useEffect(() => {
@@ -87,6 +93,11 @@ const OwnerBranchesPage = () => {
 
   const handleUpdate = (id: string, patch: BranchPatch) => updateBranch.mutate({ id, patch });
   const handleToggle = (branch: WorkspaceBranch) => toggleActive.mutate(branch);
+  const handleDelete = (id: string) => deleteBranch.mutate(id);
+  const handleCreate = (input: BranchInput) => {
+    createBranch.mutate(input);
+    setCreateOpen(false);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -97,16 +108,35 @@ const OwnerBranchesPage = () => {
             Quản lý các đơn vị thành viên và công ty con của <strong>{workspace.primary_name}</strong>.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => syncFromClaims.mutate()}
-          disabled={syncFromClaims.isPending}
-          className="gap-2 shrink-0"
-        >
-          {syncFromClaims.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitBranch className="h-3.5 w-3.5" />}
-          Đồng bộ từ tài sản
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => syncFromClaims.mutate()}
+            disabled={syncFromClaims.isPending}
+            className="gap-2 shrink-0"
+          >
+            {syncFromClaims.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitBranch className="h-3.5 w-3.5" />}
+            Đồng bộ từ tài sản
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setImportOpen(true)}
+            className="gap-2 shrink-0"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Import
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+            className="gap-2 shrink-0"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Thêm chi nhánh
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="branches">
@@ -135,7 +165,8 @@ const OwnerBranchesPage = () => {
             metrics={metrics}
             onUpdate={handleUpdate}
             onToggle={handleToggle}
-            isProcessing={updateBranch.isPending || toggleActive.isPending}
+            onDelete={handleDelete}
+            isProcessing={updateBranch.isPending || toggleActive.isPending || deleteBranch.isPending}
             emptyLabel="Chưa có chi nhánh nào. Nhấn 'Đồng bộ từ tài sản' để tự động phát hiện."
           />
         </TabsContent>
@@ -150,11 +181,27 @@ const OwnerBranchesPage = () => {
             metrics={metrics}
             onUpdate={handleUpdate}
             onToggle={handleToggle}
-            isProcessing={updateBranch.isPending || toggleActive.isPending}
+            onDelete={handleDelete}
+            isProcessing={updateBranch.isPending || toggleActive.isPending || deleteBranch.isPending}
             emptyLabel="Chưa phát hiện AMC nào. Nhấn 'Đồng bộ từ tài sản' để kiểm tra."
           />
         </TabsContent>
       </Tabs>
+
+      {/* Create dialog */}
+      <BranchCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSave={handleCreate}
+        isProcessing={createBranch.isPending}
+      />
+
+      {/* Import dialog */}
+      <BranchImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImport={(rows) => bulkCreateBranches.mutateAsync(rows)}
+      />
     </div>
   );
 };
@@ -168,11 +215,12 @@ interface BranchTableProps {
   metrics: Record<string, { total_assets: number; upcoming_auctions: number }>;
   onUpdate: (id: string, patch: BranchPatch) => void;
   onToggle: (branch: WorkspaceBranch) => void;
+  onDelete: (id: string) => void;
   isProcessing: boolean;
   emptyLabel: string;
 }
 
-const BranchTable = ({ branches, metrics, onUpdate, onToggle, isProcessing, emptyLabel }: BranchTableProps) => {
+const BranchTable = ({ branches, metrics, onUpdate, onToggle, onDelete, isProcessing, emptyLabel }: BranchTableProps) => {
   const navigate = useNavigate();
   const [editingBranch, setEditingBranch] = useState<WorkspaceBranch | null>(null);
 
@@ -303,6 +351,13 @@ const BranchTable = ({ branches, metrics, onUpdate, onToggle, isProcessing, empt
                           onConfirm={() => onToggle(branch)}
                           isProcessing={isProcessing}
                         />
+
+                        {/* Delete */}
+                        <DeletePopover
+                          branch={branch}
+                          onConfirm={() => onDelete(branch.id)}
+                          isProcessing={isProcessing}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -375,6 +430,164 @@ const DeactivatePopover = ({ branch, onConfirm, isProcessing }: DeactivatePopove
         </div>
       </PopoverContent>
     </Popover>
+  );
+};
+
+// ─── DeletePopover ────────────────────────────────────────────────────────────
+
+interface DeletePopoverProps {
+  branch: WorkspaceBranch;
+  onConfirm: () => void;
+  isProcessing: boolean;
+}
+
+const DeletePopover = ({ branch, onConfirm, isProcessing }: DeletePopoverProps) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          title="Xoá chi nhánh"
+          className="text-xs text-muted-foreground hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-muted"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-4 space-y-3" side="left">
+        <p className="text-sm font-semibold text-foreground">Xoá chi nhánh này?</p>
+        {branch.asset_owner_id && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+            Chi nhánh được đồng bộ từ dữ liệu tài sản. Bạn có thể thêm lại bằng "Đồng bộ từ tài sản".
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Thông tin chi nhánh sẽ bị xoá vĩnh viễn.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <Button size="sm" variant="outline" onClick={() => setOpen(false)}>Huỷ</Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={isProcessing}
+            onClick={() => { onConfirm(); setOpen(false); }}
+          >
+            Xoá
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+// ─── BranchCreateDialog ───────────────────────────────────────────────────────
+
+interface BranchCreateDialogProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSave: (input: BranchInput) => void;
+  isProcessing: boolean;
+}
+
+const BranchCreateDialog = ({ open, onOpenChange, onSave, isProcessing }: BranchCreateDialogProps) => {
+  const [displayName, setDisplayName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isAmc, setIsAmc] = useState(false);
+
+  const handleOpen = (v: boolean) => {
+    if (v) { setDisplayName(""); setPhone(""); setEmail(""); setNotes(""); setIsAmc(false); }
+    onOpenChange(v);
+  };
+
+  const handleSave = () => {
+    if (!displayName.trim()) return;
+    onSave({
+      display_name: displayName.trim(),
+      contact_phone: phone.trim() || null,
+      contact_email: email.trim() || null,
+      notes: notes.trim() || null,
+      is_amc: isAmc,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Thêm chi nhánh</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+              Tên chi nhánh <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Ví dụ: Chi nhánh Hà Nội"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              Số điện thoại
+            </Label>
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0901 234 567"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              Email
+            </Label>
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="chinhanh@congty.vn"
+              type="email"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              Ghi chú
+            </Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Ghi chú nội bộ..."
+              rows={2}
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+            <div>
+              <p className="text-sm font-medium text-foreground">Loại AMC</p>
+              <p className="text-xs text-muted-foreground">Công ty con xử lý nợ (AMC)</p>
+            </div>
+            <Switch checked={isAmc} onCheckedChange={setIsAmc} />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isProcessing}>Huỷ</Button>
+          <Button onClick={handleSave} disabled={!displayName.trim() || isProcessing}>
+            {isProcessing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Thêm
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

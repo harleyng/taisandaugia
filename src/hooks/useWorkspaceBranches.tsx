@@ -30,6 +30,14 @@ export interface BranchMetrics {
 
 export type BranchPatch = Partial<Pick<WorkspaceBranch, "display_name" | "contact_phone" | "contact_email" | "notes" | "is_active" | "is_amc">>;
 
+export interface BranchInput {
+  display_name: string;
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  notes?: string | null;
+  is_amc?: boolean;
+}
+
 // ─── AMC heuristic (mirrors useAssetOwnerWorkspace) ──────────────────────────
 
 function isAmc(name: string): boolean {
@@ -143,6 +151,71 @@ export function useWorkspaceBranches(workspaceId: string | null) {
     onError: () => toast.error("Đồng bộ chi nhánh thất bại"),
   });
 
+  // ── Create branch ─────────────────────────────────────────────────────────
+
+  const createBranch = useMutation({
+    mutationFn: async (input: BranchInput) => {
+      if (!workspaceId) throw new Error("no_workspace");
+      const { error } = await (supabase as any)
+        .from("workspace_branches")
+        .insert({
+          workspace_id: workspaceId,
+          display_name: input.display_name,
+          contact_phone: input.contact_phone ?? null,
+          contact_email: input.contact_email ?? null,
+          notes: input.notes ?? null,
+          is_amc: input.is_amc ?? false,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: branchesKey });
+      toast.success("Đã thêm chi nhánh");
+    },
+    onError: () => toast.error("Thêm chi nhánh thất bại"),
+  });
+
+  // ── Bulk create branches (import) ─────────────────────────────────────────
+
+  const bulkCreateBranches = useMutation({
+    mutationFn: async (inputs: BranchInput[]) => {
+      if (!workspaceId) throw new Error("no_workspace");
+      const rows = inputs.map((input) => ({
+        workspace_id: workspaceId,
+        display_name: input.display_name,
+        contact_phone: input.contact_phone ?? null,
+        contact_email: input.contact_email ?? null,
+        notes: input.notes ?? null,
+        is_amc: input.is_amc ?? false,
+      }));
+      const { error } = await (supabase as any)
+        .from("workspace_branches")
+        .insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: branchesKey });
+    },
+    onError: () => toast.error("Import chi nhánh thất bại"),
+  });
+
+  // ── Delete branch ─────────────────────────────────────────────────────────
+
+  const deleteBranch = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any)
+        .from("workspace_branches")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: branchesKey });
+      toast.success("Đã xoá chi nhánh");
+    },
+    onError: () => toast.error("Xoá thất bại"),
+  });
+
   // ── Update branch ─────────────────────────────────────────────────────────
 
   const updateBranch = useMutation({
@@ -184,6 +257,9 @@ export function useWorkspaceBranches(workspaceId: string | null) {
     branchesLoading,
     metrics,
     syncFromClaims,
+    createBranch,
+    bulkCreateBranches,
+    deleteBranch,
     updateBranch,
     toggleActive,
   };

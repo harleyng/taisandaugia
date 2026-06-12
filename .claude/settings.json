@@ -43,7 +43,8 @@
       "Bash(security find-generic-password *)",
       "WebFetch(domain:bcusbpkfnydqcvxxjvew.supabase.co)",
       "Bash(curl -s 'https://bcusbpkfnydqcvxxjvew.supabase.co/rest/v1/asset_owner_claims?select=id,status,confidence_score,listing_id&limit=5' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjdXNicGtmbnlkcWN2eHhqdmV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzOTMyODgsImV4cCI6MjA4OTk2OTI4OH0.T4sCpX3Tlxs79oyri5G0OS2svaGDzyR1F_JZPVK6mAA')",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\)\")"
     ]
   }
 }

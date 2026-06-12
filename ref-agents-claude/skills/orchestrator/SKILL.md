@@ -22,6 +22,8 @@ Use when:
 | "Think like a CPO" | CPO alone |
 | "Is this correct for Vietnamese real estate?" | Domain Expert alone |
 | "Review this code / architecture" | CTO alone |
+| "Write a migration / add a column / fix an RPC / RLS policy" | System Architect (+ QA) |
+| "Backend-only change (no UI surface)" | System Architect alone |
 | "Review this report / chart" | Data Analyst + UI/UX |
 | "Should we build X?" | CPO + Domain Expert → CTO + UI/UX |
 | "How should we design the KYC flow?" | CPO + Domain Expert → UI/UX → CTO |

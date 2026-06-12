@@ -55,6 +55,12 @@ export interface OverrideRecord {
   overriddenAt: string
 }
 
+export interface AssetResult {
+  winning_price?: number
+  isSuccessful?: boolean
+  failureReason?: string
+}
+
 export interface AuctionRecord {
   id: string
   orgId: string
@@ -85,6 +91,7 @@ export interface AuctionRecord {
   winningPrice?: number
   isSuccessful?: boolean
   failureReason?: string
+  assetResults?: AssetResult[]
 
   auctionFormat?: AuctionFormat
   biddingMethod?: BiddingMethod
@@ -184,7 +191,9 @@ export function computePriceDifference(record: AuctionRecord): {
 }
 
 export function computeEnrichmentStatus(record: AuctionRecord): EnrichmentStatus {
-  const hasWinningPrice = record.winningPrice !== undefined
+  const hasWinningPrice = record.assetResults && record.assetResults.length > 0
+    ? record.assetResults.every((r) => r.winning_price !== undefined)
+    : record.winningPrice !== undefined
   const hasFormat = record.auctionFormat !== undefined
   const hasBidStep = record.bidStep !== undefined
   const filled = [hasWinningPrice, hasFormat, hasBidStep].filter(Boolean).length

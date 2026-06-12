@@ -24,6 +24,7 @@ export interface ParsedRow {
   numberOfParticipants?: number
   depositPercentage?: number
   internalNotes?: string
+  assetIndex?: number
   [key: string]: unknown
 }
 
@@ -75,12 +76,18 @@ const HEADER_ALIASES: Record<string, ColumnKey> = {
   'tiền đặt trước (%)': 'depositPercentage',
   'tiền đặt trước': 'depositPercentage',
   'ghi chú': 'internalNotes',
+  'số thứ tự tài sản': 'assetIndex',
+  'số ts': 'assetIndex',
+  'tài sản số': 'assetIndex',
+  'ts số': 'assetIndex',
+  'asset index': 'assetIndex',
 }
 
 export const TEMPLATE_MAPPING: ColumnMapping = {
   auctionDate: '(*) Ngày đấu giá',
   ownerName: '(*) Người có tài sản',
   auctionNumber: 'Số phiên',
+  assetIndex: 'Số thứ tự tài sản (tùy chọn)',
   winningPrice: 'Giá trúng (VND)',
   isSuccessful: 'Trạng thái',
   auctionFormat: 'Hình thức đấu giá',
@@ -247,13 +254,14 @@ export function mapRow(raw: Record<string, unknown>, mapping: ColumnMapping): Pa
     numberOfParticipants: get('numberOfParticipants') ? Number(get('numberOfParticipants')) : undefined,
     depositPercentage: get('depositPercentage') ? Number(get('depositPercentage')) : undefined,
     internalNotes: get('internalNotes') ? String(get('internalNotes')) : undefined,
+    assetIndex: get('assetIndex') ? Number(get('assetIndex')) : undefined,
   }
 }
 
 const ENRICHMENT_FIELDS: (keyof ParsedRow)[] = [
   'winningPrice', 'isSuccessful', 'failureReason', 'auctionFormat', 'biddingMethod',
   'bidStep', 'maxRounds', 'actualRounds', 'numberOfParticipants',
-  'depositPercentage', 'contractNumber', 'internalNotes',
+  'depositPercentage', 'contractNumber', 'internalNotes', 'assetIndex',
 ]
 
 export function validateRows(
@@ -328,6 +336,7 @@ export function generateExcelTemplate(): void {
     ['- (*) Ngày đấu giá', 'Định dạng DD/MM/YYYY — phải khớp với ngày trên hệ thống'],
     ['- (*) Người có tài sản', 'Phải khớp chính xác với tên trên hệ thống'],
     ['  (hoặc dùng Số phiên thay thế nếu có)'],
+    ['- Số thứ tự tài sản (tùy chọn)', 'Để trống nếu chỉ có 1 tài sản. Điền 1, 2, 3... khi phiên có nhiều tài sản — mỗi tài sản một dòng riêng'],
     [],
     ['Cột bổ sung kết quả (điền ít nhất một cột):'],
     ['- ★ Giá trúng (VND)', 'Số nguyên. Quan trọng nhất — ảnh hưởng điểm IV.3-4'],
@@ -350,6 +359,7 @@ export function generateExcelTemplate(): void {
     '(*) Ngày đấu giá',
     '(*) Người có tài sản',
     'Số phiên',
+    'Số thứ tự tài sản (tùy chọn)',
     'Giá trúng (VND)',
     'Trạng thái',
     'Hình thức đấu giá',

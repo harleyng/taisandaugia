@@ -4,6 +4,7 @@ import type {
   AuctionRecord,
   AuctionRecordWithComputed,
   ImportSession,
+  AssetResult,
 } from '@/types/auction-record'
 import { computePriceDifference, computeEnrichmentStatus, getAuctionBadgeSource } from '@/types/auction-record'
 import {
@@ -89,6 +90,7 @@ function listingToRecord(listing: Record<string, unknown>, enrichments: Record<s
     winningPrice: enrichment.winningPrice ?? (ca.winning_price ?? ca.win_price) as number | undefined,
     isSuccessful: enrichment.isSuccessful ?? (listing.status === 'SOLD_RENTED' ? true : undefined),
     failureReason: enrichment.failureReason,
+    assetResults: enrichment.assetResults,
     auctionFormat: enrichment.auctionFormat ?? (ca.auction_format as AuctionRecord['auctionFormat'] | undefined),
     biddingMethod: enrichment.biddingMethod ?? (ca.bidding_method as AuctionRecord['biddingMethod'] | undefined),
     auctioneer: enrichment.auctioneer,
@@ -206,6 +208,7 @@ export function useAuctionHistory() {
       'winningPrice', 'isSuccessful', 'failureReason', 'auctionFormat', 'biddingMethod',
       'bidStep', 'maxRounds', 'actualRounds', 'numberOfParticipants',
       'depositPercentage', 'contractNumber', 'auctioneer', 'internalNotes', 'updatedAt',
+      'assetResults',
     ]
     const patch: Partial<AuctionRecord> = {}
     for (const k of enrichmentFields) {
@@ -271,21 +274,50 @@ export function useAuctionHistory() {
 
         if (matchIdx !== undefined) {
           const target = updated[matchIdx]
-          const patch: Partial<AuctionRecord> = {
-            ...(row.winningPrice !== undefined && { winningPrice: row.winningPrice }),
-            ...(row.isSuccessful !== undefined && { isSuccessful: row.isSuccessful }),
-            ...(row.failureReason !== undefined && { failureReason: row.failureReason }),
-            ...(row.auctionFormat !== undefined && { auctionFormat: row.auctionFormat }),
-            ...(row.bidStep !== undefined && { bidStep: row.bidStep }),
-            ...(row.maxRounds !== undefined && { maxRounds: row.maxRounds }),
-            ...(row.actualRounds !== undefined && { actualRounds: row.actualRounds }),
-            ...(row.numberOfParticipants !== undefined && { numberOfParticipants: row.numberOfParticipants }),
-            ...(row.depositPercentage !== undefined && { depositPercentage: row.depositPercentage }),
-            ...(row.contractNumber !== undefined && { contractNumber: row.contractNumber }),
-            ...(row.internalNotes !== undefined && { internalNotes: row.internalNotes }),
-            importedAt: now,
-            importBatchId: now,
-            updatedAt: now,
+          let patch: Partial<AuctionRecord>
+
+          if (row.assetIndex !== undefined && row.assetIndex >= 1) {
+            // Per-asset row: update assetResults[assetIndex-1] and recompute aggregates
+            const idx = row.assetIndex - 1
+            const existing: AssetResult[] = target.assetResults ? [...target.assetResults] : []
+            while (existing.length <= idx) existing.push({})
+            existing[idx] = {
+              ...existing[idx],
+              ...(row.winningPrice !== undefined && { winning_price: row.winningPrice }),
+              ...(row.isSuccessful !== undefined && { isSuccessful: row.isSuccessful }),
+              ...(row.failureReason !== undefined && { failureReason: row.failureReason }),
+            }
+            const successfulWithPrice = existing.filter(
+              (r) => r.winning_price !== undefined && r.isSuccessful !== false,
+            )
+            patch = {
+              assetResults: existing,
+              winningPrice: successfulWithPrice.length > 0
+                ? successfulWithPrice.reduce((s, r) => s + (r.winning_price ?? 0), 0)
+                : undefined,
+              isSuccessful: existing.some((r) => r.isSuccessful === true) ? true : undefined,
+              importedAt: now,
+              importBatchId: now,
+              updatedAt: now,
+            }
+          } else {
+            // Session-level row: existing behavior
+            patch = {
+              ...(row.winningPrice !== undefined && { winningPrice: row.winningPrice }),
+              ...(row.isSuccessful !== undefined && { isSuccessful: row.isSuccessful }),
+              ...(row.failureReason !== undefined && { failureReason: row.failureReason }),
+              ...(row.auctionFormat !== undefined && { auctionFormat: row.auctionFormat }),
+              ...(row.bidStep !== undefined && { bidStep: row.bidStep }),
+              ...(row.maxRounds !== undefined && { maxRounds: row.maxRounds }),
+              ...(row.actualRounds !== undefined && { actualRounds: row.actualRounds }),
+              ...(row.numberOfParticipants !== undefined && { numberOfParticipants: row.numberOfParticipants }),
+              ...(row.depositPercentage !== undefined && { depositPercentage: row.depositPercentage }),
+              ...(row.contractNumber !== undefined && { contractNumber: row.contractNumber }),
+              ...(row.internalNotes !== undefined && { internalNotes: row.internalNotes }),
+              importedAt: now,
+              importBatchId: now,
+              updatedAt: now,
+            }
           }
           saveEnrichment(target.id, patch)
           updated[matchIdx] = {

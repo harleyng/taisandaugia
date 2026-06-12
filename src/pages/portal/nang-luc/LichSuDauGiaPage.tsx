@@ -147,6 +147,7 @@ export default function LichSuDauGiaPage() {
         records={dialogRecords}
         initialIndex={Math.min(dialogIndex, Math.max(0, dialogRecords.length - 1))}
         onSave={handleDialogSave}
+        rawListings={rawListings}
       />
 
       <AuctionDetailDrawer

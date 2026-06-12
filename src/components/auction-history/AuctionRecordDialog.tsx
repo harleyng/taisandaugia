@@ -12,10 +12,17 @@ import { Textarea } from '@/components/ui/textarea'
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
 import { ChevronLeft, ChevronRight, SkipForward, Zap } from 'lucide-react'
-import type { AuctionRecord } from '@/types/auction-record'
+import type { AuctionRecord, AssetResult } from '@/types/auction-record'
 import { AUCTION_FORMAT_LABELS, BIDDING_METHOD_LABELS, type AuctionFormat, type BiddingMethod } from '@/types/auction-record'
+import type { AuctionAsset } from '@/components/auction/AuctionAssetCard'
 import { listAuctioneers } from '@/lib/auctioneers/storage'
 import { format } from 'date-fns'
+
+const assetResultSchema = z.object({
+  winningPrice: z.string().optional(),
+  isSuccessful: z.string().optional(),
+  failureReason: z.string().optional(),
+})
 
 const schema = z.object({
   contractNumber: z.string().optional(),
@@ -31,6 +38,7 @@ const schema = z.object({
   numberOfParticipants: z.string().optional(),
   depositPercentage: z.string().optional(),
   internalNotes: z.string().optional(),
+  assetFields: z.array(assetResultSchema).optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -43,14 +51,21 @@ const parseNum = (s?: string) => {
 
 interface RecordFormProps {
   record: AuctionRecord
+  rawListings?: Record<string, Record<string, unknown>>
   onSave: (record: AuctionRecord) => void
   onSkip: () => void
   onClose: () => void
   isBatch: boolean
 }
 
-function RecordForm({ record, onSave, onSkip, onClose, isBatch }: RecordFormProps) {
+function RecordForm({ record, rawListings, onSave, onSkip, onClose, isBatch }: RecordFormProps) {
   const activeAuctioneers = listAuctioneers().filter((a) => a.isActive)
+
+  const ca = (rawListings?.[record.id]?.custom_attributes ?? {}) as Record<string, unknown>
+  const assets: AuctionAsset[] = Array.isArray(ca.assets) && (ca.assets as unknown[]).length > 0
+    ? (ca.assets as AuctionAsset[])
+    : []
+  const isMultiAsset = assets.length > 1
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -68,18 +83,51 @@ function RecordForm({ record, onSave, onSkip, onClose, isBatch }: RecordFormProp
       numberOfParticipants: record.numberOfParticipants ? String(record.numberOfParticipants) : '',
       depositPercentage: record.depositPercentage ? String(record.depositPercentage) : '',
       internalNotes: record.internalNotes ?? '',
+      assetFields: isMultiAsset
+        ? assets.map((_, i) => ({
+            winningPrice: record.assetResults?.[i]?.winning_price
+              ? record.assetResults[i].winning_price!.toLocaleString('vi-VN')
+              : '',
+            isSuccessful: record.assetResults?.[i]?.isSuccessful === true ? 'true'
+              : record.assetResults?.[i]?.isSuccessful === false ? 'false' : '',
+            failureReason: record.assetResults?.[i]?.failureReason ?? '',
+          }))
+        : [],
     },
   })
 
   const onSubmit = (values: FormValues) => {
     const now = new Date().toISOString()
+
+    let assetResults: AssetResult[] | undefined
+    let aggregateWinningPrice: number | undefined
+    let aggregateIsSuccessful: boolean | undefined
+
+    if (isMultiAsset && values.assetFields && values.assetFields.length > 0) {
+      assetResults = values.assetFields.map((f) => ({
+        winning_price: parseNum(f.winningPrice),
+        isSuccessful: f.isSuccessful === 'true' ? true : f.isSuccessful === 'false' ? false : undefined,
+        failureReason: f.failureReason || undefined,
+      }))
+      const successfulWithPrice = assetResults.filter(
+        (r) => r.winning_price !== undefined && r.isSuccessful !== false,
+      )
+      aggregateWinningPrice = successfulWithPrice.length > 0
+        ? successfulWithPrice.reduce((s, r) => s + (r.winning_price ?? 0), 0)
+        : undefined
+      aggregateIsSuccessful = assetResults.some((r) => r.isSuccessful === true) ? true : undefined
+    }
+
     onSave({
       ...record,
       contractNumber: values.contractNumber || undefined,
       auctioneer: values.auctioneer || undefined,
-      winningPrice: parseNum(values.winningPrice),
-      isSuccessful: values.isSuccessful === 'true' ? true : values.isSuccessful === 'false' ? false : undefined,
-      failureReason: values.failureReason || undefined,
+      winningPrice: isMultiAsset ? aggregateWinningPrice : parseNum(values.winningPrice),
+      isSuccessful: isMultiAsset
+        ? aggregateIsSuccessful
+        : values.isSuccessful === 'true' ? true : values.isSuccessful === 'false' ? false : undefined,
+      failureReason: isMultiAsset ? undefined : (values.failureReason || undefined),
+      assetResults: isMultiAsset ? assetResults : undefined,
       auctionFormat: (values.auctionFormat as AuctionFormat) || undefined,
       biddingMethod: (values.biddingMethod as BiddingMethod) || undefined,
       bidStep: parseNum(values.bidStep),
@@ -104,38 +152,103 @@ function RecordForm({ record, onSave, onSkip, onClose, isBatch }: RecordFormProp
           <p className="text-sm font-medium leading-snug mt-0.5">{record.assetDescription}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             Giá KĐ: {record.startingPrice.toLocaleString('vi-VN')} VND
+            {isMultiAsset && <span className="ml-2 text-primary font-medium">· {assets.length} tài sản</span>}
           </p>
         </div>
 
         {/* Auction result */}
         <div className="space-y-3">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kết quả đấu giá ★</p>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField control={form.control} name="isSuccessful" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs">Trạng thái</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Chọn..." /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    <SelectItem value="true">Thành công</SelectItem>
-                    <SelectItem value="false">Không thành</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="winningPrice" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs">Giá trúng (VND) ★</FormLabel>
-                <FormControl><Input placeholder="5,500,000,000" {...field} /></FormControl>
-              </FormItem>
-            )} />
-          </div>
-          <FormField control={form.control} name="failureReason" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs">Lý do không thành</FormLabel>
-              <FormControl><Input placeholder="Không có người tham gia" {...field} /></FormControl>
-            </FormItem>
-          )} />
+
+          {isMultiAsset ? (
+            <div className="space-y-2">
+              {assets.map((asset, i) => (
+                <div key={i} className="rounded-lg border border-border p-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    #{i + 1} · {(asset as AuctionAsset).title || `Tài sản ${i + 1}`}
+                    {(asset as AuctionAsset).starting_price && (
+                      <span className="ml-1">· KĐ {((asset as AuctionAsset).starting_price! / 1_000_000).toFixed(0)}tr</span>
+                    )}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                      control={form.control}
+                      name={`assetFields.${i}.isSuccessful`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Trạng thái</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Chọn..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="true">Thành công</SelectItem>
+                              <SelectItem value="false">Không thành</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`assetFields.${i}.winningPrice`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Giá trúng (VND) ★</FormLabel>
+                          <FormControl>
+                            <Input className="h-8 text-xs" placeholder="5,500,000,000" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name={`assetFields.${i}.failureReason`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Lý do không thành</FormLabel>
+                        <FormControl>
+                          <Input className="h-8 text-xs" placeholder="Không có người tham gia" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField control={form.control} name="isSuccessful" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Trạng thái</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Chọn..." /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="true">Thành công</SelectItem>
+                        <SelectItem value="false">Không thành</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="winningPrice" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Giá trúng (VND) ★</FormLabel>
+                    <FormControl><Input placeholder="5,500,000,000" {...field} /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="failureReason" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Lý do không thành</FormLabel>
+                  <FormControl><Input placeholder="Không có người tham gia" {...field} /></FormControl>
+                </FormItem>
+              )} />
+            </>
+          )}
         </div>
 
         <Separator />
@@ -258,9 +371,10 @@ interface Props {
   records: AuctionRecord[]
   initialIndex: number
   onSave: (record: AuctionRecord) => void
+  rawListings?: Record<string, Record<string, unknown>>
 }
 
-export function AuctionRecordDialog({ open, onClose, records, initialIndex, onSave }: Props) {
+export function AuctionRecordDialog({ open, onClose, records, initialIndex, onSave, rawListings }: Props) {
   const [index, setIndex] = useState(initialIndex)
 
   useEffect(() => {
@@ -317,6 +431,7 @@ export function AuctionRecordDialog({ open, onClose, records, initialIndex, onSa
         <RecordForm
           key={record.id}
           record={record}
+          rawListings={rawListings}
           onSave={handleSave}
           onSkip={handleSkip}
           onClose={onClose}

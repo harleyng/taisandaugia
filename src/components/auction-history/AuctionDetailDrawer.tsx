@@ -157,7 +157,14 @@ export function AuctionDetailDrawer({ open, onClose, record, rawListing, onEdit 
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kết quả theo tài sản</p>
                   {assets.map((asset, i) => {
-                    const assetWinPrice = asset.winning_price ?? (assets.length === 1 ? record.winningPrice : undefined)
+                    const enrichedResult = record.assetResults?.[i]
+                    const assetWinPrice = enrichedResult?.winning_price
+                      ?? asset.winning_price
+                      ?? (assets.length === 1 ? record.winningPrice : undefined)
+                    const assetStatus = enrichedResult?.isSuccessful
+                      ?? (assets.length === 1 ? record.isSuccessful : undefined)
+                    const assetFailureReason = enrichedResult?.failureReason
+                      ?? (assets.length === 1 ? record.failureReason : undefined)
                     return (
                       <div key={i} className="rounded-lg border border-border p-3 space-y-1">
                         <div className="flex items-center gap-2 mb-2">
@@ -166,8 +173,8 @@ export function AuctionDetailDrawer({ open, onClose, record, rawListing, onEdit 
                         </div>
                         <Row label="Giá khởi điểm" value={asset.starting_price ? fmtVND(asset.starting_price) : undefined} />
                         <Row label="Giá trúng" value={assetWinPrice ? fmtVND(assetWinPrice) : undefined} />
-                        <Row label="Trạng thái" value={record.isSuccessful === true ? 'Thành công' : record.isSuccessful === false ? 'Không thành' : undefined} />
-                        {record.failureReason && <Row label="Lý do không thành" value={record.failureReason} />}
+                        <Row label="Trạng thái" value={assetStatus === true ? 'Thành công' : assetStatus === false ? 'Không thành' : undefined} />
+                        {assetFailureReason && <Row label="Lý do không thành" value={assetFailureReason} />}
                       </div>
                     )
                   })}

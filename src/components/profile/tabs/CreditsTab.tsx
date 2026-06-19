@@ -13,6 +13,7 @@ import {
   Building2,
   User,
   FileText,
+  Eye,
 } from "lucide-react";
 import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
 import { useEffect, useState } from "react";
@@ -66,10 +67,11 @@ const TYPE_ICON: Record<TransactionType, typeof ShoppingCart> = {
   unlock_company: Building2,
   unlock_owner: User,
   unlock_deep_report: FileText,
+  owner_report_view: Eye,
 };
 
 const TransactionRow = ({ tx }: { tx: Transaction }) => {
-  const Icon = TYPE_ICON[tx.type];
+  const Icon = TYPE_ICON[tx.type] ?? Receipt;
   const isPositive = tx.creditDelta > 0;
   return (
     <TableRow>

@@ -24,9 +24,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { Session } from "@supabase/supabase-js";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
+import { useIsVerifiedCompany } from "@/hooks/useIsVerifiedCompany";
 import { useCredits } from "@/hooks/useCredits";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { resolveDisplayName } from "@/lib/displayName";
@@ -46,9 +48,12 @@ export const Header = () => {
   }, []);
 
   const { toast } = useToast();
-  const [session, setSession] = useState<Session | null>(null);
-  const [profileName, setProfileName] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const { session } = useAuth();
+  const userId = session?.user?.id ?? null;
+  const { data: profile } = useProfile(userId);
+  const profileName = profile?.name ?? null;
+  const avatarUrl = profile?.agentInfo?.profile_picture_url ?? null;
+  const isVerifiedCompany = useIsVerifiedCompany(userId);
   const { balance } = useCredits();
   const { hasUnclaimed, tasks: onboardingTasks } = useOnboardingTasks();
   const hasIncompleteTasks = onboardingTasks.some((t) => t.status !== "claimed");
@@ -56,42 +61,6 @@ export const Header = () => {
     .filter((t) => t.status !== "claimed")
     .reduce((sum, t) => sum + t.credits, 0);
   const [rewardOpen, setRewardOpen] = useState(false);
-  const [isVerifiedCompany, setIsVerifiedCompany] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) => setSession(session));
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!session) {
-      setProfileName(null);
-      setAvatarUrl(null);
-      setIsVerifiedCompany(false);
-      return;
-    }
-    supabase
-      .from("profiles")
-      .select("name, agent_info")
-      .eq("id", session.user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        setProfileName(data?.name ?? null);
-        const agentInfo = (data?.agent_info as any) || {};
-        setAvatarUrl(agentInfo?.profile_picture_url || null);
-      });
-    supabase
-      .from("organizations")
-      .select("id")
-      .eq("owner_id", session.user.id)
-      .eq("kyc_status", "APPROVED")
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => setIsVerifiedCompany(!!data));
-  }, [session]);
 
   const displayName = resolveDisplayName(profileName, session?.user.id);
   const initials = displayName.slice(0, 2).toUpperCase();

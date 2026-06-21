@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Loader2 } from "lucide-react";
@@ -20,11 +22,13 @@ const VALID_TABS: ProfileTab[] = ["profile", "saved", "credits", "password", "no
 const ProfilePage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [loading, setLoading] = useState(true);
+  const { session, loading: authLoading } = useAuth();
+  const userId = session?.user?.id ?? null;
+  const email = session?.user?.email || session?.user?.phone || "";
+  const { data: profile, isLoading: profileLoading } = useProfile(userId);
+
   const [name, setName] = useState("");
-  const [userId, setUserId] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
 
   const tabParam = searchParams.get("tab") as ProfileTab | null;
   const fromParam = searchParams.get("from");
@@ -41,37 +45,20 @@ const ProfilePage = () => {
     setSearchParams(next, { replace: true });
   };
 
+  // Seed editable local state từ query profile dùng chung
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { navigate("/"); return; }
-        setUserId(session.user.id);
-        setEmail(session.user.email || session.user.phone || "");
+    if (profile) {
+      setName(profile.name || "");
+      setAvatarUrl(profile.agentInfo?.profile_picture_url ?? null);
+    }
+  }, [profile]);
 
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("name, agent_info")
-          .eq("id", session.user.id)
-          .maybeSingle();
+  // Chưa đăng nhập → đưa về trang chủ (sau khi auth đã resolve)
+  useEffect(() => {
+    if (!authLoading && !session) navigate("/");
+  }, [authLoading, session, navigate]);
 
-        if (error) {
-          console.error("Failed to load profile:", error);
-        }
-
-        if (data) {
-          setName(data.name || "");
-          const agentInfo = data.agent_info as any;
-          setAvatarUrl(agentInfo?.profile_picture_url || null);
-        }
-      } catch (e) {
-        console.error("Profile fetch exception:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, [navigate]);
+  const loading = authLoading || !session || profileLoading;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 import {
-  AgentInfoShape,
   buildTasks,
   getAvailableRewardCredits,
   hasUnclaimedRewards,
@@ -13,93 +15,44 @@ import {
 } from "@/lib/onboardingTasks";
 import { addCredits } from "@/lib/credits";
 
-interface ProfileSnapshot {
-  name: string | null;
-  agentInfo: AgentInfoShape | null;
-  freeUnlockTokens: number;
-}
-
 const EVT = "onboarding:profile-updated";
+
+/**
+ * Phát sự kiện báo `profiles` đã thay đổi. Listener toàn cục trong AuthProvider
+ * sẽ invalidate query `["profile", userId]` để mọi consumer (Header, các section…)
+ * tự refetch. Giữ hàm này để các call site cũ không phải đổi.
+ */
 const emitProfileUpdated = () => {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVT));
   }
 };
 
+/**
+ * Nhiệm vụ onboarding 2 tầng. Trước đây hook tự `getSession` + fetch `profiles`
+ * bằng useState (mỗi instance một request, lại double-fetch). Nay derive trực
+ * tiếp từ `useProfile` (React Query, dùng chung cache) + `useAuth`.
+ */
 export const useOnboardingTasks = () => {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [snap, setSnap] = useState<ProfileSnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const userIdRef = useRef<string | null>(null);
+  const { userId } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: profile, isLoading } = useProfile(userId);
 
-  const fetchProfile = useCallback(async (uid: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("name, agent_info, free_unlock_tokens")
-      .eq("id", uid)
-      .maybeSingle();
+  const agentInfo = profile?.agentInfo ?? null;
+  const name = profile?.name ?? null;
+  const freeUnlockTokens = profile?.freeUnlockTokens ?? 0;
 
-    setSnap({
-      name: data?.name ?? null,
-      agentInfo: (data?.agent_info as AgentInfoShape | null) ?? null,
-      freeUnlockTokens: (data as { free_unlock_tokens?: number } | null)?.free_unlock_tokens ?? 0,
-    });
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!mounted) return;
-      const uid = session?.user.id ?? null;
-      userIdRef.current = uid;
-      setUserId(uid);
-      if (uid) {
-        await fetchProfile(uid);
-      } else {
-        setSnap(null);
-        setLoading(false);
-      }
-    };
-
-    init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_evt, session) => {
-      const uid = session?.user.id ?? null;
-      userIdRef.current = uid;
-      setUserId(uid);
-      if (uid) await fetchProfile(uid);
-      else setSnap(null);
-    });
-
-    const handler = () => {
-      const uid = userIdRef.current;
-      if (uid) fetchProfile(uid);
-    };
-    window.addEventListener(EVT, handler);
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-      window.removeEventListener(EVT, handler);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchProfile]);
-
-  // Re-fetch when userId changes (covered by onAuthStateChange but safe)
-  useEffect(() => {
-    if (userId) fetchProfile(userId);
-  }, [userId, fetchProfile]);
-
-  const tasks: OnboardingTask[] = buildTasks(snap?.agentInfo, snap?.name);
+  const tasks: OnboardingTask[] = buildTasks(agentInfo, name);
   const availableCredits = getAvailableRewardCredits(tasks);
   const hasUnclaimed = hasUnclaimedRewards(tasks);
 
+  const invalidateProfile = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["profile", userId] });
+  }, [queryClient, userId]);
+
   const claimReward = useCallback(
     async (key: "basic" | "intent"): Promise<{ ok: boolean; credits: number; tokens: number }> => {
-      if (!userId || !snap) return { ok: false, credits: 0, tokens: 0 };
+      if (!userId || !profile) return { ok: false, credits: 0, tokens: 0 };
 
       const task = tasks.find((t) => t.key === key);
       if (!task || task.status !== "ready") {
@@ -110,13 +63,14 @@ export const useOnboardingTasks = () => {
       const tokens = key === "basic" ? REWARD_BASIC_TOKENS : REWARD_INTENT_TOKENS;
 
       const nextRewards = {
-        ...(snap.agentInfo?.rewards ?? {}),
+        ...(agentInfo?.rewards ?? {}),
         [`${key}_claimed_at`]: Date.now(),
-        [`${key}_completed_at`]: snap.agentInfo?.rewards?.[`${key}_completed_at` as keyof typeof snap.agentInfo.rewards] ?? Date.now(),
+        [`${key}_completed_at`]:
+          agentInfo?.rewards?.[`${key}_completed_at` as keyof typeof agentInfo.rewards] ?? Date.now(),
       };
 
       const nextAgentInfo = {
-        ...(snap.agentInfo ?? {}),
+        ...(agentInfo ?? {}),
         rewards: nextRewards,
       };
 
@@ -124,7 +78,7 @@ export const useOnboardingTasks = () => {
         .from("profiles")
         .update({
           agent_info: nextAgentInfo as never,
-          free_unlock_tokens: (snap.freeUnlockTokens ?? 0) + tokens,
+          free_unlock_tokens: (freeUnlockTokens ?? 0) + tokens,
         })
         .eq("id", userId);
 
@@ -133,29 +87,28 @@ export const useOnboardingTasks = () => {
       // Tặng credit
       await addCredits(userId, credits);
 
-      // Refresh
-      await fetchProfile(userId);
-      emitProfileUpdated();
+      // Refresh cache profile + credits
+      invalidateProfile();
+      queryClient.invalidateQueries({ queryKey: ["user-credits", userId] });
 
       return { ok: true, credits, tokens };
     },
-    [userId, snap, tasks, fetchProfile]
+    [userId, profile, agentInfo, freeUnlockTokens, tasks, invalidateProfile, queryClient],
   );
 
   const refresh = useCallback(() => {
-    const uid = userIdRef.current;
-    if (uid) fetchProfile(uid);
-  }, [fetchProfile]);
+    invalidateProfile();
+  }, [invalidateProfile]);
 
   return {
-    loading,
+    loading: isLoading,
     isAuthed: Boolean(userId),
     tasks,
     availableCredits,
     hasUnclaimed,
-    freeUnlockTokens: snap?.freeUnlockTokens ?? 0,
-    agentInfo: snap?.agentInfo ?? null,
-    name: snap?.name ?? null,
+    freeUnlockTokens,
+    agentInfo,
+    name,
     claimReward,
     refresh,
   };

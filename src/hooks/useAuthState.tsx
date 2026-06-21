@@ -1,22 +1,11 @@
-import { useState, useEffect } from "react";
-import { type Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
+/**
+ * Wrapper mỏng quanh `useAuth()` để giữ nguyên API cũ `{ session, loading, userId }`
+ * cho các call site hiện có (AuctionDetail, ListingDetail, Listings…). Nguồn auth
+ * thật sự là AuthProvider — không còn tự `getSession`/subscribe ở đây.
+ */
 export function useAuthState() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
-      setSession(s);
-      setLoading(false);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  return { session, loading, userId: session?.user?.id ?? null };
+  const { session, loading, userId } = useAuth();
+  return { session, loading, userId };
 }

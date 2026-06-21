@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   ASSET_COST,
   COMPANY_TIERS,
@@ -22,17 +22,7 @@ import {
 } from "@/lib/credits";
 
 export const useCredits = () => {
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id ?? null);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  const { userId } = useAuth();
 
   const qc = useQueryClient();
   const queryKey = ["user-credits", userId];
@@ -41,7 +31,7 @@ export const useCredits = () => {
     queryKey,
     queryFn: () => fetchCreditState(userId!),
     enabled: !!userId,
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 
   const invalidate = useCallback(() => {

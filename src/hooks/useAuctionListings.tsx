@@ -67,7 +67,7 @@ export function getSessionStatus(listing: AuctionListing): AuctionSessionStatus 
   return "registration_open";
 }
 
-export const useAuctionListings = () => {
+export const useAuctionListings = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["auction-listings"],
     queryFn: async () => {
@@ -80,5 +80,7 @@ export const useAuctionListings = () => {
       if (error) throw error;
       return data as AuctionListing[];
     },
+    staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   });
 };

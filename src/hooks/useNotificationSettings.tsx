@@ -1,45 +1,47 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile, type ProfileData } from "@/hooks/useProfile";
 
+/**
+ * Cài đặt thông báo derive từ query `profiles` dùng chung (`useProfile`) thay vì
+ * tự `getSession` + fetch riêng. Toggle cập nhật optimistic vào cache rồi ghi DB.
+ */
 export function useNotificationSettings() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { userId } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: profile, isLoading } = useProfile(userId);
+  const notificationsEnabled = profile?.notificationsEnabled ?? false;
 
-  useEffect(() => {
-    const fetch = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setLoading(false); return; }
+  const toggleNotifications = useCallback(
+    async (val: boolean) => {
+      if (!userId) return;
+      const key = ["profile", userId];
 
-      const { data } = await supabase
+      // Optimistic
+      queryClient.setQueryData<ProfileData>(key, (old) =>
+        old ? { ...old, notificationsEnabled: val } : old,
+      );
+
+      const { error } = await supabase
         .from("profiles")
-        .select("notifications_enabled")
-        .eq("id", session.user.id)
-        .single();
+        .update({ notifications_enabled: val } as never)
+        .eq("id", userId);
 
-      if (data) setNotificationsEnabled(data.notifications_enabled ?? false);
-      setLoading(false);
-    };
-    fetch();
-  }, []);
+      if (error) {
+        // Revert
+        queryClient.setQueryData<ProfileData>(key, (old) =>
+          old ? { ...old, notificationsEnabled: !val } : old,
+        );
+        toast.error("Không thể cập nhật cài đặt thông báo");
+      } else {
+        toast(val ? "Đã bật thông báo" : "Đã tắt thông báo");
+      }
+    },
+    [userId, queryClient],
+  );
 
-  const toggleNotifications = useCallback(async (val: boolean) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    setNotificationsEnabled(val);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ notifications_enabled: val } as any)
-      .eq("id", session.user.id);
-
-    if (error) {
-      setNotificationsEnabled(!val);
-      toast.error("Không thể cập nhật cài đặt thông báo");
-    } else {
-      toast(val ? "Đã bật thông báo" : "Đã tắt thông báo");
-    }
-  }, []);
-
-  return { notificationsEnabled, loading, toggleNotifications };
+  return { notificationsEnabled, loading: isLoading, toggleNotifications };
 }

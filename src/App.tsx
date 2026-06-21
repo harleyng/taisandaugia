@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthDialogProvider } from "@/contexts/AuthDialogContext";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -29,6 +30,9 @@ const AdminAssetOwnerKYCPage = lazy(() => import("./pages/admin/AdminAssetOwnerK
 const AdminAssetOwnerKYCDetail = lazy(() => import("./pages/admin/AdminAssetOwnerKYCDetail"));
 const AdminCollaborationPage = lazy(() => import("./pages/admin/AdminCollaborationPage"));
 const AdminContactsPage = lazy(() => import("./pages/admin/AdminContactsPage"));
+const AdminArticlesPage = lazy(() => import("./pages/admin/AdminArticlesPage"));
+const AdminArticleEditor = lazy(() => import("./pages/admin/AdminArticleEditor"));
+const AdminCategoriesPage = lazy(() => import("./pages/admin/AdminCategoriesPage"));
 
 // Protected pages — lazy
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -64,6 +68,8 @@ const Contact = lazy(() => import("./pages/Contact"));
 const About = lazy(() => import("./pages/About"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfUse = lazy(() => import("./pages/TermsOfUse"));
+const TinTucPage = lazy(() => import("./pages/TinTucPage"));
+const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 
 function RedirectApplicationId() {
   const { id } = useParams<{ id: string }>()
@@ -72,12 +78,18 @@ function RedirectApplicationId() {
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 60_000, gcTime: 5 * 60_000, retry: 1 },
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
   },
 });
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <AuthProvider>
     <TooltipProvider>
       <AuthDialogProvider>
       <Toaster />
@@ -102,6 +114,8 @@ const App = () => (
               <Route path="/dieu-khoan-su-dung" element={<TermsOfUse />} />
               <Route path="/dang-ky-to-chuc" element={<CompanyOnboarding />} />
               <Route path="/tro-thanh-chu-tai-san" element={<AssetOwnerOnboarding />} />
+              <Route path="/tin-tuc" element={<TinTucPage />} />
+              <Route path="/tin-tuc/:slug" element={<ArticleDetail />} />
 
               {/* Credits */}
               <Route path="/buy-credits" element={<BuyCredits />} />
@@ -172,6 +186,10 @@ const App = () => (
                   <Route path="chu-tai-san" element={<AdminAssetOwnerKYCPage />} />
                   <Route path="chu-tai-san/:type/:id" element={<AdminAssetOwnerKYCDetail />} />
                   <Route path="contacts" element={<AdminContactsPage />} />
+                  <Route path="tin-tuc" element={<AdminArticlesPage />} />
+                  <Route path="tin-tuc/new" element={<AdminArticleEditor />} />
+                  <Route path="tin-tuc/danh-muc" element={<AdminCategoriesPage />} />
+                  <Route path="tin-tuc/:id" element={<AdminArticleEditor />} />
                 </Route>
               </Route>
 
@@ -183,6 +201,7 @@ const App = () => (
       </BrowserRouter>
       </AuthDialogProvider>
     </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

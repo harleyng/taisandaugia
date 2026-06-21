@@ -68,12 +68,15 @@ const parseVnd = (v: string): number | null => {
 
 export const ProfileIntentSection = () => {
   const { agentInfo, tasks, refresh } = useOnboardingTasks();
-  const { data: allListings } = useAuctionListings();
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
 
   const intent = agentInfo?.intent ?? {};
   const [mode, setMode] = useState<"view" | "edit">("view");
+
+  // Listings chỉ cần khi đang chỉnh sửa nhu cầu (để đếm tài sản khớp sau khi lưu).
+  // Fetch lười để tránh kéo toàn bộ listings khi chỉ mở trang hồ sơ.
+  const { data: allListings } = useAuctionListings({ enabled: mode === "edit" });
 
   const [categories, setCategories] = useState<string[]>(intent.asset_categories ?? []);
   const [regions, setRegions] = useState<IntentRegion[]>(intent.regions ?? []);

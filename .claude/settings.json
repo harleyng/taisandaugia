@@ -44,7 +44,20 @@
       "WebFetch(domain:bcusbpkfnydqcvxxjvew.supabase.co)",
       "Bash(curl -s 'https://bcusbpkfnydqcvxxjvew.supabase.co/rest/v1/asset_owner_claims?select=id,status,confidence_score,listing_id&limit=5' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjdXNicGtmbnlkcWN2eHhqdmV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzOTMyODgsImV4cCI6MjA4OTk2OTI4OH0.T4sCpX3Tlxs79oyri5G0OS2svaGDzyR1F_JZPVK6mAA')",
       "Bash(git commit -m ' *)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(Object.keys\\(p.dependencies\\).filter\\(k => k.includes\\('tiptap'\\)\\).join\\('\\\\n'\\)\\)\")",
+      "WebFetch(domain:vnexpress.net)",
+      "WebFetch(domain:tuoitre.vn)",
+      "WebFetch(domain:dantri.com.vn)",
+      "WebFetch(domain:www.bbc.com)",
+      "WebFetch(domain:techcrunch.com)",
+      "WebFetch(domain:www.bbc.co.uk)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(npm run *)",
+      "Bash(echo \"started dev server, pid $!\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8081/)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(git commit *)"
     ]
   }
 }

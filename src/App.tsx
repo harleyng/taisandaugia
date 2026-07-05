@@ -60,6 +60,7 @@ const OwnerAssetsPage = lazy(() => import("./pages/OwnerAssetsPage"));
 const OwnerDashboard = lazy(() => import("./pages/OwnerDashboard"));
 const OwnerBranchesPage = lazy(() => import("./pages/OwnerBranchesPage"));
 const OwnerReportPage = lazy(() => import("./pages/OwnerReportPage"));
+const AssetPostingWizardPage = lazy(() => import("./pages/AssetPostingWizardPage"));
 const BuyCredits = lazy(() => import("./pages/BuyCredits"));
 const VnpayCheckout = lazy(() => import("./pages/VnpayCheckout"));
 const PaymentResult = lazy(() => import("./pages/PaymentResult"));
@@ -142,6 +143,7 @@ const App = () => (
                   <Route index element={<Navigate to="/chu-tai-san/dashboard" replace />} />
                   <Route path="dashboard" element={<OwnerDashboard />} />
                   <Route path="tai-san" element={<OwnerAssetsPage />} />
+                  <Route path="dang-tai-san" element={<AssetPostingWizardPage />} />
                   <Route path="chi-nhanh-amc" element={<OwnerBranchesPage />} />
                   <Route path="bao-cao" element={<OwnerReportPage />} />
                 </Route>

@@ -3,6 +3,7 @@ import {
   Package,
   BarChart2,
   GitBranch,
+  UploadCloud,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -28,6 +29,11 @@ export const OWNER_NAV_SECTIONS: NavSection[] = [
     label: 'Tài sản',
     icon: Package,
     href: '/chu-tai-san/tai-san',
+  },
+  {
+    label: 'Số hoá tài sản',
+    icon: UploadCloud,
+    href: '/chu-tai-san/dang-tai-san',
   },
   {
     label: 'Chi nhánh',

@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      article_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      articles: {
+        Row: {
+          author_id: string | null
+          category_id: string | null
+          content: string | null
+          created_at: string
+          excerpt: string | null
+          featured_image_url: string | null
+          homepage_position: number | null
+          id: string
+          published_at: string | null
+          read_time_minutes: number | null
+          show_on_homepage: boolean
+          slug: string
+          source_name: string | null
+          source_type: string
+          source_url: string | null
+          status: string
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          author_id?: string | null
+          category_id?: string | null
+          content?: string | null
+          created_at?: string
+          excerpt?: string | null
+          featured_image_url?: string | null
+          homepage_position?: number | null
+          id?: string
+          published_at?: string | null
+          read_time_minutes?: number | null
+          show_on_homepage?: boolean
+          slug: string
+          source_name?: string | null
+          source_type?: string
+          source_url?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          author_id?: string | null
+          category_id?: string | null
+          content?: string | null
+          created_at?: string
+          excerpt?: string | null
+          featured_image_url?: string | null
+          homepage_position?: number | null
+          id?: string
+          published_at?: string | null
+          read_time_minutes?: number | null
+          show_on_homepage?: boolean
+          slug?: string
+          source_name?: string | null
+          source_type?: string
+          source_url?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "articles_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "article_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_owner_claims: {
         Row: {
           asset_owner_id: string | null
@@ -61,9 +159,34 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
-          { foreignKeyName: "asset_owner_claims_asset_owner_id_fkey"; columns: ["asset_owner_id"]; referencedRelation: "asset_owners"; referencedColumns: ["id"] },
-          { foreignKeyName: "asset_owner_claims_listing_id_fkey"; columns: ["listing_id"]; referencedRelation: "listings"; referencedColumns: ["id"] },
-          { foreignKeyName: "asset_owner_claims_workspace_id_fkey"; columns: ["workspace_id"]; referencedRelation: "asset_owner_workspaces"; referencedColumns: ["id"] },
+          {
+            foreignKeyName: "asset_owner_claims_asset_owner_id_fkey"
+            columns: ["asset_owner_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_claims_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_claims_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_claims_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
         ]
       }
       asset_owner_kyc: {
@@ -128,7 +251,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          { foreignKeyName: "asset_owner_kyc_user_id_fkey"; columns: ["user_id"]; referencedRelation: "profiles"; referencedColumns: ["id"] },
+          {
+            foreignKeyName: "asset_owner_kyc_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_kyc_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       asset_owner_kyc_events: {
@@ -159,7 +295,15 @@ export type Database = {
           entity_type?: string
           id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "asset_owner_kyc_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       asset_owner_org_kyc: {
         Row: {
@@ -250,8 +394,27 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: "asset_owner_org_kyc_created_by_fkey"; columns: ["created_by"]; referencedRelation: "profiles"; referencedColumns: ["id"] },
-          { foreignKeyName: "asset_owner_org_kyc_linked_auction_org_id_fkey"; columns: ["linked_auction_org_id"]; referencedRelation: "auction_organizations"; referencedColumns: ["id"] },
+          {
+            foreignKeyName: "asset_owner_org_kyc_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_org_kyc_linked_auction_org_id_fkey"
+            columns: ["linked_auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_org_kyc_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       asset_owner_workspaces: {
@@ -292,8 +455,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: "asset_owner_workspaces_org_kyc_id_fkey"; columns: ["org_kyc_id"]; referencedRelation: "asset_owner_org_kyc"; referencedColumns: ["id"] },
-          { foreignKeyName: "asset_owner_workspaces_owner_user_id_fkey"; columns: ["owner_user_id"]; referencedRelation: "profiles"; referencedColumns: ["id"] },
+          {
+            foreignKeyName: "asset_owner_workspaces_org_kyc_id_fkey"
+            columns: ["org_kyc_id"]
+            isOneToOne: true
+            referencedRelation: "asset_owner_org_kyc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_workspaces_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       asset_owners: {
@@ -316,6 +491,175 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      asset_postings: {
+        Row: {
+          address: string | null
+          auction_format: string
+          child_slug: string
+          chosen_org_id: string | null
+          commission_pct: number | null
+          created_at: string
+          delta_fields: Json
+          description: string | null
+          district: string | null
+          doc_urls: string[]
+          expected_timeline: string | null
+          has_dispute: boolean | null
+          has_mortgage: boolean | null
+          id: string
+          image_urls: string[]
+          is_seized: boolean | null
+          legal_notes: string | null
+          ownership_proof_urls: string[]
+          parent_slug: string
+          pricing_mode: string
+          province: string | null
+          right_to_sell: boolean
+          starting_price: number | null
+          status: string
+          submitted_at: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          ward: string | null
+        }
+        Insert: {
+          address?: string | null
+          auction_format?: string
+          child_slug: string
+          chosen_org_id?: string | null
+          commission_pct?: number | null
+          created_at?: string
+          delta_fields?: Json
+          description?: string | null
+          district?: string | null
+          doc_urls?: string[]
+          expected_timeline?: string | null
+          has_dispute?: boolean | null
+          has_mortgage?: boolean | null
+          id?: string
+          image_urls?: string[]
+          is_seized?: boolean | null
+          legal_notes?: string | null
+          ownership_proof_urls?: string[]
+          parent_slug: string
+          pricing_mode?: string
+          province?: string | null
+          right_to_sell?: boolean
+          starting_price?: number | null
+          status?: string
+          submitted_at?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          ward?: string | null
+        }
+        Update: {
+          address?: string | null
+          auction_format?: string
+          child_slug?: string
+          chosen_org_id?: string | null
+          commission_pct?: number | null
+          created_at?: string
+          delta_fields?: Json
+          description?: string | null
+          district?: string | null
+          doc_urls?: string[]
+          expected_timeline?: string | null
+          has_dispute?: boolean | null
+          has_mortgage?: boolean | null
+          id?: string
+          image_urls?: string[]
+          is_seized?: boolean | null
+          legal_notes?: string | null
+          ownership_proof_urls?: string[]
+          parent_slug?: string
+          pricing_mode?: string
+          province?: string | null
+          right_to_sell?: boolean
+          starting_price?: number | null
+          status?: string
+          submitted_at?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          ward?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_postings_chosen_org_id_fkey"
+            columns: ["chosen_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_postings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_service_requests: {
+        Row: {
+          asset_posting_id: string
+          auction_org_id: string
+          created_at: string
+          id: string
+          match_score: number | null
+          message: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_posting_id: string
+          auction_org_id: string
+          created_at?: string
+          id?: string
+          match_score?: number | null
+          message?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_posting_id?: string
+          auction_org_id?: string
+          created_at?: string
+          id?: string
+          match_score?: number | null
+          message?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_service_requests_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_service_requests_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_service_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       auction_organizations: {
         Row: {
@@ -821,6 +1165,44 @@ export type Database = {
           },
         ]
       }
+      owner_report_views: {
+        Row: {
+          credits_charged: number
+          filter_combo: Json
+          id: string
+          is_default: boolean
+          user_id: string
+          viewed_at: string
+          workspace_id: string
+        }
+        Insert: {
+          credits_charged?: number
+          filter_combo?: Json
+          id?: string
+          is_default?: boolean
+          user_id: string
+          viewed_at?: string
+          workspace_id: string
+        }
+        Update: {
+          credits_charged?: number
+          filter_combo?: Json
+          id?: string
+          is_default?: boolean
+          user_id?: string
+          viewed_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_report_views_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partnership_registrations: {
         Row: {
           contact_name: string
@@ -1135,6 +1517,63 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_branches: {
+        Row: {
+          asset_owner_id: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          is_active: boolean
+          is_amc: boolean
+          notes: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          asset_owner_id?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          is_amc?: boolean
+          notes?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          asset_owner_id?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          is_amc?: boolean
+          notes?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_branches_asset_owner_id_fkey"
+            columns: ["asset_owner_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_branches_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
             referencedColumns: ["id"]
           },
         ]

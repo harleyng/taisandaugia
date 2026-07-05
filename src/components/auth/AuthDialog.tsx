@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Mail, Phone, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -178,14 +177,16 @@ export const AuthDialog = () => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      // Supabase native OAuth — trình duyệt sẽ redirect sang Google rồi quay lại origin.
+      // Yêu cầu: bật Google provider trong Supabase Dashboard + whitelist origin ở Auth → URL Configuration.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
       });
-      if (result.error) throw result.error;
-      closeAuthDialog();
+      if (error) throw error;
+      // Không đóng dialog ở đây: luồng thành công sẽ điều hướng khỏi trang.
     } catch (err: any) {
       toast({ title: "Đăng nhập Google thất bại", description: err.message, variant: "destructive" });
-    } finally {
       setLoading(false);
     }
   };

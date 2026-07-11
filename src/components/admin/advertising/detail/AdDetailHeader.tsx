@@ -29,7 +29,7 @@ export function AdDetailHeader({ ad }: { ad: Advertisement }) {
     <div className="bg-card border border-border rounded-2xl p-5">
       <h2 className="text-base font-semibold text-foreground mb-4">Thông tin chung</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2.5 gap-x-8">
-        <Row label="Tên banner">{ad.name}</Row>
+        <Row label="Tên chiến dịch">{ad.name}</Row>
         <Row label="Trạng thái"><AdStatusBadge status={ad.status} /></Row>
         <Row label="Thời gian tạo">{fmt(ad.created_at)}</Row>
         <Row label="Thiết bị hiển thị">{devices(ad)}</Row>

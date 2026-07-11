@@ -40,7 +40,7 @@ export default function AdminAdEditor() {
   useEffect(() => {
     if (!source || hydrated) return;
     if (isEdit && !isEditable(source.status)) {
-      toast.error("Banner đang hiển thị/đã kết thúc, không thể chỉnh sửa");
+      toast.error("Chiến dịch đang hiển thị/đã kết thúc, không thể chỉnh sửa");
       navigate(`/admin/marketing/quang-cao/${source.id}`);
       return;
     }
@@ -122,19 +122,19 @@ export default function AdminAdEditor() {
   };
 
   const handleSaveDraft = async () => {
-    if (form.name.trim().length < 3) return toast.error("Vui lòng nhập tên banner (≥ 3 ký tự)");
+    if (form.name.trim().length < 3) return toast.error("Vui lòng nhập tên chiến dịch (≥ 3 ký tự)");
     if (!form.position_id) return toast.error("Vui lòng chọn vị trí hiển thị");
     await saveWith("draft", "Đã lưu nháp");
   };
 
   const handlePublish = async () => {
-    if (!status.basic.done) return toast.error("Vui lòng nhập tên banner");
-    if (!status.content.done) return toast.error("Cần chọn vị trí, thiết bị và ảnh banner tương ứng");
+    if (!status.basic.done) return toast.error("Vui lòng nhập tên chiến dịch");
+    if (!status.content.done) return toast.error("Cần chọn vị trí, thiết bị và ảnh tương ứng");
     if (!status.schedule.done) return toast.error("Vui lòng hoàn thiện lịch đăng");
     const publishStatus: AdStatus = form.start_type === "scheduled" ? "scheduled" : "active";
     await saveWith(
       publishStatus,
-      publishStatus === "scheduled" ? "Đã lên lịch banner" : "Đã đăng banner",
+      publishStatus === "scheduled" ? "Đã lên lịch chiến dịch" : "Đã đăng chiến dịch",
     );
   };
 
@@ -155,7 +155,7 @@ export default function AdminAdEditor() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="flex-1 text-xl font-semibold text-foreground">
-          {isEdit ? "Chỉnh sửa Banner" : isCopy ? "Sao chép Banner" : "Tạo Banner"}
+          {isEdit ? "Chỉnh sửa chiến dịch" : isCopy ? "Sao chép chiến dịch" : "Tạo chiến dịch"}
         </h1>
       </div>
 
@@ -165,7 +165,7 @@ export default function AdminAdEditor() {
             <AdBasicInfoSection form={form} patch={patch} />
           </AdSectionCard>
 
-          <AdSectionCard ref={refs.content} index={2} title="Nội dung Banner" done={status.content.done} flash={flash === "content"}>
+          <AdSectionCard ref={refs.content} index={2} title="Nội dung chiến dịch" done={status.content.done} flash={flash === "content"}>
             <AdContentSection form={form} patch={patch} onPositionResolved={setPosition} />
           </AdSectionCard>
 
@@ -182,7 +182,7 @@ export default function AdminAdEditor() {
               Lưu vào bản nháp
             </Button>
             <Button disabled={busy} onClick={handlePublish}>
-              {isEdit ? "Lưu banner" : "Tạo banner mới"}
+              {isEdit ? "Lưu chiến dịch" : "Tạo chiến dịch mới"}
             </Button>
           </div>
         </div>

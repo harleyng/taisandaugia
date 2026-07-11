@@ -45,7 +45,7 @@ export default function AdminAdsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Quảng cáo</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{ads?.length ?? 0} banner</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{ads?.length ?? 0} chiến dịch</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => navigate("/admin/marketing/quang-cao/vi-tri")}>
@@ -54,7 +54,7 @@ export default function AdminAdsPage() {
           </Button>
           <Button size="sm" onClick={() => navigate("/admin/marketing/quang-cao/new")}>
             <Plus className="h-4 w-4 mr-1.5" />
-            Tạo banner
+            Tạo chiến dịch
           </Button>
         </div>
       </div>

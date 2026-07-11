@@ -22,12 +22,12 @@ export function AdBasicInfoSection({ form, patch }: Props) {
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label>
-          Tên Banner <span className="text-destructive">*</span>
+          Tên chiến dịch <span className="text-destructive">*</span>
         </Label>
         <Input
           value={form.name}
           onChange={(e) => patch({ name: e.target.value })}
-          placeholder="Nhập tên Banner"
+          placeholder="Nhập tên chiến dịch"
         />
       </div>
 

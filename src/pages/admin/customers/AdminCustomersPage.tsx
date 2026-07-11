@@ -90,7 +90,7 @@ export default function AdminCustomersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Xóa khách hàng?</AlertDialogTitle>
             <AlertDialogDescription>
-              Khách hàng &quot;{deleteTarget?.name}&quot; sẽ bị xóa. Banner đang gắn khách hàng này sẽ được gỡ liên kết.
+              Khách hàng &quot;{deleteTarget?.name}&quot; sẽ bị xóa. Chiến dịch đang gắn khách hàng này sẽ được gỡ liên kết.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

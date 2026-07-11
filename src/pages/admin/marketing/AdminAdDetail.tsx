@@ -30,7 +30,7 @@ export default function AdminAdDetail() {
   if (!ad) {
     return (
       <div className="p-6">
-        <p className="text-sm text-muted-foreground">Không tìm thấy banner.</p>
+        <p className="text-sm text-muted-foreground">Không tìm thấy chiến dịch.</p>
         <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/admin/marketing/quang-cao")}>
           Về danh sách
         </Button>
@@ -45,7 +45,7 @@ export default function AdminAdDetail() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-semibold text-foreground truncate">Chi tiết Banner</h1>
+          <h1 className="text-xl font-semibold text-foreground truncate">Chi tiết chiến dịch</h1>
           <p className="text-xs text-muted-foreground font-mono">
             {ad.code ?? `#${ad.id.slice(0, 8).toUpperCase()}`}
           </p>
@@ -61,7 +61,7 @@ export default function AdminAdDetail() {
             <BarChart3 className="h-4 w-4" /> Thống kê
           </TabsTrigger>
           <TabsTrigger value="content" className="gap-1.5">
-            <FileText className="h-4 w-4" /> Nội dung Banner
+            <FileText className="h-4 w-4" /> Nội dung chiến dịch
           </TabsTrigger>
         </TabsList>
         <TabsContent value="stats" className="mt-4">

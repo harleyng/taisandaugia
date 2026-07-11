@@ -80,13 +80,13 @@ export function AdContentSection({ form, patch, onPositionResolved }: Props) {
           <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span>
-              Vị trí duy nhất: chỉ 1 banner được chạy trong cùng khoảng thời gian. Nếu trùng lịch với banner khác, hệ thống sẽ báo lỗi khi lưu ở trạng thái lên lịch/hiển thị.
+              Vị trí duy nhất: chỉ 1 chiến dịch được chạy trong cùng khoảng thời gian. Nếu trùng lịch với chiến dịch khác, hệ thống sẽ báo lỗi khi lưu ở trạng thái lên lịch/hiển thị.
             </span>
           </div>
         )}
       </div>
 
-      {/* Ảnh Banner */}
+      {/* Ảnh */}
       <div>
         <p className="text-sm font-medium text-foreground mb-2">
           Ảnh <span className="text-destructive">*</span>

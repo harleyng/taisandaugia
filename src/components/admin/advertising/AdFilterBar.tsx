@@ -48,7 +48,7 @@ export function AdFilterBar({ filters, onChange }: Props) {
       <div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Nhập tên hoặc mã banner…"
+          placeholder="Nhập tên hoặc mã chiến dịch…"
           value={filters.search}
           onChange={(e) => set("search")(e.target.value)}
           className="pl-8"

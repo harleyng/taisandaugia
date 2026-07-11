@@ -78,10 +78,10 @@ export default function AdminCustomerDetail() {
 
       <div className="bg-card border border-border rounded-2xl p-5 mt-5">
         <h2 className="text-base font-semibold text-foreground mb-3">
-          Banner liên kết ({ads?.length ?? 0})
+          Chiến dịch liên kết ({ads?.length ?? 0})
         </h2>
         {!ads || ads.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Chưa có banner nào gắn với khách hàng này.</p>
+          <p className="text-sm text-muted-foreground">Chưa có chiến dịch nào gắn với khách hàng này.</p>
         ) : (
           <div className="divide-y divide-border">
             {ads.map((a) => (

@@ -32,7 +32,7 @@ export function AdTable({ ads, isLoading, onView, onCreate }: Props) {
           <thead>
             <tr className="border-b border-border bg-muted/50">
               <th className={TH}>Mã</th>
-              <th className={TH}>Tên banner</th>
+              <th className={TH}>Tên chiến dịch</th>
               <th className={TH}>Vị trí</th>
               <th className={TH}>Thời gian tạo</th>
               <th className={TH}>Trạng thái</th>
@@ -53,9 +53,9 @@ export function AdTable({ ads, isLoading, onView, onCreate }: Props) {
             ) : ads.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground text-sm">
-                  Chưa có banner nào.{" "}
+                  Chưa có chiến dịch nào.{" "}
                   <button className="text-primary underline" onClick={onCreate}>
-                    Tạo banner đầu tiên
+                    Tạo chiến dịch đầu tiên
                   </button>
                 </td>
               </tr>

@@ -51,7 +51,7 @@ export function AdReviewPanel({ status, position, onJump }: Props) {
       <div className="flex items-center gap-3">
         <ProgressRing progress={status.progress} />
         <div>
-          <p className="font-semibold text-sm text-foreground">Banner quảng cáo</p>
+          <p className="font-semibold text-sm text-foreground">Chiến dịch quảng cáo</p>
           <p className="text-xs text-muted-foreground">
             {remaining === 0 ? "Sẵn sàng đăng" : `Còn ${remaining} mục cần hoàn thiện`}
           </p>

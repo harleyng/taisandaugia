@@ -66,13 +66,13 @@ export function AdActions({ ad, layout, afterDelete }: Props) {
   };
   const doEnd = async () => {
     setConfirm(null);
-    await changeStatus("ended", "Đã kết thúc banner");
+    await changeStatus("ended", "Đã kết thúc chiến dịch");
   };
   const doDelete = async () => {
     setConfirm(null);
     try {
       await del.mutateAsync(ad.id);
-      toast.success("Đã xóa banner");
+      toast.success("Đã xóa chiến dịch");
       afterDelete?.();
     } catch {
       toast.error("Xóa thất bại");
@@ -102,12 +102,12 @@ export function AdActions({ ad, layout, afterDelete }: Props) {
               <Copy className="h-3.5 w-3.5" /> Sao chép
             </DropdownMenuItem>
             {canPause && (
-              <DropdownMenuItem onClick={() => changeStatus("paused", "Đã tạm dừng banner")} className="gap-2">
+              <DropdownMenuItem onClick={() => changeStatus("paused", "Đã tạm dừng chiến dịch")} className="gap-2">
                 <Pause className="h-3.5 w-3.5" /> Tạm dừng
               </DropdownMenuItem>
             )}
             {canResume && (
-              <DropdownMenuItem onClick={() => changeStatus("active", "Đã tiếp tục banner")} className="gap-2">
+              <DropdownMenuItem onClick={() => changeStatus("active", "Đã tiếp tục chiến dịch")} className="gap-2">
                 <Play className="h-3.5 w-3.5" /> Tiếp tục
               </DropdownMenuItem>
             )}
@@ -134,12 +134,12 @@ export function AdActions({ ad, layout, afterDelete }: Props) {
             </Button>
           )}
           {canPause && (
-            <Button variant="outline" size="sm" className="text-destructive" disabled={busy} onClick={() => changeStatus("paused", "Đã tạm dừng banner")}>
+            <Button variant="outline" size="sm" className="text-destructive" disabled={busy} onClick={() => changeStatus("paused", "Đã tạm dừng chiến dịch")}>
               <Pause className="h-4 w-4 mr-1.5" /> Tạm dừng
             </Button>
           )}
           {canResume && (
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => changeStatus("active", "Đã tiếp tục banner")}>
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => changeStatus("active", "Đã tiếp tục chiến dịch")}>
               <Play className="h-4 w-4 mr-1.5" /> Tiếp tục
             </Button>
           )}
@@ -154,9 +154,9 @@ export function AdActions({ ad, layout, afterDelete }: Props) {
       <AlertDialog open={confirm === "copy"} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sao chép banner?</AlertDialogTitle>
+            <AlertDialogTitle>Sao chép chiến dịch?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn sẽ được đưa tới màn tạo banner mới với thông tin của &quot;{ad.name}&quot; điền sẵn. Banner mới chỉ tạo khi bạn bấm lưu.
+              Bạn sẽ được đưa tới màn tạo chiến dịch mới với thông tin của &quot;{ad.name}&quot; điền sẵn. Chiến dịch mới chỉ tạo khi bạn bấm lưu.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -169,9 +169,9 @@ export function AdActions({ ad, layout, afterDelete }: Props) {
       <AlertDialog open={confirm === "end"} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Kết thúc banner?</AlertDialogTitle>
+            <AlertDialogTitle>Kết thúc chiến dịch?</AlertDialogTitle>
             <AlertDialogDescription>
-              Banner &quot;{ad.name}&quot; sẽ chuyển sang trạng thái Kết thúc và ngừng hiển thị.
+              Chiến dịch &quot;{ad.name}&quot; sẽ chuyển sang trạng thái Kết thúc và ngừng hiển thị.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -184,9 +184,9 @@ export function AdActions({ ad, layout, afterDelete }: Props) {
       <AlertDialog open={confirm === "delete"} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xóa banner?</AlertDialogTitle>
+            <AlertDialogTitle>Xóa chiến dịch?</AlertDialogTitle>
             <AlertDialogDescription>
-              Banner &quot;{ad.name}&quot; sẽ bị xóa vĩnh viễn.
+              Chiến dịch &quot;{ad.name}&quot; sẽ bị xóa vĩnh viễn.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

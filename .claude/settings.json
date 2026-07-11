@@ -25,7 +25,8 @@
       "Bash(grep -nE \"^#{1,3} \" .agents/knowledge/architecture.md)",
       "Bash(git rev-list *)",
       "Bash(echo \"docs exit=$?\")",
-      "Bash(echo \"chore exit=$?\")"
+      "Bash(echo \"chore exit=$?\")",
+      "Bash(timeout 20 npx vercel whoami)"
     ],
     "additionalDirectories": [
       "/tmp"

@@ -36,7 +36,7 @@ export function AdPositionsCard() {
       await del.mutateAsync(deleteTarget.id);
       toast.success("Đã xóa vị trí");
     } catch {
-      toast.error("Xóa thất bại — có thể còn banner dùng vị trí này");
+      toast.error("Xóa thất bại — có thể còn chiến dịch dùng vị trí này");
     }
     setDeleteTarget(null);
   };
@@ -133,7 +133,7 @@ export function AdPositionsCard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Xóa vị trí?</AlertDialogTitle>
             <AlertDialogDescription>
-              Vị trí &quot;{deleteTarget?.name}&quot; sẽ bị xóa. Không thể xóa nếu còn banner đang dùng.
+              Vị trí &quot;{deleteTarget?.name}&quot; sẽ bị xóa. Không thể xóa nếu còn chiến dịch đang dùng.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

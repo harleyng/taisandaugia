@@ -13,7 +13,13 @@
       "Bash(git checkout *)",
       "Bash(git status *)",
       "Bash(git diff *)",
-      "Bash(git log *)"
+      "Bash(git log *)",
+      "Bash(echo \"YES \\($\\(node -p \"require\\('@tiptap/core/package.json'\\).version\"\\)\\)\")",
+      "Bash(echo \"=== exit: $? ===\")",
+      "Bash(echo \"exit tsc: $?\")",
+      "Bash(npm uninstall *)",
+      "Bash(echo \"exit: $?\")",
+      "WebFetch(domain:claude.ai)"
     ]
   },
   "hooks": {

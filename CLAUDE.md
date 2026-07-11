@@ -29,7 +29,7 @@ npm run preview  # Preview production build
 npx supabase db push                  # Apply pending migrations to remote
 npx supabase db push --include-all    # Apply all migrations including out-of-order ones
 npx supabase migration list           # List migrations and their status
-npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integrations/supabase/types.ts  # Regenerate types after schema changes
+npx supabase gen types typescript --project-id dvdpfjprncvkhfwcvqmp > src/integrations/supabase/types.ts  # Regenerate types after schema changes
 ```
 
 **IMPORTANT:** Always run migrations yourself using the Supabase CLI — do not ask the user to run them manually.
@@ -39,7 +39,7 @@ npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integr
 - **Framework:** React 18 + TypeScript + Vite
 - **UI:** shadcn-ui (Radix primitives) + Tailwind CSS
 - **State:** TanStack React Query (server state), React Hook Form + Zod (forms)
-- **Database:** Supabase (PostgreSQL with typed client, project ID `bcusbpkfnydqcvxxjvew`)
+- **Database:** Supabase (PostgreSQL with typed client, project ID `dvdpfjprncvkhfwcvqmp`)
 - **Maps:** Leaflet + Mapbox GL
 - **Charts:** Recharts
 - **PWA:** vite-plugin-pwa (scope `/broker/`, start URL `/broker/dashboard`)

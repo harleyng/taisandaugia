@@ -87,7 +87,7 @@
     "vaul": "^0.9.9",
     "vite-plugin-pwa": "^1.1.0",
     "vitest": "^3.2.4",
-    "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0",
     "yet-another-react-lightbox": "^3.32.0",
     "zod": "^3.25.76"
   },

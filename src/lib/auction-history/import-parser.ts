@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import * as XLSX from 'xlsx-js-style'
 import { saveAs } from 'file-saver'
 import type { AssetCategory, AuctionFormat, BiddingMethod } from '@/types/auction-record'
 import { classifyAsset } from './classify'

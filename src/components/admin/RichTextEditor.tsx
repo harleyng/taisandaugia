@@ -24,15 +24,30 @@ import {
   Undo,
   Redo,
   Minus,
+  Braces,
+  MousePointerClick,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { InlineImageUpload } from "@/components/admin/ImageUploadButton";
-import { useEffect } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { VariableNode } from "@/components/admin/editor/VariableNode";
+import { CtaButtonNode } from "@/components/admin/editor/CtaButtonNode";
+import { CtaButtonDialog } from "@/components/admin/editor/CtaButtonDialog";
+import type { EmailVariable } from "@/lib/marketing/emailVariables";
+import { useEffect, useState } from "react";
 
 interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  /** Bật menu "Chèn biến" với danh sách biến cá nhân hoá (email marketing). */
+  variables?: EmailVariable[];
+  /** Bật nút "Chèn nút CTA". */
+  enableCta?: boolean;
 }
 
 function ToolbarButton({
@@ -66,7 +81,14 @@ function ToolbarButton({
   );
 }
 
-export function RichTextEditor({ value, onChange, placeholder = "Nhập nội dung bài viết..." }: RichTextEditorProps) {
+export function RichTextEditor({
+  value,
+  onChange,
+  placeholder = "Nhập nội dung bài viết...",
+  variables,
+  enableCta,
+}: RichTextEditorProps) {
+  const [ctaOpen, setCtaOpen] = useState(false);
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -76,6 +98,8 @@ export function RichTextEditor({ value, onChange, placeholder = "Nhập nội du
       Placeholder.configure({ placeholder }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       CharacterCount,
+      ...(variables && variables.length ? [VariableNode] : []),
+      ...(enableCta ? [CtaButtonNode] : []),
     ],
     content: value,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -220,6 +244,46 @@ export function RichTextEditor({ value, onChange, placeholder = "Nhập nội du
           <ImageIcon className="h-4 w-4" />
         </InlineImageUpload>
 
+        {(variables?.length || enableCta) && (
+          <>
+            <div className="w-px bg-border mx-1 self-stretch" />
+            {variables?.length ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    title="Chèn biến"
+                    className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    <Braces className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {variables.map((v) => (
+                    <DropdownMenuItem
+                      key={v.key}
+                      onClick={() =>
+                        editor
+                          .chain()
+                          .focus()
+                          .insertVariable({ name: v.key, label: v.label })
+                          .run()
+                      }
+                    >
+                      {v.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+            {enableCta ? (
+              <ToolbarButton onClick={() => setCtaOpen(true)} title="Chèn nút CTA">
+                <MousePointerClick className="h-4 w-4" />
+              </ToolbarButton>
+            ) : null}
+          </>
+        )}
+
         <div className="w-px bg-border mx-1 self-stretch" />
 
         <ToolbarButton
@@ -248,6 +312,14 @@ export function RichTextEditor({ value, onChange, placeholder = "Nhập nội du
       <div className="px-4 py-1.5 border-t border-border bg-muted/20 text-xs text-muted-foreground text-right">
         {editor.storage.characterCount.words()} từ · {editor.storage.characterCount.characters()} ký tự
       </div>
+
+      {enableCta && (
+        <CtaButtonDialog
+          open={ctaOpen}
+          onOpenChange={setCtaOpen}
+          onInsert={(attrs) => editor.chain().focus().insertCtaButton(attrs).run()}
+        />
+      )}
     </div>
   );
 }

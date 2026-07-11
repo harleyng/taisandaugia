@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ClipboardCheck, LogOut, Handshake, MessageSquare, Layers, Newspaper } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, LogOut, Handshake, MessageSquare, Layers, Newspaper, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -10,6 +10,7 @@ const NAV = [
   { to: "/admin/collaboration", label: "Đăng ký hợp tác", icon: Handshake, end: false },
   { to: "/admin/contacts", label: "Liên hệ", icon: MessageSquare, end: false },
   { to: "/admin/tin-tuc", label: "Tin tức", icon: Newspaper, end: false },
+  { to: "/admin/marketing/email", label: "Email Marketing", icon: Mail, end: false },
 ];
 
 export default function AdminLayout() {
@@ -22,7 +23,7 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen flex bg-muted/30">
+    <div className="h-screen flex bg-muted/30">
       {/* Sidebar */}
       <aside className="w-56 shrink-0 bg-card border-r border-border flex flex-col">
         <div className="px-5 py-5 border-b border-border">

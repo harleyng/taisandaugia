@@ -144,6 +144,10 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /admin/tin-tuc/new         AdminArticleEditor
 /admin/tin-tuc/danh-muc    AdminCategoriesPage
 /admin/tin-tuc/:id         AdminArticleEditor
+/admin/marketing/email          AdminCampaignsPage   (Email Marketing list)
+/admin/marketing/email/new      AdminCampaignEditor  (create; single useForm + audience builder + review sidebar)
+/admin/marketing/email/:id      AdminCampaignDetail  (?tab=stats|content|distribution)
+/admin/marketing/email/:id/edit AdminCampaignEditor  (edit; drafts only)
 
 *                          NotFound
 ```
@@ -219,6 +223,15 @@ npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integr
 ### RLS convention
 
 Every credit/unlock table has one **`"own rows"`** policy: `USING (auth.uid() = user_id)`. Never expose credit/unlock data cross-user. New per-user tables follow the same pattern.
+
+**Admin back-office tables** are the deliberate exception: `marketing_campaigns` + `campaign_recipients` use one **`admin_all`** policy `USING (public.has_role(auth.uid(),'ADMIN'::app_role))` (not `own rows`) because the data is platform-owned, not user-owned. When an admin feature must read across other users' RLS-protected tables (e.g. `user_credits` for credit-balance targeting), do it through a **`SECURITY DEFINER` RPC that guards with `has_role(...ADMIN)` and `RAISE`s otherwise** (see `resolve_campaign_audience` / `count_campaign_audience` in `20260711000001_marketing_campaigns.sql`) — never widen the underlying tables' policies. `GRANT EXECUTE ... TO authenticated`; the internal `has_role` check is the real boundary.
+
+### Email Marketing (admin)
+`/admin/marketing/email/*` — greenfield campaign feature. `useCampaigns.ts` mirrors `useArticles.ts` (array queryKeys `["marketing_campaigns"]`/`["marketing_campaign",id]`/`["campaign_recipients",id]`, mutations invalidate + toast; uses `(supabase as any)` because `types.ts` isn't regenerated yet — **all 4 marketing migrations ARE pushed** to live project `dvdpfjprncvkhfwcvqmp`, regen just needs a personal access token). Audience = a mode-gated jsonb `audience_spec` (criteria ∪ import ∪ specific), resolved server-side by the RPCs above, **always filtered by `notifications_enabled` opt-in**. **Send is stubbed** (`useSendCampaign`: resolve → snapshot `campaign_recipients` → transition status); a future `supabase/functions/send-campaign` edge function consumes the snapshot. Lifecycle `draft→scheduled→sending→sent`, `ended` = manual archive; only `draft` is editable.
+
+**"Danh sách cụ thể" surfaces opt-in early, client-side (mirror of the RPC filter):** don't let admins add recipients who'd be silently dropped at send. opt-out = `profiles.notifications_enabled !== true` (NOT NULL, default `false` → many users legitimately show "Không thể thêm"). Search tab (`AddRecipientsDialog`) selects `notifications_enabled` and disables opt-out rows; import tab classifies rows via pure `src/lib/marketing/importClassify.ts` (parse keeps row numbers → sai định dạng / trùng / chưa cho phép / hợp lệ), looks up opt-out by batching `profiles` `.in("email", chunk)` (200/chunk), shows one merged per-row issue list + `.xlsx` download (`audience/ImportReport.tsx`), and only commits `valid`. `AudienceSection` owns the single count header (no duplicate title) + import toast; `SelectedRecipientsTable` is title-less (search/clear-all only when >10 rows). Any NEW add path must apply the same opt-out gate.
+
+**Audience preview count = số THỰC NHẬN, via one shared headline helper.** `useAudiencePreview` calls `count_campaign_audience(spec, respect_optin=true)` → the number shown IS the deliverable (matched ∩ opted-in), same as what send resolves. All preview surfaces MUST render through `audiencePreviewHeadline(spec, {count,isFetching,isError})` (`src/lib/marketing/audienceCriteria.ts`), never raw `count ?? 0`: it gates on `hasAnyAudience` (`empty` → "Chưa cấu hình đối tượng", not a fake "0"), distinguishes `error` ("Không tính được…") from a real 0, and phrases per kind (`list` adds "trong N đã chọn"). Consumers: `CampaignReviewPanel` (takes `spec`+`isError`) and `AudienceSummary`; the `list` header in `AudienceSection` also surfaces `isError`. Because `notifications_enabled` defaults `false`, the count is 0 until users opt in — seed sample `20260712000001_seed_optin_sample.sql` flips ~1/3 of profiles `true` (idempotent, md5-order) for realistic previews; **default stays `false`**.
 
 ---
 

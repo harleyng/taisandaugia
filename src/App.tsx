@@ -33,6 +33,9 @@ const AdminContactsPage = lazy(() => import("./pages/admin/AdminContactsPage"));
 const AdminArticlesPage = lazy(() => import("./pages/admin/AdminArticlesPage"));
 const AdminArticleEditor = lazy(() => import("./pages/admin/AdminArticleEditor"));
 const AdminCategoriesPage = lazy(() => import("./pages/admin/AdminCategoriesPage"));
+const AdminCampaignsPage = lazy(() => import("./pages/admin/marketing/AdminCampaignsPage"));
+const AdminCampaignEditor = lazy(() => import("./pages/admin/marketing/AdminCampaignEditor"));
+const AdminCampaignDetail = lazy(() => import("./pages/admin/marketing/AdminCampaignDetail"));
 
 // Protected pages — lazy
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -192,6 +195,10 @@ const App = () => (
                   <Route path="tin-tuc/new" element={<AdminArticleEditor />} />
                   <Route path="tin-tuc/danh-muc" element={<AdminCategoriesPage />} />
                   <Route path="tin-tuc/:id" element={<AdminArticleEditor />} />
+                  <Route path="marketing/email" element={<AdminCampaignsPage />} />
+                  <Route path="marketing/email/new" element={<AdminCampaignEditor />} />
+                  <Route path="marketing/email/:id" element={<AdminCampaignDetail />} />
+                  <Route path="marketing/email/:id/edit" element={<AdminCampaignEditor />} />
                 </Route>
               </Route>
 

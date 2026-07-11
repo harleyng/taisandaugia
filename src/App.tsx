@@ -36,6 +36,12 @@ const AdminCategoriesPage = lazy(() => import("./pages/admin/AdminCategoriesPage
 const AdminCampaignsPage = lazy(() => import("./pages/admin/marketing/AdminCampaignsPage"));
 const AdminCampaignEditor = lazy(() => import("./pages/admin/marketing/AdminCampaignEditor"));
 const AdminCampaignDetail = lazy(() => import("./pages/admin/marketing/AdminCampaignDetail"));
+const AdminAdsPage = lazy(() => import("./pages/admin/marketing/AdminAdsPage"));
+const AdminAdEditor = lazy(() => import("./pages/admin/marketing/AdminAdEditor"));
+const AdminAdDetail = lazy(() => import("./pages/admin/marketing/AdminAdDetail"));
+const AdminAdPositionsPage = lazy(() => import("./pages/admin/marketing/AdminAdPositionsPage"));
+const AdminCustomersPage = lazy(() => import("./pages/admin/customers/AdminCustomersPage"));
+const AdminCustomerDetail = lazy(() => import("./pages/admin/customers/AdminCustomerDetail"));
 
 // Protected pages — lazy
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -199,6 +205,13 @@ const App = () => (
                   <Route path="marketing/email/new" element={<AdminCampaignEditor />} />
                   <Route path="marketing/email/:id" element={<AdminCampaignDetail />} />
                   <Route path="marketing/email/:id/edit" element={<AdminCampaignEditor />} />
+                  <Route path="marketing/quang-cao" element={<AdminAdsPage />} />
+                  <Route path="marketing/quang-cao/vi-tri" element={<AdminAdPositionsPage />} />
+                  <Route path="marketing/quang-cao/new" element={<AdminAdEditor />} />
+                  <Route path="marketing/quang-cao/:id" element={<AdminAdDetail />} />
+                  <Route path="marketing/quang-cao/:id/edit" element={<AdminAdEditor />} />
+                  <Route path="khach-hang" element={<AdminCustomersPage />} />
+                  <Route path="khach-hang/:id" element={<AdminCustomerDetail />} />
                 </Route>
               </Route>
 

@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-07-12 — Module Quảng cáo (Banner) + Khách hàng dùng chung
+
+**Context:** Cần cụm admin "Marketing" gộp Email Marketing + Quảng cáo; xây quản lý banner (tạo/list/chi tiết) tham khảo Email Marketing + ảnh Kiot.pro, có master data vị trí/giá, chặn vị trí unique, và 1 module Khách hàng nằm ngoài Marketing (dùng chung nhiều dịch vụ).
+**Decision:**
+- 5 bảng (`20260712000002_advertising.sql`, admin-only RLS): `ad_pages`→`ad_positions` (master data 2 cấp, `placement_type` slide/unique + `price NUMERIC(12,0)`), `advertisements` (banner; `code` "B0000009" qua trigger + `ad_code_seq`; lifecycle `draft/scheduled/active/paused/ended`, chỉ draft+scheduled sửa được), `ad_daily_stats` (seed demo 30 ngày×2 device cho biểu đồ ComposedChart), `customers` (generic, `code` "KH…").
+- **Chốt cứng unique**: trigger `enforce_unique_ad_position` dùng `tstzrange(start,end) &&` — chặn 2 banner scheduled/active trùng thời gian ở cùng vị trí unique; slide không chặn. UI cũng cảnh báo + toast `isUniquePositionError`.
+- Bucket `ad-banners` (public read, admin write, 10MB). `AdminLayout` refactor sang NAV có `children` + Collapsible (port từ PortalSidebar): cha "Marketing"→[Email, Quảng cáo], thêm item "Khách hàng". Routes `/admin/marketing/quang-cao/*` (+`/vi-tri` master data) và `/admin/khach-hang/*`.
+- **Bỏ** phần audience/đối tượng so với bản tham khảo. Form banner dùng controlled `AdFormState` (không RHF).
+**Consequences:**
+- ✅ `npx supabase db push` OK (3 migration local==remote) + **regenerate `types.ts` thành công** — nay chứa cả advertising lẫn marketing_campaigns; hook mới dùng `(supabase as any)` theo convention (không còn bắt buộc nhưng giữ nhất quán).
+- Render banner ra site công khai + tracking view/click thật = việc SAU (hiện admin-only, stats là seed demo). `numeric` có thể về string → `formatVnd` coerce `Number()`.
+
 ## 2026-07-12 — Audience preview = số THỰC NHẬN, gate/lỗi tường minh + seed opt-in
 
 **Context:** Block "Người nhận đủ điều kiện" khi tạo/sửa chiến dịch email hiện `count ?? 0` vô điều kiện (không gate, không đọc `isError`) → chưa cấu hình vẫn ra "0", lỗi RPC nuốt thành "0", mỗi loại một kiểu; loại "Theo tiêu chí" **không bao giờ nhảy số** vì DB có 0 user opt-in (`notifications_enabled` mặc định `false`) và preview lọc `respect_optin=true`.

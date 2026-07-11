@@ -148,9 +148,18 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /admin/marketing/email/new      AdminCampaignEditor  (create; single useForm + audience builder + review sidebar)
 /admin/marketing/email/:id      AdminCampaignDetail  (?tab=stats|content|distribution)
 /admin/marketing/email/:id/edit AdminCampaignEditor  (edit; drafts only)
+/admin/marketing/quang-cao          AdminAdsPage         (Quảng cáo / banner list)
+/admin/marketing/quang-cao/vi-tri   AdminAdPositionsPage (master data: trang + vị trí)
+/admin/marketing/quang-cao/new      AdminAdEditor        (create; ?from=:id = copy)
+/admin/marketing/quang-cao/:id      AdminAdDetail        (?tab=stats|content)
+/admin/marketing/quang-cao/:id/edit AdminAdEditor        (edit; draft + scheduled)
+/admin/khach-hang               AdminCustomersPage   (khách hàng dùng chung, NGOÀI Marketing)
+/admin/khach-hang/:id           AdminCustomerDetail  (info + banner liên kết)
 
 *                          NotFound
 ```
+
+> `AdminLayout` NAV hỗ trợ **submenu collapsible** (kiểu `NavGroup{ basePath, children }`, port từ `PortalSidebar`): cha "Marketing" → [Email Marketing, Quảng cáo]. Item "Khách hàng" là link phẳng top-level.
 
 > Scaffold new routes with the **`/new-page`** skill so the lazy-import + `<Route>` + nav entry stay consistent.
 
@@ -219,6 +228,10 @@ npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integr
 | `user_report_unlocks` | Permanent deep-report unlocks (key = `{slug}:{periodId}`) |
 | `listing_price_sessions` | Price-session history per listing |
 | `asset_postings` | Owner asset-posting wizard submissions (migration `20260621000001`) |
+| `ad_pages` / `ad_positions` | Master data quảng cáo 2 cấp: trang → vị trí (`placement_type` slide/unique, `price NUMERIC`) |
+| `advertisements` | Banner (admin-only); `code` "B0000009" qua trigger; lifecycle draft/scheduled/active/paused/ended |
+| `ad_daily_stats` | Số liệu view/click theo (ngày, device) — hiện là seed demo |
+| `customers` | Khách hàng dùng chung nhiều dịch vụ (`code` "KH…"); banner FK `customer_id` |
 
 ### RLS convention
 
@@ -232,6 +245,16 @@ Every credit/unlock table has one **`"own rows"`** policy: `USING (auth.uid() = 
 **"Danh sách cụ thể" surfaces opt-in early, client-side (mirror of the RPC filter):** don't let admins add recipients who'd be silently dropped at send. opt-out = `profiles.notifications_enabled !== true` (NOT NULL, default `false` → many users legitimately show "Không thể thêm"). Search tab (`AddRecipientsDialog`) selects `notifications_enabled` and disables opt-out rows; import tab classifies rows via pure `src/lib/marketing/importClassify.ts` (parse keeps row numbers → sai định dạng / trùng / chưa cho phép / hợp lệ), looks up opt-out by batching `profiles` `.in("email", chunk)` (200/chunk), shows one merged per-row issue list + `.xlsx` download (`audience/ImportReport.tsx`), and only commits `valid`. `AudienceSection` owns the single count header (no duplicate title) + import toast; `SelectedRecipientsTable` is title-less (search/clear-all only when >10 rows). Any NEW add path must apply the same opt-out gate.
 
 **Audience preview count = số THỰC NHẬN, via one shared headline helper.** `useAudiencePreview` calls `count_campaign_audience(spec, respect_optin=true)` → the number shown IS the deliverable (matched ∩ opted-in), same as what send resolves. All preview surfaces MUST render through `audiencePreviewHeadline(spec, {count,isFetching,isError})` (`src/lib/marketing/audienceCriteria.ts`), never raw `count ?? 0`: it gates on `hasAnyAudience` (`empty` → "Chưa cấu hình đối tượng", not a fake "0"), distinguishes `error` ("Không tính được…") from a real 0, and phrases per kind (`list` adds "trong N đã chọn"). Consumers: `CampaignReviewPanel` (takes `spec`+`isError`) and `AudienceSummary`; the `list` header in `AudienceSection` also surfaces `isError`. Because `notifications_enabled` defaults `false`, the count is 0 until users opt in — seed sample `20260712000001_seed_optin_sample.sql` flips ~1/3 of profiles `true` (idempotent, md5-order) for realistic previews; **default stays `false`**.
+
+### Quảng cáo / Advertising (admin)
+`/admin/marketing/quang-cao/*` — banner CRUD tham khảo Email Marketing (list/editor/detail 2 tab Thống kê+Nội dung), **KHÔNG có phần audience/đối tượng**. Migrations `20260712000002_advertising.sql` (5 bảng, admin-only RLS) + `_003_ad_banners_bucket.sql` (bucket `ad-banners`, public read / admin write, 10MB) + `_004_seed_advertising.sql` (demo). Hooks: `useAdvertisements.ts` (queryKeys `["advertisements"]`/`["advertisement",id]`/`["ad_daily_stats",id,days,device]`), `useAdMasterData.ts` (`ad_pages`/`ad_positions`), `useCustomers.ts`; đều dùng `(supabase as any)` theo convention. Types tay ở `src/types/advertising.ts`; status/section lib ở `src/lib/advertising/adStatus.ts` (chỉ `draft`+`scheduled` sửa được — khác Email chỉ `draft`). Form dùng controlled `AdFormState` (`src/lib/advertising/adForm.ts`), không RHF. Stats tab = Recharts `ComposedChart` (bar views + line clicks + line CTR), đọc `ad_daily_stats` gộp theo ngày.
+
+**INVARIANT — vị trí `unique` chỉ 1 banner/khoảng thời gian.** Trigger `enforce_unique_ad_position` (BEFORE INSERT/UPDATE trên `advertisements`) chặn khi `NEW.status IN ('scheduled','active')` + vị trí unique + `tstzrange(start,end) &&` với banner khác scheduled/active cùng vị trí → `RAISE EXCEPTION 'Vị trí duy nhất…'`. UI bắt lỗi qua `isUniquePositionError` (khớp message) và cũng cảnh báo trước khi lưu. Vị trí `slide` KHÔNG bị chặn (cho nhiều banner, sắp theo `sort_order`). `code` banner sinh tự động (`ad_code_seq`), đừng set thủ công.
+
+**Vị trí = "phiên trả giá":** `ad_positions` có `auction_ends_at` (đếm ngược "Kết thúc sau") + `bidder_count` (số người đang trả giá); `price` = "Mức giá hiện tại". Component `AdvertisementBlock` (prop-driven `endsAt`/`bidderCount`/`price`, dùng `formatVnd`) render card "Vị trí quảng cáo" + nút "Liên hệ để trả giá" (→ /lien-he). Hiện dùng làm **preview trong `AdPositionFormDialog`**; đặt card ra trang công khai + mở RLS public-read cho `ad_positions` = việc SAU.
+
+### Khách hàng (admin, NGOÀI Marketing)
+`/admin/khach-hang/*` — module khách hàng **generic dùng chung nhiều dịch vụ** (không riêng quảng cáo). Bảng `customers`; banner tham chiếu optional qua `advertisements.customer_id` (ON DELETE SET NULL). Trang chi tiết KH hiển thị "banner liên kết" qua `useCustomerAdvertisements(customerId)`.
 
 ---
 

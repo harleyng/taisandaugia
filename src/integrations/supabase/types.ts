@@ -10,10 +10,264 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      ad_daily_stats: {
+        Row: {
+          advertisement_id: string
+          clicks: number
+          created_at: string
+          device: string
+          id: string
+          stat_date: string
+          views: number
+        }
+        Insert: {
+          advertisement_id: string
+          clicks?: number
+          created_at?: string
+          device: string
+          id?: string
+          stat_date: string
+          views?: number
+        }
+        Update: {
+          advertisement_id?: string
+          clicks?: number
+          created_at?: string
+          device?: string
+          id?: string
+          stat_date?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_daily_stats_advertisement_id_fkey"
+            columns: ["advertisement_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_pages: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ad_positions: {
+        Row: {
+          auction_ends_at: string | null
+          bidder_count: number
+          code: string | null
+          created_at: string
+          desktop_height: number
+          desktop_width: number
+          id: string
+          is_active: boolean
+          mobile_height: number
+          mobile_width: number
+          name: string
+          page_id: string
+          placement_type: string
+          price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          auction_ends_at?: string | null
+          bidder_count?: number
+          code?: string | null
+          created_at?: string
+          desktop_height?: number
+          desktop_width?: number
+          id?: string
+          is_active?: boolean
+          mobile_height?: number
+          mobile_width?: number
+          name: string
+          page_id: string
+          placement_type?: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          auction_ends_at?: string | null
+          bidder_count?: number
+          code?: string | null
+          created_at?: string
+          desktop_height?: number
+          desktop_width?: number
+          id?: string
+          is_active?: boolean
+          mobile_height?: number
+          mobile_width?: number
+          name?: string
+          page_id?: string
+          placement_type?: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_positions_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "ad_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      advertisements: {
+        Row: {
+          click_count: number
+          code: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          desktop_image_url: string | null
+          end_at: string | null
+          end_type: string
+          id: string
+          is_test: boolean
+          mobile_image_url: string | null
+          name: string
+          nav_filter: Json | null
+          nav_type: string
+          nav_url: string | null
+          position_id: string
+          show_desktop: boolean
+          show_mobile: boolean
+          sort_order: number
+          start_at: string | null
+          start_type: string
+          status: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          click_count?: number
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          desktop_image_url?: string | null
+          end_at?: string | null
+          end_type?: string
+          id?: string
+          is_test?: boolean
+          mobile_image_url?: string | null
+          name: string
+          nav_filter?: Json | null
+          nav_type?: string
+          nav_url?: string | null
+          position_id: string
+          show_desktop?: boolean
+          show_mobile?: boolean
+          sort_order?: number
+          start_at?: string | null
+          start_type?: string
+          status?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          click_count?: number
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          desktop_image_url?: string | null
+          end_at?: string | null
+          end_type?: string
+          id?: string
+          is_test?: boolean
+          mobile_image_url?: string | null
+          name?: string
+          nav_filter?: Json | null
+          nav_type?: string
+          nav_url?: string | null
+          position_id?: string
+          show_desktop?: boolean
+          show_mobile?: boolean
+          sort_order?: number
+          start_at?: string | null
+          start_type?: string
+          status?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisements_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advertisements_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "ad_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       article_categories: {
         Row: {
           color: string
@@ -700,6 +954,60 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_recipients: {
+        Row: {
+          campaign_id: string
+          clicked_at: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          opened_at: string | null
+          sent_at: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          clicked_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          opened_at?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          clicked_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          opened_at?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_recipients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_submissions: {
         Row: {
           created_at: string
@@ -767,6 +1075,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      customers: {
+        Row: {
+          address: string | null
+          code: string | null
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          customer_type: string
+          email: string | null
+          id: string
+          name: string
+          note: string | null
+          phone: string | null
+          status: string
+          tax_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          code?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_type?: string
+          email?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          phone?: string | null
+          status?: string
+          tax_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          code?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_type?: string
+          email?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          phone?: string | null
+          status?: string
+          tax_code?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       listing_contacts: {
         Row: {
@@ -1028,6 +1387,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      marketing_campaigns: {
+        Row: {
+          audience_spec: Json
+          channel: string
+          clicked_count: number
+          content_html: string | null
+          created_at: string
+          created_by: string | null
+          eligible_count: number | null
+          id: string
+          name: string
+          notes: string | null
+          opened_count: number
+          preview_text: string | null
+          recipient_count: number
+          respect_optin: boolean
+          schedule_type: string
+          scheduled_at: string | null
+          sent_at: string | null
+          sent_count: number
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience_spec?: Json
+          channel?: string
+          clicked_count?: number
+          content_html?: string | null
+          created_at?: string
+          created_by?: string | null
+          eligible_count?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          opened_count?: number
+          preview_text?: string | null
+          recipient_count?: number
+          respect_optin?: boolean
+          schedule_type?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience_spec?: Json
+          channel?: string
+          clicked_count?: number
+          content_html?: string | null
+          created_at?: string
+          created_by?: string | null
+          eligible_count?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          opened_count?: number
+          preview_text?: string | null
+          recipient_count?: number
+          respect_optin?: boolean
+          schedule_type?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       organization_memberships: {
         Row: {
@@ -1584,6 +2015,10 @@ export type Database = {
     }
     Functions: {
       check_email_exists: { Args: { _email: string }; Returns: boolean }
+      count_campaign_audience: {
+        Args: { _respect_optin?: boolean; _spec: Json }
+        Returns: number
+      }
       get_listing_save_counts: {
         Args: { listing_ids: string[] }
         Returns: {
@@ -1606,6 +2041,20 @@ export type Database = {
       is_org_member: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
+      }
+      resolve_campaign_audience: {
+        Args: {
+          _limit?: number
+          _offset?: number
+          _respect_optin?: boolean
+          _spec: Json
+        }
+        Returns: {
+          email: string
+          name: string
+          total_count: number
+          user_id: string
+        }[]
       }
       users_share_org: {
         Args: { _user1_id: string; _user2_id: string }
@@ -1747,6 +2196,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["USER", "ADMIN"],

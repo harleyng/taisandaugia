@@ -4,63 +4,81 @@ import {
   LayoutDashboard,
   ClipboardCheck,
   LogOut,
-  Handshake,
   MessageSquare,
   Layers,
   Newspaper,
   Mail,
   Megaphone,
   Users,
-  Sparkles,
+  UserCog,
+  Building2,
+  ArrowLeftRight,
+  FileText,
+  MapPin,
   ChevronDown,
-  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-interface NavChild {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-interface NavLinkEntry {
+interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  /** Nested sub-menu rendered indented beneath this item. */
+  children?: NavItem[];
 }
 
-interface NavGroupEntry {
-  label: string;
-  icon: LucideIcon;
-  basePath: string;
-  children: NavChild[];
+interface NavSection {
+  /** Uppercase block heading; omit for the top-level standalone items. */
+  title?: string;
+  items: NavItem[];
 }
 
-type NavEntry = NavLinkEntry | NavGroupEntry;
-
-const isGroup = (e: NavEntry): e is NavGroupEntry => "children" in e;
-
-const NAV: NavEntry[] = [
-  { to: "/admin", label: "Tổng quan", icon: LayoutDashboard, end: true },
-  { to: "/admin/kyc", label: "Duyệt KYC Công ty", icon: ClipboardCheck },
-  { to: "/admin/chu-tai-san", label: "Duyệt Chủ tài sản", icon: Layers },
-  { to: "/admin/collaboration", label: "Đăng ký hợp tác", icon: Handshake },
-  { to: "/admin/contacts", label: "Liên hệ", icon: MessageSquare },
-  { to: "/admin/tin-tuc", label: "Tin tức", icon: Newspaper },
+const NAV: NavSection[] = [
   {
-    label: "Marketing",
-    icon: Sparkles,
-    basePath: "/admin/marketing",
-    children: [
-      { to: "/admin/marketing/email", label: "Email Marketing", icon: Mail },
-      { to: "/admin/marketing/quang-cao", label: "Quảng cáo", icon: Megaphone },
+    items: [{ to: "/admin", label: "Tổng quan", icon: LayoutDashboard, end: true }],
+  },
+  {
+    title: "Chăm sóc khách hàng",
+    items: [
+      { to: "/admin/nguoi-dung", label: "Quản lý người dùng", icon: UserCog },
+      { to: "/admin/kyc", label: "Duyệt KYC Công ty", icon: ClipboardCheck },
+      { to: "/admin/chu-tai-san", label: "Duyệt Chủ tài sản", icon: Layers },
+      { to: "/admin/lien-he-hop-tac", label: "Liên hệ & Hợp tác", icon: MessageSquare },
     ],
   },
-  { to: "/admin/khach-hang", label: "Khách hàng", icon: Users },
+  {
+    title: "Nội dung",
+    items: [
+      { to: "/admin/tin-tuc", label: "Tin tức", icon: Newspaper },
+      { to: "/admin/doi-tac", label: "Quản lý đối tác", icon: Building2 },
+    ],
+  },
+  {
+    title: "Marketing",
+    items: [
+      { to: "/admin/marketing/email", label: "Email Marketing", icon: Mail },
+      {
+        to: "/admin/marketing/quang-cao",
+        label: "Quảng cáo",
+        icon: Megaphone,
+        end: true,
+        children: [
+          { to: "/admin/marketing/quang-cao/trang", label: "Trang quảng cáo", icon: FileText },
+          { to: "/admin/marketing/quang-cao/vi-tri", label: "Vị trí quảng cáo", icon: MapPin },
+        ],
+      },
+      { to: "/admin/khach-hang", label: "Khách hàng", icon: Users },
+    ],
+  },
+  {
+    title: "Báo cáo",
+    items: [
+      { to: "/admin/bao-cao/giao-dich", label: "Giao dịch", icon: ArrowLeftRight },
+    ],
+  },
 ];
 
 const linkClass = (isActive: boolean) =>
@@ -71,46 +89,21 @@ const linkClass = (isActive: boolean) =>
       : "text-muted-foreground hover:text-foreground hover:bg-muted",
   ].join(" ");
 
-function NavGroup({ group }: { group: NavGroupEntry }) {
-  const location = useLocation();
-  const anyActive = location.pathname.startsWith(group.basePath);
-  const [open, setOpen] = useState(anyActive);
-  const Icon = group.icon;
-
-  return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger asChild>
-        <button
-          className={[
-            "flex w-full items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-            anyActive ? "text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted",
-          ].join(" ")}
-        >
-          <Icon className="h-4 w-4 shrink-0" />
-          <span className="flex-1 text-left">{group.label}</span>
-          {open ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )}
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="ml-3 mt-0.5 space-y-0.5 border-l border-border pl-3">
-          {group.children.map(({ to, label, icon: ChildIcon }) => (
-            <NavLink key={to} to={to} className={({ isActive }) => linkClass(isActive)}>
-              <ChildIcon className="h-3.5 w-3.5 shrink-0" />
-              {label}
-            </NavLink>
-          ))}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  const isWithin = (to: string) => pathname === to || pathname.startsWith(to + "/");
+
+  /** Parent stays active across its whole section, except when a child owns the highlight. */
+  const parentActive = (item: NavItem) =>
+    isWithin(item.to) && !(item.children ?? []).some((c) => isWithin(c.to));
+
+  // Collapse state per parent; defaults open when the current route is inside the section.
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const isOpen = (item: NavItem) => openMenus[item.to] ?? isWithin(item.to);
+  const toggleMenu = (to: string) =>
+    setOpenMenus((m) => ({ ...m, [to]: !(m[to] ?? isWithin(to)) }));
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -127,22 +120,86 @@ export default function AdminLayout() {
           <p className="text-sm font-bold text-foreground mt-0.5">Tài Sản Đấu Giá</p>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {NAV.map((entry) =>
-            isGroup(entry) ? (
-              <NavGroup key={entry.label} group={entry} />
-            ) : (
-              <NavLink
-                key={entry.to}
-                to={entry.to}
-                end={entry.end}
-                className={({ isActive }) => linkClass(isActive)}
-              >
-                <entry.icon className="h-4 w-4 shrink-0" />
-                {entry.label}
-              </NavLink>
-            ),
-          )}
+        <nav className="flex-1 p-3 overflow-y-auto">
+          {NAV.map((section, i) => (
+            <div key={section.title ?? "top"} className={i > 0 ? "mt-5" : ""}>
+              {section.title && (
+                <p className="px-3 mb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  {section.title}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const { to, label, icon: Icon, end, children } = item;
+
+                  if (!children) {
+                    return (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={end}
+                        className={({ isActive }) => linkClass(isActive)}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {label}
+                      </NavLink>
+                    );
+                  }
+
+                  const active = parentActive(item);
+                  const open = isOpen(item);
+                  const textClass = active
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground group-hover:text-foreground";
+                  return (
+                    <div key={to}>
+                      <div
+                        className={[
+                          "group flex items-center rounded-lg transition-colors",
+                          active ? "bg-primary" : "hover:bg-muted",
+                        ].join(" ")}
+                      >
+                        <NavLink
+                          to={to}
+                          end={end}
+                          className={`flex items-center gap-2.5 flex-1 min-w-0 px-3 py-2 text-sm font-medium ${textClass}`}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          {label}
+                        </NavLink>
+                        <button
+                          type="button"
+                          onClick={() => toggleMenu(to)}
+                          aria-label={open ? "Thu gọn" : "Mở rộng"}
+                          aria-expanded={open}
+                          className={`shrink-0 pl-1 pr-2.5 py-2 ${textClass}`}
+                        >
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform ${open ? "" : "-rotate-90"}`}
+                          />
+                        </button>
+                      </div>
+                      {open && (
+                        <div className="mt-0.5 space-y-0.5">
+                          {children.map(({ to: cto, label: clabel, icon: CIcon, end: cend }) => (
+                            <NavLink
+                              key={cto}
+                              to={cto}
+                              end={cend}
+                              className={({ isActive }) => `${linkClass(isActive)} pl-9 text-[13px]`}
+                            >
+                              <CIcon className="h-3.5 w-3.5 shrink-0" />
+                              {clabel}
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="p-3 border-t border-border">

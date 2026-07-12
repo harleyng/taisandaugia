@@ -17,6 +17,7 @@ import { PaywallProvider } from "@/contexts/PaywallContext";
 // Critical path — eager
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import SetPassword from "./pages/SetPassword";
 import Listings from "./pages/Listings";
 import ListingDetail from "./pages/ListingDetail";
 import AuctionDetail from "./pages/AuctionDetail";
@@ -28,8 +29,7 @@ const AdminKYCPage = lazy(() => import("./pages/AdminKYCPage"));
 const AdminKYCDetail = lazy(() => import("./pages/admin/AdminKYCDetail"));
 const AdminAssetOwnerKYCPage = lazy(() => import("./pages/admin/AdminAssetOwnerKYCPage"));
 const AdminAssetOwnerKYCDetail = lazy(() => import("./pages/admin/AdminAssetOwnerKYCDetail"));
-const AdminCollaborationPage = lazy(() => import("./pages/admin/AdminCollaborationPage"));
-const AdminContactsPage = lazy(() => import("./pages/admin/AdminContactsPage"));
+const AdminInboxPage = lazy(() => import("./pages/admin/AdminInboxPage"));
 const AdminArticlesPage = lazy(() => import("./pages/admin/AdminArticlesPage"));
 const AdminArticleEditor = lazy(() => import("./pages/admin/AdminArticleEditor"));
 const AdminCategoriesPage = lazy(() => import("./pages/admin/AdminCategoriesPage"));
@@ -39,9 +39,14 @@ const AdminCampaignDetail = lazy(() => import("./pages/admin/marketing/AdminCamp
 const AdminAdsPage = lazy(() => import("./pages/admin/marketing/AdminAdsPage"));
 const AdminAdEditor = lazy(() => import("./pages/admin/marketing/AdminAdEditor"));
 const AdminAdDetail = lazy(() => import("./pages/admin/marketing/AdminAdDetail"));
+const AdminAdPagesPage = lazy(() => import("./pages/admin/marketing/AdminAdPagesPage"));
 const AdminAdPositionsPage = lazy(() => import("./pages/admin/marketing/AdminAdPositionsPage"));
 const AdminCustomersPage = lazy(() => import("./pages/admin/customers/AdminCustomersPage"));
 const AdminCustomerDetail = lazy(() => import("./pages/admin/customers/AdminCustomerDetail"));
+const AdminPartnersPage = lazy(() => import("./pages/admin/partners/AdminPartnersPage"));
+const TransactionReportPage = lazy(() => import("./pages/admin/reports/TransactionReportPage"));
+const AdminUsersPage = lazy(() => import("./pages/admin/users/AdminUsersPage"));
+const AdminUserDetail = lazy(() => import("./pages/admin/users/AdminUserDetail"));
 
 // Protected pages — lazy
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -134,6 +139,7 @@ const App = () => (
 
               {/* Auth */}
               <Route path="/auth" element={<Auth />} />
+              <Route path="/tao-mat-khau" element={<SetPassword />} />
 
               {/* Redirects: old ho-so-du-tuyen paths → portal */}
               <Route path="/ho-so-du-tuyen" element={<Navigate to="/portal/ho-so-du-tuyen" replace />} />
@@ -192,11 +198,12 @@ const App = () => (
                 <Route element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="kyc" element={<AdminKYCPage />} />
-                  <Route path="collaboration" element={<AdminCollaborationPage />} />
+                  <Route path="lien-he-hop-tac" element={<AdminInboxPage />} />
+                  <Route path="collaboration" element={<Navigate to="/admin/lien-he-hop-tac?loai=hop-tac" replace />} />
+                  <Route path="contacts" element={<Navigate to="/admin/lien-he-hop-tac" replace />} />
                   <Route path="kyc/:id" element={<AdminKYCDetail />} />
                   <Route path="chu-tai-san" element={<AdminAssetOwnerKYCPage />} />
                   <Route path="chu-tai-san/:type/:id" element={<AdminAssetOwnerKYCDetail />} />
-                  <Route path="contacts" element={<AdminContactsPage />} />
                   <Route path="tin-tuc" element={<AdminArticlesPage />} />
                   <Route path="tin-tuc/new" element={<AdminArticleEditor />} />
                   <Route path="tin-tuc/danh-muc" element={<AdminCategoriesPage />} />
@@ -206,12 +213,18 @@ const App = () => (
                   <Route path="marketing/email/:id" element={<AdminCampaignDetail />} />
                   <Route path="marketing/email/:id/edit" element={<AdminCampaignEditor />} />
                   <Route path="marketing/quang-cao" element={<AdminAdsPage />} />
+                  <Route path="marketing/quang-cao/trang" element={<AdminAdPagesPage />} />
                   <Route path="marketing/quang-cao/vi-tri" element={<AdminAdPositionsPage />} />
                   <Route path="marketing/quang-cao/new" element={<AdminAdEditor />} />
                   <Route path="marketing/quang-cao/:id" element={<AdminAdDetail />} />
                   <Route path="marketing/quang-cao/:id/edit" element={<AdminAdEditor />} />
+                  <Route path="nguoi-dung" element={<AdminUsersPage />} />
+                  <Route path="nguoi-dung/:id" element={<AdminUserDetail />} />
                   <Route path="khach-hang" element={<AdminCustomersPage />} />
                   <Route path="khach-hang/:id" element={<AdminCustomerDetail />} />
+                  <Route path="doi-tac" element={<AdminPartnersPage />} />
+                  <Route path="bao-cao" element={<Navigate to="/admin/bao-cao/giao-dich" replace />} />
+                  <Route path="bao-cao/giao-dich" element={<TransactionReportPage />} />
                 </Route>
               </Route>
 

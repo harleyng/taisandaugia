@@ -172,6 +172,114 @@ export type Database = {
           },
         ]
       }
+      admin_role_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_role_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_role_assignments_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "admin_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_role_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_role_permissions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          module: string
+          role_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          module: string
+          role_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          module?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "admin_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_roles: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       advertisements: {
         Row: {
           click_count: number
@@ -267,6 +375,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      analytics_events: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device_type: string | null
+          event_type: string
+          feature_key: string | null
+          id: string
+          os: string | null
+          path: string | null
+          province: string | null
+          referrer: string | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          event_type: string
+          feature_key?: string | null
+          id?: string
+          os?: string | null
+          path?: string | null
+          province?: string | null
+          referrer?: string | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          event_type?: string
+          feature_key?: string | null
+          id?: string
+          os?: string | null
+          path?: string | null
+          province?: string | null
+          referrer?: string | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       article_categories: {
         Row: {
@@ -1047,26 +1200,39 @@ export type Database = {
           credit_delta: number
           description: string
           id: string
+          service_variant_id: string | null
           type: string
           user_id: string
+          variant_key: string | null
         }
         Insert: {
           created_at?: string
           credit_delta: number
           description: string
           id?: string
+          service_variant_id?: string | null
           type: string
           user_id: string
+          variant_key?: string | null
         }
         Update: {
           created_at?: string
           credit_delta?: number
           description?: string
           id?: string
+          service_variant_id?: string | null
           type?: string
           user_id?: string
+          variant_key?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "credit_transactions_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "credit_transactions_user_id_fkey"
             columns: ["user_id"]
@@ -1124,6 +1290,39 @@ export type Database = {
           status?: string
           tax_code?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      legal_documents: {
+        Row: {
+          changelog: string | null
+          content: string | null
+          created_at: string
+          doc_type: string
+          effective_date: string
+          id: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          changelog?: string | null
+          content?: string | null
+          created_at?: string
+          doc_type: string
+          effective_date: string
+          id?: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          changelog?: string | null
+          content?: string | null
+          created_at?: string
+          doc_type?: string
+          effective_date?: string
+          id?: string
+          updated_at?: string
+          version?: string
         }
         Relationships: []
       }
@@ -1460,6 +1659,89 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          advertisement_id: string | null
+          amount: number
+          code: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          fulfilled_at: string | null
+          fulfillment_status: string
+          id: string
+          note: string | null
+          ordered_at: string
+          quantity: number
+          service_id: string
+          service_variant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          advertisement_id?: string | null
+          amount?: number
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          fulfilled_at?: string | null
+          fulfillment_status?: string
+          id?: string
+          note?: string | null
+          ordered_at?: string
+          quantity?: number
+          service_id: string
+          service_variant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          advertisement_id?: string | null
+          amount?: number
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          fulfilled_at?: string | null
+          fulfillment_status?: string
+          id?: string
+          note?: string | null
+          ordered_at?: string
+          quantity?: number
+          service_id?: string
+          service_variant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_advertisement_id_fkey"
+            columns: ["advertisement_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_memberships: {
         Row: {
           created_at: string
@@ -1743,6 +2025,8 @@ export type Database = {
           kyc_status: Database["public"]["Enums"]["kyc_status"]
           name: string | null
           notifications_enabled: boolean
+          privacy_accepted_at: string | null
+          privacy_version: string | null
           rejection_reason: string | null
           status: string
           terms_accepted_at: string | null
@@ -1761,6 +2045,8 @@ export type Database = {
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           name?: string | null
           notifications_enabled?: boolean
+          privacy_accepted_at?: string | null
+          privacy_version?: string | null
           rejection_reason?: string | null
           status?: string
           terms_accepted_at?: string | null
@@ -1779,6 +2065,8 @@ export type Database = {
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
           name?: string | null
           notifications_enabled?: boolean
+          privacy_accepted_at?: string | null
+          privacy_version?: string | null
           rejection_reason?: string | null
           status?: string
           terms_accepted_at?: string | null
@@ -1810,6 +2098,125 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      service_variants: {
+        Row: {
+          base_credits: number | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          credit_cost: number | null
+          credits: number | null
+          id: string
+          is_active: boolean
+          is_best: boolean
+          is_popular: boolean
+          name: string
+          price: number
+          service_id: string
+          sort_order: number
+          updated_at: string
+          variant_key: string
+        }
+        Insert: {
+          base_credits?: number | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number | null
+          credits?: number | null
+          id?: string
+          is_active?: boolean
+          is_best?: boolean
+          is_popular?: boolean
+          name: string
+          price?: number
+          service_id: string
+          sort_order?: number
+          updated_at?: string
+          variant_key: string
+        }
+        Update: {
+          base_credits?: number | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number | null
+          credits?: number | null
+          id?: string
+          is_active?: boolean
+          is_best?: boolean
+          is_popular?: boolean
+          name?: string
+          price?: number
+          service_id?: string
+          sort_order?: number
+          updated_at?: string
+          variant_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_variants_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          audience: string
+          category: string | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          credit_cost: number | null
+          credit_feature_key: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          category?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number | null
+          credit_feature_key?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          category?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number | null
+          credit_feature_key?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          price?: number
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []
@@ -2089,9 +2496,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_access_report: {
+        Args: { _from: string; _granularity?: string; _to: string }
+        Returns: Json
+      }
       admin_grant_credits: {
         Args: { _amount: number; _note?: string; _user_id: string }
         Returns: number
+      }
+      admin_has_permission: {
+        Args: { _action: string; _module: string }
+        Returns: boolean
+      }
+      admin_is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      admin_set_role_permissions: {
+        Args: { _perms: Json; _role_id: string }
+        Returns: undefined
       }
       check_email_exists: { Args: { _email: string }; Returns: boolean }
       count_campaign_audience: {
@@ -2135,6 +2555,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      user_province: { Args: { uid: string }; Returns: string }
       users_share_org: {
         Args: { _user1_id: string; _user2_id: string }
         Returns: boolean

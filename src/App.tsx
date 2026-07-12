@@ -4,15 +4,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthDialogProvider } from "@/contexts/AuthDialogContext";
 import { AuthDialog } from "@/components/auth/AuthDialog";
+import { TermsGate } from "@/components/auth/TermsGate";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { AdminPermissionRoute } from "@/components/admin/AdminPermissionRoute";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { OwnerPortalLayout } from "@/components/owner-portal/OwnerPortalLayout";
 import { PaywallProvider } from "@/contexts/PaywallContext";
+import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 
 // Critical path — eager
 import Index from "./pages/Index";
@@ -43,10 +46,21 @@ const AdminAdPagesPage = lazy(() => import("./pages/admin/marketing/AdminAdPages
 const AdminAdPositionsPage = lazy(() => import("./pages/admin/marketing/AdminAdPositionsPage"));
 const AdminCustomersPage = lazy(() => import("./pages/admin/customers/AdminCustomersPage"));
 const AdminCustomerDetail = lazy(() => import("./pages/admin/customers/AdminCustomerDetail"));
+const AdminServicesPage = lazy(() => import("./pages/admin/services/AdminServicesPage"));
+const AdminOrdersPage = lazy(() => import("./pages/admin/orders/AdminOrdersPage"));
 const AdminPartnersPage = lazy(() => import("./pages/admin/partners/AdminPartnersPage"));
+const AdminLegalDocsPage = lazy(() => import("./pages/admin/legal/AdminLegalDocsPage"));
+const AdminLegalEditor = lazy(() => import("./pages/admin/legal/AdminLegalEditor"));
+const AdminLegalDetail = lazy(() => import("./pages/admin/legal/AdminLegalDetail"));
 const TransactionReportPage = lazy(() => import("./pages/admin/reports/TransactionReportPage"));
+const RevenueReportPage = lazy(() => import("./pages/admin/reports/RevenueReportPage"));
+const AccessAnalyticsReportPage = lazy(() => import("./pages/admin/reports/AccessAnalyticsReportPage"));
 const AdminUsersPage = lazy(() => import("./pages/admin/users/AdminUsersPage"));
 const AdminUserDetail = lazy(() => import("./pages/admin/users/AdminUserDetail"));
+const AdminAccountsPage = lazy(() => import("./pages/admin/quan-tri/AdminAccountsPage"));
+const AdminRolesPage = lazy(() => import("./pages/admin/quan-tri/AdminRolesPage"));
+const AdminRoleDetail = lazy(() => import("./pages/admin/quan-tri/AdminRoleDetail"));
+const AdminAccountDetail = lazy(() => import("./pages/admin/quan-tri/AdminAccountDetail"));
 
 // Protected pages — lazy
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -74,6 +88,7 @@ const OwnerAssetsPage = lazy(() => import("./pages/OwnerAssetsPage"));
 const OwnerDashboard = lazy(() => import("./pages/OwnerDashboard"));
 const OwnerBranchesPage = lazy(() => import("./pages/OwnerBranchesPage"));
 const OwnerReportPage = lazy(() => import("./pages/OwnerReportPage"));
+const OwnerCreditsPage = lazy(() => import("./pages/chu-tai-san/OwnerCreditsPage"));
 const AssetPostingWizardPage = lazy(() => import("./pages/AssetPostingWizardPage"));
 const BuyCredits = lazy(() => import("./pages/BuyCredits"));
 const VnpayCheckout = lazy(() => import("./pages/VnpayCheckout"));
@@ -105,6 +120,7 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+    <TermsGate />
     <TooltipProvider>
       <AuthDialogProvider>
       <Toaster />
@@ -112,6 +128,7 @@ const App = () => (
       <AuthDialog />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <PaywallProvider>
+          <AnalyticsTracker />
           <Suspense fallback={<div className="min-h-screen bg-background" />}>
             <Routes>
               {/* Public Marketplace */}
@@ -161,6 +178,7 @@ const App = () => (
                   <Route path="dang-tai-san" element={<AssetPostingWizardPage />} />
                   <Route path="chi-nhanh-amc" element={<OwnerBranchesPage />} />
                   <Route path="bao-cao" element={<OwnerReportPage />} />
+                  <Route path="credits" element={<OwnerCreditsPage />} />
                 </Route>
               </Route>
 
@@ -222,9 +240,21 @@ const App = () => (
                   <Route path="nguoi-dung/:id" element={<AdminUserDetail />} />
                   <Route path="khach-hang" element={<AdminCustomersPage />} />
                   <Route path="khach-hang/:id" element={<AdminCustomerDetail />} />
+                  <Route path="dich-vu" element={<AdminPermissionRoute module="dich-vu"><AdminServicesPage /></AdminPermissionRoute>} />
+                  <Route path="don-hang" element={<AdminPermissionRoute module="don-hang"><AdminOrdersPage /></AdminPermissionRoute>} />
                   <Route path="doi-tac" element={<AdminPartnersPage />} />
+                  <Route path="phap-ly" element={<AdminPermissionRoute module="phap-ly"><AdminLegalDocsPage /></AdminPermissionRoute>} />
+                  <Route path="phap-ly/tao" element={<AdminPermissionRoute module="phap-ly" action="create"><AdminLegalEditor /></AdminPermissionRoute>} />
+                  <Route path="phap-ly/:id" element={<AdminPermissionRoute module="phap-ly"><AdminLegalDetail /></AdminPermissionRoute>} />
                   <Route path="bao-cao" element={<Navigate to="/admin/bao-cao/giao-dich" replace />} />
+                  <Route path="bao-cao/doanh-thu" element={<AdminPermissionRoute module="doanh-thu"><RevenueReportPage /></AdminPermissionRoute>} />
                   <Route path="bao-cao/giao-dich" element={<TransactionReportPage />} />
+                  <Route path="bao-cao/truy-cap" element={<AccessAnalyticsReportPage />} />
+                  <Route path="quan-tri" element={<Navigate to="/admin/quan-tri/tai-khoan" replace />} />
+                  <Route path="quan-tri/tai-khoan" element={<AdminPermissionRoute module="tai-khoan"><AdminAccountsPage /></AdminPermissionRoute>} />
+                  <Route path="quan-tri/tai-khoan/:id" element={<AdminPermissionRoute module="tai-khoan"><AdminAccountDetail /></AdminPermissionRoute>} />
+                  <Route path="quan-tri/vai-tro" element={<AdminPermissionRoute module="vai-tro"><AdminRolesPage /></AdminPermissionRoute>} />
+                  <Route path="quan-tri/vai-tro/:id" element={<AdminPermissionRoute module="vai-tro"><AdminRoleDetail /></AdminPermissionRoute>} />
                 </Route>
               </Route>
 

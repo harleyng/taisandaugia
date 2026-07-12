@@ -13,19 +13,29 @@ import {
   UserCog,
   Building2,
   ArrowLeftRight,
+  Activity,
   FileText,
   MapPin,
   ChevronDown,
+  ShieldCheck,
+  KeyRound,
+  ScrollText,
+  Package,
+  ClipboardList,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  /** Mã module trong danh mục quyền; có mặt ⇒ menu chỉ hiện khi có quyền 'view'. */
+  module?: string;
   /** Nested sub-menu rendered indented beneath this item. */
   children?: NavItem[];
 }
@@ -43,40 +53,53 @@ const NAV: NavSection[] = [
   {
     title: "Chăm sóc khách hàng",
     items: [
-      { to: "/admin/nguoi-dung", label: "Quản lý người dùng", icon: UserCog },
-      { to: "/admin/kyc", label: "Duyệt KYC Công ty", icon: ClipboardCheck },
-      { to: "/admin/chu-tai-san", label: "Duyệt Chủ tài sản", icon: Layers },
-      { to: "/admin/lien-he-hop-tac", label: "Liên hệ & Hợp tác", icon: MessageSquare },
+      { to: "/admin/nguoi-dung", label: "Quản lý người dùng", icon: UserCog, module: "nguoi-dung" },
+      { to: "/admin/kyc", label: "Duyệt KYC Công ty", icon: ClipboardCheck, module: "kyc-cong-ty" },
+      { to: "/admin/chu-tai-san", label: "Duyệt Chủ tài sản", icon: Layers, module: "kyc-chu-tai-san" },
+      { to: "/admin/lien-he-hop-tac", label: "Liên hệ & Hợp tác", icon: MessageSquare, module: "lien-he" },
     ],
   },
   {
     title: "Nội dung",
     items: [
-      { to: "/admin/tin-tuc", label: "Tin tức", icon: Newspaper },
-      { to: "/admin/doi-tac", label: "Quản lý đối tác", icon: Building2 },
+      { to: "/admin/tin-tuc", label: "Tin tức", icon: Newspaper, module: "tin-tuc" },
+      { to: "/admin/doi-tac", label: "Quản lý đối tác", icon: Building2, module: "doi-tac" },
+      { to: "/admin/phap-ly", label: "Văn bản pháp lý", icon: ScrollText, module: "phap-ly" },
     ],
   },
   {
-    title: "Marketing",
+    title: "Sale & Marketing",
     items: [
-      { to: "/admin/marketing/email", label: "Email Marketing", icon: Mail },
+      { to: "/admin/marketing/email", label: "Email Marketing", icon: Mail, module: "email" },
       {
         to: "/admin/marketing/quang-cao",
         label: "Quảng cáo",
         icon: Megaphone,
         end: true,
+        module: "quang-cao",
         children: [
-          { to: "/admin/marketing/quang-cao/trang", label: "Trang quảng cáo", icon: FileText },
-          { to: "/admin/marketing/quang-cao/vi-tri", label: "Vị trí quảng cáo", icon: MapPin },
+          { to: "/admin/marketing/quang-cao/trang", label: "Trang quảng cáo", icon: FileText, module: "quang-cao" },
+          { to: "/admin/marketing/quang-cao/vi-tri", label: "Vị trí quảng cáo", icon: MapPin, module: "quang-cao" },
         ],
       },
-      { to: "/admin/khach-hang", label: "Khách hàng", icon: Users },
+      { to: "/admin/dich-vu", label: "Dịch vụ", icon: Package, module: "dich-vu" },
+      { to: "/admin/don-hang", label: "Đơn hàng", icon: ClipboardList, module: "don-hang" },
+      { to: "/admin/khach-hang", label: "Khách hàng", icon: Users, module: "khach-hang" },
     ],
   },
   {
     title: "Báo cáo",
     items: [
-      { to: "/admin/bao-cao/giao-dich", label: "Giao dịch", icon: ArrowLeftRight },
+      { to: "/admin/bao-cao/doanh-thu", label: "Doanh thu", icon: Wallet, module: "doanh-thu" },
+      { to: "/admin/bao-cao/giao-dich", label: "Giao dịch credit", icon: ArrowLeftRight, module: "giao-dich" },
+      { to: "/admin/bao-cao/truy-cap", label: "Phân tích truy cập", icon: Activity, module: "truy-cap" },
+    ],
+  },
+  {
+    title: "Quản trị",
+    items: [
+      { to: "/admin/quan-tri/tai-khoan", label: "Tài khoản quản trị", icon: ShieldCheck, module: "tai-khoan" },
+      { to: "/admin/quan-tri/vai-tro", label: "Vai trò", icon: KeyRound, module: "vai-tro" },
     ],
   },
 ];
@@ -92,6 +115,17 @@ const linkClass = (isActive: boolean) =>
 export default function AdminLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { isSuperAdmin, matrix, ready } = useAdminPermissions();
+
+  const canView = (item: NavItem) =>
+    !item.module || isSuperAdmin || (matrix[item.module]?.includes("view") ?? false);
+
+  // Lọc menu theo quyền 'view'. Trong lúc đang nạp quyền chỉ hiện mục không gắn
+  // module (Tổng quan) để tránh nháy link chưa được phép.
+  const visibleNav = NAV.map((section) => ({
+    ...section,
+    items: section.items.filter((it) => (ready ? canView(it) : !it.module)),
+  })).filter((section) => section.items.length > 0);
 
   const isWithin = (to: string) => pathname === to || pathname.startsWith(to + "/");
 
@@ -121,7 +155,7 @@ export default function AdminLayout() {
         </div>
 
         <nav className="flex-1 p-3 overflow-y-auto">
-          {NAV.map((section, i) => (
+          {visibleNav.map((section, i) => (
             <div key={section.title ?? "top"} className={i > 0 ? "mt-5" : ""}>
               {section.title && (
                 <p className="px-3 mb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">

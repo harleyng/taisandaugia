@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { AssetPaywallDialog } from "@/components/paywall/AssetPaywallDialog";
 import { CompanyPaywallDialog } from "@/components/paywall/CompanyPaywallDialog";
 import { OwnerPaywallDialog } from "@/components/paywall/OwnerPaywallDialog";
+import { trackFeature } from "@/lib/analytics/track";
 
 interface PaywallContextValue {
   openAssetPaywall: (listingId: string, label?: string) => void;
@@ -25,18 +26,21 @@ export const PaywallProvider = ({ children }: { children: ReactNode }) => {
   const [ownerOpen, setOwnerOpen] = useState(false);
 
   const openAssetPaywall = useCallback((id: string, label?: string) => {
+    trackFeature("open_paywall");
     setAssetId(id);
     setAssetLabel(label);
     setAssetOpen(true);
   }, []);
 
   const openCompanyPaywall = useCallback((id: string, label?: string) => {
+    trackFeature("open_paywall");
     setOrgId(id);
     setOrgLabel(label);
     setCompanyOpen(true);
   }, []);
 
   const openOwnerPaywall = useCallback((id: string, label?: string) => {
+    trackFeature("open_paywall");
     setOwnerId(id);
     setOwnerLabel(label);
     setOwnerOpen(true);

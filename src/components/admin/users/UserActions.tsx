@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lock, Unlock, KeyRound, Zap, Loader2 } from "lucide-react";
+import { Lock, Unlock, KeyRound, Zap, Loader2, RefreshCw, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -11,19 +11,35 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useSetActivated, useSetLock, useResetPassword } from "@/hooks/useAdminUsers";
+import { useSetActivated, useSetLock, useSetUserPassword } from "@/hooks/useAdminUsers";
+import { randomPassword } from "@/lib/randomPassword";
 import type { AdminUser } from "@/types/adminUser";
 
-type Confirm = "activate" | "lock" | "unlock" | "reset" | null;
+type Confirm = "activate" | "lock" | "unlock" | null;
 
 export function UserActions({ user }: { user: AdminUser }) {
   const setActivated = useSetActivated();
   const setLock = useSetLock();
-  const resetPassword = useResetPassword();
+  const setPassword = useSetUserPassword();
   const [confirm, setConfirm] = useState<Confirm>(null);
 
-  const busy = setActivated.isPending || setLock.isPending || resetPassword.isPending;
+  // Reset-password popup state
+  const [resetOpen, setResetOpen] = useState(false);
+  const [newPass, setNewPass] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const busy = setActivated.isPending || setLock.isPending;
   const isLocked = user.lockStatus === "locked";
 
   const run = async () => {
@@ -37,14 +53,41 @@ export function UserActions({ user }: { user: AdminUser }) {
       } else if (confirm === "unlock") {
         await setLock.mutateAsync({ userId: user.id, lock: false });
         toast.success("Đã mở khóa tài khoản");
-      } else if (confirm === "reset") {
-        await resetPassword.mutateAsync(user.email);
-        toast.success("Đã gửi email đặt lại mật khẩu");
       }
     } catch (err) {
       toast.error("Thao tác thất bại", { description: (err as Error).message });
     } finally {
       setConfirm(null);
+    }
+  };
+
+  const openReset = () => {
+    setNewPass(randomPassword());
+    setCopied(false);
+    setResetOpen(true);
+  };
+
+  const copyPass = async () => {
+    try {
+      await navigator.clipboard.writeText(newPass);
+      setCopied(true);
+      toast.success("Đã sao chép mật khẩu");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Không sao chép được, hãy copy thủ công");
+    }
+  };
+
+  const submitReset = async () => {
+    if (newPass.length < 6) return toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+    try {
+      await setPassword.mutateAsync({ userId: user.id, password: newPass });
+      toast.success("Đã đặt lại mật khẩu", {
+        description: `Gửi mật khẩu mới cho ${user.email}.`,
+      });
+      setResetOpen(false);
+    } catch (err) {
+      toast.error("Đặt lại mật khẩu thất bại", { description: (err as Error).message });
     }
   };
 
@@ -64,11 +107,6 @@ export function UserActions({ user }: { user: AdminUser }) {
       title: "Mở khóa tài khoản?",
       desc: `"${user.email}" sẽ có thể đăng nhập trở lại.`,
       action: "Mở khóa",
-    },
-    reset: {
-      title: "Đặt lại mật khẩu?",
-      desc: `Gửi email đặt lại mật khẩu đến "${user.email}".`,
-      action: "Gửi email",
     },
   };
 
@@ -94,7 +132,7 @@ export function UserActions({ user }: { user: AdminUser }) {
           <Lock className="h-4 w-4 mr-1.5" /> Khóa tài khoản
         </Button>
       )}
-      <Button variant="outline" size="sm" onClick={() => setConfirm("reset")} disabled={busy}>
+      <Button variant="outline" size="sm" onClick={openReset} disabled={busy || setPassword.isPending}>
         <KeyRound className="h-4 w-4 mr-1.5" /> Đặt lại mật khẩu
       </Button>
 
@@ -123,6 +161,44 @@ export function UserActions({ user }: { user: AdminUser }) {
           )}
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={resetOpen} onOpenChange={(o) => !setPassword.isPending && setResetOpen(o)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Đặt lại mật khẩu</DialogTitle>
+            <DialogDescription>
+              Đặt mật khẩu mới cho <strong className="text-foreground">{user.email}</strong>, rồi gửi cho người dùng. Không có email nào được gửi đi.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-1">
+            <Label>Mật khẩu mới</Label>
+            <div className="flex gap-2">
+              <Input
+                value={newPass}
+                onChange={(e) => setNewPass(e.target.value)}
+                placeholder="Nhập hoặc tạo ngẫu nhiên"
+                autoFocus
+              />
+              <Button type="button" variant="outline" size="icon" onClick={() => setNewPass(randomPassword())} title="Tạo ngẫu nhiên">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="icon" onClick={copyPass} disabled={!newPass} title="Sao chép">
+                {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Tối thiểu 6 ký tự.</p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetOpen(false)} disabled={setPassword.isPending}>Hủy</Button>
+            <Button onClick={submitReset} disabled={setPassword.isPending || newPass.length < 6}>
+              {setPassword.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Đặt lại mật khẩu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

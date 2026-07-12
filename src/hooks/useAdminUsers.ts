@@ -137,7 +137,7 @@ function invalidateUser(qc: ReturnType<typeof useQueryClient>, id?: string) {
 
 // Read the JSON body of a failed functions.invoke error so we can surface the
 // server's Vietnamese-friendly reason instead of a generic message.
-async function invokeMessage(error: unknown): Promise<string> {
+export async function invokeMessage(error: unknown): Promise<string> {
   const ctx = (error as { context?: Response })?.context;
   try {
     const body = await ctx?.clone().json();
@@ -185,7 +185,7 @@ export function useCreateUser() {
         body: { action: "create", email, name, makeAdmin, redirectTo: `${window.location.origin}/tao-mat-khau` },
       });
       if (error) throw new Error(await invokeMessage(error));
-      return data as { userId: string; email: string };
+      return data as { userId: string; email: string; actionLink: string | null };
     },
     onSuccess: () => invalidateUser(qc),
   });
@@ -204,13 +204,15 @@ export function useSetLock() {
   });
 }
 
-export function useResetPassword() {
+// Admin đặt lại mật khẩu cho user trực tiếp (không gửi email) — dùng service_role
+// trong edge function.
+export function useSetUserPassword() {
   return useMutation({
-    mutationFn: async (email: string) => {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/tao-mat-khau`,
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { error } = await supabase.functions.invoke("admin-user-actions", {
+        body: { action: "set_password", userId, password },
       });
-      if (error) throw error;
+      if (error) throw new Error(await invokeMessage(error));
     },
   });
 }

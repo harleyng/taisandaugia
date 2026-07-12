@@ -37,6 +37,8 @@ export default function AdminAdEditor() {
 
   const patch = (p: Partial<AdFormState>) => setForm((f) => ({ ...f, ...p }));
 
+  const isUnique = position?.placement_type === "unique";
+
   useEffect(() => {
     if (!source || hydrated) return;
     if (isEdit && !isEditable(source.status)) {
@@ -103,7 +105,7 @@ export default function AdminAdEditor() {
     start_at: form.start_type === "scheduled" ? form.start_at || null : null,
     end_type: form.end_type,
     end_at: form.end_type === "scheduled" ? form.end_at || null : null,
-    sort_order: form.sort_order,
+    sort_order: isUnique ? 1 : form.sort_order,
     status: statusValue,
     customer_id: form.customer_id || null,
   });
@@ -170,7 +172,7 @@ export default function AdminAdEditor() {
           </AdSectionCard>
 
           <AdSectionCard ref={refs.schedule} index={3} title="Thông tin lịch đăng" done={status.schedule.done} flash={flash === "schedule"}>
-            <AdScheduleSection form={form} patch={patch} />
+            <AdScheduleSection form={form} patch={patch} isUnique={isUnique} />
           </AdSectionCard>
 
           <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">

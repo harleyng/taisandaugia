@@ -6,15 +6,39 @@
 // user with the ADMIN role in public.user_roles.
 //
 // Actions (dispatched by body.action):
-//   create → auth.admin.inviteUserByEmail (creates user + sends set-password
-//            email), then marks the new profile activated.
-//   lock   → auth.admin.updateUserById(ban_duration) + profiles.status='locked'
-//   unlock → auth.admin.updateUserById(ban_duration:'none') + status='active'
+//   create       → auth.admin.createUser with a random password (no email
+//                  sent), marks the new profile activated, then generates a
+//                  recovery action link so the user can set their own password.
+//                  The link is RETURNED to the admin (never emailed) — the
+//                  project has no custom SMTP, so we never rely on Supabase mail.
+//   set_password → auth.admin.updateUserById({ password }) — admin resets a
+//                  user's password directly (no email).
+//   lock         → auth.admin.updateUserById(ban_duration) + profiles.status='locked'
+//   unlock       → auth.admin.updateUserById(ban_duration:'none') + status='active'
 //
 // SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are auto-injected into deployed
 // functions by the Supabase platform.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+// Strong-ish random password (mật khẩu tạm — user sẽ tự đặt lại qua link).
+// Bỏ ký tự dễ nhầm (0/O, 1/l/I). Đảm bảo có đủ 3 nhóm ký tự.
+function randomPassword(len = 14): string {
+  const lower = 'abcdefghijkmnpqrstuvwxyz'
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const digits = '23456789'
+  const all = lower + upper + digits
+  const bytes = new Uint8Array(len)
+  crypto.getRandomValues(bytes)
+  let out = ''
+  for (let i = 0; i < len; i++) out += all[bytes[i] % all.length]
+  return (
+    out.slice(0, len - 3) +
+    lower[bytes[0] % lower.length] +
+    upper[bytes[1] % upper.length] +
+    digits[bytes[2] % digits.length]
+  )
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,11 +56,12 @@ const json = (body: unknown, status = 200) =>
 const PERMANENT_BAN = '876000h'
 
 interface Body {
-  action?: 'create' | 'lock' | 'unlock'
+  action?: 'create' | 'set_password' | 'lock' | 'unlock'
   email?: string
   name?: string
   makeAdmin?: boolean
   userId?: string
+  password?: string
   redirectTo?: string
 }
 
@@ -77,16 +102,21 @@ Deno.serve(async (req) => {
         return json({ error: 'invalid_email' }, 400)
       }
 
-      const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-        data: { name },
-        redirectTo: body.redirectTo,
+      // Create a confirmed user with a throwaway random password — no email is
+      // sent (unlike inviteUserByEmail). The user sets their own password via
+      // the recovery link below.
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email,
+        password: randomPassword(),
+        email_confirm: true,
+        user_metadata: { name },
       })
-      if (inviteErr || !invited?.user) {
+      if (createErr || !created?.user) {
         // Most common: email already registered.
-        return json({ error: 'invite_failed', message: inviteErr?.message ?? 'unknown' }, 400)
+        return json({ error: 'create_failed', message: createErr?.message ?? 'unknown' }, 400)
       }
 
-      const newId = invited.user.id
+      const newId = created.user.id
       // The handle_new_user trigger created the profile; mark it activated
       // (admin-created accounts skip the top-up activation gate) + set name.
       await admin
@@ -100,7 +130,29 @@ Deno.serve(async (req) => {
           .upsert({ user_id: newId, role: 'ADMIN' }, { onConflict: 'user_id,role', ignoreDuplicates: true })
       }
 
-      return json({ ok: true, userId: newId, email })
+      // Generate (but do NOT email) a recovery link so the user lands directly
+      // in the set-password flow. Admin copies this and delivers it themselves.
+      let actionLink: string | null = null
+      const { data: linkData } = await admin.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: { redirectTo: body.redirectTo },
+      })
+      actionLink = linkData?.properties?.action_link ?? null
+
+      return json({ ok: true, userId: newId, email, actionLink })
+    }
+
+    if (action === 'set_password') {
+      const userId = body.userId
+      const password = body.password ?? ''
+      if (!userId) return json({ error: 'missing_user_id' }, 400)
+      if (password.length < 6) return json({ error: 'weak_password' }, 400)
+
+      const { error: pwErr } = await admin.auth.admin.updateUserById(userId, { password })
+      if (pwErr) return json({ error: 'set_password_failed', message: pwErr.message }, 400)
+
+      return json({ ok: true, userId })
     }
 
     if (action === 'lock' || action === 'unlock') {

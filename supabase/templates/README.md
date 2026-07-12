@@ -1,5 +1,11 @@
 # Email templates (Auth)
 
+> ⚠️ **HIỆN CHƯA DÙNG.** Luồng tạo tài khoản / đặt lại mật khẩu đã chuyển sang
+> **không gửi email** (admin tạo user → copy link đặt mật khẩu; đặt lại mật khẩu →
+> admin nhập trực tiếp trong popup). Xem `admin-user-actions` + `UserActions.tsx`.
+> Sửa email template trên Supabase còn **yêu cầu bật custom SMTP**. Giữ 2 file này để
+> dùng lại nếu sau này bật SMTP và muốn gửi email branded.
+
 Template HTML branded cho email xác thực của Supabase Auth. Đây là project **hosted**
 (`dvdpfjprncvkhfwcvqmp`) nên template phải được dán qua Dashboard — không push bằng CLI.
 

@@ -82,7 +82,9 @@ export function AdContentTab({ ad }: { ad: Advertisement }) {
             <Row label="Thời gian kết thúc">
               {ad.end_type === "continuous" ? "Liên tục" : fmt(ad.end_at)}
             </Row>
-            <Row label="Thứ tự hiển thị">{ad.sort_order}</Row>
+            {ad.position?.placement_type !== "unique" && (
+              <Row label="Thứ tự hiển thị">{ad.sort_order}</Row>
+            )}
           </div>
         </section>
       </div>

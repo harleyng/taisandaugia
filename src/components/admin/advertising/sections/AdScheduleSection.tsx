@@ -14,9 +14,11 @@ import type { AdStartType, AdEndType } from "@/types/advertising";
 interface Props {
   form: AdFormState;
   patch: (p: Partial<AdFormState>) => void;
+  /** Vị trí "duy nhất" chỉ có 1 chiến dịch nên không cần thứ tự hiển thị. */
+  isUnique?: boolean;
 }
 
-export function AdScheduleSection({ form, patch }: Props) {
+export function AdScheduleSection({ form, patch, isUnique }: Props) {
   return (
     <div className="space-y-5">
       {/* Thời gian bắt đầu */}
@@ -67,18 +69,20 @@ export function AdScheduleSection({ form, patch }: Props) {
         </div>
       </div>
 
-      {/* Thứ tự hiển thị */}
-      <div className="flex items-center gap-3">
-        <span className="w-32 shrink-0 text-sm text-muted-foreground">Thứ tự hiển thị:</span>
-        <Select value={String(form.sort_order)} onValueChange={(v) => patch({ sort_order: Number(v) })}>
-          <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-              <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Thứ tự hiển thị — vị trí "duy nhất" chỉ có 1 chiến dịch nên bỏ qua */}
+      {!isUnique && (
+        <div className="flex items-center gap-3">
+          <span className="w-32 shrink-0 text-sm text-muted-foreground">Thứ tự hiển thị:</span>
+          <Select value={String(form.sort_order)} onValueChange={(v) => patch({ sort_order: Number(v) })}>
+            <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }

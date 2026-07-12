@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronRight, QrCode, Landmark, CreditCard, Smartphone, ShieldCheck, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
+import { CREDIT_PACKAGES } from "@/hooks/useCredits";
 import { cn } from "@/lib/utils";
 
 type Method = "qr" | "atm" | "intl" | "app";
@@ -26,7 +26,6 @@ const buildQrDataUrl = (text: string) => {
 const VnpayCheckout = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { addCredits } = useCredits();
 
   const packageKey = params.get("package") || "";
   const returnPath = params.get("return") || "";
@@ -51,10 +50,10 @@ const VnpayCheckout = () => {
 
   if (!pkg) return null;
 
-  const goToResult = async (status: "success" | "failed") => {
-    if (status === "success") {
-      await addCredits(pkg.credits, pkg.key);
-    }
+  const goToResult = (status: "success" | "failed") => {
+    // Credit cộng DUY NHẤT tại /payment-result (PaymentResult orchestrate cả cộng
+    // credit + auto-unlock). Trước đây cộng thêm ở đây → mỗi giao dịch bị ghi 2 dòng
+    // `purchase` và cộng credit gấp đôi. Không cộng ở bước thanh toán nữa.
     const sp = new URLSearchParams();
     sp.set("status", status);
     sp.set("package", pkg.key);

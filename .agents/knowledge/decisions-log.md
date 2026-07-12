@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-07-12 — Module Quản lý người dùng (admin) + activation server-backed
+
+**Context:** Admin chưa có cách quản lý người dùng (list/chi tiết/tặng credit/tạo+kích hoạt/khóa-mở/reset mật khẩu). Đồng thời phát hiện bug: activation chỉ lưu ở `localStorage["activated_${userId}"]`, path nạp thật không ghi → popup kích hoạt hiện lại mỗi lần login/đổi thiết bị.
+**Decision:**
+- **Activation server-backed**: thêm `profiles.activated` + `activated_at` (nguồn sự thật duy nhất). Sửa gate login (`AuthDialog`), `addCredits` (`.eq('activated', false)` để lần nạp ĐẦU kích hoạt, không ghi đè `activated_at`), `DepositCard` (personal), `ProfileInfoTab`. Migration `20260712000012` backfill `activated=true` cho ai `balance>0` hoặc có giao dịch `purchase`.
+- **Khóa/mở = GoTrue ban thật** (`ban_duration`), mirror vào `profiles.status` (`CHECK IN ('active','locked')`) để list render "Bị khóa" không cần đọc `auth.users`.
+- **Tặng credit cross-user** = RPC `admin_grant_credits(_user_id,_amount,_note)` SECURITY DEFINER + guard `has_role ADMIN` (mẫu `resolve_campaign_audience`); ledger type MỚI `'admin_grant'`. Là cách DUY NHẤT ghi credit user khác (bảng credit vẫn own-rows).
+- **Đọc cross-user** = policy SELECT admin riêng `<table>_admin_read USING has_role ADMIN` trên `user_credits`, `user_roles`, 4 bảng unlock — GIỮ nguyên own-rows.
+- **Auth đặc quyền** (tạo user qua `inviteUserByEmail`, khóa/mở qua `ban_duration`) → edge function MỚI `supabase/functions/admin-user-actions` (service_role + verify caller ADMIN, gọi qua `functions.invoke`). Reset mật khẩu client-side `resetPasswordForEmail`.
+**Consequences:**
+- **Ops bắt buộc:** cấu hình SMTP trong Supabase Auth để email invite/reset gửi thật (bộ gửi mặc định của Supabase giới hạn ~vài/giờ). Edge function đã deploy; `SUPABASE_SERVICE_ROLE_KEY` tự inject.
+- `credit_transactions.type` giờ có thêm `'admin_grant'` (báo cáo/thống kê cần biết). Route `/admin/nguoi-dung` + `/:id`; nav mục "Chăm sóc khách hàng".
+
+## 2026-07-12 — Module "Báo cáo giao dịch" (admin) + sửa bug cộng credit x2
+
+**Context:** Admin cần module Báo cáo (báo cáo đầu tiên: doanh thu + tiêu dùng credit). KHÔNG có bảng payments/orders — VND doanh thu không lưu trong DB. Phát hiện thêm bug: mỗi thanh toán thành công cộng credit 2 lần → doanh thu/credit x2.
+**Decision:**
+- **Suy ra doanh thu từ ledger**: revenue = `credit_transactions` rows `type='purchase' AND credit_delta>0 AND description LIKE 'Mua gói %'`, map giá VND từ `CREDIT_PACKAGES` (`src/lib/credits.ts`) — **nguồn giá VND duy nhất, không hardcode vào SQL/RPC**. Purchase dương không khớp gói = "Nạp khác" (VND=0, tách riêng, loại khỏi avg). Purchase ÂM = spend "Xuất hồ sơ" (type ghi nhầm) → tính vào tiêu dùng.
+- **Tổng hợp phía client**: hook `useTransactionReport` (React Query, queryKey theo range; granularity qua `useMemo` không refetch; fetch phân trang 1000/trang cap 50k). Logic thuần + catalog `FEATURE_LABELS` ở `src/lib/reports/transactionReport.ts` (có unit test). Route `/admin/bao-cao/giao-dich`.
+- **Sửa bug credit x2**: bỏ `addCredits` ở `VnpayCheckout.tsx`; điểm cộng credit DUY NHẤT là `PaymentResult.tsx`.
+**Consequences:**
+- Doanh thu chỉ đúng khi giá gói không đổi (giao dịch cũ định giá theo giá hiện tại) — future-proof: lưu VND lúc mua. `credit_transactions` SELECT vẫn mở cho authenticated (admin gate ở UI) — hardening = SECURITY DEFINER RPC. Residual: reload PaymentResult vẫn có thể cộng lại (ranRef reset) — cần cờ server-side. Dữ liệu lịch sử đã x2 vẫn còn (dọn ở task riêng nếu cần).
+
 ## 2026-07-12 — "Danh sách cụ thể": gửi được email NGOÀI hệ thống + badge "Chưa có tài khoản"
 
 **Context:** `resolve_campaign_audience` giải đối tượng hoàn toàn `FROM profiles` → email import không khớp tài khoản nào bị âm thầm loại bỏ (không vào số "sẽ nhận", không snapshot lúc gửi) dù admin vẫn thêm vào danh sách được. Yêu cầu: cho phép gửi tới người ngoài hệ thống + đánh dấu họ.

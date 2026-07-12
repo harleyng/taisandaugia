@@ -153,13 +153,19 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /admin/marketing/quang-cao/new      AdminAdEditor        (create; ?from=:id = copy)
 /admin/marketing/quang-cao/:id      AdminAdDetail        (?tab=stats|content)
 /admin/marketing/quang-cao/:id/edit AdminAdEditor        (edit; draft + scheduled)
+/admin/nguoi-dung               AdminUsersPage       (Quản lý người dùng: list + stats + filters)
+/admin/nguoi-dung/:id           AdminUserDetail      (hồ sơ + số dư + giao dịch + tặng/khóa/reset)
 /admin/khach-hang               AdminCustomersPage   (khách hàng dùng chung, NGOÀI Marketing)
 /admin/khach-hang/:id           AdminCustomerDetail  (info + banner liên kết)
+/admin/bao-cao                  → redirect /admin/bao-cao/giao-dich
+/admin/bao-cao/giao-dich        TransactionReportPage (Báo cáo giao dịch: doanh thu + tiêu dùng credit)
 
 *                          NotFound
 ```
 
-> `AdminLayout` NAV hỗ trợ **submenu collapsible** (kiểu `NavGroup{ basePath, children }`, port từ `PortalSidebar`): cha "Marketing" → [Email Marketing, Quảng cáo]. Item "Khách hàng" là link phẳng top-level.
+> `AdminLayout` NAV = mảng `NavSection[]` (khối có `title` in hoa + `items: NavItem[]` link phẳng), KHÔNG còn submenu collapsible. Các section: (top) Tổng quan · **Báo cáo** [Giao dịch] · Chăm sóc khách hàng [Quản lý người dùng, KYC…] · Nội dung · Marketing.
+
+> **Edge functions** (`supabase/functions/`): scraping proxies (`crawl-auctioneers`, `fetch-announcement`) + **`admin-user-actions`** — privileged GoTrue admin ops (create user via `inviteUserByEmail`, lock/unlock via `ban_duration`) that need `service_role` and can't run client-side or as a DB function. It builds a service-role client from `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` (auto-injected), **verifies the caller is ADMIN** (Bearer JWT → `user_roles`), then dispatches on `body.action`. Call from the client with `supabase.functions.invoke(...)`; deploy with `npx supabase functions deploy <name> --project-ref dvdpfjprncvkhfwcvqmp`. Email invite/reset needs SMTP configured in Supabase Auth. This is the pattern for any future privileged-auth admin action.
 
 > Scaffold new routes with the **`/new-page`** skill so the lazy-import + `<Route>` + nav entry stay consistent.
 
@@ -265,6 +271,16 @@ Every credit/unlock table has one **`"own rows"`** policy: `USING (auth.uid() = 
 - `src/contexts/PaywallContext.tsx` — `PaywallProvider` / `usePaywall()` drive credit-gated dialogs; lives inside Router.
 
 **Behavior:** `unlockAsset` is **permanent** (`user_asset_unlocks`); `unlockCompany`/`unlockOwner` are **time-limited and stack** (new purchase extends from current expiry); `unlockDeepReportPeriod` key is `"{slug}:{periodId}"` and buying a year unlocks its quarters/months via `expandUnlock()`. See `credits-paywall-expert` for tiers/costs. Scaffold new unlock types with the **`/add-unlock`** skill.
+
+---
+
+## Reporting / analytics (admin) — derive revenue from the ledger
+
+There is **no payments/orders table** — VND revenue is never persisted. Any "doanh thu" report must **derive** VND from `credit_transactions`:
+- **Revenue rows** = `type='purchase' AND credit_delta>0 AND description LIKE 'Mua gói %'`; map each to a price via `CREDIT_PACKAGES` (`src/lib/credits.ts`) by **package name in the description** (never fallback on `credit_delta` — collides with reward/debug top-ups). Prices stay in code — **do not duplicate them into SQL/RPC**.
+- Positive `purchase` with no package match = **"Nạp khác"** (VND 0, shown separately, excluded from avg). Negative `purchase` = a mislabeled spend ("Xuất hồ sơ") → count as consumption.
+- **Consumption rows** = `credit_delta<0`, grouped by `type`; Vietnamese labels in `FEATURE_LABELS` (`src/lib/reports/transactionReport.ts`, the one catalog).
+- Pattern (`Báo cáo giao dịch`, `/admin/bao-cao/giao-dich`): pure aggregation in `src/lib/reports/transactionReport.ts` (unit-tested) + `useTransactionReport` hook (React Query keyed on **range only**; granularity re-buckets via `useMemo` with no refetch; paginated fetch 1000/page, 50k cap). RLS SELECT on `credit_transactions` is open to authenticated users (admin gate is UI-only) — future hardening = SECURITY DEFINER admin RPC.
 
 ---
 

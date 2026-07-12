@@ -29,7 +29,23 @@
       "Bash(timeout 20 npx vercel whoami)",
       "Bash(env)",
       "Bash(git stash *)",
-      "Bash(grep -iv \"terms_\\\\|^-$\")"
+      "Bash(grep -iv \"terms_\\\\|^-$\")",
+      "Bash(mv 20260712000005_partners.sql 20260712000009_partners.sql)",
+      "Bash(mv 20260712000006_partner_logos_bucket.sql 20260712000010_partner_logos_bucket.sql)",
+      "Bash(mv 20260712000007_seed_partners.sql 20260712000011_seed_partners.sql)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -nE \"^#{1,3} \" .agents/knowledge/common-pitfalls.md)",
+      "Bash(kill 98946 98932)",
+      "Bash(xargs kill -9)",
+      "Bash(echo \"started npm run dev \\(bg pid $!\\)\")",
+      "Bash(break)",
+      "Bash(curl -s -o /dev/null -w \"index.html → HTTP %{http_code}\\\\n\" http://localhost:8080/)",
+      "Bash(curl -s -o /dev/null -w \"main.tsx → HTTP %{http_code}\\\\n\" http://localhost:8080/src/main.tsx)",
+      "Bash(curl -s -o /dev/null -w \"embla \\(no hash\\)  → HTTP %{http_code}\\\\n\" http://localhost:8080/node_modules/.vite/deps/embla-carousel-react.js)",
+      "Bash(sort -k2)",
+      "Bash(python3 - /private/tmp/claude-501/-Users-m116gb-Downloads-Agency-taisandaugia/736bc3b4-e14c-463f-8803-70721cb5ef86/scratchpad/types-full.patch /private/tmp/claude-501/-Users-m116gb-Downloads-Agency-taisandaugia/736bc3b4-e14c-463f-8803-70721cb5ef86/scratchpad/types-partners.patch)",
+      "Bash(git apply *)",
+      "Bash(git rm *)"
     ],
     "additionalDirectories": [
       "/tmp"

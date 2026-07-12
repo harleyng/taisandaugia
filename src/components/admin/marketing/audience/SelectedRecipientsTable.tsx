@@ -8,6 +8,8 @@ export interface RecipientItem {
   key: string;
   primary: string;
   secondary?: string | null;
+  /** Email ngoài hệ thống (không khớp tài khoản nào) — hiện badge "Chưa có tài khoản". */
+  noAccount?: boolean;
 }
 
 interface Props {
@@ -104,7 +106,14 @@ export function SelectedRecipientsTable({ items, onRemove, onClearAll }: Props) 
               pageItems.map((it) => (
                 <tr key={it.key} className="border-b border-border last:border-0">
                   <td className="max-w-0 px-3 py-2">
-                    <p className="truncate text-foreground">{it.primary}</p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="truncate text-foreground">{it.primary}</p>
+                      {it.noAccount && (
+                        <span className="shrink-0 whitespace-nowrap rounded-full border border-warning/40 bg-warning/10 px-1.5 py-px text-[11px] font-medium text-warning">
+                          Chưa có tài khoản
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="max-w-0 px-3 py-2">
                     <p className="truncate text-muted-foreground">{it.secondary ?? "—"}</p>

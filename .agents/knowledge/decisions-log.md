@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-07-12 — "Danh sách cụ thể": gửi được email NGOÀI hệ thống + badge "Chưa có tài khoản"
+
+**Context:** `resolve_campaign_audience` giải đối tượng hoàn toàn `FROM profiles` → email import không khớp tài khoản nào bị âm thầm loại bỏ (không vào số "sẽ nhận", không snapshot lúc gửi) dù admin vẫn thêm vào danh sách được. Yêu cầu: cho phép gửi tới người ngoài hệ thống + đánh dấu họ.
+**Decision:**
+- **RPC thêm nhánh email ngoài hệ thống** (`20260712000007_campaign_audience_external_emails.sql`, `CREATE OR REPLACE`): mọi email trong `spec.emails` KHÔNG khớp `profiles` (anti-join `lower(p.email)`) trả về `user_id=NULL` và **LUÔN được gửi** — `respect_optin` chỉ áp cho tài khoản có sẵn (email ngoài HT không có `notifications_enabled`). `count_campaign_audience` + snapshot (`campaign_recipients.user_id` nullable) thừa hưởng.
+- **UI badge "Chưa có tài khoản"**: hook `useEmailAccountStatus` (mirror `useUserLabels`) tra `spec.emails` trong `profiles` (lowercase, kiểu `fetchOptOut`); `SelectedRecipientsTable` gắn badge hàng `noAccount`.
+**Consequences:**
+- Áp bằng `psql "$SUPABASE_DB_URI"` (ở `.env.local`) + `supabase migration repair --status applied 20260712000007` — KHÔNG `db push --include-all` để tránh áp nhầm migration đang dở song song (`20260712000008_profile_terms_consent`).
+- `ResolvedAudienceRow.user_id` nay `string|null`. `types.ts` KHÔNG regen (feature consent sẽ tự regen); hook mới chỉ select `profiles.email` (type đã có).
+
 ## 2026-07-12 — Module Quảng cáo (Banner) + Khách hàng dùng chung
 
 **Context:** Cần cụm admin "Marketing" gộp Email Marketing + Quảng cáo; xây quản lý banner (tạo/list/chi tiết) tham khảo Email Marketing + ảnh Kiot.pro, có master data vị trí/giá, chặn vị trí unique, và 1 module Khách hàng nằm ngoài Marketing (dùng chung nhiều dịch vụ).

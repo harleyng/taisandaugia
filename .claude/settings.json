@@ -26,7 +26,10 @@
       "Bash(git rev-list *)",
       "Bash(echo \"docs exit=$?\")",
       "Bash(echo \"chore exit=$?\")",
-      "Bash(timeout 20 npx vercel whoami)"
+      "Bash(timeout 20 npx vercel whoami)",
+      "Bash(env)",
+      "Bash(git stash *)",
+      "Bash(grep -iv \"terms_\\\\|^-$\")"
     ],
     "additionalDirectories": [
       "/tmp"

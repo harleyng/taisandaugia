@@ -92,7 +92,8 @@ export interface CampaignRecipient {
 
 /** Row shape returned by the resolve_campaign_audience RPC. */
 export interface ResolvedAudienceRow {
-  user_id: string;
+  /** null = email ngoài hệ thống (không có tài khoản). */
+  user_id: string | null;
   email: string;
   name: string | null;
   total_count: number;

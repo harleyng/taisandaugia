@@ -11,6 +11,7 @@ import {
 } from "../audience/SelectedRecipientsTable";
 import { DEFAULT_CRITERIA, modesForKind } from "@/lib/marketing/audienceCriteria";
 import { useUserLabels, type UserLabel } from "@/hooks/useUserLabels";
+import { useEmailAccountStatus } from "@/hooks/useEmailAccountStatus";
 import type {
   AudienceCriteria,
   AudienceKind,
@@ -95,6 +96,8 @@ export function AudienceSection({ spec, onChange, count, isFetching, isError }: 
   const [addOpen, setAddOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const { labels, seed } = useUserLabels(spec.userIds);
+  // Email import khớp tài khoản hay không — để gắn badge "Chưa có tài khoản".
+  const emailAccount = useEmailAccountStatus(spec.emails);
 
   const selectKind = (kind: Exclude<AudienceKind, "none">) => {
     if (kind === spec.kind) return;
@@ -149,7 +152,13 @@ export function AudienceSection({ spec, onChange, count, isFetching, isError }: 
     })),
     ...spec.emails
       .filter((e) => !manualEmails.has(e.toLowerCase()))
-      .map((e) => ({ key: `e:${e}`, primary: e, secondary: null })),
+      .map((e) => ({
+        key: `e:${e}`,
+        primary: e,
+        secondary: null,
+        // undefined khi chưa tra xong → chưa gắn badge (tránh nhầm lúc đang tải).
+        noAccount: emailAccount[e.toLowerCase()] === false,
+      })),
   ];
 
   const removeByKey = (key: string) => {

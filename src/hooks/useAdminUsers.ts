@@ -182,7 +182,7 @@ export function useCreateUser() {
   return useMutation({
     mutationFn: async ({ email, name, makeAdmin }: { email: string; name: string; makeAdmin?: boolean }) => {
       const { data, error } = await supabase.functions.invoke("admin-user-actions", {
-        body: { action: "create", email, name, makeAdmin, redirectTo: window.location.origin },
+        body: { action: "create", email, name, makeAdmin, redirectTo: `${window.location.origin}/tao-mat-khau` },
       });
       if (error) throw new Error(await invokeMessage(error));
       return data as { userId: string; email: string };
@@ -208,7 +208,7 @@ export function useResetPassword() {
   return useMutation({
     mutationFn: async (email: string) => {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/tao-mat-khau`,
       });
       if (error) throw error;
     },

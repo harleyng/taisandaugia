@@ -1682,6 +1682,8 @@ export type Database = {
           name: string | null
           notifications_enabled: boolean
           rejection_reason: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           updated_at: string
         }
         Insert: {
@@ -1695,6 +1697,8 @@ export type Database = {
           name?: string | null
           notifications_enabled?: boolean
           rejection_reason?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
         }
         Update: {
@@ -1708,6 +1712,8 @@ export type Database = {
           name?: string | null
           notifications_enabled?: boolean
           rejection_reason?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
         }
         Relationships: []

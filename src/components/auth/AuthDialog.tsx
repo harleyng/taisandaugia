@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Mail, Phone, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DepositCard } from "@/components/company-onboarding/DepositCard";
+import { RegisterConsent } from "@/components/auth/RegisterConsent";
+import { TERMS_VERSION } from "@/constants/terms";
 
 type Step = "identifier" | "login" | "login-phone" | "register-email" | "register-phone-otp" | "register-phone-password" | "activate";
 type InputMode = "email" | "phone";
@@ -25,6 +27,8 @@ export const AuthDialog = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [emailOptIn, setEmailOptIn] = useState(false);
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -36,6 +40,8 @@ export const AuthDialog = () => {
         setConfirmPassword("");
         setOtp("");
         setLoading(false);
+        setAgreeTerms(false);
+        setEmailOptIn(false);
       }, 200);
     }
   }, [isOpen]);
@@ -119,12 +125,23 @@ export const AuthDialog = () => {
       toast({ title: "Mật khẩu phải có ít nhất 6 ký tự", variant: "destructive" });
       return;
     }
+    if (!agreeTerms) {
+      toast({ title: "Vui lòng đồng ý với Điều khoản sử dụng và Chính sách bảo mật", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.signUp({
         email: identifier.trim(),
         password,
-        options: { emailRedirectTo: window.location.origin },
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            notifications_enabled: emailOptIn,
+            terms_accepted: true,
+            terms_version: TERMS_VERSION,
+          },
+        },
       });
       if (error) throw error;
       toast({
@@ -156,6 +173,10 @@ export const AuthDialog = () => {
       toast({ title: "Mật khẩu phải có ít nhất 6 ký tự", variant: "destructive" });
       return;
     }
+    if (!agreeTerms) {
+      toast({ title: "Vui lòng đồng ý với Điều khoản sử dụng và Chính sách bảo mật", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       // Use phone number as a fake email for demo purposes
@@ -163,6 +184,13 @@ export const AuthDialog = () => {
       const { error } = await supabase.auth.signUp({
         email: fakeEmail,
         password,
+        options: {
+          data: {
+            notifications_enabled: emailOptIn,
+            terms_accepted: true,
+            terms_version: TERMS_VERSION,
+          },
+        },
       });
       if (error) throw error;
       toast({ title: "Tài khoản đã được tạo!" });
@@ -196,6 +224,8 @@ export const AuthDialog = () => {
     setPassword("");
     setConfirmPassword("");
     setOtp("");
+    setAgreeTerms(false);
+    setEmailOptIn(false);
   };
 
   return (
@@ -322,7 +352,13 @@ export const AuthDialog = () => {
                     onKeyDown={(e) => e.key === "Enter" && handleRegisterEmail()}
                   />
                 </div>
-                <Button className="w-full" onClick={handleRegisterEmail} disabled={loading}>
+                <RegisterConsent
+                  agreeTerms={agreeTerms}
+                  onAgreeTermsChange={setAgreeTerms}
+                  emailOptIn={emailOptIn}
+                  onEmailOptInChange={setEmailOptIn}
+                />
+                <Button className="w-full" onClick={handleRegisterEmail} disabled={loading || !agreeTerms}>
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Đăng ký
                 </Button>
@@ -379,7 +415,13 @@ export const AuthDialog = () => {
                     onKeyDown={(e) => e.key === "Enter" && handlePhoneRegister()}
                   />
                 </div>
-                <Button className="w-full" onClick={handlePhoneRegister} disabled={loading}>
+                <RegisterConsent
+                  agreeTerms={agreeTerms}
+                  onAgreeTermsChange={setAgreeTerms}
+                  emailOptIn={emailOptIn}
+                  onEmailOptInChange={setEmailOptIn}
+                />
+                <Button className="w-full" onClick={handlePhoneRegister} disabled={loading || !agreeTerms}>
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Đăng ký
                 </Button>

@@ -8,6 +8,8 @@ import { OppCharts } from "@/components/report/opp/OppCharts";
 import { OppSessionTable } from "@/components/report/opp/OppSessionTable";
 import { OppDrawer } from "@/components/report/opp/OppDrawer";
 import { useCredits } from "@/hooks/useCredits";
+import { toast } from "sonner";
+import { trackFeature } from "@/lib/analytics/track";
 import { LEGAL_TYPE_OPTIONS, type SessionRow } from "@/lib/mockOppReport";
 
 const MATCH_COUNT = 47;
@@ -15,6 +17,7 @@ const MATCH_COUNT = 47;
 const MarketReport = () => {
   useEffect(() => {
     document.title = "Báo cáo Cơ hội Đấu giá — tàisảnđấugiá";
+    trackFeature("view_report");
   }, []);
 
   // Filters
@@ -43,7 +46,7 @@ const MarketReport = () => {
   const filterBarRef = useRef<HTMLDivElement>(null);
   const [miniBarVisible, setMiniBarVisible] = useState(false);
 
-  const { balance } = useCredits();
+  const { balance, chargeOppReport } = useCredits();
 
   // Mark stale when filters change after first generate
   const markStale = () => {
@@ -60,8 +63,14 @@ const MarketReport = () => {
 
   const handleGenerate = () => setConfirmOpen(true);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setConfirmOpen(false);
+    // Trừ credit thật (giá từ catalog: report_opp_buyer = 1 credit/lượt).
+    const r = await chargeOppReport();
+    if (!r.ok) {
+      toast.error("Số dư credit không đủ để tạo báo cáo. Vui lòng nạp thêm.");
+      return;
+    }
     setLoading(true);
     setTimeout(() => {
       setLoading(false);

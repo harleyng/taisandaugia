@@ -13,7 +13,7 @@ export default function PortalCreditsPage() {
         </div>
         <CreditBalanceChip />
       </div>
-      <CreditsTab defaultReturnPath="/portal/credits" />
+      <CreditsTab defaultReturnPath="/portal/credits" audience="company" />
     </div>
   )
 }

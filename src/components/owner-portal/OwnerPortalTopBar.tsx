@@ -18,6 +18,7 @@ const PAGE_META: Record<string, { title: string; parent?: string }> = {
   '/chu-tai-san/dashboard': { title: 'Tổng quan' },
   '/chu-tai-san/tai-san': { title: 'Danh sách tài sản' },
   '/chu-tai-san/bao-cao': { title: 'Báo cáo' },
+  '/chu-tai-san/credits': { title: 'Credit & Thanh toán' },
 }
 
 interface Props {
@@ -97,7 +98,7 @@ export function OwnerPortalTopBar({ onMenuClick }: Props) {
       <div className="flex items-center gap-3">
         <button
           className="flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-sm transition-colors hover:bg-muted"
-          onClick={() => navigate('/buy-credits')}
+          onClick={() => navigate('/chu-tai-san/credits')}
         >
           <CreditCard className="h-3.5 w-3.5 text-primary" />
           <span className="font-semibold text-foreground">{balance.toLocaleString('vi-VN')}</span>
@@ -124,7 +125,7 @@ export function OwnerPortalTopBar({ onMenuClick }: Props) {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Quay lại Marketplace
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/buy-credits')}>
+            <DropdownMenuItem onClick={() => navigate('/chu-tai-san/credits')}>
               <CreditCard className="h-4 w-4 mr-2" />
               Mua thêm credit
             </DropdownMenuItem>

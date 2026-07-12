@@ -15,6 +15,8 @@ import {
   unlockCompany as unlockCompanyImpl,
   unlockOwner as unlockOwnerImpl,
   unlockDeepReportPeriod as unlockDeepReportPeriodImpl,
+  chargeOppReport as chargeOppReportImpl,
+  chargeExportProfile as chargeExportProfileImpl,
   type CompanyTierKey,
   type OwnerTierKey,
   type CreditPackageKey,
@@ -86,13 +88,27 @@ export const useCredits = () => {
   );
 
   const addCredits = useCallback(
-    async (credits: number, packageKey?: CreditPackageKey) => {
+    async (credits: number, variantKey?: string) => {
       if (!userId) return;
-      await addCreditsImpl(userId, credits, packageKey);
+      await addCreditsImpl(userId, credits, variantKey);
       invalidate();
     },
     [userId, invalidate],
   );
+
+  const chargeOppReport = useCallback(async () => {
+    if (!userId) return { ok: false, reason: "insufficient" as const };
+    const result = await chargeOppReportImpl(userId);
+    if (result.ok) invalidate();
+    return result;
+  }, [userId, invalidate]);
+
+  const chargeExportProfile = useCallback(async () => {
+    if (!userId) return { ok: false, reason: "insufficient" as const };
+    const result = await chargeExportProfileImpl(userId);
+    if (result.ok) invalidate();
+    return result;
+  }, [userId, invalidate]);
 
   const assetUnlocked = useCallback(
     (id: string) => creditsState?.assetUnlocks.includes(id) ?? false,
@@ -137,6 +153,8 @@ export const useCredits = () => {
     unlockOwner,
     unlockDeepReportPeriod,
     addCredits,
+    chargeOppReport,
+    chargeExportProfile,
     isLoading,
     ASSET_COST,
     COMPANY_TIERS,

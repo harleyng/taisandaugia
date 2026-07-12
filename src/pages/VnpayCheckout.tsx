@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight, QrCode, Landmark, CreditCard, Smartphone, ShieldCheck, Info } from "lucide-react";
+import { ArrowLeft, ChevronRight, QrCode, Landmark, CreditCard, Smartphone, ShieldCheck, Info, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CREDIT_PACKAGES } from "@/hooks/useCredits";
+import { useServiceCatalog } from "@/hooks/useServiceCatalog";
 import { cn } from "@/lib/utils";
 
 type Method = "qr" | "atm" | "intl" | "app";
@@ -31,7 +31,9 @@ const VnpayCheckout = () => {
   const returnPath = params.get("return") || "";
   const unlockParam = params.get("unlock") || "";
 
-  const pkg = useMemo(() => CREDIT_PACKAGES.find((p) => p.key === packageKey), [packageKey]);
+  const { variant: getVariant, isLoading: catalogLoading } = useServiceCatalog();
+  const pkg = getVariant(packageKey);
+  const priceVnd = Number(pkg?.price ?? 0);
 
   const [step, setStep] = useState<"method" | "qr">("method");
   const [method, setMethod] = useState<Method>("qr");
@@ -39,8 +41,8 @@ const VnpayCheckout = () => {
   const orderId = useMemo(() => Math.floor(100000 + Math.random() * 900000).toString(), []);
 
   useEffect(() => {
-    if (!pkg) navigate("/profile?tab=credits", { replace: true });
-  }, [pkg, navigate]);
+    if (!catalogLoading && !pkg) navigate("/profile?tab=credits", { replace: true });
+  }, [catalogLoading, pkg, navigate]);
 
   useEffect(() => {
     if (step !== "qr") return;
@@ -48,6 +50,13 @@ const VnpayCheckout = () => {
     return () => clearInterval(t);
   }, [step]);
 
+  if (catalogLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
   if (!pkg) return null;
 
   const goToResult = (status: "success" | "failed") => {
@@ -56,7 +65,7 @@ const VnpayCheckout = () => {
     // `purchase` và cộng credit gấp đôi. Không cộng ở bước thanh toán nữa.
     const sp = new URLSearchParams();
     sp.set("status", status);
-    sp.set("package", pkg.key);
+    sp.set("package", pkg.variant_key);
     if (returnPath) sp.set("return", returnPath);
     if (unlockParam) sp.set("unlock", unlockParam);
     navigate(`/payment-result?${sp.toString()}`);
@@ -70,7 +79,7 @@ const VnpayCheckout = () => {
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
   const ss = String(secondsLeft % 60).padStart(2, "0");
 
-  const qrPayload = `vnpay://pay?order=${orderId}&amount=${pkg.priceVnd}&pkg=${pkg.key}`;
+  const qrPayload = `vnpay://pay?order=${orderId}&amount=${priceVnd}&pkg=${pkg.variant_key}`;
 
   return (
     <div className="min-h-screen bg-[#f3f4f6]">
@@ -201,13 +210,13 @@ const VnpayCheckout = () => {
                     <div>
                       <p className="text-muted-foreground">Số tiền thanh toán</p>
                       <p className="text-2xl font-bold text-[#005baa]">
-                        {formatVnd(pkg.priceVnd)}
+                        {formatVnd(priceVnd)}
                         <sup className="text-xs ml-0.5">VND</sup>
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Sản phẩm</p>
-                      <p className="font-semibold text-foreground">Gói {pkg.name} — {pkg.credits} credit</p>
+                      <p className="font-semibold text-foreground">Gói {pkg.name} — {pkg.credits ?? 0} credit</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Phí giao dịch</p>

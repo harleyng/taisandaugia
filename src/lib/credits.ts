@@ -1,6 +1,9 @@
 // Credit system backed by Supabase. DB-persisted, client-trusted.
+// Giá là NGUỒN SỰ THẬT ở DB (service_variants) qua serviceCatalog.getVariantCost;
+// hằng số dưới đây chỉ còn là fallback khi DB không đọc được.
 import { supabase } from "@/integrations/supabase/client";
 import { expandUnlock, formatPeriodLabel, parsePeriod } from "./reportPeriods";
+import { getVariantCost, getVariantPackage } from "./serviceCatalog";
 
 // ─── Constants (stay as code, not in DB) ────────────────────────────────────
 
@@ -48,9 +51,11 @@ export type TransactionType =
   | "unlock_company"
   | "unlock_owner"
   | "unlock_deep_report"
-  | "owner_report_view";
+  | "owner_report_view"
+  | "unlock_opp_report"
+  | "export_profile";
 
-export const OWNER_REPORT_COST = 49;
+export const OWNER_REPORT_COST = 4;
 
 export interface Transaction {
   id: string;
@@ -157,10 +162,12 @@ const ensureCreditsRow = async (userId: string) => {
 export const addCredits = async (
   userId: string,
   credits: number,
-  packageKey?: CreditPackageKey,
+  variantKey?: string,
 ): Promise<void> => {
   await ensureCreditsRow(userId);
-  const pkg = packageKey ? CREDIT_PACKAGES.find((p) => p.key === packageKey) : null;
+  // Giá/tên gói lấy từ catalog DB (service_variants) qua variant_key; giữ quy ước
+  // description "Mua gói {name}" + lưu variant_key/service_variant_id để quy doanh thu.
+  const variant = variantKey ? await getVariantPackage(variantKey) : null;
   const { data } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
   const current = data?.balance ?? 0;
   await Promise.all([
@@ -168,8 +175,10 @@ export const addCredits = async (
     supabase.from("credit_transactions").insert({
       user_id: userId,
       type: "purchase",
-      description: pkg ? `Mua gói ${pkg.name}` : `Nạp ${credits} tín dụng`,
+      description: variant ? `Mua gói ${variant.name}` : `Nạp ${credits} tín dụng`,
       credit_delta: credits,
+      variant_key: variantKey ?? null,
+      service_variant_id: variant?.id ?? null,
     }),
     // "Nạp lần đầu để kích hoạt": the first top-up activates the account.
     // The activated=false filter makes this a no-op on subsequent top-ups
@@ -208,7 +217,8 @@ export const unlockAsset = async (
     .maybeSingle();
   if (existing) return { ok: true, reason: "already" };
 
-  const ok = await deductCredits(userId, ASSET_COST);
+  const cost = await getVariantCost("asset_unlock");
+  const ok = await deductCredits(userId, cost);
   if (!ok) return { ok: false, reason: "insufficient" };
 
   await Promise.all([
@@ -217,7 +227,8 @@ export const unlockAsset = async (
       user_id: userId,
       type: "unlock_asset",
       description: `Mở khóa tài sản ${label ?? listingId}`,
-      credit_delta: -ASSET_COST,
+      credit_delta: -cost,
+      variant_key: "asset_unlock",
     }),
   ]);
   return { ok: true };
@@ -231,6 +242,8 @@ export const unlockCompany = async (
 ): Promise<{ ok: boolean; reason?: "insufficient" }> => {
   await ensureCreditsRow(userId);
   const tier = COMPANY_TIERS.find((t) => t.key === tierKey)!;
+  const variantKey = `track_company_${tierKey}`;
+  const cost = await getVariantCost(variantKey);
 
   // Extend from existing expiry if still active
   const { data: existing } = await supabase
@@ -243,7 +256,7 @@ export const unlockCompany = async (
     .limit(1)
     .maybeSingle();
 
-  const ok = await deductCredits(userId, tier.cost);
+  const ok = await deductCredits(userId, cost);
   if (!ok) return { ok: false, reason: "insufficient" };
 
   const base = existing ? new Date(existing.expires_at).getTime() : Date.now();
@@ -255,7 +268,8 @@ export const unlockCompany = async (
       user_id: userId,
       type: "unlock_company",
       description: `Theo dõi công ty ${label ?? orgId} ${tier.label}`,
-      credit_delta: -tier.cost,
+      credit_delta: -cost,
+      variant_key: variantKey,
     }),
   ]);
   return { ok: true };
@@ -269,6 +283,8 @@ export const unlockOwner = async (
 ): Promise<{ ok: boolean; reason?: "insufficient" }> => {
   await ensureCreditsRow(userId);
   const tier = OWNER_TIERS.find((t) => t.key === tierKey)!;
+  const variantKey = `track_owner_${tierKey}`;
+  const cost = await getVariantCost(variantKey);
 
   const { data: existing } = await supabase
     .from("user_owner_unlocks")
@@ -280,7 +296,7 @@ export const unlockOwner = async (
     .limit(1)
     .maybeSingle();
 
-  const ok = await deductCredits(userId, tier.cost);
+  const ok = await deductCredits(userId, cost);
   if (!ok) return { ok: false, reason: "insufficient" };
 
   const base = existing ? new Date(existing.expires_at).getTime() : Date.now();
@@ -292,7 +308,8 @@ export const unlockOwner = async (
       user_id: userId,
       type: "unlock_owner",
       description: `Theo dõi chủ tài sản ${label ?? ownerId} ${tier.label}`,
-      credit_delta: -tier.cost,
+      credit_delta: -cost,
+      variant_key: variantKey,
     }),
   ]);
   return { ok: true };
@@ -304,7 +321,7 @@ export const chargeOwnerReport = async (
   filterCombo: object,
   isDefault: boolean,
 ): Promise<{ ok: boolean; reason?: "insufficient" }> => {
-  const cost = isDefault ? 0 : OWNER_REPORT_COST;
+  const cost = isDefault ? 0 : await getVariantCost("report_portfolio_owner");
   if (cost > 0) {
     await ensureCreditsRow(userId);
     const ok = await deductCredits(userId, cost);
@@ -312,8 +329,9 @@ export const chargeOwnerReport = async (
     await supabase.from("credit_transactions").insert({
       user_id: userId,
       type: "owner_report_view",
-      description: "Xem báo cáo chủ tài sản (bộ lọc tùy chỉnh)",
+      description: "Báo cáo danh mục tài sản",
       credit_delta: -cost,
+      variant_key: "report_portfolio_owner",
     });
   }
   await supabase.from("owner_report_views").insert({
@@ -346,7 +364,7 @@ export const unlockDeepReportPeriod = async (
     .maybeSingle();
   if (existing) return { ok: true, reason: "already" };
 
-  const cost = DEEP_REPORT_PERIOD_PRICES[parsed.kind];
+  const cost = await getVariantCost(`deep_report_${parsed.kind}`);
   const ok = await deductCredits(userId, cost);
   if (!ok) return { ok: false, reason: "insufficient" };
 
@@ -361,8 +379,45 @@ export const unlockDeepReportPeriod = async (
       type: "unlock_deep_report",
       description: `Mở khóa ${reportLabel ?? slug} — ${formatPeriodLabel(periodId)}`,
       credit_delta: -cost,
+      variant_key: `deep_report_${parsed.kind}`,
     }),
   ]);
+  return { ok: true };
+};
+
+// Báo cáo cơ hội (người mua) — trừ 1 credit/lượt (giá từ catalog).
+export const chargeOppReport = async (
+  userId: string,
+): Promise<{ ok: boolean; reason?: "insufficient" }> => {
+  await ensureCreditsRow(userId);
+  const cost = await getVariantCost("report_opp_buyer");
+  const ok = await deductCredits(userId, cost);
+  if (!ok) return { ok: false, reason: "insufficient" };
+  await supabase.from("credit_transactions").insert({
+    user_id: userId,
+    type: "unlock_opp_report",
+    description: "Xem báo cáo cơ hội đấu giá",
+    credit_delta: -cost,
+    variant_key: "report_opp_buyer",
+  });
+  return { ok: true };
+};
+
+// Xuất hồ sơ dự tuyển (công ty) — trừ theo giá catalog (thay anti-pattern addCredits âm).
+export const chargeExportProfile = async (
+  userId: string,
+): Promise<{ ok: boolean; reason?: "insufficient" }> => {
+  await ensureCreditsRow(userId);
+  const cost = await getVariantCost("export_profile_company");
+  const ok = await deductCredits(userId, cost);
+  if (!ok) return { ok: false, reason: "insufficient" };
+  await supabase.from("credit_transactions").insert({
+    user_id: userId,
+    type: "export_profile",
+    description: "Xuất hồ sơ dự tuyển đấu giá",
+    credit_delta: -cost,
+    variant_key: "export_profile_company",
+  });
   return { ok: true };
 };
 

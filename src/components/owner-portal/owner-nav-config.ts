@@ -4,6 +4,7 @@ import {
   BarChart2,
   GitBranch,
   UploadCloud,
+  CreditCard,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -44,5 +45,10 @@ export const OWNER_NAV_SECTIONS: NavSection[] = [
     label: 'Báo cáo',
     icon: BarChart2,
     href: '/chu-tai-san/bao-cao',
+  },
+  {
+    label: 'Credit',
+    icon: CreditCard,
+    href: '/chu-tai-san/credits',
   },
 ]

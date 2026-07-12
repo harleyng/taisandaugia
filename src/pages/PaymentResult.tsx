@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Coins } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { CREDIT_PACKAGES, useCredits, CompanyTierKey, OwnerTierKey } from "@/hooks/useCredits";
+import { useCredits, CompanyTierKey, OwnerTierKey } from "@/hooks/useCredits";
+import { getVariantPackage } from "@/lib/serviceCatalog";
 
 const PaymentResult = () => {
   const [params] = useSearchParams();
@@ -17,8 +18,7 @@ const PaymentResult = () => {
   const unlockParam = params.get("unlock");
   const ranRef = useRef(false);
   const [autoUnlocked, setAutoUnlocked] = useState<string | null>(null);
-
-  const pkg = CREDIT_PACKAGES.find((p) => p.key === packageKey);
+  const [pkg, setPkg] = useState<{ name: string; credits: number } | null>(null);
 
   useEffect(() => {
     if (ranRef.current) return;
@@ -26,9 +26,13 @@ const PaymentResult = () => {
     if (status !== "success") return;
 
     (async () => {
-      // Add credits first if a package was purchased
-      if (pkg) {
-        await addCredits(pkg.credits, pkg.key);
+      // Cộng credit nếu có mua gói — giá/credits lấy từ catalog DB theo variant_key.
+      if (packageKey) {
+        const variant = await getVariantPackage(packageKey);
+        if (variant) {
+          setPkg({ name: variant.name, credits: variant.credits });
+          await addCredits(variant.credits, packageKey);
+        }
       }
 
       if (!unlockParam) return;

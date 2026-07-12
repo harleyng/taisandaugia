@@ -15,7 +15,9 @@ import {
   FileText,
   Eye,
 } from "lucide-react";
-import { CREDIT_PACKAGES, useCredits } from "@/hooks/useCredits";
+import { useCredits } from "@/hooks/useCredits";
+import { useServiceCatalog, type CatalogVariantRow } from "@/hooks/useServiceCatalog";
+import type { ServiceAudience } from "@/types/orders";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,13 +42,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const IMAGES: Record<string, string> = {
-  starter: packStarter,
-  popular: packPopular,
-  value: packPro,
-  pro: packValue,
-  max: packMax,
-};
+// Ảnh gói theo biến thể (fallback dùng 5 ảnh sẵn có theo flag/thứ tự).
+const TIER_IMAGES = [packStarter, packValue, packPro];
+function imageForVariant(v: CatalogVariantRow): string {
+  if (v.is_best) return packMax;
+  if (v.is_popular) return packPopular;
+  return TIER_IMAGES[Math.max(0, v.sort_order - 1) % TIER_IMAGES.length];
+}
 
 const formatVnd = (n: number) => `${n.toLocaleString("vi-VN")} đ`;
 
@@ -68,6 +70,8 @@ const TYPE_ICON: Record<TransactionType, typeof ShoppingCart> = {
   unlock_owner: User,
   unlock_deep_report: FileText,
   owner_report_view: Eye,
+  unlock_opp_report: FileText,
+  export_profile: FileText,
 };
 
 const TransactionRow = ({ tx }: { tx: Transaction }) => {
@@ -107,8 +111,13 @@ const TransactionRow = ({ tx }: { tx: Transaction }) => {
   );
 };
 
-export const CreditsTab = ({ defaultReturnPath }: { defaultReturnPath?: string } = {}) => {
+export const CreditsTab = ({
+  defaultReturnPath,
+  audience = "buyer",
+}: { defaultReturnPath?: string; audience?: ServiceAudience } = {}) => {
   const { transactions } = useCredits();
+  const { packagesForAudience, variant: getVariant, isLoading: catalogLoading } = useServiceCatalog();
+  const packages = packagesForAudience(audience);
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [paying, setPaying] = useState<string | null>(null);
@@ -202,79 +211,93 @@ export const CreditsTab = ({ defaultReturnPath }: { defaultReturnPath?: string }
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {CREDIT_PACKAGES.map((pkg) => {
-          const isPopular = pkg.popular;
-          const isBest = pkg.best;
-          const isPaying = paying === pkg.key;
-          return (
-            <Card
-              key={pkg.key}
-              className={cn(
-                "relative p-5 flex flex-col items-center text-center transition-all",
-                isBest
-                  ? "border-2 border-amber-500 shadow-lg bg-gradient-to-b from-amber-50/40 to-transparent dark:from-amber-500/10"
-                  : isPopular
-                    ? "border-2 border-primary shadow-lg"
-                    : "border-border",
-              )}
-            >
-              {isPopular && (
-                <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
-                  Phổ biến
-                </Badge>
-              )}
-              {isBest && (
-                <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-500 text-white hover:bg-amber-500 inline-flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-current" />
-                  Tiết kiệm
-                </Badge>
-              )}
-              <div className="w-28 h-28 mb-3 flex items-center justify-center">
-                <img
-                  src={IMAGES[pkg.key]}
-                  alt={`Gói ${pkg.name}`}
-                  loading="lazy"
-                  width={112}
-                  height={112}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <h3 className="text-lg font-bold text-foreground">{pkg.name}</h3>
-              <p className="text-2xl font-extrabold text-foreground mt-1">{formatVnd(pkg.priceVnd)}</p>
-              <div className="mt-1 min-h-[40px] flex flex-col items-center justify-center">
-                <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
-                  <Coins className="h-3.5 w-3.5 text-primary" />
-                  {pkg.baseCredits} credit
-                </p>
-                {pkg.credits > pkg.baseCredits && (
-                  <p className="text-xs font-semibold text-green-600 dark:text-green-400 mt-0.5">
-                    +{pkg.credits - pkg.baseCredits} credit tặng thêm
-                  </p>
+      {catalogLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="h-72 animate-pulse bg-muted/40" />
+          ))}
+        </div>
+      ) : packages.length === 0 ? (
+        <Card className="p-8 text-center text-sm text-muted-foreground">
+          Chưa có gói credit cho đối tượng này.
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {packages.map((pkg) => {
+            const isPopular = pkg.is_popular;
+            const isBest = pkg.is_best;
+            const base = pkg.base_credits ?? pkg.credits ?? 0;
+            const total = pkg.credits ?? base;
+            const isPaying = paying === pkg.variant_key;
+            return (
+              <Card
+                key={pkg.variant_key}
+                className={cn(
+                  "relative p-5 flex flex-col items-center text-center transition-all",
+                  isBest
+                    ? "border-2 border-amber-500 shadow-lg bg-gradient-to-b from-amber-50/40 to-transparent dark:from-amber-500/10"
+                    : isPopular
+                      ? "border-2 border-primary shadow-lg"
+                      : "border-border",
                 )}
-              </div>
-              <Button
-                className={cn("w-full mt-4", isBest && "bg-amber-500 hover:bg-amber-600 text-white")}
-                variant={isPopular || isBest ? "default" : "outline"}
-                onClick={() => handleBuy(pkg.key)}
-                disabled={!!paying}
               >
-                {isPaying ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Đang xử lý...
-                  </>
-                ) : (
-                  <>
-                    Mua ngay
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </>
+                {isPopular && (
+                  <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
+                    Phổ biến
+                  </Badge>
                 )}
-              </Button>
-            </Card>
-          );
-        })}
-      </div>
+                {isBest && (
+                  <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-500 text-white hover:bg-amber-500 inline-flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-current" />
+                    Tiết kiệm
+                  </Badge>
+                )}
+                <div className="w-28 h-28 mb-3 flex items-center justify-center">
+                  <img
+                    src={imageForVariant(pkg)}
+                    alt={`Gói ${pkg.name}`}
+                    loading="lazy"
+                    width={112}
+                    height={112}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">{pkg.name}</h3>
+                <p className="text-2xl font-extrabold text-foreground mt-1">{formatVnd(pkg.price)}</p>
+                <div className="mt-1 min-h-[40px] flex flex-col items-center justify-center">
+                  <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
+                    <Coins className="h-3.5 w-3.5 text-primary" />
+                    {base} credit
+                  </p>
+                  {total > base && (
+                    <p className="text-xs font-semibold text-green-600 dark:text-green-400 mt-0.5">
+                      +{total - base} credit tặng thêm
+                    </p>
+                  )}
+                </div>
+                <Button
+                  className={cn("w-full mt-4", isBest && "bg-amber-500 hover:bg-amber-600 text-white")}
+                  variant={isPopular || isBest ? "default" : "outline"}
+                  onClick={() => handleBuy(pkg.variant_key)}
+                  disabled={!!paying}
+                >
+                  {isPaying ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      Mua ngay
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </>
+                  )}
+                </Button>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       <div className="mt-6 text-center text-xs text-muted-foreground inline-flex items-center justify-center gap-1.5 w-full">
         <ShieldCheck className="h-4 w-4 text-primary" />
@@ -333,19 +356,20 @@ export const CreditsTab = ({ defaultReturnPath }: { defaultReturnPath?: string }
           <div className="p-5 space-y-4 overflow-y-auto">
             {pendingKey &&
               (() => {
-                const pkg = CREDIT_PACKAGES.find((p) => p.key === pendingKey)!;
+                const pkg = getVariant(pendingKey);
+                if (!pkg) return null;
                 return (
                   <>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Sản phẩm</span>
                         <span className="font-medium text-foreground">
-                          Gói {pkg.name} ({pkg.credits} credit)
+                          Gói {pkg.name} ({pkg.credits ?? 0} credit)
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Số tiền</span>
-                        <span className="font-bold text-foreground">{pkg.priceVnd.toLocaleString("vi-VN")} ₫</span>
+                        <span className="font-bold text-foreground">{Number(pkg.price).toLocaleString("vi-VN")} ₫</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Phương thức</span>

@@ -1634,6 +1634,66 @@ export type Database = {
           },
         ]
       }
+      partners: {
+        Row: {
+          accent_color: string
+          badge: string
+          created_at: string
+          cta_href: string | null
+          cta_text: string | null
+          date_label: string | null
+          date_value: string | null
+          description: string | null
+          id: string
+          logo_filter: string | null
+          logo_url: string | null
+          name: string
+          sort_order: number
+          stats: Json
+          status: string
+          tagline: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          badge?: string
+          created_at?: string
+          cta_href?: string | null
+          cta_text?: string | null
+          date_label?: string | null
+          date_value?: string | null
+          description?: string | null
+          id?: string
+          logo_filter?: string | null
+          logo_url?: string | null
+          name: string
+          sort_order?: number
+          stats?: Json
+          status?: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          badge?: string
+          created_at?: string
+          cta_href?: string | null
+          cta_text?: string | null
+          date_label?: string | null
+          date_value?: string | null
+          description?: string | null
+          id?: string
+          logo_filter?: string | null
+          logo_url?: string | null
+          name?: string
+          sort_order?: number
+          stats?: Json
+          status?: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       partnership_registrations: {
         Row: {
           contact_name: string

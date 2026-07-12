@@ -1,20 +1,19 @@
-import { useState, useEffect, type ReactNode } from "react";
-import { ArrowRight, Star, Clock, Users, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowRight, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
-import logoAnti from "@/assets/logo-anti.png";
-import logoMarathon from "@/assets/logo-marathon.png";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+} from "@/components/ui/carousel";
+import { usePublicPartners } from "@/hooks/usePartners";
+import { PartnerCard } from "@/components/PartnerCard";
+import { PARTNER_COLORS } from "@/lib/partnerTheme";
 
 /* ── palette ── */
-const C = {
-  bg: "#f4faf4",
-  card: "#ffffff",
-  border: "#d0e8d1",
-  ink: "#0f1f10",
-  muted: "#5a7a5b",
-  gold: "#367639",   // primary green — ad slot badge / countdown accent
-  red: "#DA2128",    // secondary red — italic headline / Antiquorum accent
-  navy: "#367639",   // primary green — ZAHA badge
-};
+const C = PARTNER_COLORS;
 
 /* ── countdown ── */
 const DEADLINE = new Date("2026-06-30T23:59:59");
@@ -29,89 +28,7 @@ function getTimeLeft() {
 }
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/* ── shared card shell ── */
-function PartnerCard({
-  badge, badgeEn, logoNode, name, tagline, description, stats,
-  dateLabel, date, ctaText, ctaHref, accentColor,
-}: {
-  badge: string; logoNode: ReactNode;
-  name: string; tagline: string; description: string;
-  stats: { label: string; value: string }[];
-  dateLabel: string; date: string;
-  ctaText: string; ctaHref: string; accentColor: string;
-}) {
-  return (
-    <div
-      className="flex flex-col"
-      style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 2 }}
-    >
-      {/* top meta */}
-      <div className="px-6 pt-5 pb-4">
-        <span
-          className="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-semibold tracking-widest uppercase"
-          style={{ border: `1px solid ${accentColor}`, color: accentColor }}
-        >
-          <Star className="h-2.5 w-2.5 fill-current" />
-          {badge}
-        </span>
-      </div>
-
-      {/* logo box */}
-      <div
-        className="mx-6 mb-6 flex items-center justify-center"
-        style={{ background: C.bg, border: `1px solid ${C.border}`, height: 140 }}
-      >
-        {logoNode}
-      </div>
-
-      {/* body */}
-      <div className="flex flex-col flex-1 px-6 pb-6 gap-3">
-        <div>
-          <p className="text-xl font-serif" style={{ color: C.ink }}>{name}</p>
-          <p className="text-sm italic font-serif mt-0.5" style={{ color: C.muted }}>{tagline}</p>
-        </div>
-
-        <p className="text-sm leading-relaxed" style={{ color: "#5a5048" }}>{description}</p>
-
-        {/* stats */}
-        <div
-          className="grid gap-x-4 gap-y-3 py-4 mt-1"
-          style={{
-            gridTemplateColumns: `repeat(${stats.length}, 1fr)`,
-            borderTop: `1px solid ${C.border}`,
-            borderBottom: `1px solid ${C.border}`,
-          }}
-        >
-          {stats.map((s) => (
-            <div key={s.label} className="flex flex-col gap-1">
-              <span className="text-[9px] tracking-widest uppercase" style={{ color: C.muted }}>{s.label}</span>
-              <span className="text-base font-bold" style={{ color: C.ink }}>{s.value}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* bottom row */}
-        <div className="flex items-end justify-between mt-auto pt-2">
-          <div>
-            <p className="text-[9px] tracking-widest uppercase mb-1" style={{ color: C.muted }}>{dateLabel}</p>
-            <p className="text-base font-bold tracking-wider" style={{ color: C.ink }}>{date}</p>
-          </div>
-          <a
-            href={ctaHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold hover:opacity-60 transition-opacity"
-            style={{ color: C.ink }}
-          >
-            {ctaText} <ArrowRight className="h-3.5 w-3.5" />
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── ad slot card ── */
+/* ── ad slot card (static, always last) ── */
 function AdSlotCard() {
   const [time, setTime] = useState(getTimeLeft);
   useEffect(() => {
@@ -121,7 +38,7 @@ function AdSlotCard() {
 
   return (
     <div
-      className="flex flex-col"
+      className="flex h-full flex-col"
       style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 2 }}
     >
       {/* top meta */}
@@ -182,8 +99,8 @@ function AdSlotCard() {
           </div>
           <Link
             to="/lien-he"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold hover:opacity-60 transition-opacity"
-            style={{ color: C.ink }}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold hover:opacity-70 transition-opacity shrink-0"
+            style={{ color: C.gold }}
           >
             Liên hệ ngay <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -195,78 +112,65 @@ function AdSlotCard() {
 
 /* ── section ── */
 export function PartnersSection() {
+  const { data: partners, isLoading } = usePublicPartners();
+
+  const navBtn = "static translate-y-0 h-9 w-9";
+
   return (
     <section style={{ background: C.bg }} className="py-12 md:py-16">
       <div className="container px-4">
+        <Carousel opts={{ align: "start" }}>
+          {/* ── header ── */}
+          <div className="mb-10">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 text-[10px] tracking-widest uppercase mb-4" style={{ color: C.muted }}>
+                  <span style={{ display: "inline-block", width: 32, height: 1, background: C.muted }} />
+                  2026 · Đối tác chiến lược
+                </div>
 
-        {/* ── header ── */}
-        <div className="mb-10">
-          <div className="flex items-center gap-3 text-[10px] tracking-widest uppercase mb-4" style={{ color: C.muted }}>
-            <span style={{ display: "inline-block", width: 32, height: 1, background: C.muted }} />
-            2026 · Đối tác chiến lược
+                <h2
+                  className="text-3xl md:text-4xl lg:text-[2.75rem] font-serif leading-tight max-w-xl"
+                  style={{ color: C.ink }}
+                >
+                  Đồng hành cùng{" "}
+                  <em className="italic not-italic" style={{ color: C.red, fontStyle: "italic" }}>những thương hiệu</em>
+                  <br />định hình thị trường đấu giá.
+                </h2>
+              </div>
+
+              {/* slider controls */}
+              <div className="hidden md:flex items-center gap-2 shrink-0 pt-1">
+                <CarouselPrevious className={navBtn} />
+                <CarouselNext className={navBtn} />
+              </div>
+            </div>
+
+            <div className="mt-8" style={{ borderTop: `1px solid ${C.border}` }} />
           </div>
 
-          <h2
-            className="text-3xl md:text-4xl lg:text-[2.75rem] font-serif leading-tight max-w-xl"
-            style={{ color: C.ink }}
-          >
-            Đồng hành cùng{" "}
-            <em className="italic not-italic" style={{ color: C.red, fontStyle: "italic" }}>những thương hiệu</em>
-            <br />định hình thị trường đấu giá.
-          </h2>
+          {/* ── slider ── */}
+          <CarouselContent className="items-stretch">
+            {isLoading &&
+              Array.from({ length: 3 }).map((_, i) => (
+                <CarouselItem key={`sk-${i}`} className="basis-full md:basis-1/2 lg:basis-1/3">
+                  <div className="h-[420px] animate-pulse" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 2 }} />
+                </CarouselItem>
+              ))}
 
-          <div className="mt-8" style={{ borderTop: `1px solid ${C.border}` }} />
-        </div>
+            {!isLoading &&
+              (partners ?? []).map((p) => (
+                <CarouselItem key={p.id} className="basis-full md:basis-1/2 lg:basis-1/3">
+                  <PartnerCard partner={p} />
+                </CarouselItem>
+              ))}
 
-        {/* ── cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
-
-          <PartnerCard
-            badge="Đối tác toàn cầu"
-            accentColor={C.red}
-            logoNode={
-              <img src={logoAnti} alt="Antiquorum" className="max-h-14 max-w-[200px] object-contain" />
-            }
-            name="Antiquorum"
-            tagline="Important Modern & Vintage Timepieces"
-            description="Nhà đấu giá đồng hồ độc lập lâu đời bậc nhất thế giới. Mỗi phiên Antiquorum quy tụ hàng trăm lô hiện vật được giám định bởi các chuyên gia hàng đầu — từ Patek Philippe complications đến những độc bản Rolex hiếm thấy."
-            stats={[
-              { label: "Năm thành lập", value: "1974" },
-              { label: "Phiên/năm",     value: "12+" },
-              { label: "Văn phòng",     value: "3 châu lục" },
-            ]}
-            dateLabel="Phiên Hong Kong"
-            date="31 · 05 · 2026"
-            ctaText="Khám phá phiên đấu giá"
-            ctaHref="https://antiquorum.swiss"
-          />
-
-          <PartnerCard
-            badge="Đối tác cộng đồng"
-            accentColor={C.navy}
-            logoNode={
-              <div className="flex flex-col items-center gap-1">
-                <img src={logoMarathon} alt="ZAHA Legacy Marathon" className="max-h-12 max-w-[180px] object-contain" style={{ filter: "brightness(0) saturate(100%) invert(16%) sepia(64%) saturate(726%) hue-rotate(196deg) brightness(94%) contrast(94%)" }} />
-              </div>
-            }
-            name="ZAHA Legacy Marathon"
-            tagline="Giải chạy Việt Nam Tôi đó"
-            description="Giải chạy thường niên quy mô toàn quốc với các cự ly 2.9km, 9.2km, 21km và bán-marathon đầy đủ 42km. Mỗi bước chạy là một câu chuyện — về di sản, sức bền, và lòng tự hào dân tộc."
-            stats={[
-              { label: "Cự ly",          value: "4 chặng" },
-              { label: "Vận động viên",  value: "12.000+" },
-              { label: "Mùa giải",       value: "Lần thứ 5" },
-            ]}
-            dateLabel="Ngày khởi tranh"
-            date="23 · 08 · 2026"
-            ctaText="Đăng ký giải chạy"
-            ctaHref="https://facebook.com/vntoido"
-          />
-
-          <AdSlotCard />
-        </div>
-
-
+            {/* Vị trí quảng cáo — luôn ở cuối */}
+            <CarouselItem className="basis-full md:basis-1/2 lg:basis-1/3">
+              <AdSlotCard />
+            </CarouselItem>
+          </CarouselContent>
+        </Carousel>
       </div>
     </section>
   );

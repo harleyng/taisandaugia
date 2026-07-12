@@ -63,4 +63,10 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Pre-bundle deps that are only reached from lazy routes/components (e.g. the
+  // carousel/embla slider). Without this, Vite discovers them mid-session and
+  // re-optimizes, which 504s in-flight requests ("Outdated Optimize Dep").
+  optimizeDeps: {
+    include: ["embla-carousel-react"],
+  },
 }));

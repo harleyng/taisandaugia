@@ -1,18 +1,21 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { type Session } from "@supabase/supabase-js";
+import { type AuthChangeEvent, type Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextValue {
   session: Session | null;
   userId: string | null;
   loading: boolean;
+  /** Sự kiện auth gần nhất (INITIAL_SESSION khi khôi phục lúc tải, SIGNED_IN khi đăng nhập mới…). */
+  authEvent: AuthChangeEvent | null;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   session: null,
   userId: null,
   loading: true,
+  authEvent: null,
 });
 
 /**
@@ -26,6 +29,7 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authEvent, setAuthEvent] = useState<AuthChangeEvent | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -35,8 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      setAuthEvent(event);
       setLoading(false);
     });
     return () => subscription.unsubscribe();
@@ -52,7 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   return (
-    <AuthContext.Provider value={{ session, userId: session?.user?.id ?? null, loading }}>
+    <AuthContext.Provider
+      value={{ session, userId: session?.user?.id ?? null, loading, authEvent }}
+    >
       {children}
     </AuthContext.Provider>
   );

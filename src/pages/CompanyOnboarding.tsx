@@ -6,6 +6,7 @@ import { Step5PendingReview } from "@/components/company-onboarding/M2/Step5Pend
 import { supabase } from "@/integrations/supabase/client";
 import type { AuctionCompany } from "@/lib/mockAuctionCompanies";
 import type { KYCSubmitData } from "@/components/company-onboarding/M2/KYCForm";
+import { trackFeature } from "@/lib/analytics/track";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -39,6 +40,10 @@ const CompanyOnboarding = () => {
     const raw = localStorage.getItem(`sb-${PROJECT_REF}-auth-token`);
     const session = raw ? JSON.parse(raw) : null;
     if (session?.user?.email) setAccountEmail(session.user.email);
+  }, []);
+
+  useEffect(() => {
+    trackFeature("start_kyc");
   }, []);
 
   const handleComplete = async (data: KYCSubmitData) => {

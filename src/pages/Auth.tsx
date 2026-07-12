@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
+import { LoginConsentNotice } from "@/components/auth/LoginConsentNotice";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -27,20 +28,28 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState("");
 
   useEffect(() => {
+    // Điều hướng theo vai trò khi đã có phiên: admin → /admin, còn lại → /.
+    // (Admin KHÔNG bị chặn đăng nhập nữa — chỉ được đưa về trang quản trị.)
+    const redirectByRole = async (userId: string) => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "ADMIN")
+        .maybeSingle();
+      navigate(data ? "/admin" : "/", { replace: true });
+    };
+
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) {
-        navigate("/");
-      }
+      if (session) redirectByRole(session.user.id);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (session) {
-        navigate("/");
-      }
+      if (session) redirectByRole(session.user.id);
     });
 
     return () => subscription.unsubscribe();
@@ -58,27 +67,9 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Check if user has ADMIN role - block admin from marketplace
+      // Đăng nhập thành công — onAuthStateChange (useEffect) sẽ điều hướng:
+      // admin → /admin, user thường → /. Ở đây chỉ xử lý liên kết lời mời.
       if (authData.user) {
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", authData.user.id)
-          .eq("role", "ADMIN")
-          .maybeSingle();
-
-        if (roleData) {
-          // User is ADMIN - logout and show error
-          await supabase.auth.signOut();
-          toast({
-            title: "Truy cập bị từ chối",
-            description: "Tài khoản admin không thể đăng nhập vào marketplace. Vui lòng sử dụng trang admin riêng.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-
         // If there's an invite token, link the user to the organization
         if (inviteToken) {
           console.log("Login with invite token:", inviteToken);
@@ -291,6 +282,7 @@ const Auth = () => {
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Đăng nhập
                 </Button>
+                <LoginConsentNotice cta="Đăng nhập" className="mt-3" />
               </form>
             </TabsContent>
 

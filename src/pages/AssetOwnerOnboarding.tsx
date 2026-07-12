@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 
+import { trackFeature } from "@/lib/analytics/track";
 import { useAssetOwnerKYC } from "@/hooks/useAssetOwnerKYC";
 import { useAssetOwnerOrgKYC } from "@/hooks/useAssetOwnerOrgKYC";
 import { useAssetOwnerWorkspace } from "@/hooks/useAssetOwnerWorkspace";
@@ -49,6 +50,10 @@ const AssetOwnerOnboarding = () => {
   const [orgTermsAccepted, setOrgTermsAccepted] = useState(false);
 
   const [hasRun, setHasRun] = useState(false);
+
+  useEffect(() => {
+    trackFeature("start_owner_kyc");
+  }, []);
 
   // Individual KYC local form state
   const [indForm, setIndForm] = useState({

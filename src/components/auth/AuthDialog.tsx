@@ -11,7 +11,9 @@ import { ArrowLeft, Mail, Phone, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DepositCard } from "@/components/company-onboarding/DepositCard";
 import { RegisterConsent } from "@/components/auth/RegisterConsent";
+import { LoginConsentNotice } from "@/components/auth/LoginConsentNotice";
 import { TERMS_VERSION } from "@/constants/terms";
+import { useLegalActiveVersions } from "@/hooks/useLegalDocuments";
 
 type Step = "identifier" | "login" | "login-phone" | "register-email" | "register-phone-otp" | "register-phone-password" | "activate";
 type InputMode = "email" | "phone";
@@ -29,6 +31,11 @@ export const AuthDialog = () => {
   const [loading, setLoading] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(false);
+
+  // Phiên bản pháp lý hiện hành (fallback về hằng số nếu query chưa load).
+  const { data: activeVersions } = useLegalActiveVersions();
+  const activeTermsVersion = activeVersions?.terms ?? TERMS_VERSION;
+  const activePrivacyVersion = activeVersions?.privacy ?? TERMS_VERSION;
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -144,7 +151,8 @@ export const AuthDialog = () => {
           data: {
             notifications_enabled: emailOptIn,
             terms_accepted: true,
-            terms_version: TERMS_VERSION,
+            terms_version: activeTermsVersion,
+            privacy_version: activePrivacyVersion,
           },
         },
       });
@@ -193,7 +201,8 @@ export const AuthDialog = () => {
           data: {
             notifications_enabled: emailOptIn,
             terms_accepted: true,
-            terms_version: TERMS_VERSION,
+            terms_version: activeTermsVersion,
+            privacy_version: activePrivacyVersion,
           },
         },
       });
@@ -328,6 +337,7 @@ export const AuthDialog = () => {
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Đăng nhập
                 </Button>
+                <LoginConsentNotice cta="Đăng nhập" />
               </>
             )}
 

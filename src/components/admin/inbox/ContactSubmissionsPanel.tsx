@@ -43,7 +43,12 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "replied", label: "Đã phản hồi" },
 ];
 
-export default function AdminContactsPage() {
+interface Props {
+  /** Reports the number of unread submissions so the parent can badge the selector. */
+  onPendingChange?: (count: number) => void;
+}
+
+export default function ContactSubmissionsPanel({ onPendingChange }: Props) {
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [tab, setTab] = useState<Tab>("all");
   const [loading, setLoading] = useState(true);
@@ -66,6 +71,10 @@ export default function AdminContactsPage() {
   }, []);
 
   useEffect(() => { fetchContacts(); }, [fetchContacts]);
+
+  useEffect(() => {
+    onPendingChange?.(contacts.filter((c) => c.status === "unread").length);
+  }, [contacts, onPendingChange]);
 
   const updateStatus = async (id: string, status: ContactStatus) => {
     setProcessing(true);
@@ -96,21 +105,9 @@ export default function AdminContactsPage() {
     key === "all" ? contacts.length : contacts.filter((c) => c.status === key).length;
 
   return (
-    <>
-      <div className="px-6 py-8 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Tin nhắn liên hệ</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Các tin nhắn gửi từ trang Liên hệ</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={fetchContacts} className="gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Làm mới
-          </Button>
-        </div>
-
-        {/* Tabs */}
+    <div className="space-y-6">
+      {/* Status tabs + refresh */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex gap-1 bg-card border border-border rounded-xl p-1 w-fit">
           {TABS.map(({ key, label }) => (
             <button
@@ -133,68 +130,72 @@ export default function AdminContactsPage() {
             </button>
           ))}
         </div>
+        <Button variant="outline" size="sm" onClick={fetchContacts} className="gap-1.5">
+          <RefreshCw className="h-3.5 w-3.5" />
+          Làm mới
+        </Button>
+      </div>
 
-        {/* Table */}
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          {loading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Đang tải...</div>
-          ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Không có tin nhắn nào</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Người gửi</th>
-                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Chủ đề</th>
-                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Thời gian</th>
-                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Trạng thái</th>
-                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Chi tiết</th>
+      {/* Table */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        {loading ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">Đang tải...</div>
+        ) : filtered.length === 0 ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">Không có tin nhắn nào</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Người gửi</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Chủ đề</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Thời gian</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Trạng thái</th>
+                <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Chi tiết</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((contact, i) => (
+                <tr
+                  key={contact.id}
+                  className={[
+                    i < filtered.length - 1 ? "border-b border-border" : "",
+                    contact.status === "unread" ? "bg-amber-50/40" : "",
+                  ].join(" ")}
+                >
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-foreground">{contact.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{contact.phone}</p>
+                    {contact.email && (
+                      <p className="text-[11px] text-muted-foreground">{contact.email}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground max-w-[200px]">
+                    <p className="truncate">{contact.subject || <span className="italic opacity-50">Không có chủ đề</span>}</p>
+                    <p className="text-[11px] truncate mt-0.5">{contact.message}</p>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                    {formatDistanceToNow(new Date(contact.created_at), { addSuffix: true, locale: vi })}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${STATUS_COLORS[contact.status]}`}>
+                      {STATUS_LABELS[contact.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={() => openDetail(contact)}
+                    >
+                      Xem
+                    </Button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filtered.map((contact, i) => (
-                  <tr
-                    key={contact.id}
-                    className={[
-                      i < filtered.length - 1 ? "border-b border-border" : "",
-                      contact.status === "unread" ? "bg-amber-50/40" : "",
-                    ].join(" ")}
-                  >
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-foreground">{contact.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{contact.phone}</p>
-                      {contact.email && (
-                        <p className="text-[11px] text-muted-foreground">{contact.email}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground max-w-[200px]">
-                      <p className="truncate">{contact.subject || <span className="italic opacity-50">Không có chủ đề</span>}</p>
-                      <p className="text-[11px] truncate mt-0.5">{contact.message}</p>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNow(new Date(contact.created_at), { addSuffix: true, locale: vi })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${STATUS_COLORS[contact.status]}`}>
-                        {STATUS_LABELS[contact.status]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs"
-                        onClick={() => openDetail(contact)}
-                      >
-                        Xem
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Detail dialog */}
@@ -275,6 +276,6 @@ export default function AdminContactsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

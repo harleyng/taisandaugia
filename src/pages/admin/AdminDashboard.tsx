@@ -139,7 +139,7 @@ export default function AdminDashboard() {
       count: jobStats?.newPartnerships,
       countLabel: "mới chưa xử lý",
       countColor: "text-orange-600",
-      path: "/admin/collaboration",
+      path: "/admin/lien-he-hop-tac?loai=hop-tac",
     },
     {
       key: "contact",
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
       count: jobStats?.unreadContacts,
       countLabel: "chưa đọc",
       countColor: "text-blue-600",
-      path: "/admin/contacts",
+      path: "/admin/lien-he-hop-tac",
     },
   ];
 

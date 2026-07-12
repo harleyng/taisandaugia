@@ -41,7 +41,12 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "REJECTED", label: "Đã từ chối" },
 ];
 
-export default function AdminCollaborationPage() {
+interface Props {
+  /** Reports the number of NEW registrations so the parent can badge the selector. */
+  onPendingChange?: (count: number) => void;
+}
+
+export default function PartnershipRegistrationsPanel({ onPendingChange }: Props) {
   const [rows, setRows] = useState<RegistrationRow[]>([]);
   const [tab, setTab] = useState<Tab>("all");
   const [loading, setLoading] = useState(true);
@@ -64,6 +69,10 @@ export default function AdminCollaborationPage() {
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
 
+  useEffect(() => {
+    onPendingChange?.(rows.filter((r) => r.status === "NEW").length);
+  }, [rows, onPendingChange]);
+
   const updateStatus = async (id: string, status: RegistrationStatus) => {
     setProcessing(id);
     const { error } = await supabase
@@ -85,45 +94,37 @@ export default function AdminCollaborationPage() {
     key === "all" ? rows.length : rows.filter((r) => r.status === key).length;
 
   return (
-    <div className="px-6 py-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Đăng ký hợp tác</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Danh sách tổ chức đấu giá đăng ký hợp tác từ trang chủ
-          </p>
+    <div className="space-y-6">
+      {/* Status tabs + refresh */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex gap-1 bg-card border border-border rounded-xl p-1 w-fit">
+          {TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={[
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
+                tab === key
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              ].join(" ")}
+            >
+              {label}
+              <span
+                className={[
+                  "text-[10px] rounded-full px-1.5 py-0.5 font-semibold",
+                  tab === key ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
+                ].join(" ")}
+              >
+                {countFor(key)}
+              </span>
+            </button>
+          ))}
         </div>
         <Button variant="outline" size="sm" onClick={fetchRows} className="gap-1.5">
           <RefreshCw className="h-3.5 w-3.5" />
           Làm mới
         </Button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 bg-card border border-border rounded-xl p-1 w-fit">
-        {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={[
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5",
-              tab === key
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            ].join(" ")}
-          >
-            {label}
-            <span
-              className={[
-                "text-[10px] rounded-full px-1.5 py-0.5 font-semibold",
-                tab === key ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
-              ].join(" ")}
-            >
-              {countFor(key)}
-            </span>
-          </button>
-        ))}
       </div>
 
       {/* Table */}

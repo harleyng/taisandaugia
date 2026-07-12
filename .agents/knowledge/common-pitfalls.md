@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-07-13 — Admin bị KHÓA đăng nhập ở /auth (catch-22)
+
+`Auth.tsx` (trang login DUY NHẤT) từng `signOut` MỌI tài khoản `ADMIN` kèm lỗi *"Tài khoản admin không thể đăng nhập vào marketplace"* — nhưng `AdminRoute` lại đẩy khách chưa đăng nhập ở `/admin` về `/auth` ⇒ admin không bao giờ vào được panel (vòng khóa cứng). **Đừng chặn admin đăng nhập — hãy ĐIỀU HƯỚNG** họ về `/admin` (helper `redirectByRole` trong `useEffect`, dùng cho cả `getSession()` và `onAuthStateChange`). Muốn "admin không lang thang marketplace" thì redirect chứ đừng `signOut`.
+
+---
+
 ## 2026-07-05 — Baseline pitfalls (seeded with the knowledge base)
 
 ### Button + Link — silent disappearance

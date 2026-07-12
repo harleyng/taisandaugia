@@ -45,7 +45,21 @@
       "Bash(sort -k2)",
       "Bash(python3 - /private/tmp/claude-501/-Users-m116gb-Downloads-Agency-taisandaugia/736bc3b4-e14c-463f-8803-70721cb5ef86/scratchpad/types-full.patch /private/tmp/claude-501/-Users-m116gb-Downloads-Agency-taisandaugia/736bc3b4-e14c-463f-8803-70721cb5ef86/scratchpad/types-partners.patch)",
       "Bash(git apply *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(awk '/admin_access_report: \\\\{/{f=1} f{print} /Returns: /{if\\(f\\)c++} f&&c>=1&&/\\\\}/{if\\(++n>3\\)exit}' src/integrations/supabase/types.ts)",
+      "Bash(perl -0pi -e 's/user_id: opts\\\\.userId \\\\?\\\\? null,/user_id: opts.userId ?? currentUserId,/g' src/lib/analytics/track.ts)",
+      "Bash(grep -nE \"^#{1,3} \" .agents/knowledge/business-rules.md)",
+      "Bash(export PGURI=\"postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres\")",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c '\\\\d public.credit_transactions')",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT count\\(*\\) AS profiles, count\\(email\\) AS with_email, count\\(name\\) AS with_name FROM public.profiles;')",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT count\\(*\\) AS total, min\\(created_at\\)::date AS earliest, max\\(created_at\\)::date AS latest FROM public.credit_transactions;')",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT type, count\\(*\\), sum\\(credit_delta\\) FROM public.credit_transactions GROUP BY type ORDER BY 2 DESC;')",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT id, coalesce\\(name,'\\\\''—'\\\\''\\) AS name, email FROM public.profiles ORDER BY created_at LIMIT 15;')",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT now\\(\\) AS db_now;')",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT count\\(*\\) FROM public.profiles;')",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260714000004_seed_credit_transactions.sql)",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT type, count\\(*\\) AS rows, sum\\(credit_delta\\) AS credits, min\\(created_at\\)::date AS earliest, max\\(created_at\\)::date AS latest FROM public.credit_transactions GROUP BY type ORDER BY 2 DESC;')",
+      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c ' *)"
     ],
     "additionalDirectories": [
       "/tmp"

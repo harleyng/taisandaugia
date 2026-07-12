@@ -5,6 +5,47 @@
 
 ---
 
+## 2026-07-15 — Catalog nhóm→biến thể làm NGUỒN GIÁ + gói credit theo đối tượng + reprice
+
+**Context:** Giá gói credit + chi phí tính năng là hằng số code (1 danh mục dùng chung). Cần: (1) Dịch vụ 2 cấp nhóm→biến thể, giá ở biến thể; (2) 3 bộ gói credit theo đối tượng (người mua/chủ tài sản/công ty) — DB là nguồn sự thật; (3) reprice tính năng.
+**Decision:**
+- **`service_variants`** (con của `services`, migration `20260715000001`): `variant_key UNIQUE`, `price`(gói)/`credit_cost`(tier-feature), `base_credits`/`credits`, flags popular/best. `services` thêm `audience` (buyer|owner|company|all) + **public-read RLS** (`SELECT USING is_active`) để trang mua + hàm unlock đọc giá; admin vẫn full CRUD (tamper-proof, đã test anon update = 0 rows). `orders`/`credit_transactions` thêm `service_variant_id`+`variant_key`.
+- **DB = nguồn giá runtime** (KHÔNG dùng SECURITY DEFINER RPC — initiative riêng; mô hình vẫn client-trusted như trước). Hook `useServiceCatalog` (UI) + module cache `serviceCatalog.getVariantCost/getVariantPackage` (cho `credits.ts` async) — **luôn fallback hằng số code** nếu DB lỗi. `credits.ts` KHÔNG import `serviceCatalog` constants (tránh vòng lặp — serviceCatalog hardcode fallback). `addCredits(userId, credits, variantKey)` + mọi unlock đọc `getVariantCost(variant_key)` + ghi `variant_key`/`service_variant_id` vào ledger.
+- **3 bộ gói theo đối tượng, áp THEO GIAO DIỆN**: `CreditsTab` nhận prop `audience` → `packagesForAudience()`; hồ sơ=buyer, `/portal/credits`=company, TRANG MỚI `/chu-tai-san/credits`=owner. `?package=` mang `variant_key`; Vnpay/PaymentResult tra biến thể qua catalog (PaymentResult dùng module cache `getVariantPackage` để an toàn timing). Key + tên gói duy nhất toàn cục (15 gói).
+- **Doanh thu bền vững**: `resolvePurchase` ưu tiên `variant.price`/`variant_key`, fallback khớp tên legacy; GIỮ `CREDIT_PACKAGES` code vĩnh viễn cho dòng cũ. Báo cáo đổi tên **"Doanh thu"**; thêm by-audience + top-variant + tăng trưởng; "Giao dịch credit" gom theo nhóm+đối tượng. Seed mock 12 tháng (500 nạp + 1600 tiêu dùng + 70 đơn) qua `20260715000002/3`.
+- **Reprice (loại ledger mới `unlock_opp_report`/`export_profile`)**: báo cáo cơ hội (người mua) = **1 credit TRỪ THẬT** (wire `chargeOppReport` ở MarketReport, trước chỉ cosmetic); báo cáo danh mục (owner) **49→4** (`OWNER_REPORT_COST`+DB); xuất hồ sơ (công ty) **50→30** (`chargeExportProfile`, bỏ anti-pattern `addCredits(-cost)`).
+**Consequences:**
+- Đổi giá = sửa `service_variants` (admin UI hoặc SQL) — KHÔNG cần deploy. Nhưng phải giữ đồng bộ fallback hằng số trong `serviceCatalog.ts` + `credits.ts` cho trường hợp DB lỗi.
+- Deduction VẪN client-trusted (RLS credit own-rows) — chuyển sang RPC enforce là việc SAU.
+- Admin sửa biến thể phải invalidate `["service-catalog"]` + `resetCatalogCache()` (đã wire trong hooks) nếu không giá client bị cũ.
+- ESLint/tsc: 82 lỗi + 21 warning nền GIỮ NGUYÊN (không thêm mới); build (vite, không typecheck) pass.
+
+## 2026-07-14 — Sale & Marketing: Dịch vụ + Đơn hàng + Doanh thu tổng
+
+**Context:** Marketing chỉ theo dõi doanh thu credit; nền tảng còn bán dịch vụ trả tiền trực tiếp (quảng cáo…) mà chưa có danh mục dịch vụ, đơn hàng, hay doanh thu tổng phân nguồn.
+**Decision:**
+- **2 bảng mới** (`20260714000002_services_orders.sql`, đã push + regen `types.ts`): `services` (danh mục hợp nhất, `kind` `'credit'|'direct'`, `credit_feature_key` = khóa gói CREDIT_PACKAGES cho category `package` / `credit_transactions.type` cho `unlock`, `price` VND, `credit_cost`) + `orders` (`customer_id`→customers, `service_id`→services, `amount`, `fulfillment_status` `pending|fulfilled|cancelled`, `advertisement_id` nullable). RLS admin-only `has_role ADMIN`; code trigger `DV…`/`DH…`. Seed 16 dịch vụ credit + 1 dịch vụ `Quảng cáo` direct.
+- **Quy tắc doanh thu (QUAN TRỌNG):** Doanh thu tổng = credit tính LÚC NẠP GÓI (tái dùng `resolvePurchase`/`isPurchase`) + đơn dịch vụ direct (trừ `cancelled`). Credit tiêu cho tính năng là TIÊU DÙNG, KHÔNG tính doanh thu (tránh double-count). Báo cáo mới `/admin/bao-cao/doanh-thu` (`revenueReport.ts` thuần, dùng lại `enumerateBuckets`/`bucketKeyOf` vừa export). Báo cáo cũ đổi tên **"Giao dịch credit"** (giữ slug `bao-cao/giao-dich` + module code `giao-dich`).
+- **Fulfillment tự động qua trigger DB:** `orders_fulfill_on_ad_active` (AFTER UPDATE OF status trên advertisements → đơn `pending` liên kết thành `fulfilled` khi ad `active`) + `orders_fulfill_on_link` (BEFORE INSERT/UPDATE trên orders khi ad liên kết đã `active`). `orders_require_direct_service` chặn đặt đơn vào dịch vụ `kind='credit'` (chống double-count). Đã test 4 case (rollback, không để lại data).
+- **Đổi tên** nav section + RBAC category label `marketing` → "Sale & Marketing" (CODE `marketing` giữ nguyên). Thêm module code `dich-vu`, `don-hang` (marketing) + `doanh-thu` (bao-cao) vào `MODULE_DEFINITIONS` — code-only, KHÔNG migration; SUPER_ADMIN thấy ngay.
+**Consequences:**
+- `customers` (B2B, gắn orders) ≠ `profiles` (end user, mua credit) — báo cáo doanh thu chỉ hợp nhất ở mức VND + nguồn, KHÔNG có view "theo khách hàng".
+- `orders.customer_id`/`service_id` = `ON DELETE RESTRICT` → xóa khách/dịch vụ có đơn sẽ fail (toast báo lỗi thân thiện). Đơn `fulfilled` bị đưa về `pending` khi ad còn `active` sẽ tự fulfill lại ở lần ghi kế (chấp nhận).
+- Doanh thu vẫn là SUY RA (chưa có cổng thanh toán/bảng payments) cho cả 2 nguồn.
+
+## 2026-07-13 — Admin RBAC ("Quản trị") + sửa catch-22 đăng nhập admin
+
+**Context:** Admin chỉ có cổng nhị phân `user_roles.ADMIN`. Cần phân quyền chi tiết: 2 trang `/admin/quan-tri/tai-khoan` (tài khoản admin) + `/admin/quan-tri/vai-tro` (vai trò + quyền). Đồng thời phát hiện bug tiềm ẩn: admin bị KHÓA đăng nhập.
+**Decision:**
+- **3 bảng mới** (prefix `admin_`, KHÔNG lẫn `organization_roles`): `admin_roles`, `admin_role_permissions(role_id,module,action)`, `admin_role_assignments(user_id,role_id)` — layer TRÊN `user_roles.ADMIN` (vẫn là cổng /admin). Migration `20260713000010_admin_rbac.sql` (đã áp + regen `types.ts`).
+- **Quyền hiệu lực** = hợp `(module,action)` mọi vai trò được gán, HOẶC toàn quyền nếu có vai trò hệ thống `SUPER_ADMIN` (đi tắt theo `code`). Danh mục quyền ở CODE: `src/lib/adminPermissions.ts` (module theo section nav × action `view/create/update/delete/approve/export`).
+- **Helper SECURITY DEFINER** `admin_has_permission(module,action)` + `admin_is_super_admin(uid)` (mô phỏng `has_role`). RLS 3 bảng: SELECT mở cho mọi ADMIN; ghi vai trò/quyền gated `admin_has_permission('vai-tro',*)`, ghi gán gated `('tai-khoan','update')`. Ma trận quyền thay ATOMIC qua RPC `admin_set_role_permissions(role_id,jsonb)` (delete-all-then-insert). Trigger `admin_roles_protect_system` chặn xóa/đổi mã vai trò `is_system`. Seed `SUPER_ADMIN` cho MỌI `user_roles.ADMIN` hiện tại.
+- **Enforce = UI + model** (giai đoạn này): frontend lọc nav + chặn route qua `useAdminPermissions()`/`useHasAdminPermission()` + guard `AdminPermissionRoute`. Module admin CŨ vẫn giữ cổng ADMIN ở RLS. **"Xóa" admin = thu hồi** (xóa assignments + `user_roles` ADMIN, giữ login). Tạo admin: reuse edge fn `admin-user-actions` (create+makeAdmin) rồi gán vai trò; thăng cấp user = insert `user_roles` ADMIN trực tiếp (policy "Admins can manage all roles" FOR ALL cho phép).
+- **Bug fix (Lovable-era):** `Auth.tsx` `handleLogin` signOut mọi ADMIN kèm lỗi "Tài khoản admin không thể đăng nhập vào marketplace" — nhưng `/auth` là trang login DUY NHẤT → catch-22 khóa admin. Sửa: admin được điều hướng về `/admin` (helper `redirectByRole` trong `useEffect`), không signOut.
+**Consequences:**
+- **Follow-up:** enforce quyền chi tiết ở TẦNG DB (RLS/RPC/edge) cho từng module admin cũ (hiện mới UI-gate). Nếu tạo admin mới bằng account chưa có quyền `tai-khoan.update` thì bước gán vai trò sau `create` sẽ bị RLS chặn (super admin OK).
+- `types.ts` regen (3 bảng + 3 RPC mới). Nav admin giờ phụ thuộc `useAdminPermissions` — ai không có SUPER_ADMIN/permission `view` sẽ KHÔNG thấy mục đó (fail-closed). Cần SMTP để gửi link tạo mật khẩu (như module người dùng).
+
 ## 2026-07-12 — Module Quản lý người dùng (admin) + activation server-backed
 
 **Context:** Admin chưa có cách quản lý người dùng (list/chi tiết/tặng credit/tạo+kích hoạt/khóa-mở/reset mật khẩu). Đồng thời phát hiện bug: activation chỉ lưu ở `localStorage["activated_${userId}"]`, path nạp thật không ghi → popup kích hoạt hiện lại mỗi lần login/đổi thiết bị.

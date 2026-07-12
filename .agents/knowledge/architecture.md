@@ -155,15 +155,18 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /admin/marketing/quang-cao/:id/edit AdminAdEditor        (edit; draft + scheduled)
 /admin/nguoi-dung               AdminUsersPage       (Quản lý người dùng: list + stats + filters)
 /admin/nguoi-dung/:id           AdminUserDetail      (hồ sơ + số dư + giao dịch + tặng/khóa/reset)
-/admin/khach-hang               AdminCustomersPage   (khách hàng dùng chung, NGOÀI Marketing)
-/admin/khach-hang/:id           AdminCustomerDetail  (info + banner liên kết)
+/admin/khach-hang               AdminCustomersPage   (khách hàng dùng chung; chi tiết KH có card "Đơn hàng / Dịch vụ đã mua")
+/admin/khach-hang/:id           AdminCustomerDetail  (info + banner liên kết + đơn hàng)
+/admin/dich-vu                  AdminServicesPage    (Dịch vụ: danh mục kind credit|direct; RBAC module dich-vu)
+/admin/don-hang                 AdminOrdersPage      (Đơn hàng dịch vụ direct; RBAC module don-hang)
 /admin/bao-cao                  → redirect /admin/bao-cao/giao-dich
-/admin/bao-cao/giao-dich        TransactionReportPage (Báo cáo giao dịch: doanh thu + tiêu dùng credit)
+/admin/bao-cao/doanh-thu        RevenueReportPage    ("Doanh thu": credit nạp + đơn direct; by-audience + top-variant + growth; RBAC doanh-thu)
+/admin/bao-cao/giao-dich        TransactionReportPage (Giao dịch credit: doanh thu credit + tiêu dùng)
 
 *                          NotFound
 ```
 
-> `AdminLayout` NAV = mảng `NavSection[]` (khối có `title` in hoa + `items: NavItem[]` link phẳng), KHÔNG còn submenu collapsible. Các section: (top) Tổng quan · **Báo cáo** [Giao dịch] · Chăm sóc khách hàng [Quản lý người dùng, KYC…] · Nội dung · Marketing.
+> `AdminLayout` NAV = mảng `NavSection[]` (khối có `title` in hoa + `items: NavItem[]` link phẳng), KHÔNG còn submenu collapsible. Section marketing đổi tên hiển thị **"Sale & Marketing"** (category CODE vẫn `marketing`) — gồm Email, Quảng cáo, **Dịch vụ, Đơn hàng**, Khách hàng. Báo cáo gồm **Doanh thu tổng, Giao dịch credit**, Phân tích truy cập. RBAC module code mới `dich-vu`/`don-hang`/`doanh-thu` khai báo trong `MODULE_DEFINITIONS` (`adminPermissions.ts`) — code-only, không migration.
 
 > **Edge functions** (`supabase/functions/`): scraping proxies (`crawl-auctioneers`, `fetch-announcement`) + **`admin-user-actions`** — privileged GoTrue admin ops (create user via `inviteUserByEmail`, lock/unlock via `ban_duration`) that need `service_role` and can't run client-side or as a DB function. It builds a service-role client from `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` (auto-injected), **verifies the caller is ADMIN** (Bearer JWT → `user_roles`), then dispatches on `body.action`. Call from the client with `supabase.functions.invoke(...)`; deploy with `npx supabase functions deploy <name> --project-ref dvdpfjprncvkhfwcvqmp`. Email invite/reset needs SMTP configured in Supabase Auth. This is the pattern for any future privileged-auth admin action.
 
@@ -238,12 +241,18 @@ npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integr
 | `advertisements` | Banner (admin-only); `code` "B0000009" qua trigger; lifecycle draft/scheduled/active/paused/ended |
 | `ad_daily_stats` | Số liệu view/click theo (ngày, device) — hiện là seed demo |
 | `customers` | Khách hàng dùng chung nhiều dịch vụ (`code` "KH…"); banner FK `customer_id` |
+| `services` | NHÓM dịch vụ (`code` "DV…"); `kind` credit\|direct + `audience` buyer\|owner\|company\|all + `category`; **public-read (is_active) + admin-all** RLS |
+| `service_variants` | BIẾN THỂ (con của services, `code` "BV…"); `variant_key` UNIQUE + `price`(gói)/`credit_cost`(tier-feature) + `base_credits`/`credits` + popular/best. **NGUỒN GIÁ runtime** (đọc qua `useServiceCatalog`/`serviceCatalog.getVariantCost`); public-read + admin-all RLS |
+| `orders` | Đơn hàng dịch vụ direct (admin-only; `code` "DH…"); FK `customer_id`/`service_id` (RESTRICT) + `advertisement_id` (SET NULL); `fulfillment_status` pending\|fulfilled\|cancelled; tự fulfilled qua trigger khi banner active |
 
 ### RLS convention
 
 Every credit/unlock table has one **`"own rows"`** policy: `USING (auth.uid() = user_id)`. Never expose credit/unlock data cross-user. New per-user tables follow the same pattern.
 
 **Admin back-office tables** are the deliberate exception: `marketing_campaigns` + `campaign_recipients` use one **`admin_all`** policy `USING (public.has_role(auth.uid(),'ADMIN'::app_role))` (not `own rows`) because the data is platform-owned, not user-owned. When an admin feature must read across other users' RLS-protected tables (e.g. `user_credits` for credit-balance targeting), do it through a **`SECURITY DEFINER` RPC that guards with `has_role(...ADMIN)` and `RAISE`s otherwise** (see `resolve_campaign_audience` / `count_campaign_audience` in `20260711000001_marketing_campaigns.sql`) — never widen the underlying tables' policies. `GRANT EXECUTE ... TO authenticated`; the internal `has_role` check is the real boundary.
+
+### Admin RBAC — "Quản trị" module (`/admin/quan-tri/*`)
+Granular per-module admin permissions layered ON TOP of the binary `user_roles.ADMIN` gate (which still gates `/admin`). Do NOT confuse with `organization_roles` (auction-company RBAC) — these are prefixed `admin_`. Tables (`20260713000010_admin_rbac.sql`): `admin_roles` (name/`code` unique/`is_system`), `admin_role_permissions(role_id,module,action)`, `admin_role_assignments(user_id,role_id)`. **Permission catalog lives in code** — `src/lib/adminPermissions.ts` (modules grouped by nav category × actions `view/create/update/delete/approve/export`); DB stores only granted `(module,action)` rows. Effective perms = union across assigned roles, OR all-allowed if assigned the seeded `SUPER_ADMIN` `is_system` role (short-circuit by `code`). **New SECURITY-DEFINER helpers mirroring `has_role`**: `admin_has_permission(_module,_action)` + `admin_is_super_admin(_uid)` — use these in RLS/RPC for anything gated by a specific admin permission. RLS on the 3 tables: SELECT open to any ADMIN; writes gated `admin_has_permission('vai-tro',*)` (roles/perms) or `('tai-khoan','update')` (assignments); matrix replaced atomically via RPC `admin_set_role_permissions(role_id,jsonb)`; trigger `admin_roles_protect_system` blocks deleting/renaming `is_system` roles. **Frontend**: `useAdminPermissions()` (→ `{isSuperAdmin,matrix,ready}`), `useHasAdminPermission(module,action)`, and route guard `AdminPermissionRoute` (`src/components/admin/`); `AdminLayout` NAV items carry a `module` and are filtered by `view` perm. **Scope caveat:** enforcement is currently **UI + new-tables-RLS only** — the EXISTING admin modules still use the coarse ADMIN gate at the DB level; per-module DB enforcement is a follow-up. "Xóa" an admin = revoke (`useRevokeAdmin`: delete assignments + `user_roles` ADMIN), keeping the login.
 
 ### Email Marketing (admin)
 `/admin/marketing/email/*` — greenfield campaign feature. `useCampaigns.ts` mirrors `useArticles.ts` (array queryKeys `["marketing_campaigns"]`/`["marketing_campaign",id]`/`["campaign_recipients",id]`, mutations invalidate + toast; uses `(supabase as any)` because `types.ts` isn't regenerated yet — **all 4 marketing migrations ARE pushed** to live project `dvdpfjprncvkhfwcvqmp`, regen just needs a personal access token). Audience = a mode-gated jsonb `audience_spec` (criteria ∪ import ∪ specific), resolved server-side by the RPCs above; account rows are **filtered by `notifications_enabled` opt-in**, but import emails that match **no** profile are emitted as **external recipients (`user_id=NULL`) and ALWAYS sent** (opt-in can't apply — no account), so `count_campaign_audience` and the send snapshot include them (`20260712000007_campaign_audience_external_emails.sql`). **Send is stubbed** (`useSendCampaign`: resolve → snapshot `campaign_recipients` → transition status); a future `supabase/functions/send-campaign` edge function consumes the snapshot. Lifecycle `draft→scheduled→sending→sent`, `ended` = manual archive; only `draft` is editable.
@@ -276,11 +285,12 @@ Every credit/unlock table has one **`"own rows"`** policy: `USING (auth.uid() = 
 
 ## Reporting / analytics (admin) — derive revenue from the ledger
 
-There is **no payments/orders table** — VND revenue is never persisted. Any "doanh thu" report must **derive** VND from `credit_transactions`:
-- **Revenue rows** = `type='purchase' AND credit_delta>0 AND description LIKE 'Mua gói %'`; map each to a price via `CREDIT_PACKAGES` (`src/lib/credits.ts`) by **package name in the description** (never fallback on `credit_delta` — collides with reward/debug top-ups). Prices stay in code — **do not duplicate them into SQL/RPC**.
+**Credit** revenue is never persisted as VND — it is **derived** from `credit_transactions`. Direct-service revenue DOES persist as `orders.amount` (the `orders` table). Neither has a real payment gateway yet (both are still inferred/manual).
+- **Credit revenue rows** = `type='purchase' AND credit_delta>0 AND description LIKE 'Mua gói %'`; map each to a price via `CREDIT_PACKAGES` (`src/lib/credits.ts`) by **package name in the description** (never fallback on `credit_delta` — collides with reward/debug top-ups). Prices stay in code — **do not duplicate them into SQL/RPC**.
 - Positive `purchase` with no package match = **"Nạp khác"** (VND 0, shown separately, excluded from avg). Negative `purchase` = a mislabeled spend ("Xuất hồ sơ") → count as consumption.
 - **Consumption rows** = `credit_delta<0`, grouped by `type`; Vietnamese labels in `FEATURE_LABELS` (`src/lib/reports/transactionReport.ts`, the one catalog).
-- Pattern (`Báo cáo giao dịch`, `/admin/bao-cao/giao-dich`): pure aggregation in `src/lib/reports/transactionReport.ts` (unit-tested) + `useTransactionReport` hook (React Query keyed on **range only**; granularity re-buckets via `useMemo` with no refetch; paginated fetch 1000/page, 50k cap). RLS SELECT on `credit_transactions` is open to authenticated users (admin gate is UI-only) — future hardening = SECURITY DEFINER admin RPC.
+- Pattern (`Giao dịch credit`, `/admin/bao-cao/giao-dich`): pure aggregation in `src/lib/reports/transactionReport.ts` (unit-tested) + `useTransactionReport` hook (React Query keyed on **range only**; granularity re-buckets via `useMemo` with no refetch; paginated fetch 1000/page, 50k cap). RLS SELECT on `credit_transactions` is open to authenticated users (admin gate is UI-only) — future hardening = SECURITY DEFINER admin RPC.
+- **Doanh thu tổng** (`/admin/bao-cao/doanh-thu`, `revenueReport.ts` + `useRevenueReport`) = credit-purchase VND (reuse `isPurchase`/`resolvePurchase`) + direct `orders.amount` (excl. `cancelled`). **Rule: credit counts at TOP-UP only, never at spend** — see `business-rules.md`. Reuses exported `enumerateBuckets`/`bucketKeyOf` from `transactionReport.ts`; `customers` (orders) and `profiles` (credit) are distinct populations, so NO by-customer view — reconcile only at VND + source level.
 
 ---
 

@@ -24,9 +24,14 @@ export const ProfileInfoTab = ({ name, email, avatarUrl, onNameChange, onAvatarC
   const [depositOpen, setDepositOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user?.id) {
-        setActivated(localStorage.getItem(`activated_${session.user.id}`) === "true");
+        const { data } = await supabase
+          .from("profiles")
+          .select("activated")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        setActivated(data?.activated === true);
       }
     });
   }, []);

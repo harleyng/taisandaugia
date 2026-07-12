@@ -1732,6 +1732,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activated: boolean
+          activated_at: string | null
           agent_info: Json | null
           created_at: string
           email: string
@@ -1742,11 +1744,14 @@ export type Database = {
           name: string | null
           notifications_enabled: boolean
           rejection_reason: string | null
+          status: string
           terms_accepted_at: string | null
           terms_version: string | null
           updated_at: string
         }
         Insert: {
+          activated?: boolean
+          activated_at?: string | null
           agent_info?: Json | null
           created_at?: string
           email: string
@@ -1757,11 +1762,14 @@ export type Database = {
           name?: string | null
           notifications_enabled?: boolean
           rejection_reason?: string | null
+          status?: string
           terms_accepted_at?: string | null
           terms_version?: string | null
           updated_at?: string
         }
         Update: {
+          activated?: boolean
+          activated_at?: string | null
           agent_info?: Json | null
           created_at?: string
           email?: string
@@ -1772,6 +1780,7 @@ export type Database = {
           name?: string | null
           notifications_enabled?: boolean
           rejection_reason?: string | null
+          status?: string
           terms_accepted_at?: string | null
           terms_version?: string | null
           updated_at?: string
@@ -2080,6 +2089,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_grant_credits: {
+        Args: { _amount: number; _note?: string; _user_id: string }
+        Returns: number
+      }
       check_email_exists: { Args: { _email: string }; Returns: boolean }
       count_campaign_audience: {
         Args: { _respect_optin?: boolean; _spec: Json }

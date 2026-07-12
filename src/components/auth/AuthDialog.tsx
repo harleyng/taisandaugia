@@ -100,8 +100,13 @@ export const AuthDialog = () => {
       });
       if (error) throw error;
 
-      const isActivated = localStorage.getItem(`activated_${data.user?.id}`) === "true";
-      if (!isActivated) {
+      // Activation is server-backed (profiles.activated) — persistent + cross-device.
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("activated")
+        .eq("id", data.user?.id ?? "")
+        .maybeSingle();
+      if (!prof?.activated) {
         setStep("activate");
         return;
       }

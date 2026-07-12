@@ -113,7 +113,11 @@ export const DepositCard = ({ context, onComplete, onSkip }: DepositCardProps) =
       if (context === "personal") {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user?.id) {
-          localStorage.setItem(`activated_${session.user.id}`, "true");
+          // Persist activation server-side so it survives logout / new devices.
+          await supabase
+            .from("profiles")
+            .update({ activated: true, activated_at: new Date().toISOString() })
+            .eq("id", session.user.id);
         }
         toast.success(copy.successMessage);
         setShowSuccess(true);

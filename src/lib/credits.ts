@@ -171,6 +171,14 @@ export const addCredits = async (
       description: pkg ? `Mua gói ${pkg.name}` : `Nạp ${credits} tín dụng`,
       credit_delta: credits,
     }),
+    // "Nạp lần đầu để kích hoạt": the first top-up activates the account.
+    // The activated=false filter makes this a no-op on subsequent top-ups
+    // (so activated_at keeps the original activation time).
+    supabase
+      .from("profiles")
+      .update({ activated: true, activated_at: new Date().toISOString() })
+      .eq("id", userId)
+      .eq("activated", false),
   ]);
 };
 

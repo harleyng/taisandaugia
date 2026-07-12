@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdvertisement } from "@/hooks/useAdvertisements";
 import { AdActions } from "@/components/admin/advertising/AdActions";
 import { AdDetailHeader } from "@/components/admin/advertising/detail/AdDetailHeader";
+import { AdLinkedOrders } from "@/components/admin/advertising/detail/AdLinkedOrders";
 import { AdStatsTab } from "@/components/admin/advertising/detail/AdStatsTab";
 import { AdContentTab } from "@/components/admin/advertising/detail/AdContentTab";
 
@@ -54,6 +55,8 @@ export default function AdminAdDetail() {
       </div>
 
       <AdDetailHeader ad={ad} />
+
+      <AdLinkedOrders adId={ad.id} />
 
       <Tabs value={tab} onValueChange={(v) => setParams({ tab: v })} className="mt-5">
         <TabsList>

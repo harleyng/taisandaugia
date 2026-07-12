@@ -17,11 +17,19 @@ import {
   startOfWeek,
   format,
 } from "date-fns";
-import { CREDIT_PACKAGES, type CreditPackageKey } from "@/lib/credits";
+import { CREDIT_PACKAGES } from "@/lib/credits";
 
 export type Granularity = "day" | "week" | "month";
 
-/** Một dòng ledger kèm embed profiles(name,email) từ PostgREST. */
+/** Biến thể đã embed từ credit_transactions.service_variant_id (nguồn giá bền vững). */
+export interface TxVariant {
+  price: number;
+  name: string;
+  variant_key: string;
+  group: { name: string; audience: string } | null;
+}
+
+/** Một dòng ledger kèm embed profiles(name,email) + variant từ PostgREST. */
 export interface RawTxRow {
   id: string;
   user_id: string;
@@ -29,7 +37,9 @@ export interface RawTxRow {
   description: string;
   credit_delta: number;
   created_at: string;
+  variant_key?: string | null;
   profiles: { name: string | null; email: string } | null;
+  variant?: TxVariant | null;
 }
 
 // ─── Predicates ──────────────────────────────────────────────────────────────
@@ -45,17 +55,29 @@ export const isConsumption = (r: RawTxRow) => r.credit_delta < 0;
 
 export interface ResolvedPurchase {
   vnd: number;
-  packageKey: CreditPackageKey | null;
+  packageKey: string | null; // variant_key (mới) hoặc CreditPackageKey (legacy)
   label: string;
+  audience: string | null; // buyer|owner|company (từ nhóm), null nếu không rõ
+  groupName: string | null;
 }
 
-/** Map một dòng nạp → giá VND theo tên gói trong description ("Mua gói {name}").
- *  KHÔNG fallback theo credit_delta để tránh đụng các top-up thưởng/debug cùng
- *  mệnh giá. Không khớp gói → "Nạp khác", vnd = 0. */
+/** Map một dòng nạp → giá VND.
+ *  Ưu tiên biến thể embed (variant.price, bền vững khi giá catalog đổi). Fallback
+ *  khớp tên gói legacy trong description ("Mua gói {name}") theo CREDIT_PACKAGES.
+ *  Không khớp gì → "Nạp khác", vnd = 0. */
 export function resolvePurchase(r: RawTxRow): ResolvedPurchase {
+  if (r.variant) {
+    return {
+      vnd: Number(r.variant.price ?? 0),
+      packageKey: r.variant.variant_key,
+      label: r.variant.name,
+      audience: r.variant.group?.audience ?? null,
+      groupName: r.variant.group?.name ?? null,
+    };
+  }
   const pkg = CREDIT_PACKAGES.find((p) => r.description.includes(`Mua gói ${p.name}`));
-  if (pkg) return { vnd: pkg.priceVnd, packageKey: pkg.key, label: pkg.name };
-  return { vnd: 0, packageKey: null, label: "Nạp khác" };
+  if (pkg) return { vnd: pkg.priceVnd, packageKey: pkg.key, label: pkg.name, audience: null, groupName: null };
+  return { vnd: 0, packageKey: null, label: "Nạp khác", audience: null, groupName: null };
 }
 
 // ─── Catalog nhãn tính năng (nguồn duy nhất) ─────────────────────────────────
@@ -65,9 +87,11 @@ export const FEATURE_LABELS: Record<string, string> = {
   unlock_company: "Theo dõi công ty",
   unlock_owner: "Theo dõi chủ tài sản",
   unlock_deep_report: "Mở khóa báo cáo chuyên sâu",
-  owner_report_view: "Xem báo cáo chủ tài sản",
+  owner_report_view: "Báo cáo danh mục",
+  unlock_opp_report: "Báo cáo cơ hội",
+  export_profile: "Xuất hồ sơ dự tuyển",
   subscribe_demand: "Đăng ký nhu cầu",
-  // row `purchase` âm = xuất hồ sơ (ghi nhầm type)
+  // row `purchase` âm = xuất hồ sơ (ghi nhầm type — legacy)
   purchase: "Xuất hồ sơ",
 };
 
@@ -109,6 +133,8 @@ export interface TimeBucket {
 export interface PackageStat {
   key: string;
   label: string;
+  audience: string | null; // buyer|owner|company|all (từ nhóm)
+  groupName: string | null;
   vnd: number;
   credits: number;
   count: number;
@@ -144,13 +170,13 @@ export interface TransactionReport {
 
 // ─── Bucketing theo granularity ──────────────────────────────────────────────
 
-function bucketKeyOf(date: Date, g: Granularity): string {
+export function bucketKeyOf(date: Date, g: Granularity): string {
   if (g === "month") return format(date, "yyyy-MM");
   if (g === "week") return format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
   return format(date, "yyyy-MM-dd");
 }
 
-function enumerateBuckets(from: Date, to: Date, g: Granularity): { key: string; label: string }[] {
+export function enumerateBuckets(from: Date, to: Date, g: Granularity): { key: string; label: string }[] {
   if (g === "month") {
     return eachMonthOfInterval({ start: from, end: to }).map((d) => ({
       key: format(d, "yyyy-MM"),
@@ -216,25 +242,24 @@ export function aggregateTransactionReport(
     credits: creditsByBucket[b.key] ?? 0,
   }));
 
-  // Doanh thu theo gói
+  // Doanh thu theo gói (mỗi biến thể gói) — kèm nhóm + đối tượng
   const pkgMap = new Map<string, PackageStat>();
   for (const r of purchases) {
-    const { vnd, packageKey, label } = resolvePurchase(r);
+    const { vnd, packageKey, label, audience, groupName } = resolvePurchase(r);
     const key = packageKey ?? "other";
     const cur =
       pkgMap.get(key) ??
-      ({ key, label, vnd: 0, credits: 0, count: 0, vndKnown: packageKey !== null } as PackageStat);
+      ({ key, label, audience, groupName, vnd: 0, credits: 0, count: 0, vndKnown: packageKey !== null } as PackageStat);
     cur.vnd += vnd;
     cur.credits += r.credit_delta;
     cur.count += 1;
     pkgMap.set(key, cur);
   }
-  // Sắp theo thứ tự gói trong CREDIT_PACKAGES, "Nạp khác" cuối cùng
-  const order = CREDIT_PACKAGES.map((p) => p.key as string);
+  // Sắp theo doanh thu giảm dần, "Nạp khác" cuối cùng
   const byPackage = [...pkgMap.values()].sort((a, b) => {
-    const ia = a.key === "other" ? 999 : order.indexOf(a.key);
-    const ib = b.key === "other" ? 999 : order.indexOf(b.key);
-    return ia - ib;
+    if (a.key === "other") return 1;
+    if (b.key === "other") return -1;
+    return b.vnd - a.vnd;
   });
 
   // Tiêu dùng credit theo tính năng

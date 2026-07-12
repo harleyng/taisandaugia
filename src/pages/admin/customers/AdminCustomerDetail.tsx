@@ -5,9 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCustomer } from "@/hooks/useCustomers";
 import { useCustomerAdvertisements } from "@/hooks/useAdvertisements";
+import { useCustomerOrders } from "@/hooks/useOrders";
 import { CustomerStatusBadge } from "@/components/admin/customers/CustomerStatusBadge";
 import { CustomerFormDialog } from "@/components/admin/customers/CustomerFormDialog";
 import { AdStatusBadge } from "@/components/admin/advertising/AdStatusBadge";
+import { OrderStatusBadge } from "@/components/admin/orders/OrderStatusBadge";
+import { formatVnd } from "@/lib/advertising/slug";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -23,6 +26,7 @@ export default function AdminCustomerDetail() {
   const navigate = useNavigate();
   const { data: customer, isLoading } = useCustomer(id);
   const { data: ads } = useCustomerAdvertisements(id);
+  const { data: orders } = useCustomerOrders(id);
   const [editOpen, setEditOpen] = useState(false);
 
   if (isLoading) {
@@ -96,6 +100,42 @@ export default function AdminCustomerDetail() {
                 <AdStatusBadge status={a.status} />
               </button>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-5 mt-5">
+        <h2 className="text-base font-semibold text-foreground mb-3">
+          Đơn hàng / Dịch vụ đã mua ({orders?.length ?? 0})
+        </h2>
+        {!orders || orders.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Chưa có đơn hàng nào của khách hàng này.</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {orders.map((o) => {
+              const linkedAd = o.advertisement_id;
+              const rowClass =
+                "flex w-full items-center gap-3 py-2.5 text-left rounded-lg px-2 -mx-2 transition-colors";
+              const content = (
+                <>
+                  <span className="font-mono text-xs text-primary w-24 shrink-0">{o.code ?? "—"}</span>
+                  <span className="flex-1 text-sm text-foreground truncate">{o.service?.name ?? "—"}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums hidden sm:block">{formatVnd(o.amount)}</span>
+                  <OrderStatusBadge status={o.fulfillment_status} />
+                </>
+              );
+              return linkedAd ? (
+                <button
+                  key={o.id}
+                  onClick={() => navigate(`/admin/marketing/quang-cao/${linkedAd}`)}
+                  className={`${rowClass} hover:bg-muted/30`}
+                >
+                  {content}
+                </button>
+              ) : (
+                <div key={o.id} className={rowClass}>{content}</div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -46,11 +46,12 @@ export default function TransactionReportPage() {
     <div className="px-6 py-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-foreground">Báo cáo giao dịch</h1>
+        <h1 className="text-xl font-bold text-foreground">Giao dịch credit</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
           Doanh thu nạp credit & tiêu dùng credit theo tính năng.{" "}
           <span className="text-muted-foreground/70">
-            Doanh thu được suy ra từ các gói nạp (chưa tích hợp cổng thanh toán thật).
+            Doanh thu được suy ra từ các gói nạp (chưa tích hợp cổng thanh toán thật). Xem doanh thu
+            tổng (gồm dịch vụ trực tiếp) tại báo cáo Doanh thu tổng.
           </span>
         </p>
       </div>

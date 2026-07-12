@@ -23,18 +23,43 @@ const row = (over: Partial<RawTxRow>): RawTxRow => ({
 });
 
 describe("resolvePurchase", () => {
-  it("map đúng giá VND theo tên gói trong description", () => {
+  it("map đúng giá VND theo tên gói legacy trong description", () => {
     expect(resolvePurchase(row({ description: "Mua gói Popular", credit_delta: 190 }))).toEqual({
       vnd: 179_000,
       packageKey: "popular",
       label: "Popular",
+      audience: null,
+      groupName: null,
     });
     expect(resolvePurchase(row({ description: "Mua gói Starter", credit_delta: 69 })).vnd).toBe(69_000);
   });
 
+  it("ưu tiên biến thể embed (variant.price) hơn khớp tên", () => {
+    const r = resolvePurchase(
+      row({
+        description: "Mua gói X [demo]",
+        credit_delta: 116,
+        variant_key: "buyer_ts_cao_cap",
+        variant: {
+          price: 2_500_000,
+          name: "Thợ Săn Cao Cấp",
+          variant_key: "buyer_ts_cao_cap",
+          group: { name: "Gói credit Người mua", audience: "buyer" },
+        },
+      }),
+    );
+    expect(r).toEqual({
+      vnd: 2_500_000,
+      packageKey: "buyer_ts_cao_cap",
+      label: "Thợ Săn Cao Cấp",
+      audience: "buyer",
+      groupName: "Gói credit Người mua",
+    });
+  });
+
   it("không khớp gói → Nạp khác, vnd 0 (không đoán theo credit_delta)", () => {
     const r = resolvePurchase(row({ description: "Nạp 59 tín dụng", credit_delta: 59 }));
-    expect(r).toEqual({ vnd: 0, packageKey: null, label: "Nạp khác" });
+    expect(r).toEqual({ vnd: 0, packageKey: null, label: "Nạp khác", audience: null, groupName: null });
   });
 });
 

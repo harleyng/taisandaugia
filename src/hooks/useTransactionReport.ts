@@ -13,7 +13,8 @@ import {
   type Granularity,
 } from "@/lib/reports/transactionReport";
 
-const SELECT = "id, user_id, type, description, credit_delta, created_at, profiles(name, email)";
+const SELECT =
+  "id, user_id, type, description, credit_delta, created_at, variant_key, profiles(name, email), variant:service_variants(price, name, variant_key, group:services(name, audience))";
 const PAGE = 1000;
 const MAX_ROWS = 50_000;
 

@@ -47,9 +47,10 @@ export default function RevenueReportPage() {
       <div>
         <h1 className="text-xl font-bold text-foreground">Doanh thu</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Hợp nhất doanh thu từ nạp credit và đơn dịch vụ bán trực tiếp, phân theo nguồn.{" "}
+          Hợp nhất doanh thu từ nạp credit, dịch vụ bán trực tiếp và hoa hồng môi giới, phân theo nguồn.{" "}
           <span className="text-muted-foreground/70">
-            Credit ghi nhận lúc nạp gói (không tính lại lúc tiêu credit); đơn đã hủy không tính.
+            Mỗi lần nạp credit là một đơn hàng (ghi nhận lúc nạp, không tính lại lúc tiêu credit);
+            môi giới ghi nhận theo hoa hồng thực nhận (net), không tính giá trị hợp đồng; đơn đã hủy không tính.
           </span>
         </p>
       </div>

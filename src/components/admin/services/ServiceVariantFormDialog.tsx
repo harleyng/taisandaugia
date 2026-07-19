@@ -10,10 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { groupNumber, parseNumber } from "@/lib/advertising/slug";
 import { useUpsertServiceVariant } from "@/hooks/useServiceVariants";
-import type { Service, ServiceVariant } from "@/types/orders";
+import type { Service, ServiceVariant, CommissionType } from "@/types/orders";
 
 interface Props {
   open: boolean;
@@ -29,6 +36,8 @@ const empty = () => ({
   base_credits: 0,
   credits: 0,
   credit_cost: 0,
+  commission_type: "percent" as CommissionType,
+  commission_value: 0,
   is_popular: false,
   is_best: false,
   sort_order: 0,
@@ -39,7 +48,10 @@ export function ServiceVariantFormDialog({ open, onOpenChange, group, editing }:
   const upsert = useUpsertServiceVariant();
   const [form, setForm] = useState(empty());
 
-  const isPackage = group.category === "package";
+  // Thứ tự ưu tiên — không để hai trục cùng true.
+  const isCommission = group.kind === "commission";
+  const isPackage = !isCommission && group.category === "package";
+  const isPercent = form.commission_type === "percent";
 
   useEffect(() => {
     if (!open) return;
@@ -51,6 +63,8 @@ export function ServiceVariantFormDialog({ open, onOpenChange, group, editing }:
         base_credits: editing.base_credits ?? 0,
         credits: editing.credits ?? 0,
         credit_cost: editing.credit_cost ?? 0,
+        commission_type: editing.commission_type ?? "percent",
+        commission_value: Number(editing.commission_value ?? 0),
         is_popular: editing.is_popular,
         is_best: editing.is_best,
         sort_order: editing.sort_order ?? 0,
@@ -67,6 +81,11 @@ export function ServiceVariantFormDialog({ open, onOpenChange, group, editing }:
   const submit = async () => {
     if (form.name.trim().length < 1) return toast.error("Nhập tên biến thể");
     if (form.variant_key.trim().length < 2) return toast.error("Nhập variant_key (khóa máy duy nhất)");
+    if (isCommission) {
+      if (form.commission_value <= 0) return toast.error("Nhập giá trị hoa hồng");
+      if (isPercent && form.commission_value > 100)
+        return toast.error("Tỷ lệ hoa hồng không vượt quá 100%");
+    }
     try {
       await upsert.mutateAsync({
         ...(editing ? { id: editing.id } : {}),
@@ -76,7 +95,9 @@ export function ServiceVariantFormDialog({ open, onOpenChange, group, editing }:
         price: isPackage ? form.price : 0,
         base_credits: isPackage ? form.base_credits || null : null,
         credits: isPackage ? form.credits || null : null,
-        credit_cost: isPackage ? null : form.credit_cost || null,
+        credit_cost: isPackage || isCommission ? null : form.credit_cost || null,
+        commission_type: isCommission ? form.commission_type : null,
+        commission_value: isCommission ? form.commission_value : null,
         is_popular: form.is_popular,
         is_best: form.is_best,
         sort_order: form.sort_order,
@@ -129,6 +150,46 @@ export function ServiceVariantFormDialog({ open, onOpenChange, group, editing }:
               <div className="space-y-1.5">
                 <Label>Tổng credit</Label>
                 <Input inputMode="numeric" value={groupNumber(form.credits)} onChange={(e) => set("credits", parseNumber(e.target.value))} />
+              </div>
+            </div>
+          ) : isCommission ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Cách tính hoa hồng</Label>
+                <Select
+                  value={form.commission_type}
+                  onValueChange={(v) =>
+                    // Đổi cách tính phải XOÁ giá trị: percent 15 → fixed 15 sẽ
+                    // thành hoa hồng 15₫ mà mọi ràng buộc đều lọt.
+                    setForm((f) => ({ ...f, commission_type: v as CommissionType, commission_value: 0 }))
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">Phần trăm (%)</SelectItem>
+                    <SelectItem value="fixed">Cố định / đơn vị</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{isPercent ? "Tỷ lệ (%)" : "Hoa hồng cố định / đơn vị (VND)"}</Label>
+                {isPercent ? (
+                  // KHÔNG dùng parseNumber: nó strip mọi ký tự không phải chữ số
+                  // nên 12.5 sẽ thành 125.
+                  <Input
+                    type="number" step="0.01" min="0" max="100"
+                    value={form.commission_value || ""}
+                    onChange={(e) => set("commission_value", Number(e.target.value))}
+                    placeholder="12.5"
+                  />
+                ) : (
+                  <Input
+                    inputMode="numeric"
+                    value={groupNumber(form.commission_value)}
+                    onChange={(e) => set("commission_value", parseNumber(e.target.value))}
+                    placeholder="3,000,000"
+                  />
+                )}
               </div>
             </div>
           ) : (

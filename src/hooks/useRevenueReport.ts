@@ -1,51 +1,44 @@
 // Đọc dữ liệu cho báo cáo Doanh thu tổng rồi tổng hợp phía client.
 //
-// 2 nguồn: (1) credit_transactions dòng nạp (type='purchase', credit_delta>0) —
-// lọc server để giảm dữ liệu; (2) orders trong khoảng theo ordered_at. queryKey chỉ
-// theo range → đổi granularity KHÔNG refetch, chỉ re-bucket qua useMemo.
+// MỘT nguồn duy nhất: bảng `orders`. Từ 20260719000003 mỗi giao dịch nạp credit
+// sinh đúng một dòng orders, nên không còn đọc credit_transactions ở đây nữa —
+// đó chính là thứ từng tạo ra hai đường cộng doanh thu song song.
+//
+// queryKey chỉ theo range → đổi granularity KHÔNG refetch, chỉ re-bucket qua useMemo.
 
 import { useMemo } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { startOfDay, endOfDay } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { type RawTxRow, type Granularity } from "@/lib/reports/transactionReport";
+import { type Granularity } from "@/lib/reports/transactionReport";
 import { aggregateRevenueReport, type OrderRevenueRow } from "@/lib/reports/revenueReport";
 
-const TX_SELECT =
-  "id, user_id, type, description, credit_delta, created_at, variant_key, variant:service_variants(price, name, variant_key, group:services(name, audience))";
-const ORDER_SELECT = "id, amount, ordered_at, fulfillment_status, service:services(id,name)";
+const ORDER_SELECT =
+  "id, amount, gross_amount, service_kind, ordered_at, fulfillment_status, " +
+  "service:services(id,name,audience), variant:service_variants(id,name,variant_key)";
 const PAGE = 1000;
 const MAX_ROWS = 50_000;
 
-async function fetchPurchases(fromISO: string, toISO: string): Promise<RawTxRow[]> {
-  const all: RawTxRow[] = [];
+async function fetchOrders(
+  fromISO: string,
+  toISO: string,
+): Promise<{ rows: OrderRevenueRow[]; truncated: boolean }> {
+  const all: OrderRevenueRow[] = [];
   for (let page = 0; ; page++) {
-    const { data, error } = await supabase
-      .from("credit_transactions")
-      .select(TX_SELECT)
-      .eq("type", "purchase")
-      .gt("credit_delta", 0)
-      .gte("created_at", fromISO)
-      .lte("created_at", toISO)
-      .order("created_at", { ascending: false })
+    const { data, error } = await (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      .from("orders")
+      .select(ORDER_SELECT)
+      .gte("ordered_at", fromISO)
+      .lte("ordered_at", toISO)
+      .order("ordered_at", { ascending: false })
       .range(page * PAGE, page * PAGE + PAGE - 1);
     if (error) throw error;
-    const rows = (data ?? []) as unknown as RawTxRow[];
+    const rows = (data ?? []) as OrderRevenueRow[];
     all.push(...rows);
-    if (rows.length < PAGE || all.length >= MAX_ROWS) break;
+    // Cắt ở MAX_ROWS phải BÁO ra ngoài, không im lặng báo thiếu doanh thu.
+    if (rows.length < PAGE) return { rows: all, truncated: false };
+    if (all.length >= MAX_ROWS) return { rows: all, truncated: true };
   }
-  return all;
-}
-
-async function fetchOrders(fromISO: string, toISO: string): Promise<OrderRevenueRow[]> {
-  const { data, error } = await (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
-    .from("orders")
-    .select(ORDER_SELECT)
-    .gte("ordered_at", fromISO)
-    .lte("ordered_at", toISO)
-    .order("ordered_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as OrderRevenueRow[];
 }
 
 export function useRevenueReport(range: { from: Date; to: Date }, granularity: Granularity) {
@@ -54,27 +47,15 @@ export function useRevenueReport(range: { from: Date; to: Date }, granularity: G
 
   const query = useQuery({
     queryKey: ["admin", "revenue-report", fromISO, toISO],
-    queryFn: async () => {
-      const [txRows, orders] = await Promise.all([
-        fetchPurchases(fromISO, toISO),
-        fetchOrders(fromISO, toISO),
-      ]);
-      return { txRows, orders };
-    },
+    queryFn: () => fetchOrders(fromISO, toISO),
     placeholderData: keepPreviousData,
   });
 
   const report = useMemo(
-    () =>
-      aggregateRevenueReport(
-        query.data?.txRows ?? [],
-        query.data?.orders ?? [],
-        range,
-        granularity,
-      ),
+    () => aggregateRevenueReport(query.data?.rows ?? [], range, granularity),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [query.data, fromISO, toISO, granularity],
   );
 
-  return { ...query, report };
+  return { ...query, report, truncated: query.data?.truncated ?? false };
 }

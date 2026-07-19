@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   ClipboardCheck,
   LogOut,
-  MessageSquare,
   Layers,
   Newspaper,
   Mail,
@@ -23,6 +22,10 @@ import {
   Package,
   ClipboardList,
   Wallet,
+  UserPlus,
+  Target,
+  ListTodo,
+  Ticket,
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,24 +54,35 @@ const NAV: NavSection[] = [
     items: [{ to: "/admin", label: "Tổng quan", icon: LayoutDashboard, end: true }],
   },
   {
-    title: "Chăm sóc khách hàng",
+    title: "Quản trị & Phê duyệt",
     items: [
       { to: "/admin/nguoi-dung", label: "Quản lý người dùng", icon: UserCog, module: "nguoi-dung" },
       { to: "/admin/kyc", label: "Duyệt KYC Công ty", icon: ClipboardCheck, module: "kyc-cong-ty" },
       { to: "/admin/chu-tai-san", label: "Duyệt Chủ tài sản", icon: Layers, module: "kyc-chu-tai-san" },
-      { to: "/admin/lien-he-hop-tac", label: "Liên hệ & Hợp tác", icon: MessageSquare, module: "lien-he" },
     ],
   },
   {
-    title: "Nội dung",
+    // Phễu bán hàng đọc từ trên xuống: tiềm năng → cơ hội → khách → đơn, và
+    // Đối tác là bên cung cấp dịch vụ mình bán lại.
+    title: "Bán hàng",
     items: [
-      { to: "/admin/tin-tuc", label: "Tin tức", icon: Newspaper, module: "tin-tuc" },
-      { to: "/admin/doi-tac", label: "Quản lý đối tác", icon: Building2, module: "doi-tac" },
-      { to: "/admin/phap-ly", label: "Văn bản pháp lý", icon: ScrollText, module: "phap-ly" },
+      { to: "/admin/khach-hang-tiem-nang", label: "Khách hàng tiềm năng", icon: UserPlus, module: "khach-hang-tiem-nang" },
+      { to: "/admin/co-hoi", label: "Cơ hội", icon: Target, module: "co-hoi" },
+      { to: "/admin/khach-hang", label: "Khách hàng", icon: Users, module: "khach-hang" },
+      { to: "/admin/don-hang", label: "Đơn hàng", icon: ClipboardList, module: "don-hang" },
+      { to: "/admin/doi-tac", label: "Đối tác", icon: Building2, module: "nha-cung-cap" },
     ],
   },
   {
-    title: "Sale & Marketing",
+    title: "Vận hành & Hỗ trợ",
+    items: [
+      { to: "/admin/dich-vu", label: "Dịch vụ", icon: Package, module: "dich-vu" },
+      { to: "/admin/cong-viec", label: "Công việc", icon: ListTodo, module: "cong-viec" },
+      { to: "/admin/ticket", label: "Ticket", icon: Ticket, module: "lien-he" },
+    ],
+  },
+  {
+    title: "Marketing",
     items: [
       { to: "/admin/marketing/email", label: "Email Marketing", icon: Mail, module: "email" },
       {
@@ -82,9 +96,14 @@ const NAV: NavSection[] = [
           { to: "/admin/marketing/quang-cao/vi-tri", label: "Vị trí quảng cáo", icon: MapPin, module: "quang-cao" },
         ],
       },
-      { to: "/admin/dich-vu", label: "Dịch vụ", icon: Package, module: "dich-vu" },
-      { to: "/admin/don-hang", label: "Đơn hàng", icon: ClipboardList, module: "don-hang" },
-      { to: "/admin/khach-hang", label: "Khách hàng", icon: Users, module: "khach-hang" },
+    ],
+  },
+  {
+    title: "Nội dung",
+    items: [
+      { to: "/admin/tin-tuc", label: "Tin tức", icon: Newspaper, module: "tin-tuc" },
+      { to: "/admin/doi-tac-tren-san", label: "Đối tác trên sàn", icon: Building2, module: "doi-tac" },
+      { to: "/admin/phap-ly", label: "Văn bản pháp lý", icon: ScrollText, module: "phap-ly" },
     ],
   },
   {

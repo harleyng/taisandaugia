@@ -32,7 +32,6 @@ const AdminKYCPage = lazy(() => import("./pages/AdminKYCPage"));
 const AdminKYCDetail = lazy(() => import("./pages/admin/AdminKYCDetail"));
 const AdminAssetOwnerKYCPage = lazy(() => import("./pages/admin/AdminAssetOwnerKYCPage"));
 const AdminAssetOwnerKYCDetail = lazy(() => import("./pages/admin/AdminAssetOwnerKYCDetail"));
-const AdminInboxPage = lazy(() => import("./pages/admin/AdminInboxPage"));
 const AdminArticlesPage = lazy(() => import("./pages/admin/AdminArticlesPage"));
 const AdminArticleEditor = lazy(() => import("./pages/admin/AdminArticleEditor"));
 const AdminCategoriesPage = lazy(() => import("./pages/admin/AdminCategoriesPage"));
@@ -47,6 +46,11 @@ const AdminAdPositionsPage = lazy(() => import("./pages/admin/marketing/AdminAdP
 const AdminCustomersPage = lazy(() => import("./pages/admin/customers/AdminCustomersPage"));
 const AdminCustomerDetail = lazy(() => import("./pages/admin/customers/AdminCustomerDetail"));
 const AdminServicesPage = lazy(() => import("./pages/admin/services/AdminServicesPage"));
+const AdminSuppliersPage = lazy(() => import("./pages/admin/suppliers/AdminSuppliersPage"));
+const AdminLeadsPage = lazy(() => import("./pages/admin/leads/AdminLeadsPage"));
+const AdminOpportunitiesPage = lazy(() => import("./pages/admin/opportunities/AdminOpportunitiesPage"));
+const AdminTasksPage = lazy(() => import("./pages/admin/tasks/AdminTasksPage"));
+const AdminTicketsPage = lazy(() => import("./pages/admin/tickets/AdminTicketsPage"));
 const AdminOrdersPage = lazy(() => import("./pages/admin/orders/AdminOrdersPage"));
 const AdminPartnersPage = lazy(() => import("./pages/admin/partners/AdminPartnersPage"));
 const AdminLegalDocsPage = lazy(() => import("./pages/admin/legal/AdminLegalDocsPage"));
@@ -216,9 +220,12 @@ const App = () => (
                 <Route element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="kyc" element={<AdminKYCPage />} />
-                  <Route path="lien-he-hop-tac" element={<AdminInboxPage />} />
-                  <Route path="collaboration" element={<Navigate to="/admin/lien-he-hop-tac?loai=hop-tac" replace />} />
-                  <Route path="contacts" element={<Navigate to="/admin/lien-he-hop-tac" replace />} />
+                  {/* Ticket thay the han hop thu cu — giu redirect cho link/bookmark da phat ra */}
+                  <Route path="ticket" element={<AdminPermissionRoute module="lien-he"><AdminTicketsPage /></AdminPermissionRoute>} />
+                  <Route path="cong-viec" element={<AdminPermissionRoute module="cong-viec"><AdminTasksPage /></AdminPermissionRoute>} />
+                  <Route path="lien-he-hop-tac" element={<Navigate to="/admin/ticket" replace />} />
+                  <Route path="collaboration" element={<Navigate to="/admin/ticket?nguon=partnership" replace />} />
+                  <Route path="contacts" element={<Navigate to="/admin/ticket" replace />} />
                   <Route path="kyc/:id" element={<AdminKYCDetail />} />
                   <Route path="chu-tai-san" element={<AdminAssetOwnerKYCPage />} />
                   <Route path="chu-tai-san/:type/:id" element={<AdminAssetOwnerKYCDetail />} />
@@ -238,11 +245,15 @@ const App = () => (
                   <Route path="marketing/quang-cao/:id/edit" element={<AdminAdEditor />} />
                   <Route path="nguoi-dung" element={<AdminUsersPage />} />
                   <Route path="nguoi-dung/:id" element={<AdminUserDetail />} />
+                  <Route path="khach-hang-tiem-nang" element={<AdminPermissionRoute module="khach-hang-tiem-nang"><AdminLeadsPage /></AdminPermissionRoute>} />
+                  <Route path="co-hoi" element={<AdminPermissionRoute module="co-hoi"><AdminOpportunitiesPage /></AdminPermissionRoute>} />
                   <Route path="khach-hang" element={<AdminCustomersPage />} />
                   <Route path="khach-hang/:id" element={<AdminCustomerDetail />} />
+                  <Route path="doi-tac" element={<AdminPermissionRoute module="nha-cung-cap"><AdminSuppliersPage /></AdminPermissionRoute>} />
                   <Route path="dich-vu" element={<AdminPermissionRoute module="dich-vu"><AdminServicesPage /></AdminPermissionRoute>} />
                   <Route path="don-hang" element={<AdminPermissionRoute module="don-hang"><AdminOrdersPage /></AdminPermissionRoute>} />
-                  <Route path="doi-tac" element={<AdminPartnersPage />} />
+                  <Route path="doi-tac-tren-san" element={<AdminPartnersPage />} />
+                  <Route path="hien-thi-tren-san" element={<Navigate to="/admin/doi-tac-tren-san" replace />} />
                   <Route path="phap-ly" element={<AdminPermissionRoute module="phap-ly"><AdminLegalDocsPage /></AdminPermissionRoute>} />
                   <Route path="phap-ly/tao" element={<AdminPermissionRoute module="phap-ly" action="create"><AdminLegalEditor /></AdminPermissionRoute>} />
                   <Route path="phap-ly/:id" element={<AdminPermissionRoute module="phap-ly"><AdminLegalDetail /></AdminPermissionRoute>} />

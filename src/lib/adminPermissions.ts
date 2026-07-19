@@ -7,11 +7,13 @@
 export type AdminAction = "view" | "create" | "update" | "delete" | "approve" | "export";
 
 export type AdminCategory =
-  | "cham-soc-khach-hang"
-  | "noi-dung"
+  | "quan-tri-phe-duyet"
+  | "ban-hang"
+  | "van-hanh"
   | "marketing"
+  | "noi-dung"
   | "bao-cao"
-  | "quan-tri";
+  | "he-thong";
 
 export interface AdminModuleDef {
   module: string; // mã ổn định, vd "nguoi-dung"
@@ -42,44 +44,67 @@ export const ACTION_LABELS: Record<AdminAction, string> = {
 };
 
 export const CATEGORY_LABELS: Record<AdminCategory, string> = {
-  "cham-soc-khach-hang": "Chăm sóc khách hàng",
+  "quan-tri-phe-duyet": "Quản trị & Phê duyệt",
+  "ban-hang": "Bán hàng",
+  "van-hanh": "Vận hành & Hỗ trợ",
+  marketing: "Marketing",
   "noi-dung": "Nội dung",
-  marketing: "Sale & Marketing",
   "bao-cao": "Báo cáo",
-  "quan-tri": "Quản trị",
+  "he-thong": "Quản trị",
 };
 
 export const CATEGORY_ORDER: AdminCategory[] = [
-  "cham-soc-khach-hang",
-  "noi-dung",
+  "quan-tri-phe-duyet",
+  "ban-hang",
+  "van-hanh",
   "marketing",
+  "noi-dung",
   "bao-cao",
-  "quan-tri",
+  "he-thong",
 ];
 
 export const MODULE_DEFINITIONS: AdminModuleDef[] = [
-  // Chăm sóc khách hàng
-  { module: "nguoi-dung", label: "Quản lý người dùng", category: "cham-soc-khach-hang", actions: ["view", "create", "update", "delete", "export"] },
-  { module: "kyc-cong-ty", label: "Duyệt KYC Công ty", category: "cham-soc-khach-hang", actions: ["view", "approve", "export"] },
-  { module: "kyc-chu-tai-san", label: "Duyệt Chủ tài sản", category: "cham-soc-khach-hang", actions: ["view", "approve", "export"] },
-  { module: "lien-he", label: "Liên hệ & Hợp tác", category: "cham-soc-khach-hang", actions: ["view", "update", "delete", "export"] },
-  // Nội dung
-  { module: "tin-tuc", label: "Tin tức", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
-  { module: "doi-tac", label: "Quản lý đối tác", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
-  { module: "phap-ly", label: "Văn bản pháp lý", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
-  // Sale & Marketing
+  // Thứ tự + nhóm khớp CHÍNH XÁC sidebar (AdminLayout.tsx). Các mã module GIỮ
+  // NGUYÊN dù đổi category/nhãn: mã lưu trong admin_role_permissions, đổi mã =
+  // mọi vai trò mất quyền đó.
+
+  // Quản trị & Phê duyệt
+  { module: "nguoi-dung", label: "Quản lý người dùng", category: "quan-tri-phe-duyet", actions: ["view", "create", "update", "delete", "export"] },
+  { module: "kyc-cong-ty", label: "Duyệt KYC Công ty", category: "quan-tri-phe-duyet", actions: ["view", "approve", "export"] },
+  { module: "kyc-chu-tai-san", label: "Duyệt Chủ tài sản", category: "quan-tri-phe-duyet", actions: ["view", "approve", "export"] },
+
+  // Bán hàng
+  { module: "khach-hang-tiem-nang", label: "Khách hàng tiềm năng", category: "ban-hang", actions: ["view", "create", "update", "delete", "export"] },
+  { module: "co-hoi", label: "Cơ hội", category: "ban-hang", actions: ["view", "create", "update", "delete", "approve", "export"] },
+  { module: "khach-hang", label: "Khách hàng", category: "ban-hang", actions: ["view", "update", "export"] },
+  { module: "don-hang", label: "Đơn hàng", category: "ban-hang", actions: ["view", "create", "update", "delete", "export"] },
+  // Sổ đăng ký công ty (bảng suppliers). Mã giữ "nha-cung-cap" —
+  // "doi-tac" đã thuộc về module thẻ hiển thị trang chủ từ trước.
+  { module: "nha-cung-cap", label: "Đối tác", category: "ban-hang", actions: ["view", "create", "update", "delete"] },
+
+  // Vận hành & Hỗ trợ
+  { module: "dich-vu", label: "Dịch vụ", category: "van-hanh", actions: ["view", "create", "update", "delete"] },
+  { module: "cong-viec", label: "Công việc", category: "van-hanh", actions: ["view", "create", "update", "delete", "export"] },
+  // Mã "lien-he" GIỮ NGUYÊN: Ticket thay thế hộp thư cũ nên kế thừa quyền đã cấp.
+  { module: "lien-he", label: "Ticket", category: "van-hanh", actions: ["view", "create", "update", "delete", "export"] },
+
+  // Marketing
   { module: "email", label: "Email Marketing", category: "marketing", actions: ["view", "create", "update", "delete"] },
   { module: "quang-cao", label: "Quảng cáo", category: "marketing", actions: ["view", "create", "update", "delete"] },
-  { module: "dich-vu", label: "Dịch vụ", category: "marketing", actions: ["view", "create", "update", "delete"] },
-  { module: "don-hang", label: "Đơn hàng", category: "marketing", actions: ["view", "create", "update", "delete", "export"] },
-  { module: "khach-hang", label: "Khách hàng", category: "marketing", actions: ["view", "update", "export"] },
+
+  // Nội dung
+  { module: "tin-tuc", label: "Tin tức", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
+  // Mã "doi-tac" giữ nguyên, nhưng module giờ quản lý THẺ HIỂN THỊ trang chủ;
+  // sổ đăng ký công ty nằm ở "nha-cung-cap".
+  { module: "doi-tac", label: "Đối tác trên sàn", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
+  { module: "phap-ly", label: "Văn bản pháp lý", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
   // Báo cáo
   { module: "doanh-thu", label: "Doanh thu", category: "bao-cao", actions: ["view", "export"] },
   { module: "giao-dich", label: "Giao dịch credit", category: "bao-cao", actions: ["view", "export"] },
   { module: "truy-cap", label: "Phân tích truy cập", category: "bao-cao", actions: ["view", "export"] },
-  // Quản trị
-  { module: "tai-khoan", label: "Tài khoản quản trị", category: "quan-tri", actions: ["view", "create", "update", "delete"] },
-  { module: "vai-tro", label: "Vai trò", category: "quan-tri", actions: ["view", "create", "update", "delete"] },
+  // Quản trị hệ thống (phân quyền)
+  { module: "tai-khoan", label: "Tài khoản quản trị", category: "he-thong", actions: ["view", "create", "update", "delete"] },
+  { module: "vai-tro", label: "Vai trò", category: "he-thong", actions: ["view", "create", "update", "delete"] },
 ];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

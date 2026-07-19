@@ -48,18 +48,23 @@ export default function AdminDashboard() {
   const [periodLoading, setPeriodLoading] = useState(true);
   const [jobLoading, setJobLoading] = useState(true);
 
-  // Jobs to be done — always live, no date filter
+  // Jobs to be done — always live, no date filter.
+  // Đếm theo `tickets`: từ 20260719000010 mọi liên hệ/đăng ký hợp tác đều
+  // materialise thành ticket, nên hai bảng intake không còn là nguồn trạng thái.
   useEffect(() => {
     (async () => {
-      const [pending, newPartner, unread] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const t = () => (supabase as any).from("tickets");
+      const OPEN = ["new", "open", "pending"];
+      const [pending, partnerTickets, contactTickets] = await Promise.all([
         supabase.from("organizations").select("id", { count: "exact", head: true }).eq("kyc_status", "PENDING_KYC"),
-        supabase.from("partnership_registrations").select("id", { count: "exact", head: true }).eq("status", "NEW"),
-        supabase.from("contact_submissions").select("id", { count: "exact", head: true }).eq("status", "unread"),
+        t().select("id", { count: "exact", head: true }).eq("source", "partnership").in("status", OPEN),
+        t().select("id", { count: "exact", head: true }).eq("source", "contact_form").in("status", OPEN),
       ]);
       setJobStats({
         pendingKYC: pending.count ?? 0,
-        newPartnerships: newPartner.count ?? 0,
-        unreadContacts: unread.count ?? 0,
+        newPartnerships: partnerTickets.count ?? 0,
+        unreadContacts: contactTickets.count ?? 0,
       });
       setJobLoading(false);
     })();
@@ -139,7 +144,7 @@ export default function AdminDashboard() {
       count: jobStats?.newPartnerships,
       countLabel: "mới chưa xử lý",
       countColor: "text-orange-600",
-      path: "/admin/lien-he-hop-tac?loai=hop-tac",
+      path: "/admin/ticket?nguon=partnership",
     },
     {
       key: "contact",
@@ -150,7 +155,7 @@ export default function AdminDashboard() {
       count: jobStats?.unreadContacts,
       countLabel: "chưa đọc",
       countColor: "text-blue-600",
-      path: "/admin/lien-he-hop-tac",
+      path: "/admin/ticket",
     },
   ];
 

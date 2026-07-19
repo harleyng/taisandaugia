@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { groupNumber, parseNumber } from "@/lib/advertising/slug";
 import { useUpsertService } from "@/hooks/useServices";
+import { useSuppliers } from "@/hooks/useSuppliers";
 import type { Service, ServiceKind, ServiceAudience } from "@/types/orders";
 
 interface Props {
@@ -27,6 +28,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   editing: Service | null;
 }
+
+const NO_SUPPLIER = "__none__";
 
 const EMPTY = {
   name: "",
@@ -38,10 +41,12 @@ const EMPTY = {
   description: "",
   sort_order: 0,
   is_active: true,
+  supplier_id: NO_SUPPLIER,
 };
 
 export function ServiceFormDialog({ open, onOpenChange, editing }: Props) {
   const upsert = useUpsertService();
+  const { data: suppliers } = useSuppliers();
   const [form, setForm] = useState({ ...EMPTY });
 
   useEffect(() => {
@@ -57,6 +62,7 @@ export function ServiceFormDialog({ open, onOpenChange, editing }: Props) {
         description: editing.description ?? "",
         sort_order: editing.sort_order ?? 0,
         is_active: editing.is_active,
+        supplier_id: editing.supplier_id ?? NO_SUPPLIER,
       });
     } else {
       setForm({ ...EMPTY });
@@ -67,27 +73,37 @@ export function ServiceFormDialog({ open, onOpenChange, editing }: Props) {
     setForm((f) => ({ ...f, [key]: value }));
 
   const isCredit = form.kind === "credit";
+  const isCommission = form.kind === "commission";
 
   const submit = async () => {
     if (form.name.trim().length < 2) return toast.error("Vui lòng nhập tên nhóm dịch vụ");
+    if (isCommission && form.supplier_id === NO_SUPPLIER)
+      return toast.error("Dịch vụ hoa hồng phải chọn nhà cung cấp");
     try {
       await upsert.mutateAsync({
         ...(editing ? { id: editing.id } : {}),
         name: form.name.trim(),
         kind: form.kind,
-        category: form.category.trim() || null,
+        // Ràng buộc DB: kind='commission' bắt buộc category='brokerage'.
+        category: isCommission ? "brokerage" : form.category.trim() || null,
         audience: form.audience,
         credit_feature_key: isCredit ? form.credit_feature_key.trim() || null : null,
-        price: isCredit ? 0 : form.price,
+        price: isCredit || isCommission ? 0 : form.price,
         credit_cost: null,
         description: form.description.trim() || null,
         sort_order: form.sort_order,
         is_active: form.is_active,
+        supplier_id: isCommission ? form.supplier_id : null,
       });
       toast.success(editing ? "Đã cập nhật nhóm dịch vụ" : "Đã thêm nhóm dịch vụ");
       onOpenChange(false);
-    } catch {
-      toast.error("Thao tác thất bại");
+    } catch (err) {
+      const msg = (err as { message?: string })?.message ?? "";
+      toast.error(
+        msg.includes("Không đổi loại dịch vụ")
+          ? "Không đổi loại dịch vụ khi đã có đơn hàng"
+          : "Thao tác thất bại",
+      );
     }
   };
 
@@ -107,13 +123,19 @@ export function ServiceFormDialog({ open, onOpenChange, editing }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Nguồn</Label>
-              <Select value={form.kind} onValueChange={(v) => set("kind", v as ServiceKind)}>
+              {/* Khoá khi sửa: đổi kind sau khi có đơn sẽ làm báo cáo tách nguồn
+                  sai hồi tố (đơn giữ snapshot service_kind lúc chốt). */}
+              <Select value={form.kind} onValueChange={(v) => set("kind", v as ServiceKind)} disabled={!!editing}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="credit">Credit</SelectItem>
                   <SelectItem value="direct">Bán trực tiếp (VND)</SelectItem>
+                  <SelectItem value="commission">Hoa hồng (môi giới)</SelectItem>
                 </SelectContent>
               </Select>
+              {editing && (
+                <p className="text-[11px] text-muted-foreground">Không đổi loại dịch vụ sau khi đã có đơn hàng.</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Đối tượng</Label>
@@ -132,13 +154,18 @@ export function ServiceFormDialog({ open, onOpenChange, editing }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Loại (category)</Label>
-              <Select value={form.category} onValueChange={(v) => set("category", v)}>
+              <Select
+                value={isCommission ? "brokerage" : form.category}
+                onValueChange={(v) => set("category", v)}
+                disabled={isCommission}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="package">Gói credit</SelectItem>
                   <SelectItem value="unlock">Tính năng credit (tier)</SelectItem>
                   <SelectItem value="feature">Tính năng theo lượt</SelectItem>
                   <SelectItem value="advertising">Quảng cáo</SelectItem>
+                  <SelectItem value="brokerage">Môi giới</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -153,6 +180,29 @@ export function ServiceFormDialog({ open, onOpenChange, editing }: Props) {
               </Select>
             </div>
           </div>
+
+          {isCommission && (
+            <div className="space-y-1.5">
+              <Label>Nhà cung cấp <span className="text-destructive">*</span></Label>
+              <Select value={form.supplier_id} onValueChange={(v) => set("supplier_id", v)}>
+                <SelectTrigger><SelectValue placeholder="Chọn nhà cung cấp" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_SUPPLIER}>— Chọn nhà cung cấp —</SelectItem>
+                  {(suppliers ?? [])
+                    .filter((s) => s.status === "active" || s.id === editing?.supplier_id)
+                    .map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                        {s.code ? ` (${s.code})` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Bên thực hiện dịch vụ. Tỷ lệ hoa hồng đặt ở từng biến thể.
+              </p>
+            </div>
+          )}
 
           {isCredit ? (
             <div className="space-y-1.5">

@@ -22,14 +22,19 @@ import { PartnerLogoUpload } from "./PartnerLogoUpload";
 import { PartnerCard } from "@/components/PartnerCard";
 import { PARTNER_COLORS } from "@/lib/partnerTheme";
 import { useUpsertPartner } from "@/hooks/usePartners";
+import { useSuppliers } from "@/hooks/useSuppliers";
 import type { Partner, PartnerStat, PartnerStatus } from "@/types/partner";
+
+const NO_SUPPLIER = "__none__";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: Partner | null;
-  /** Gợi ý thứ tự cho đối tác mới (= số đối tác hiện có). */
+  /** Gợi ý thứ tự cho thẻ mới (= số thẻ hiện có). */
   nextOrder: number;
+  /** Đối tác đã có thẻ khác — unique index chặn gắn trùng. */
+  takenSupplierIds: string[];
 }
 
 const COLOR_PRESETS = [
@@ -46,6 +51,7 @@ const emptyStats = (): PartnerStat[] => [
 
 function buildEmpty(order: number) {
   return {
+    supplier_id: NO_SUPPLIER,
     name: "",
     badge: "",
     accent_color: "#367639",
@@ -73,8 +79,9 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   );
 }
 
-export function PartnerFormDialog({ open, onOpenChange, editing, nextOrder }: Props) {
+export function PartnerFormDialog({ open, onOpenChange, editing, nextOrder, takenSupplierIds }: Props) {
   const upsert = useUpsertPartner();
+  const { data: suppliers } = useSuppliers();
   const [form, setForm] = useState(() => buildEmpty(nextOrder));
 
   useEffect(() => {
@@ -85,6 +92,7 @@ export function PartnerFormDialog({ open, onOpenChange, editing, nextOrder }: Pr
         stats[i] = { label: s.label ?? "", value: s.value ?? "" };
       });
       setForm({
+        supplier_id: editing.supplier_id ?? NO_SUPPLIER,
         name: editing.name,
         badge: editing.badge ?? "",
         accent_color: editing.accent_color || "#367639",
@@ -117,6 +125,7 @@ export function PartnerFormDialog({ open, onOpenChange, editing, nextOrder }: Pr
   // Thẻ preview dựng từ state hiện tại (giữ logo_filter của bản ghi gốc nếu có).
   const previewPartner: Partner = {
     id: "preview",
+    supplier_id: form.supplier_id === NO_SUPPLIER ? null : form.supplier_id,
     name: form.name,
     badge: form.badge,
     accent_color: form.accent_color,
@@ -140,6 +149,7 @@ export function PartnerFormDialog({ open, onOpenChange, editing, nextOrder }: Pr
     try {
       await upsert.mutateAsync({
         ...(editing ? { id: editing.id } : {}),
+        supplier_id: form.supplier_id === NO_SUPPLIER ? null : form.supplier_id,
         name: form.name.trim(),
         badge: form.badge.trim(),
         accent_color: form.accent_color,
@@ -154,10 +164,15 @@ export function PartnerFormDialog({ open, onOpenChange, editing, nextOrder }: Pr
         sort_order: Number(form.sort_order) || 0,
         status: form.status,
       });
-      toast.success(editing ? "Đã cập nhật đối tác" : "Đã thêm đối tác");
+      toast.success(editing ? "Đã cập nhật thẻ hiển thị" : "Đã thêm thẻ hiển thị");
       onOpenChange(false);
-    } catch {
-      toast.error("Thao tác thất bại");
+    } catch (err) {
+      const msg = (err as { message?: string })?.message ?? "";
+      toast.error(
+        msg.includes("idx_partners_supplier")
+          ? "Đối tác này đã có thẻ hiển thị khác"
+          : "Thao tác thất bại",
+      );
     }
   };
 
@@ -165,19 +180,53 @@ export function PartnerFormDialog({ open, onOpenChange, editing, nextOrder }: Pr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editing ? "Sửa đối tác" : "Thêm đối tác"}</DialogTitle>
+          <DialogTitle>{editing ? "Sửa thẻ hiển thị" : "Thêm thẻ hiển thị"}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_460px] gap-6 py-1">
           {/* ── Cột form ── */}
           <div className="space-y-4">
+            <Section
+              title="Đối tác"
+              hint="Chọn ra từ sổ đăng ký Đối tác — công ty chỉ nhập một lần ở đó."
+            >
+              <div className="space-y-1.5">
+                <Label>Đối tác hiển thị</Label>
+                <Select
+                  value={form.supplier_id}
+                  onValueChange={(v) => {
+                    const s = (suppliers ?? []).find((x) => x.id === v);
+                    // Điền sẵn tên nhưng vẫn cho sửa: tên thương hiệu trên thẻ
+                    // có thể khác tên pháp nhân trong sổ đăng ký.
+                    setForm((f) => ({
+                      ...f,
+                      supplier_id: v,
+                      name: v !== NO_SUPPLIER && !f.name.trim() ? (s?.name ?? "") : f.name,
+                    }));
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Chọn đối tác" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_SUPPLIER}>Không gắn đối tác</SelectItem>
+                    {(suppliers ?? [])
+                      .filter((s) => s.id === editing?.supplier_id || !takenSupplierIds.includes(s.id))
+                      .map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}{s.code ? ` · ${s.code}` : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </Section>
+
             <Section title="Thông tin cơ bản">
               <div className="space-y-1.5">
                 <Label>Logo</Label>
                 <PartnerLogoUpload value={form.logo_url} onChange={(url) => set("logo_url", url)} />
               </div>
               <div className="space-y-1.5">
-                <Label>Tên đối tác <span className="text-destructive">*</span></Label>
+                <Label>Tên hiển thị <span className="text-destructive">*</span></Label>
                 <Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="VD: Antiquorum" />
               </div>
               <div className="grid grid-cols-2 gap-3">

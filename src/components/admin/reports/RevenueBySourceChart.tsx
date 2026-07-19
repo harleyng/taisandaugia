@@ -8,10 +8,7 @@ interface Props {
   loading?: boolean;
 }
 
-const COLORS: Record<string, string> = {
-  credit: "hsl(43 96% 56%)",
-  direct: "hsl(210 90% 45%)",
-};
+import { SOURCE_COLORS as COLORS } from "@/lib/reports/revenueSource";
 
 const tooltipStyle = {
   fontSize: 12,
@@ -26,7 +23,7 @@ export default function RevenueBySourceChart({ data, loading }: Props) {
   const empty = !loading && total === 0;
 
   return (
-    <ReportCard title="Doanh thu theo nguồn" subtitle="Tỷ trọng Credit vs Dịch vụ trực tiếp" loading={loading} empty={empty}>
+    <ReportCard title="Doanh thu theo nguồn" subtitle="Tỷ trọng credit · dịch vụ trực tiếp · hoa hồng" loading={loading} empty={empty}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>

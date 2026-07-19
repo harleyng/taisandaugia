@@ -18,8 +18,11 @@ interface Props {
   loading?: boolean;
 }
 
-const CREDIT = "hsl(43 96% 56%)";
-const DIRECT = "hsl(210 90% 45%)";
+import { SOURCE_COLORS } from "@/lib/reports/revenueSource";
+
+const CREDIT = SOURCE_COLORS.credit;
+const DIRECT = SOURCE_COLORS.direct;
+const COMMISSION = SOURCE_COLORS.commission;
 
 const tooltipStyle = {
   fontSize: 12,
@@ -47,6 +50,10 @@ export default function RevenueSourceTrendChart({ data, loading }: Props) {
             <linearGradient id="fillCredit" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={CREDIT} stopOpacity={0.5} />
               <stop offset="95%" stopColor={CREDIT} stopOpacity={0.1} />
+            </linearGradient>
+            <linearGradient id="fillCommission" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={COMMISSION} stopOpacity={0.5} />
+              <stop offset="95%" stopColor={COMMISSION} stopOpacity={0.1} />
             </linearGradient>
             <linearGradient id="fillDirect" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={DIRECT} stopOpacity={0.5} />
@@ -87,6 +94,15 @@ export default function RevenueSourceTrendChart({ data, loading }: Props) {
             stroke={DIRECT}
             strokeWidth={2}
             fill="url(#fillDirect)"
+          />
+          <Area
+            type="monotone"
+            dataKey="commissionVnd"
+            name="Hoa hồng môi giới"
+            stackId="1"
+            stroke={COMMISSION}
+            strokeWidth={2}
+            fill="url(#fillCommission)"
           />
         </AreaChart>
       </ResponsiveContainer>

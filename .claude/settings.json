@@ -49,20 +49,21 @@
       "Bash(awk '/admin_access_report: \\\\{/{f=1} f{print} /Returns: /{if\\(f\\)c++} f&&c>=1&&/\\\\}/{if\\(++n>3\\)exit}' src/integrations/supabase/types.ts)",
       "Bash(perl -0pi -e 's/user_id: opts\\\\.userId \\\\?\\\\? null,/user_id: opts.userId ?? currentUserId,/g' src/lib/analytics/track.ts)",
       "Bash(grep -nE \"^#{1,3} \" .agents/knowledge/business-rules.md)",
-      "Bash(export PGURI=\"postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres\")",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c '\\\\d public.credit_transactions')",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT count\\(*\\) AS profiles, count\\(email\\) AS with_email, count\\(name\\) AS with_name FROM public.profiles;')",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT count\\(*\\) AS total, min\\(created_at\\)::date AS earliest, max\\(created_at\\)::date AS latest FROM public.credit_transactions;')",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT type, count\\(*\\), sum\\(credit_delta\\) FROM public.credit_transactions GROUP BY type ORDER BY 2 DESC;')",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT id, coalesce\\(name,'\\\\''—'\\\\''\\) AS name, email FROM public.profiles ORDER BY created_at LIMIT 15;')",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT now\\(\\) AS db_now;')",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT count\\(*\\) FROM public.profiles;')",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260714000004_seed_credit_transactions.sql)",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c 'SELECT type, count\\(*\\) AS rows, sum\\(credit_delta\\) AS credits, min\\(created_at\\)::date AS earliest, max\\(created_at\\)::date AS latest FROM public.credit_transactions GROUP BY type ORDER BY 2 DESC;')",
-      "Bash(psql postgresql://postgres:Ra1nbowafterra1n%3C3@db.dvdpfjprncvkhfwcvqmp.supabase.co:5432/postgres -c ' *)"
+      "Bash(awk '{printf \"%d\\\\t%s\\\\n\", $1+214, substr\\($0, index\\($0,$2\\)\\)}')",
+      "Bash(python3 -)",
+      "Bash(sed -n '1,80p' supabase/migrations/20260521000003*.sql)",
+      "Bash(sed -n '1,80p' supabase/migrations/20260521000002*.sql)",
+      "Bash(sed -n '1,80p' supabase/migrations/20260521000003*.sql; echo \"=== ADMIN_HAS_PERM ===\"; sed -n '55,100p' supabase/migrations/20260713000010_admin_rbac.sql; echo \"=== CUSTOMERS ===\"; sed -n '25,70p' supabase/migrations/20260712000002_advertising.sql)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const p=require\\('/Users/m116gb/Downloads/Agency/taisandaugia/node_modules/lucide-react/package.json'\\);console.log\\(p.version\\)\")",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts,null,1\\)\\)\")",
+      "Bash(sed -n '140,200p' supabase/migrations/20260714000002_services_orders.sql; echo \"=== contact_submissions ===\"; sed -n '1,40p' supabase/migrations/20260521000003*.sql)",
+      "Bash(node -e \"const L=require\\('lucide-react'\\); ['UserPlus','Target','ListTodo','Ticket','Handshake','CheckSquare','SquareCheck','Truck','GitBranch','Kanban','Contact'].forEach\\(n=>console.log\\(n, !!L[n]\\)\\)\")",
+      "Bash(python3 -c ' *)"
     ],
     "additionalDirectories": [
-      "/tmp"
+      "/tmp",
+      "/Users/m116gb/Downloads/Agency/taisandaugia/supabase/migrations"
     ]
   },
   "hooks": {

@@ -1196,6 +1196,7 @@ export type Database = {
       }
       credit_transactions: {
         Row: {
+          amount_vnd: number | null
           created_at: string
           credit_delta: number
           description: string
@@ -1206,6 +1207,7 @@ export type Database = {
           variant_key: string | null
         }
         Insert: {
+          amount_vnd?: number | null
           created_at?: string
           credit_delta: number
           description: string
@@ -1216,6 +1218,7 @@ export type Database = {
           variant_key?: string | null
         }
         Update: {
+          amount_vnd?: number | null
           created_at?: string
           credit_delta?: number
           description?: string
@@ -1255,9 +1258,12 @@ export type Database = {
           name: string
           note: string | null
           phone: string | null
+          segment: string
+          source_lead_id: string | null
           status: string
           tax_code: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           address?: string | null
@@ -1271,9 +1277,12 @@ export type Database = {
           name: string
           note?: string | null
           phone?: string | null
+          segment?: string
+          source_lead_id?: string | null
           status?: string
           tax_code?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           address?: string | null
@@ -1287,11 +1296,100 @@ export type Database = {
           name?: string
           note?: string | null
           phone?: string | null
+          segment?: string
+          source_lead_id?: string | null
           status?: string
           tax_code?: string | null
           updated_at?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_source_lead_id_fkey"
+            columns: ["source_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          assigned_to: string | null
+          code: string | null
+          company_name: string | null
+          contact_name: string | null
+          converted_at: string | null
+          converted_customer_id: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          lead_type: string
+          name: string
+          note: string | null
+          phone: string | null
+          province: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          code?: string | null
+          company_name?: string | null
+          contact_name?: string | null
+          converted_at?: string | null
+          converted_customer_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          lead_type?: string
+          name: string
+          note?: string | null
+          phone?: string | null
+          province?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          code?: string | null
+          company_name?: string | null
+          contact_name?: string | null
+          converted_at?: string | null
+          converted_customer_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          lead_type?: string
+          name?: string
+          note?: string | null
+          phone?: string | null
+          province?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_converted_customer_id_fkey"
+            columns: ["converted_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       legal_documents: {
         Row: {
@@ -1659,57 +1757,208 @@ export type Database = {
         }
         Relationships: []
       }
+      opportunities: {
+        Row: {
+          amount: number
+          assigned_to: string | null
+          closed_at: string | null
+          code: string | null
+          commission_type: string | null
+          commission_value: number | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          expected_close_at: string | null
+          gross_amount: number
+          id: string
+          lead_id: string | null
+          lost_reason: string | null
+          name: string
+          note: string | null
+          opportunity_type: string
+          revenue_mode: string
+          service_id: string
+          service_kind: string
+          service_variant_id: string | null
+          sort_order: number
+          stage: string
+          updated_at: string
+          won_order_id: string | null
+        }
+        Insert: {
+          amount?: number
+          assigned_to?: string | null
+          closed_at?: string | null
+          code?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          expected_close_at?: string | null
+          gross_amount?: number
+          id?: string
+          lead_id?: string | null
+          lost_reason?: string | null
+          name: string
+          note?: string | null
+          opportunity_type?: string
+          revenue_mode?: string
+          service_id: string
+          service_kind?: string
+          service_variant_id?: string | null
+          sort_order?: number
+          stage?: string
+          updated_at?: string
+          won_order_id?: string | null
+        }
+        Update: {
+          amount?: number
+          assigned_to?: string | null
+          closed_at?: string | null
+          code?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          expected_close_at?: string | null
+          gross_amount?: number
+          id?: string
+          lead_id?: string | null
+          lost_reason?: string | null
+          name?: string
+          note?: string | null
+          opportunity_type?: string
+          revenue_mode?: string
+          service_id?: string
+          service_kind?: string
+          service_variant_id?: string | null
+          sort_order?: number
+          stage?: string
+          updated_at?: string
+          won_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_won_order_id_fkey"
+            columns: ["won_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           advertisement_id: string | null
           amount: number
           code: string | null
+          commission_type: string | null
+          commission_value: number | null
           created_at: string
           created_by: string | null
-          customer_id: string
+          credit_transaction_id: string | null
+          customer_id: string | null
           fulfilled_at: string | null
           fulfillment_status: string
+          gross_amount: number
           id: string
           note: string | null
+          opportunity_id: string | null
           ordered_at: string
           quantity: number
           service_id: string
+          service_kind: string
           service_variant_id: string | null
+          supplier_id: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           advertisement_id?: string | null
           amount?: number
           code?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
           created_at?: string
           created_by?: string | null
-          customer_id: string
+          credit_transaction_id?: string | null
+          customer_id?: string | null
           fulfilled_at?: string | null
           fulfillment_status?: string
+          gross_amount?: number
           id?: string
           note?: string | null
+          opportunity_id?: string | null
           ordered_at?: string
           quantity?: number
           service_id: string
+          service_kind?: string
           service_variant_id?: string | null
+          supplier_id?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           advertisement_id?: string | null
           amount?: number
           code?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
           created_at?: string
           created_by?: string | null
-          customer_id?: string
+          credit_transaction_id?: string | null
+          customer_id?: string | null
           fulfilled_at?: string | null
           fulfillment_status?: string
+          gross_amount?: number
           id?: string
           note?: string | null
+          opportunity_id?: string | null
           ordered_at?: string
           quantity?: number
           service_id?: string
+          service_kind?: string
           service_variant_id?: string | null
+          supplier_id?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1720,10 +1969,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_credit_transaction_id_fkey"
+            columns: ["credit_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "credit_transactions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
             referencedColumns: ["id"]
           },
           {
@@ -1738,6 +2001,13 @@ export type Database = {
             columns: ["service_variant_id"]
             isOneToOne: false
             referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1933,6 +2203,7 @@ export type Database = {
           sort_order: number
           stats: Json
           status: string
+          supplier_id: string | null
           tagline: string | null
           updated_at: string
         }
@@ -1952,6 +2223,7 @@ export type Database = {
           sort_order?: number
           stats?: Json
           status?: string
+          supplier_id?: string | null
           tagline?: string | null
           updated_at?: string
         }
@@ -1971,10 +2243,19 @@ export type Database = {
           sort_order?: number
           stats?: Json
           status?: string
+          supplier_id?: string | null
           tagline?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "partners_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       partnership_registrations: {
         Row: {
@@ -2106,6 +2387,8 @@ export type Database = {
         Row: {
           base_credits: number | null
           code: string | null
+          commission_type: string | null
+          commission_value: number | null
           created_at: string
           created_by: string | null
           credit_cost: number | null
@@ -2124,6 +2407,8 @@ export type Database = {
         Insert: {
           base_credits?: number | null
           code?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
           created_at?: string
           created_by?: string | null
           credit_cost?: number | null
@@ -2142,6 +2427,8 @@ export type Database = {
         Update: {
           base_credits?: number | null
           code?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
           created_at?: string
           created_by?: string | null
           credit_cost?: number | null
@@ -2183,6 +2470,7 @@ export type Database = {
           name: string
           price: number
           sort_order: number
+          supplier_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2200,6 +2488,7 @@ export type Database = {
           name: string
           price?: number
           sort_order?: number
+          supplier_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2217,9 +2506,308 @@ export type Database = {
           name?: string
           price?: number
           sort_order?: number
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          bank_account: string | null
+          bank_name: string | null
+          code: string | null
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          default_commission_rate: number | null
+          default_commission_type: string | null
+          email: string | null
+          id: string
+          name: string
+          note: string | null
+          phone: string | null
+          status: string
+          supplier_type: string
+          tax_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          code?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_commission_rate?: number | null
+          default_commission_type?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          phone?: string | null
+          status?: string
+          supplier_type?: string
+          tax_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          code?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_commission_rate?: number | null
+          default_commission_type?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          phone?: string | null
+          status?: string
+          supplier_type?: string
+          tax_code?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      tasks: {
+        Row: {
+          assignee_id: string | null
+          closed_at: string | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          description: string | null
+          due_at: string | null
+          id: string
+          lead_id: string | null
+          opportunity_id: string | null
+          order_id: string | null
+          priority: string
+          status: string
+          task_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          closed_at?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          lead_id?: string | null
+          opportunity_id?: string | null
+          order_id?: string | null
+          priority?: string
+          status?: string
+          task_type?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          closed_at?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          lead_id?: string | null
+          opportunity_id?: string | null
+          order_id?: string | null
+          priority?: string
+          status?: string
+          task_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          assignee_id: string | null
+          body: string | null
+          code: string | null
+          contact_submission_id: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          first_response_at: string | null
+          id: string
+          lead_id: string | null
+          meta: Json
+          opportunity_id: string | null
+          order_id: string | null
+          partnership_registration_id: string | null
+          priority: string
+          requester_email: string | null
+          requester_name: string | null
+          requester_phone: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          source: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          body?: string | null
+          code?: string | null
+          contact_submission_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          first_response_at?: string | null
+          id?: string
+          lead_id?: string | null
+          meta?: Json
+          opportunity_id?: string | null
+          order_id?: string | null
+          partnership_registration_id?: string | null
+          priority?: string
+          requester_email?: string | null
+          requester_name?: string | null
+          requester_phone?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          body?: string | null
+          code?: string | null
+          contact_submission_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          first_response_at?: string | null
+          id?: string
+          lead_id?: string | null
+          meta?: Json
+          opportunity_id?: string | null
+          order_id?: string | null
+          partnership_registration_id?: string | null
+          priority?: string
+          requester_email?: string | null
+          requester_name?: string | null
+          requester_phone?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_contact_submission_id_fkey"
+            columns: ["contact_submission_id"]
+            isOneToOne: true
+            referencedRelation: "contact_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_partnership_registration_id_fkey"
+            columns: ["partnership_registration_id"]
+            isOneToOne: true
+            referencedRelation: "partnership_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_asset_actions: {
         Row: {
@@ -2500,6 +3088,10 @@ export type Database = {
         Args: { _from: string; _granularity?: string; _to: string }
         Returns: Json
       }
+      admin_convert_lead: {
+        Args: { _customer_id?: string; _lead_id: string }
+        Returns: string
+      }
       admin_grant_credits: {
         Args: { _amount: number; _note?: string; _user_id: string }
         Returns: number
@@ -2513,11 +3105,26 @@ export type Database = {
         Args: { _perms: Json; _role_id: string }
         Returns: undefined
       }
+      admin_unwin_opportunity: {
+        Args: { _opportunity_id: string }
+        Returns: undefined
+      }
+      admin_win_opportunity: {
+        Args: {
+          _amount?: number
+          _customer_id?: string
+          _gross?: number
+          _opportunity_id: string
+          _ordered_at?: string
+        }
+        Returns: Json
+      }
       check_email_exists: { Args: { _email: string }; Returns: boolean }
       count_campaign_audience: {
         Args: { _respect_optin?: boolean; _spec: Json }
         Returns: number
       }
+      credit_fallback_service_id: { Args: never; Returns: string }
       get_listing_save_counts: {
         Args: { listing_ids: string[] }
         Returns: {

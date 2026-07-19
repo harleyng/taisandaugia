@@ -6,11 +6,7 @@ interface Props {
   data: RevenueServiceStat[];
 }
 
-const SOURCE_BADGE: Record<string, string> = {
-  credit: "bg-amber-100 text-amber-700",
-  direct: "bg-blue-100 text-blue-700",
-};
-const SOURCE_LABEL: Record<string, string> = { credit: "Credit", direct: "Trực tiếp" };
+import { SOURCE_BADGE_CLASS, sourceLabel } from "@/lib/reports/revenueSource";
 
 export default function RevenueByServiceTable({ data }: Props) {
   const totalVnd = data.reduce((s, d) => s + d.vnd, 0);
@@ -20,7 +16,7 @@ export default function RevenueByServiceTable({ data }: Props) {
     <div className="rounded-xl border border-border bg-card p-5 space-y-4">
       <div>
         <p className="text-sm font-semibold text-foreground">Doanh thu theo dịch vụ</p>
-        <p className="text-xs text-muted-foreground">Gói credit và dịch vụ trực tiếp, phân biệt bằng nguồn</p>
+        <p className="text-xs text-muted-foreground">Nạp credit, dịch vụ trực tiếp và hoa hồng môi giới, phân biệt bằng nguồn</p>
       </div>
 
       {data.length === 0 ? (
@@ -42,8 +38,8 @@ export default function RevenueByServiceTable({ data }: Props) {
               <TableRow key={d.key}>
                 <TableCell className="font-medium text-foreground">{d.label}</TableCell>
                 <TableCell>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${SOURCE_BADGE[d.source]}`}>
-                    {SOURCE_LABEL[d.source]}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${SOURCE_BADGE_CLASS[d.source]}`}>
+                    {sourceLabel(d.source)}
                   </span>
                 </TableCell>
                 <TableCell className="text-right tabular-nums text-muted-foreground">

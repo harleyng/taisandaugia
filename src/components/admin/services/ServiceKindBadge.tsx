@@ -3,11 +3,13 @@ import type { ServiceKind, ServiceAudience } from "@/types/orders";
 const LABELS: Record<ServiceKind, string> = {
   credit: "Credit",
   direct: "Trực tiếp",
+  commission: "Hoa hồng",
 };
 
 const CLASS: Record<ServiceKind, string> = {
   credit: "bg-amber-100 text-amber-700",
   direct: "bg-blue-100 text-blue-700",
+  commission: "bg-emerald-100 text-emerald-700",
 };
 
 export function ServiceKindBadge({ kind }: { kind: ServiceKind }) {
@@ -24,6 +26,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   unlock: "Tính năng credit",
   feature: "Tính năng theo lượt",
   advertising: "Quảng cáo",
+  brokerage: "Môi giới",
 };
 
 export const categoryLabel = (c: string | null | undefined): string =>

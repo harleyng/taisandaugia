@@ -28,6 +28,12 @@ export default function AdminPartnersPage() {
   const [editing, setEditing] = useState<Partner | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Partner | null>(null);
 
+  // Một đối tác ↔ tối đa một thẻ (unique index idx_partners_supplier).
+  const takenSupplierIds = useMemo(
+    () => (partners ?? []).filter((p) => p.supplier_id).map((p) => p.supplier_id as string),
+    [partners],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return partners ?? [];
@@ -51,7 +57,7 @@ export default function AdminPartnersPage() {
     if (!deleteTarget) return;
     try {
       await del.mutateAsync(deleteTarget.id);
-      toast.success("Đã xóa đối tác");
+      toast.success("Đã xóa thẻ hiển thị");
     } catch {
       toast.error("Xóa thất bại");
     }
@@ -62,14 +68,14 @@ export default function AdminPartnersPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Quản lý đối tác</h1>
+          <h1 className="text-xl font-semibold text-foreground">Đối tác trên sàn</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {partners?.length ?? 0} đối tác · hiển thị ở mục &quot;Đồng hành cùng những thương hiệu…&quot; trên trang chủ
+            {partners?.length ?? 0} đối tác đang hiển thị · chọn ra từ sổ Đối tác, lên mục &quot;Đồng hành cùng những thương hiệu…&quot; ở trang chủ
           </p>
         </div>
         <Button size="sm" onClick={openAdd}>
           <Plus className="h-4 w-4 mr-1.5" />
-          Thêm đối tác
+          Thêm thẻ
         </Button>
       </div>
 
@@ -92,12 +98,13 @@ export default function AdminPartnersPage() {
         onOpenChange={setDialogOpen}
         editing={editing}
         nextOrder={partners?.length ?? 0}
+        takenSupplierIds={takenSupplierIds}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xóa đối tác?</AlertDialogTitle>
+            <AlertDialogTitle>Xóa thẻ hiển thị?</AlertDialogTitle>
             <AlertDialogDescription>
               Đối tác &quot;{deleteTarget?.name}&quot; sẽ bị xóa khỏi trang chủ. Hành động này không thể hoàn tác.
             </AlertDialogDescription>

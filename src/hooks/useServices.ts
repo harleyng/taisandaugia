@@ -7,12 +7,15 @@ import type { Service, ServiceUpsert } from "@/types/orders";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const servicesTable = () => (supabase as any).from("services");
 
+// Bề mặt admin-only nên embed được nhà cung cấp (suppliers là RLS admin).
+const SERVICE_SELECT = "*, supplier:suppliers(id,name,code)";
+
 export function useServices() {
   return useQuery<Service[]>({
     queryKey: ["services"],
     queryFn: async () => {
       const { data, error } = await servicesTable()
-        .select("*")
+        .select(SERVICE_SELECT)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -25,7 +28,7 @@ export function useService(id?: string) {
   return useQuery<Service>({
     queryKey: ["service", id],
     queryFn: async () => {
-      const { data, error } = await servicesTable().select("*").eq("id", id).single();
+      const { data, error } = await servicesTable().select(SERVICE_SELECT).eq("id", id).single();
       if (error) throw error;
       return data as Service;
     },

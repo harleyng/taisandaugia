@@ -14,6 +14,8 @@ const COLORS: Record<string, string> = {
   owner: "hsl(262 83% 58%)",
   company: "hsl(25 95% 53%)",
   direct: "hsl(210 90% 45%)",
+  // Không lấy violet — trùng byte với `owner`.
+  commission: "hsl(160 84% 39%)",
   all: "hsl(215 16% 47%)",
   unknown: "hsl(215 16% 60%)",
 };

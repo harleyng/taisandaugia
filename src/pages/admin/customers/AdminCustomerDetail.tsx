@@ -7,6 +7,7 @@ import { useCustomer } from "@/hooks/useCustomers";
 import { useCustomerAdvertisements } from "@/hooks/useAdvertisements";
 import { useCustomerOrders } from "@/hooks/useOrders";
 import { CustomerStatusBadge } from "@/components/admin/customers/CustomerStatusBadge";
+import { RelatedTasksPanel, RelatedTicketsPanel } from "@/components/admin/crm/RelatedPanels";
 import { CustomerFormDialog } from "@/components/admin/customers/CustomerFormDialog";
 import { AdStatusBadge } from "@/components/admin/advertising/AdStatusBadge";
 import { OrderStatusBadge } from "@/components/admin/orders/OrderStatusBadge";
@@ -138,6 +139,12 @@ export default function AdminCustomerDetail() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Cặp panel dùng chung — cùng bộ component với Lead và Cơ hội. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RelatedTasksPanel relation={{ customer_id: customer.id }} />
+        <RelatedTicketsPanel relation={{ customer_id: customer.id }} />
       </div>
 
       <CustomerFormDialog open={editOpen} onOpenChange={setEditOpen} editing={customer} />

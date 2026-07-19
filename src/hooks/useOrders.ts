@@ -7,7 +7,7 @@ import type { Order, OrderUpsert } from "@/types/orders";
 const ordersTable = () => (supabase as any).from("orders");
 
 const ORDER_SELECT =
-  "*, customer:customers(id,name,code), service:services(id,name,kind), advertisement:advertisements(id,code,name,status)";
+  "*, customer:customers(id,name,code), service:services(id,name,kind), supplier:suppliers(id,name,code), advertisement:advertisements(id,code,name,status)";
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
@@ -70,10 +70,25 @@ export function useAdvertisementOrders(advertisementId?: string) {
 
 // ─── Writes ──────────────────────────────────────────────────────────────────
 
-/** Lỗi trigger chặn đặt đơn vào dịch vụ credit — nhận diện để toast rõ. */
-export function isDirectServiceError(err: unknown): boolean {
-  const msg = (err as { message?: string })?.message ?? "";
-  return msg.includes("dịch vụ bán trực tiếp");
+/** Thông điệp tiếng Việt do trigger orders_sync_kind_and_commission phát ra.
+ *  Trả về câu cụ thể để toast, hoặc null nếu không nhận ra (rơi về câu chung). */
+const TRIGGER_MESSAGES = [
+  "Đơn hoa hồng phải có nhà cung cấp",
+  "Đơn hoa hồng phải có giá trị hợp đồng",
+  "Đơn hoa hồng phải có loại và tỷ lệ hoa hồng",
+  "Hoa hồng vượt quá giá trị hợp đồng",
+  "Dịch vụ không tồn tại",
+  "Không đổi loại dịch vụ khi đã có đơn hàng",
+];
+
+export function orderErrorMessage(err: unknown): string | null {
+  const e = err as { message?: string; code?: string };
+  const msg = e?.message ?? "";
+  const hit = TRIGGER_MESSAGES.find((m) => msg.includes(m));
+  if (hit) return hit;
+  // Vượt trần NUMERIC — hiếm nhưng nếu xảy ra thì "Thao tác thất bại" vô nghĩa.
+  if (e?.code === "22003") return "Số tiền vượt quá giới hạn cho phép";
+  return null;
 }
 
 export function useUpsertOrder() {
@@ -96,7 +111,11 @@ export function useUpsertOrder() {
     onSuccess: (data: Order) => {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order", data.id] });
-      qc.invalidateQueries({ queryKey: ["orders", "by-customer", data.customer_id] });
+      if (data.customer_id) {
+        qc.invalidateQueries({ queryKey: ["orders", "by-customer", data.customer_id] });
+      }
+      // Đơn hàng giờ là nguồn doanh thu duy nhất → báo cáo phải làm mới theo.
+      qc.invalidateQueries({ queryKey: ["admin", "revenue-report"] });
     },
   });
 }
@@ -108,6 +127,9 @@ export function useDeleteOrder() {
       const { error } = await ordersTable().delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["admin", "revenue-report"] });
+    },
   });
 }

@@ -86,7 +86,9 @@ export function ServiceGroupTable({
                       <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{g.variants.length}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex gap-1">
-                          {g.kind === "credit" && (
+                          {/* Nhóm credit VÀ hoa hồng đều có biến thể; chỉ 'direct'
+                              (quảng cáo) là bán thẳng không qua biến thể. */}
+                          {g.kind !== "direct" && (
                             <Button size="icon" variant="ghost" className="h-7 w-7" title="Thêm biến thể" onClick={() => onAddVariant(g)}>
                               <Plus className="h-3.5 w-3.5" />
                             </Button>

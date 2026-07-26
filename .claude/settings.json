@@ -59,7 +59,16 @@
       "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts,null,1\\)\\)\")",
       "Bash(sed -n '140,200p' supabase/migrations/20260714000002_services_orders.sql; echo \"=== contact_submissions ===\"; sed -n '1,40p' supabase/migrations/20260521000003*.sql)",
       "Bash(node -e \"const L=require\\('lucide-react'\\); ['UserPlus','Target','ListTodo','Ticket','Handshake','CheckSquare','SquareCheck','Truck','GitBranch','Kanban','Contact'].forEach\\(n=>console.log\\(n, !!L[n]\\)\\)\")",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(git pull *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); const d={...p.dependencies,...p.devDependencies}; ['zustand','date-fns','@radix-ui/react-toggle-group','@radix-ui/react-popover','@radix-ui/react-dropdown-menu'].forEach\\(k=>console.log\\(k, d[k]||'—'\\)\\)\")",
+      "Read(//Users/m116gb/Downloads/Agency/build-space-78164/**)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(jobs)",
+      "Bash(ls ~/.claude/ 2>/dev/null | head; echo \"---\"; which claude 2>/dev/null; echo \"--- checking for design-login command ---\")",
+      "Read(//Users/m116gb/.claude/**)",
+      "Bash(xargs -n1 basename)",
+      "Bash(pkill -f \"vite\")"
     ],
     "additionalDirectories": [
       "/tmp",

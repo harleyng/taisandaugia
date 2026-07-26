@@ -98,6 +98,7 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   // sổ đăng ký công ty nằm ở "nha-cung-cap".
   { module: "doi-tac", label: "Đối tác trên sàn", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
   { module: "phap-ly", label: "Văn bản pháp lý", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
+  { module: "cong-cu-dau-gia", label: "Công cụ đấu giá", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
   // Báo cáo
   { module: "doanh-thu", label: "Doanh thu", category: "bao-cao", actions: ["view", "export"] },
   { module: "giao-dich", label: "Giao dịch credit", category: "bao-cao", actions: ["view", "export"] },

@@ -43,6 +43,7 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   referral: "Giới thiệu",
   event: "Sự kiện",
   ads: "Quảng cáo",
+  tool_marketplace: "Công cụ đấu giá",
   other: "Khác",
 };
 

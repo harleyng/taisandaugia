@@ -53,6 +53,7 @@ const AdminTasksPage = lazy(() => import("./pages/admin/tasks/AdminTasksPage"));
 const AdminTicketsPage = lazy(() => import("./pages/admin/tickets/AdminTicketsPage"));
 const AdminOrdersPage = lazy(() => import("./pages/admin/orders/AdminOrdersPage"));
 const AdminPartnersPage = lazy(() => import("./pages/admin/partners/AdminPartnersPage"));
+const AdminAuctionToolsPage = lazy(() => import("./pages/admin/auction-tools/AdminAuctionToolsPage"));
 const AdminLegalDocsPage = lazy(() => import("./pages/admin/legal/AdminLegalDocsPage"));
 const AdminLegalEditor = lazy(() => import("./pages/admin/legal/AdminLegalEditor"));
 const AdminLegalDetail = lazy(() => import("./pages/admin/legal/AdminLegalDetail"));
@@ -104,6 +105,8 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfUse = lazy(() => import("./pages/TermsOfUse"));
 const TinTucPage = lazy(() => import("./pages/TinTucPage"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
+const AuctionToolsPage = lazy(() => import("./pages/AuctionToolsPage"));
+const AuctionToolDetail = lazy(() => import("./pages/AuctionToolDetail"));
 
 function RedirectApplicationId() {
   const { id } = useParams<{ id: string }>()
@@ -152,6 +155,8 @@ const App = () => (
               <Route path="/tro-thanh-chu-tai-san" element={<AssetOwnerOnboarding />} />
               <Route path="/tin-tuc" element={<TinTucPage />} />
               <Route path="/tin-tuc/:slug" element={<ArticleDetail />} />
+              <Route path="/cong-cu-dau-gia" element={<AuctionToolsPage />} />
+              <Route path="/cong-cu-dau-gia/:slug" element={<AuctionToolDetail />} />
 
               {/* Credits */}
               <Route path="/buy-credits" element={<BuyCredits />} />
@@ -257,6 +262,7 @@ const App = () => (
                   <Route path="phap-ly" element={<AdminPermissionRoute module="phap-ly"><AdminLegalDocsPage /></AdminPermissionRoute>} />
                   <Route path="phap-ly/tao" element={<AdminPermissionRoute module="phap-ly" action="create"><AdminLegalEditor /></AdminPermissionRoute>} />
                   <Route path="phap-ly/:id" element={<AdminPermissionRoute module="phap-ly"><AdminLegalDetail /></AdminPermissionRoute>} />
+                  <Route path="cong-cu-dau-gia" element={<AdminPermissionRoute module="cong-cu-dau-gia"><AdminAuctionToolsPage /></AdminPermissionRoute>} />
                   <Route path="bao-cao" element={<Navigate to="/admin/bao-cao/giao-dich" replace />} />
                   <Route path="bao-cao/doanh-thu" element={<AdminPermissionRoute module="doanh-thu"><RevenueReportPage /></AdminPermissionRoute>} />
                   <Route path="bao-cao/giao-dich" element={<TransactionReportPage />} />

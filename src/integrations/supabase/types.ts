@@ -1107,6 +1107,196 @@ export type Database = {
         }
         Relationships: []
       }
+      auction_tool_providers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_own: boolean
+          logo_url: string | null
+          name: string
+          price_label: string | null
+          service_id: string | null
+          service_variant_id: string | null
+          slug: string
+          sort_order: number
+          status: string
+          supplier_id: string | null
+          tagline: string | null
+          tool_id: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_own?: boolean
+          logo_url?: string | null
+          name: string
+          price_label?: string | null
+          service_id?: string | null
+          service_variant_id?: string | null
+          slug: string
+          sort_order?: number
+          status?: string
+          supplier_id?: string | null
+          tagline?: string | null
+          tool_id: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_own?: boolean
+          logo_url?: string | null
+          name?: string
+          price_label?: string | null
+          service_id?: string | null
+          service_variant_id?: string | null
+          slug?: string
+          sort_order?: number
+          status?: string
+          supplier_id?: string | null
+          tagline?: string | null
+          tool_id?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_tool_providers_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_tool_providers_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_tool_providers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_tool_providers_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "auction_tools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_tool_showcases: {
+        Row: {
+          access_password: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          provider_id: string
+          sort_order: number
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          url: string
+          visibility: string
+        }
+        Insert: {
+          access_password?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          provider_id: string
+          sort_order?: number
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          url: string
+          visibility?: string
+        }
+        Update: {
+          access_password?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          provider_id?: string
+          sort_order?: number
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          url?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_tool_showcases_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "auction_tool_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_tools: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          slug: string
+          sort_order: number
+          tagline: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          slug: string
+          sort_order?: number
+          tagline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       campaign_recipients: {
         Row: {
           campaign_id: string
@@ -1332,6 +1522,7 @@ export type Database = {
           province: string | null
           source: string
           status: string
+          tool_provider_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1352,6 +1543,7 @@ export type Database = {
           province?: string | null
           source?: string
           status?: string
+          tool_provider_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1372,6 +1564,7 @@ export type Database = {
           province?: string | null
           source?: string
           status?: string
+          tool_provider_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1387,6 +1580,13 @@ export type Database = {
             columns: ["converted_customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_tool_provider_id_fkey"
+            columns: ["tool_provider_id"]
+            isOneToOne: false
+            referencedRelation: "auction_tool_providers"
             referencedColumns: ["id"]
           },
         ]
@@ -1782,6 +1982,7 @@ export type Database = {
           service_variant_id: string | null
           sort_order: number
           stage: string
+          tool_provider_id: string | null
           updated_at: string
           won_order_id: string | null
         }
@@ -1809,6 +2010,7 @@ export type Database = {
           service_variant_id?: string | null
           sort_order?: number
           stage?: string
+          tool_provider_id?: string | null
           updated_at?: string
           won_order_id?: string | null
         }
@@ -1836,6 +2038,7 @@ export type Database = {
           service_variant_id?: string | null
           sort_order?: number
           stage?: string
+          tool_provider_id?: string | null
           updated_at?: string
           won_order_id?: string | null
         }
@@ -1873,6 +2076,13 @@ export type Database = {
             columns: ["service_variant_id"]
             isOneToOne: false
             referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_tool_provider_id_fkey"
+            columns: ["tool_provider_id"]
+            isOneToOne: false
+            referencedRelation: "auction_tool_providers"
             referencedColumns: ["id"]
           },
           {
@@ -3148,6 +3358,24 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      list_tool_showcases: {
+        Args: { _provider_id: string }
+        Returns: {
+          description: string
+          id: string
+          is_locked: boolean
+          kind: string
+          sort_order: number
+          thumbnail_url: string
+          title: string
+          url: string
+          visibility: string
+        }[]
+      }
+      request_tool_service: {
+        Args: { _note?: string; _provider_id: string }
+        Returns: Json
+      }
       resolve_campaign_audience: {
         Args: {
           _limit?: number
@@ -3161,6 +3389,10 @@ export type Database = {
           total_count: number
           user_id: string
         }[]
+      }
+      unlock_tool_showcase: {
+        Args: { _id: string; _password: string }
+        Returns: string
       }
       user_province: { Args: { uid: string }; Returns: string }
       users_share_org: {

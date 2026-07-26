@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard, Layers } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard, Layers, Wrench } from "lucide-react";
 import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
@@ -103,6 +103,18 @@ export const Header = () => {
                   }`}
                 >
                   Báo cáo
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link
+                  to="/cong-cu-dau-gia"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    transparent
+                      ? "text-white/90 hover:text-white hover:bg-white/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Công cụ đấu giá
                 </Link>
               </NavigationMenuItem>
               <NavigationMenuItem>
@@ -306,6 +318,13 @@ export const Header = () => {
                   >
                     <BarChart2 className="h-5 w-5" />
                     Báo cáo cơ hội
+                  </Link>
+                  <Link
+                    to="/cong-cu-dau-gia"
+                    className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                  >
+                    <Wrench className="h-5 w-5" />
+                    Công cụ đấu giá
                   </Link>
                 </div>
 

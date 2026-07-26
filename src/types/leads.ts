@@ -10,7 +10,7 @@ export type LeadType =
 
 export type LeadSource =
   | "contact_form" | "partnership_form" | "hotline" | "email"
-  | "referral" | "event" | "ads" | "other";
+  | "referral" | "event" | "ads" | "tool_marketplace" | "other";
 
 export interface Lead {
   id: string;

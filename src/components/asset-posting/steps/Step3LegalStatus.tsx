@@ -1,118 +1,87 @@
-import type { UseFormReturn } from "react-hook-form";
-import { ShieldCheck } from "lucide-react";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { AlertCircle, FileText, List, ShieldCheck } from "lucide-react";
 import { AssetDocUpload } from "../AssetDocUpload";
+import { Group, OptionalGroup, TextField, SegYesNo, Switch, Pill } from "../fields";
 import type { WizardValues } from "../wizardSchema";
 
 interface StepProps {
-  form: UseFormReturn<WizardValues>;
+  f: WizardValues;
+  up: (patch: Partial<WizardValues>) => void;
+  errs: Record<string, string>;
 }
 
-const LEGAL_QUESTIONS: { name: "hasDispute" | "hasMortgage" | "isSeized"; label: string }[] = [
+const LEGAL_Q: { name: "hasDispute" | "hasMortgage" | "isSeized"; label: string }[] = [
   { name: "hasDispute", label: "Tài sản có đang tranh chấp không?" },
   { name: "hasMortgage", label: "Tài sản có đang thế chấp không?" },
   { name: "isSeized", label: "Tài sản có đang bị kê biên không?" },
 ];
 
-/** Bước 3: pháp lý & hiện trạng — giấy tờ sở hữu (bắt buộc) + tình trạng pháp lý (bắt buộc). */
-export function Step3LegalStatus({ form }: StepProps) {
+/** Bước 3: giấy tờ sở hữu + tình trạng pháp lý (3 câu) + ghi chú. */
+export function Step3LegalStatus({ f, up, errs }: StepProps) {
+  const answered = LEGAL_Q.filter((q) => f[q.name]).length;
+
   return (
-    <Form {...form}>
-      <div className="space-y-6">
-        {/* Giấy tờ chứng minh quyền sở hữu */}
-        <FormField
-          control={form.control}
-          name="ownershipProofUrls"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Giấy tờ chứng minh quyền sở hữu *</FormLabel>
-              <p className="text-xs text-muted-foreground">
-                Sổ đỏ/sổ hồng, đăng ký xe, hóa đơn, hợp đồng mua bán… (PDF/JPG/PNG).
-              </p>
-              <FormControl>
-                <AssetDocUpload value={field.value} onChange={field.onChange} prefix="ownership" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <div className="flex flex-col gap-4">
+      <Group
+        icon={<FileText className="h-4 w-4" />}
+        title="Giấy tờ chứng minh quyền sở hữu"
+        desc="Sổ đỏ / sổ hồng, đăng ký xe, hợp đồng mua bán…"
+        right={f.ownershipProofUrls.length > 0 ? <Pill tone="ok">{f.ownershipProofUrls.length} tệp</Pill> : null}
+      >
+        <label className="block text-[13.5px] font-semibold text-foreground mb-2">
+          Tải lên tối thiểu 1 tệp<span className="ml-0.5 text-destructive">*</span>
+        </label>
+        <AssetDocUpload value={f.ownershipProofUrls} onChange={(v) => up({ ownershipProofUrls: v })} prefix="ownership" />
+        {errs.ownershipProofUrls && (
+          <div className="flex items-center gap-1.5 text-xs font-medium text-destructive mt-2.5">
+            <AlertCircle className="h-3.5 w-3.5" /> {errs.ownershipProofUrls}
+          </div>
+        )}
+      </Group>
 
-        {/* Quyền được bán */}
-        <FormField
-          control={form.control}
-          name="rightToSell"
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-3">
-                <div className="flex items-start gap-2.5">
-                  <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <div>
-                    <Label htmlFor="rightToSell" className="text-sm">
-                      Tôi có toàn quyền định đoạt / được ủy quyền bán tài sản này
-                    </Label>
-                  </div>
-                </div>
-                <FormControl>
-                  <Switch id="rightToSell" checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </div>
-            </FormItem>
-          )}
-        />
-
-        {/* Tình trạng pháp lý */}
-        <div className="space-y-4">
-          <p className="text-sm font-medium text-foreground">Tình trạng pháp lý *</p>
-          {LEGAL_QUESTIONS.map((q) => (
-            <FormField
+      <Group
+        icon={<ShieldCheck className="h-4 w-4" />}
+        title="Tình trạng pháp lý"
+        right={<Pill tone={answered === 3 ? "ok" : "muted"}>{answered}/3</Pill>}
+      >
+        <label className="block text-[13.5px] font-semibold text-foreground mb-1">
+          Trả lời cả 3 câu<span className="ml-0.5 text-destructive">*</span>
+        </label>
+        {LEGAL_Q.map((q) => {
+          const unanswered = !f[q.name] && !!errs.legal;
+          return (
+            <div
               key={q.name}
-              control={form.control}
-              name={q.name}
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <FormLabel className="font-normal">{q.label}</FormLabel>
-                    <FormControl>
-                      <RadioGroup value={field.value} onValueChange={field.onChange} className="flex gap-4">
-                        <div className="flex items-center gap-1.5">
-                          <RadioGroupItem value="no" id={`${q.name}-no`} />
-                          <Label htmlFor={`${q.name}-no`} className="font-normal text-sm">
-                            Không
-                          </Label>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <RadioGroupItem value="yes" id={`${q.name}-yes`} />
-                          <Label htmlFor={`${q.name}-yes`} className="font-normal text-sm">
-                            Có
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </FormControl>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          ))}
+              className={`flex items-center justify-between gap-4 py-3 border-b border-dashed border-border last:border-b-0 ${
+                unanswered ? "bg-warning/10 -mx-3 px-3 rounded-lg border-transparent" : ""
+              }`}
+            >
+              <div className="text-sm font-medium text-foreground">{q.label}</div>
+              <SegYesNo value={f[q.name]} onChange={(v) => up({ [q.name]: v } as Partial<WizardValues>)} />
+            </div>
+          );
+        })}
+        <div className="flex items-center justify-between gap-4 py-3">
+          <div className="text-sm font-medium text-foreground">
+            Tôi có toàn quyền định đoạt / được uỷ quyền bán tài sản này
+          </div>
+          <Switch on={f.rightToSell} onChange={(v) => up({ rightToSell: v })} />
         </div>
+        {errs.legal && (
+          <div className="flex items-center gap-1.5 text-xs font-medium text-destructive mt-3">
+            <AlertCircle className="h-3.5 w-3.5" /> {errs.legal}
+          </div>
+        )}
+      </Group>
 
-        <FormField
-          control={form.control}
-          name="legalNotes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Ghi chú pháp lý (nếu có)</FormLabel>
-              <FormControl>
-                <Textarea {...field} placeholder="VD: đang trong quá trình giải chấp..." className="min-h-[72px]" />
-              </FormControl>
-            </FormItem>
-          )}
+      <OptionalGroup icon={<List className="h-4 w-4" />} title="Ghi chú pháp lý" desc="Giải chấp, tranh chấp đang xử lý…" count={1}>
+        <TextField
+          label="Ghi chú pháp lý"
+          rows={3}
+          placeholder="VD: đang trong quá trình giải chấp…"
+          value={f.legalNotes ?? ""}
+          onChange={(v) => up({ legalNotes: v })}
         />
-      </div>
-    </Form>
+      </OptionalGroup>
+    </div>
   );
 }

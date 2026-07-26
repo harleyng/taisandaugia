@@ -14,6 +14,7 @@ const CHILD_LABEL: Record<string, string> = Object.fromEntries(
 
 const STATUS_STYLE: Record<AssetPostingStatus, string> = {
   draft: "bg-muted text-muted-foreground",
+  active: "bg-success/10 text-success",
   pending: "bg-warning/10 text-warning",
   matched: "bg-primary/10 text-primary",
   contracted: "bg-success/10 text-success",

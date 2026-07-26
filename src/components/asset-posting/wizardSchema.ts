@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getDeltaFields } from "@/constants/asset-delta-fields";
 import type { NewAssetPosting } from "@/hooks/useAssetPosting";
 import type { MatchCriteria } from "@/lib/orgMatching";
+import type { AssetPosting } from "@/types/asset-posting";
 
 // Form dùng một useForm xuyên suốt 5 bước. Field bắt buộc được gate theo từng bước
 // qua form.trigger(STEP_FIELDS[step]); delta fields (riêng theo loại) validate thủ công.
@@ -30,6 +31,9 @@ export const wizardSchema = z
     legalNotes: z.string().optional(),
 
     // Bước 4 — nhu cầu đấu giá
+    // wantsAuction: "" chưa chọn · "yes" muốn đấu giá · "no" chỉ số hoá & lưu hồ sơ
+    wantsAuction: z.enum(["", "yes", "no"]),
+    chosenOrg: z.string().nullable(),
     pricingMode: z.enum(["self", "appraisal"]),
     startingPrice: z.string().optional(),
     auctionFormat: z.enum(["truc_tiep", "truc_tuyen", "ca_hai"]),
@@ -39,7 +43,7 @@ export const wizardSchema = z
     docUrls: z.array(z.string()),
   })
   .superRefine((v, ctx) => {
-    if (v.pricingMode === "self" && (!v.startingPrice || Number(v.startingPrice) <= 0)) {
+    if (v.wantsAuction === "yes" && v.pricingMode === "self" && (!v.startingPrice || Number(v.startingPrice) <= 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["startingPrice"],
@@ -66,6 +70,8 @@ export const wizardDefaults: WizardValues = {
   hasMortgage: "",
   isSeized: "",
   legalNotes: "",
+  wantsAuction: "",
+  chosenOrg: null,
   pricingMode: "self",
   startingPrice: "",
   auctionFormat: "truc_tiep",
@@ -75,7 +81,57 @@ export const wizardDefaults: WizardValues = {
   docUrls: [],
 };
 
-/** Field RHF cần validate khi rời mỗi bước (delta của bước 2 validate riêng). */
+/** Đã nhập (khác rỗng)? */
+export const filled = (v: unknown): boolean =>
+  v !== undefined && v !== null && String(v).trim() !== "";
+
+// ─── Bảng yêu cầu bắt buộc — nguồn DUY NHẤT cho rail, cảnh báo & nút Tiếp tục ──
+export interface Requirement {
+  step: number;
+  key: string;
+  label: string;
+  ok: boolean;
+}
+
+/** Thông điệp lỗi ngắn theo key (hiện sau khi bấm Tiếp tục mà còn thiếu). */
+export const REQUIREMENT_MSG: Record<string, string> = {
+  parentSlug: "Chọn nhóm tài sản",
+  childSlug: "Chọn loại tài sản",
+  title: "Tối thiểu 3 ký tự",
+  province: "Chọn tỉnh / thành phố",
+  ownershipProofUrls: "Cần ít nhất 1 giấy tờ sở hữu",
+  legal: "Trả lời cả 3 câu",
+  wantsAuction: "Chọn một phương án",
+  auctionFormat: "Chọn hình thức đấu giá",
+  startingPrice: "Nhập giá hoặc chọn nhờ định giá",
+};
+
+/** Toàn bộ điều kiện bắt buộc theo giá trị form hiện tại (mirror sohoa-app.jsx). */
+export function requirements(v: WizardValues): Requirement[] {
+  const r: Requirement[] = [
+    { step: 1, key: "parentSlug", label: "Nhóm tài sản", ok: !!v.parentSlug },
+    { step: 1, key: "childSlug", label: "Loại tài sản", ok: !!v.childSlug },
+    { step: 2, key: "title", label: "Tên tài sản", ok: v.title.trim().length >= 3 },
+    { step: 2, key: "province", label: "Khu vực", ok: !!v.province },
+  ];
+  getDeltaFields(v.childSlug)
+    .filter((d) => d.required)
+    .forEach((d) => r.push({ step: 2, key: `delta.${d.key}`, label: d.label, ok: filled(v.deltaFields[d.key]) }));
+  r.push(
+    { step: 3, key: "ownershipProofUrls", label: "Giấy tờ sở hữu", ok: v.ownershipProofUrls.length > 0 },
+    { step: 3, key: "legal", label: "Tình trạng pháp lý", ok: !!v.hasDispute && !!v.hasMortgage && !!v.isSeized },
+    { step: 4, key: "wantsAuction", label: "Nhu cầu đấu giá", ok: !!v.wantsAuction },
+  );
+  if (v.wantsAuction === "yes") {
+    r.push({ step: 4, key: "auctionFormat", label: "Hình thức đấu giá", ok: !!v.auctionFormat });
+    if (v.pricingMode === "self") {
+      r.push({ step: 4, key: "startingPrice", label: "Giá khởi điểm", ok: Number(v.startingPrice) > 0 });
+    }
+  }
+  return r;
+}
+
+/** Field RHF cần validate khi rời mỗi bước (giữ cho tương thích; gating chính qua requirements). */
 export const STEP_FIELDS: Record<number, (keyof WizardValues)[]> = {
   1: ["parentSlug", "childSlug"],
   2: ["title", "province"],
@@ -114,6 +170,17 @@ export function buildMatchCriteria(v: WizardValues): MatchCriteria {
     format: v.auctionFormat,
     startingPrice: v.pricingMode === "self" && v.startingPrice ? Number(v.startingPrice) : null,
     acceptableCommissionPct: v.commissionPct ? Number(v.commissionPct) : null,
+  };
+}
+
+/** Tiêu chí gợi ý tổ chức từ một hồ sơ đã lưu (dùng ở luồng gửi yêu cầu sau khi số hoá). */
+export function postingToMatchCriteria(p: AssetPosting): MatchCriteria {
+  return {
+    parentSlug: p.parent_slug,
+    province: p.province,
+    format: p.auction_format,
+    startingPrice: p.pricing_mode === "self" ? p.starting_price : null,
+    acceptableCommissionPct: p.commission_pct,
   };
 }
 

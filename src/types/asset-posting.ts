@@ -3,6 +3,7 @@
 
 export type AssetPostingStatus =
   | "draft"
+  | "active"
   | "pending"
   | "matched"
   | "contracted"
@@ -84,6 +85,7 @@ export const EXPECTED_TIMELINE_LABELS: Record<ExpectedTimeline, string> = {
 
 export const ASSET_POSTING_STATUS_LABELS: Record<AssetPostingStatus, string> = {
   draft: "Nháp",
+  active: "Đã số hoá",
   pending: "Chờ xử lý",
   matched: "Đã chọn tổ chức",
   contracted: "Đã ký hợp đồng",

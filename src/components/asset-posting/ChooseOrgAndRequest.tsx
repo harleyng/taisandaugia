@@ -1,45 +1,48 @@
-import { useMemo, useState } from "react";
-import type { UseFormReturn } from "react-hook-form";
+import { useState } from "react";
 import { Loader2, Send, SearchX, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useMatchedOrgs, useSubmitPostingWithOrg } from "@/hooks/useAssetPosting";
-import { OrgComparisonTable } from "../OrgComparisonTable";
-import { buildMatchCriteria, buildPostingPayload, type WizardValues } from "../wizardSchema";
+import { useMatchedOrgs, useSendServiceRequest } from "@/hooks/useAssetPosting";
+import type { MatchCriteria } from "@/lib/orgMatching";
+import { OrgComparisonTable } from "./OrgComparisonTable";
 
-interface StepProps {
-  form: UseFormReturn<WizardValues>;
-  onSubmitted: (orgName: string) => void;
+interface ChooseOrgAndRequestProps {
+  /** Hồ sơ tài sản ĐÃ số hoá cần gửi yêu cầu. */
+  postingId: string;
+  /** Tiêu chí gợi ý tổ chức. */
+  criteria: MatchCriteria;
+  /** Đã gửi yêu cầu thành công tới tổ chức. */
+  onSent: (orgName: string) => void;
+  /** Bỏ qua gửi yêu cầu (để sau). */
+  onSkip: () => void;
+  /** Nhãn nút bỏ qua (mặc định "Để sau"). */
+  skipLabel?: string;
 }
 
-/** Bước 5: gợi ý tổ chức đấu giá → so sánh → chọn → tạo hồ sơ + gửi yêu cầu dịch vụ. */
-export function Step5MatchAndSend({ form, onSubmitted }: StepProps) {
+/**
+ * Luồng RIÊNG: chọn tổ chức đấu giá + gửi yêu cầu dịch vụ cho một hồ sơ đã số hoá.
+ * Tái sử dụng trong wizard (ngay sau khi số hoá) và ở trang chi tiết hồ sơ.
+ */
+export function ChooseOrgAndRequest({ postingId, criteria, onSent, onSkip, skipLabel = "Để sau" }: ChooseOrgAndRequestProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
-  const values = form.watch();
-  const criteria = useMemo(
-    () => buildMatchCriteria(values),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [values.parentSlug, values.province, values.auctionFormat, values.pricingMode, values.startingPrice, values.commissionPct],
-  );
-
   const { results, isLoading } = useMatchedOrgs(criteria);
-  const submit = useSubmitPostingWithOrg();
+  const send = useSendServiceRequest();
 
   const selected = results.find((r) => r.org.id === selectedId) ?? null;
 
-  const handleSubmit = () => {
+  const handleSend = () => {
     if (!selected) return;
-    submit.mutate(
+    send.mutate(
       {
-        posting: buildPostingPayload(form.getValues()),
+        postingId,
         orgId: selected.org.id,
         matchScore: selected.score,
         message: message.trim() || undefined,
       },
-      { onSuccess: () => onSubmitted(selected.org.name) },
+      { onSuccess: () => onSent(selected.org.name) },
     );
   };
 
@@ -53,11 +56,14 @@ export function Step5MatchAndSend({ form, onSubmitted }: StepProps) {
 
   if (results.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+      <div className="flex flex-col items-center justify-center py-14 text-center gap-3">
         <SearchX className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground max-w-xs">
-          Chưa tìm thấy tổ chức đấu giá nào trong hệ thống. Vui lòng thử lại sau.
+          Chưa tìm thấy tổ chức đấu giá phù hợp trong hệ thống. Hồ sơ của bạn đã được số hoá — bạn có thể gửi yêu cầu sau.
         </p>
+        <Button variant="outline" onClick={onSkip}>
+          {skipLabel}
+        </Button>
       </div>
     );
   }
@@ -89,10 +95,15 @@ export function Step5MatchAndSend({ form, onSubmitted }: StepProps) {
         </div>
       )}
 
-      <Button onClick={handleSubmit} disabled={!selectedId || submit.isPending} className="w-full gap-2" size="lg">
-        {submit.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        {submit.isPending ? "Đang gửi yêu cầu..." : "Tạo hồ sơ & gửi yêu cầu dịch vụ"}
-      </Button>
+      <div className="flex flex-col sm:flex-row-reverse gap-3">
+        <Button onClick={handleSend} disabled={!selectedId || send.isPending} className="flex-1 gap-2" size="lg">
+          {send.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {send.isPending ? "Đang gửi yêu cầu..." : "Gửi yêu cầu dịch vụ"}
+        </Button>
+        <Button variant="ghost" onClick={onSkip} disabled={send.isPending} className="sm:flex-none" size="lg">
+          {skipLabel}
+        </Button>
+      </div>
     </div>
   );
 }

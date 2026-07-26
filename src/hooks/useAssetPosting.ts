@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { rankOrgs, type AuctionOrgRow, type MatchCriteria, type OrgMatchResult } from "@/lib/orgMatching";
 import type { Database } from "@/integrations/supabase/types";
-import type { AssetPosting, AssetServiceRequest } from "@/types/asset-posting";
+import type { AssetPosting, AssetServiceRequest, AssetPostingStatus } from "@/types/asset-posting";
 
 type AssetPostingInsert = Database["public"]["Tables"]["asset_postings"]["Insert"];
 
@@ -44,51 +44,97 @@ export function useMatchedOrgs(criteria: MatchCriteria | null) {
   return { results, isLoading: query.isLoading, error: query.error };
 }
 
-// ─── Chọn org + gửi yêu cầu dịch vụ (tạo hồ sơ + service request) ─────────────
+// ─── Số hoá tài sản (tạo/cập nhật hồ sơ, KHÔNG gắn tổ chức) ───────────────────
+// Số hoá và chọn tổ chức đấu giá là 2 luồng riêng: hook này chỉ lưu hồ sơ.
+//   status 'draft'  → Lưu và thoát giữa chừng
+//   status 'active' → hoàn tất số hoá (không bắt buộc tổ chức)
 
-export interface SubmitPostingArgs {
+export interface CreatePostingArgs {
   posting: NewAssetPosting;
+  status: Extract<AssetPostingStatus, "draft" | "active">;
+  /** Có giá trị = cập nhật hồ sơ nháp đã có; bỏ trống = tạo mới. */
+  postingId?: string;
+}
+
+export function useCreatePosting() {
+  const { userId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ posting, status, postingId }: CreatePostingArgs) => {
+      if (!userId) throw new Error("Bạn cần đăng nhập để số hoá tài sản.");
+
+      const submittedAt = status === "active" ? new Date().toISOString() : null;
+
+      if (postingId) {
+        const { data: updated, error } = await supabase
+          .from("asset_postings")
+          .update({ ...posting, status, submitted_at: submittedAt })
+          .eq("id", postingId)
+          .eq("user_id", userId)
+          .select("id")
+          .single();
+        if (error) throw error;
+        return { postingId: updated.id };
+      }
+
+      const { data: created, error } = await supabase
+        .from("asset_postings")
+        .insert({
+          ...posting,
+          user_id: userId,
+          chosen_org_id: null,
+          status,
+          submitted_at: submittedAt,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return { postingId: created.id };
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["my-postings", userId] });
+      toast.success(vars.status === "draft" ? "Đã lưu nháp hồ sơ tài sản." : "Đã số hoá tài sản thành công.");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Không thể lưu hồ sơ. Vui lòng thử lại.");
+    },
+  });
+}
+
+// ─── Gửi yêu cầu dịch vụ tới tổ chức đấu giá (luồng riêng, sau khi đã số hoá) ──
+
+export interface SendServiceRequestArgs {
+  postingId: string;
   orgId: string;
   matchScore: number;
   message?: string;
 }
 
-export function useSubmitPostingWithOrg() {
+export function useSendServiceRequest() {
   const { userId } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ posting, orgId, matchScore, message }: SubmitPostingArgs) => {
-      if (!userId) throw new Error("Bạn cần đăng nhập để đăng tài sản.");
+    mutationFn: async ({ postingId, orgId, matchScore, message }: SendServiceRequestArgs) => {
+      if (!userId) throw new Error("Bạn cần đăng nhập để gửi yêu cầu.");
 
-      const { data: created, error: postingError } = await supabase
-        .from("asset_postings")
-        .insert({
-          ...posting,
-          user_id: userId,
-          chosen_org_id: orgId,
-          status: "matched",
-          submitted_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
-      if (postingError) throw postingError;
-
-      const { error: requestError } = await supabase.from("asset_service_requests").insert({
-        asset_posting_id: created.id,
+      const { error } = await supabase.from("asset_service_requests").insert({
+        asset_posting_id: postingId,
         auction_org_id: orgId,
         user_id: userId,
         status: "sent",
         message: message ?? null,
         match_score: matchScore,
       });
-      if (requestError) throw requestError;
+      if (error) throw error;
 
-      return { postingId: created.id, orgId };
+      return { postingId, orgId };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["my-postings", userId] });
-      toast.success("Đã tạo hồ sơ tài sản và gửi yêu cầu dịch vụ tới tổ chức đấu giá.");
+      queryClient.invalidateQueries({ queryKey: ["posting-detail", data.postingId] });
+      toast.success("Đã gửi yêu cầu dịch vụ tới tổ chức đấu giá.");
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Không thể gửi yêu cầu. Vui lòng thử lại.");

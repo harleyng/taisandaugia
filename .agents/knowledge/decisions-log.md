@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-07-26 — Module "Công cụ đấu giá" (Admin Nội dung + MKP) + CTA lead-gen
+
+**Context:** Cần khu giới thiệu 4 công cụ hỗ trợ đấu giá (Số hoá / Định giá / Vay vốn / Pháp lý), mỗi công cụ do đối tác ngoài hoặc SSCorp cung cấp; khách dùng dịch vụ phải phát sinh doanh thu + hoa hồng qua phễu CRM sẵn có.
+**Decision:**
+- **3 bảng** (`20260726000001-4`): `auction_tools` (4 công cụ cố định, seed, `public_read` theo `is_active`), `auction_tool_providers` (gắn `supplier_id`+`service_id` để quy doanh thu — đối tác ngoài dùng service `kind=commission`, SSCorp `is_own=true` dùng `direct`; `public_read` theo `status='active'`), `auction_tool_showcases`.
+- **Showcase bí mật qua RPC, KHÔNG public_read**: `url`/`access_password` nhạy cảm mà RLS lọc theo dòng không giấu được cột → bảng chỉ `admin_all`; MKP đọc qua SECURITY DEFINER `list_tool_showcases` (chỉ trả `url` khi `visibility='public'`, còn lại `is_locked=true`) + `unlock_tool_showcase` (đổi mật khẩu lấy url). Cùng tinh thần "commission ẩn khỏi catalog" của services.
+- **CTA MKP → CRM (RPC public cho END-USER)**: `request_tool_service` grant `authenticated` (bắt buộc đăng nhập), **KHÔNG** gọi `admin_has_permission` — tạo lead (`source='tool_marketplace'`) + opportunity `stage='selling'` gắn service của provider; dedup theo (`created_by`, `tool_provider_id`, stage mở). Admin chốt thắng bằng `admin_win_opportunity` như thường → khách hàng + đơn + hoa hồng.
+- Thêm `leads.source='tool_marketplace'` + cột `tool_provider_id` trên `leads` & `opportunities`; module quyền `cong-cu-dau-gia` (category `noi-dung`).
+**Consequences:**
+- Provider chưa gắn `service_id` ⇒ CTA đổi thành "Liên hệ tư vấn" (không tạo được opportunity vì `opportunities.service_id` NOT NULL). Opportunity commission cần admin nhập `gross` lúc chốt (variant seed `price=0`).
+- Mẫu MỚI: RPC SECURITY DEFINER public cho end-user (không cần quyền admin) để ghi vào bảng admin-only — khác các RPC chuyển đổi CRM (vốn gác `admin_has_permission`).
+- Migrations 1-4 PUSHED, `types.ts` regen.
+
+## 2026-07-26 — Số hoá tài sản: trạng thái `active` + tách luồng gửi tổ chức + làm lại vỏ wizard
+
+**Context:** Wizard số hoá `/chu-tai-san/dang-tai-san` BẮT BUỘC chọn 1 tổ chức đấu giá ở bước cuối mới lưu được (kẹt nếu chỉ muốn số hoá). Yêu cầu: số hoá không cần chọn tổ chức; chọn/gửi tổ chức là luồng riêng; đồng thời làm lại UI/UX vỏ wizard (tham khảo project `build-space-78164`, KHÔNG clone vì ref chỉ BDS-only).
+**Decision:**
+- **Thêm status `active` ("đã số hoá")** vào CHECK `asset_postings.status` (migration `20260726000005`; các giá trị cũ giữ nguyên). Vòng đời: `draft` (Lưu và thoát) → `active` (số hoá xong, KHÔNG cần tổ chức). `matched` không còn là điều kiện hoàn tất.
+- **Tách 2 luồng** trong [useAssetPosting.ts](src/hooks/useAssetPosting.ts): `useSubmitPostingWithOrg` bị bỏ, thay bằng `useCreatePosting({posting,status,postingId?})` (chỉ lưu hồ sơ, `chosen_org_id:null`, insert HOẶC update draft) + `useSendServiceRequest({postingId,orgId,matchScore,message})` (insert `asset_service_requests` — luồng riêng, KHÔNG đổi status posting; quan hệ tổ chức chỉ nằm ở bảng request).
+- **Vỏ wizard mới = FULL-PAGE takeover** (`fixed inset-0 z-50 flex-col`, phủ cả OwnerPortalLayout — như ref): `WizardHeader` full-width (X trái · `WizardProgress` stepper ngang nhãn+thanh gạch · "Lưu và thoát"=lưu draft, guard cần parent/child/title), vùng nội dung cuộn giữa có tiêu đề/mô tả từng bước, `WizardNavigation` thanh đáy cố định (Quay lại · Tiếp theo). `WizardProgress` clickable (chỉ quay lại bước đã xong). Bước cuối đổi `Step5MatchAndSend`→`StepReview` (xem lại + 2 nút: "Hoàn tất số hoá" vs "Số hoá & gửi cho tổ chức"). Chọn tổ chức tách ra `ChooseOrgAndRequest` (tái dùng: full-page sau số hoá trong wizard + nút "Gửi cho tổ chức" trong `AssetPostingDetail` khi `status==='active' && !request`). Ảnh: kéo-thả sắp xếp + badge "Ảnh bìa" (ảnh đầu mảng).
+**Consequences:**
+- `SuccessScreen.orgName` giờ nullable (biến thể "Đã số hoá tài sản" khi không gửi tổ chức). `AssetPostingStatus` + mọi `STATUS_STYLE`/label phải có `active` (đã cập nhật types + Landing + Detail).
+- Draft resume TỪ DANH SÁCH chưa làm — "Lưu và thoát" tạo được draft nhưng bấm lại từ Landing hiện mở Detail, không mở lại wizard. Việc sau (cần map `AssetPosting`→`WizardValues`).
+- `types.ts` regen thêm các bảng `auction_tools*` (đã push trước đó, chưa regen) — additive.
+
 ## 2026-07-15 — Catalog nhóm→biến thể làm NGUỒN GIÁ + gói credit theo đối tượng + reprice
 
 **Context:** Giá gói credit + chi phí tính năng là hằng số code (1 danh mục dùng chung). Cần: (1) Dịch vụ 2 cấp nhóm→biến thể, giá ở biến thể; (2) 3 bộ gói credit theo đối tượng (người mua/chủ tài sản/công ty) — DB là nguồn sự thật; (3) reprice tính năng.

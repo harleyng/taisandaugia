@@ -1,10 +1,14 @@
-import { ArrowLeft, Loader2, FileText, Building2, MapPin, Phone } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Loader2, FileText, Building2, MapPin, Phone, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { getDeltaFields, type DeltaFieldDescriptor } from "@/constants/asset-delta-fields";
 import { formatPrice } from "@/utils/formatters";
+import { ChooseOrgAndRequest } from "./ChooseOrgAndRequest";
+import { postingToMatchCriteria } from "./wizardSchema";
 import {
   ASSET_POSTING_STATUS_LABELS,
   AUCTION_FORMAT_LABELS,
@@ -23,6 +27,7 @@ const CHILD_LABEL: Record<string, string> = Object.fromEntries(
 
 const STATUS_STYLE: Record<AssetPostingStatus, string> = {
   draft: "bg-muted text-muted-foreground",
+  active: "bg-success/10 text-success",
   pending: "bg-warning/10 text-warning",
   matched: "bg-primary/10 text-primary",
   contracted: "bg-success/10 text-success",
@@ -65,6 +70,7 @@ interface AssetPostingDetailProps {
 /** Màn chi tiết một hồ sơ tài sản đấu giá. */
 export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProps) {
   const { data, isLoading } = usePostingDetail(postingId);
+  const [choosingOrg, setChoosingOrg] = useState(false);
 
   if (isLoading) {
     return (
@@ -117,6 +123,36 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
           {ASSET_POSTING_STATUS_LABELS[p.status]}
         </span>
       </div>
+
+      {/* Luồng riêng: gửi cho tổ chức đấu giá (hồ sơ đã số hoá, chưa gửi yêu cầu) */}
+      {p.status === "active" && !request && (
+        <Card className="border-primary/20">
+          <CardContent className="pt-5 space-y-4">
+            {choosingOrg ? (
+              <ChooseOrgAndRequest
+                postingId={p.id}
+                criteria={postingToMatchCriteria(p)}
+                onSent={() => setChoosingOrg(false)}
+                onSkip={() => setChoosingOrg(false)}
+                skipLabel="Đóng"
+              />
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground">Gửi cho tổ chức đấu giá</p>
+                  <p className="text-sm text-muted-foreground">
+                    Hồ sơ đã số hoá. Chọn tổ chức đấu giá phù hợp để gửi yêu cầu dịch vụ.
+                  </p>
+                </div>
+                <Button onClick={() => setChoosingOrg(true)} className="gap-2 shrink-0">
+                  <Send className="h-4 w-4" />
+                  Gửi cho tổ chức đấu giá
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tổ chức đấu giá đã chọn */}
       {org && (

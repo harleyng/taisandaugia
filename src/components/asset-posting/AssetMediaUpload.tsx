@@ -52,12 +52,38 @@ export function AssetMediaUpload({ value, onChange }: AssetMediaUploadProps) {
 
   const removeAt = (idx: number) => onChange(value.filter((_, i) => i !== idx));
 
+  // Kéo-thả sắp xếp: ảnh đầu mảng = ảnh bìa.
+  const move = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= value.length) return;
+    const next = [...value];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+  };
+  const onDrop = (e: React.DragEvent, to: number) => {
+    e.preventDefault();
+    const from = Number(e.dataTransfer.getData("text/plain"));
+    if (!Number.isNaN(from)) move(from, to);
+  };
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
         {value.map((url, idx) => (
-          <div key={url} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
-            <img src={url} alt={`Ảnh ${idx + 1}`} className="w-full h-full object-cover" />
+          <div
+            key={url}
+            draggable
+            onDragStart={(e) => e.dataTransfer.setData("text/plain", String(idx))}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => onDrop(e, idx)}
+            className="relative aspect-square rounded-lg overflow-hidden bg-muted group cursor-move"
+          >
+            <img src={url} alt={`Ảnh ${idx + 1}`} className="w-full h-full object-cover pointer-events-none" />
+            {idx === 0 && (
+              <span className="absolute bottom-1 left-1 rounded bg-primary/90 px-1.5 py-0.5 text-[9px] font-medium text-primary-foreground">
+                Ảnh bìa
+              </span>
+            )}
             <button
               type="button"
               onClick={() => removeAt(idx)}
@@ -78,7 +104,9 @@ export function AssetMediaUpload({ value, onChange }: AssetMediaUploadProps) {
           <span className="text-[10px] font-medium">{uploading ? "Đang tải..." : "Thêm ảnh"}</span>
         </button>
       </div>
-      <p className="text-[11px] text-muted-foreground">JPG, PNG, WebP — tối đa 10MB mỗi ảnh. Ảnh là tùy chọn.</p>
+      <p className="text-[11px] text-muted-foreground">
+        JPG, PNG, WebP — tối đa 10MB mỗi ảnh. Kéo-thả để sắp xếp; ảnh đầu là ảnh bìa. Ảnh là tùy chọn.
+      </p>
       <input ref={inputRef} type="file" accept={ACCEPT} multiple className="hidden" onChange={handleInputChange} />
     </div>
   );

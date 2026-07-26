@@ -111,7 +111,7 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /chu-tai-san               → /chu-tai-san/dashboard
 /chu-tai-san/dashboard     OwnerDashboard
 /chu-tai-san/tai-san       OwnerAssetsPage
-/chu-tai-san/dang-tai-san  AssetPostingWizardPage  (5-step "Số hoá tài sản" wizard)
+/chu-tai-san/dang-tai-san  AssetPostingWizardPage  (5-step "Số hoá tài sản" wizard: Loại→Thông tin→Pháp lý→Nhu cầu→Xem lại; bước cuối 2 hành động: chỉ số hoá / số hoá & gửi tổ chức. Chọn tổ chức tách ra ChooseOrgAndRequest)
 /chu-tai-san/chi-nhanh-amc OwnerBranchesPage
 /chu-tai-san/bao-cao       OwnerReportPage
 
@@ -236,7 +236,7 @@ npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integr
 | `user_owner_unlocks` | **Time-limited** owner access (tier + expires_at) |
 | `user_report_unlocks` | Permanent deep-report unlocks (key = `{slug}:{periodId}`) |
 | `listing_price_sessions` | Price-session history per listing |
-| `asset_postings` | Owner asset-posting wizard submissions (migration `20260621000001`) |
+| `asset_postings` | Owner asset-posting wizard submissions (migration `20260621000001`). Status: `draft`→`active` ("đã số hoá") — số hoá KHÔNG cần tổ chức; +`active` via `20260726000005`. Chọn/gửi tổ chức = luồng RIÊNG qua `asset_service_requests` (hook `useSendServiceRequest`), không đổi status. Digitize via `useCreatePosting({status})`. |
 | `ad_pages` / `ad_positions` | Master data quảng cáo 2 cấp: trang → vị trí (`placement_type` slide/unique, `price NUMERIC`) |
 | `advertisements` | Banner (admin-only); `code` "B0000009" qua trigger; lifecycle draft/scheduled/active/paused/ended |
 | `ad_daily_stats` | Số liệu view/click theo (ngày, device) — hiện là seed demo |
@@ -270,6 +270,13 @@ Granular per-module admin permissions layered ON TOP of the binary `user_roles.A
 
 ### Khách hàng (admin, NGOÀI Marketing)
 `/admin/khach-hang/*` — module khách hàng **generic dùng chung nhiều dịch vụ** (không riêng quảng cáo). Bảng `customers`; banner tham chiếu optional qua `advertisements.customer_id` (ON DELETE SET NULL). Trang chi tiết KH hiển thị "banner liên kết" qua `useCustomerAdvertisements(customerId)`.
+
+### Công cụ đấu giá (Nội dung admin + MKP công khai)
+`/admin/cong-cu-dau-gia` (module quyền `cong-cu-dau-gia`, category `noi-dung`) + MKP `/cong-cu-dau-gia` (list 4 công cụ) & `/cong-cu-dau-gia/:slug` (chi tiết provider). Bảng (`20260726000001-4`): `auction_tools` (4 công cụ cố định seed: `so-hoa/dinh-gia/vay-von/phap-ly`, `public_read` theo `is_active`), `auction_tool_providers` (gắn `supplier_id`+`service_id`+`service_variant_id` để quy doanh thu — đối tác ngoài dùng service `kind='commission'`, công cụ nhà SSCorp `is_own=true` dùng `direct`; `public_read` theo `status='active'`), `auction_tool_showcases`. Hooks: admin `useAuctionTools.ts`, MKP `usePublicAuctionTools.ts`; types `src/types/auctionTools.ts`; truy cập DB qua `(supabase as any)` như module CRM.
+
+**Showcase bí mật qua RPC (KHÔNG public_read):** `url` (showcase password) + `access_password` nhạy cảm mà RLS lọc theo DÒNG không giấu được CỘT → bảng chỉ `admin_all`; MKP đọc qua SECURITY DEFINER `list_tool_showcases(_provider_id)` (chỉ trả `url` khi `visibility='public'`, còn lại `url=NULL, is_locked=true`, KHÔNG bao giờ trả `access_password`) + `unlock_tool_showcase(_id,_password)` (đổi mật khẩu chia sẻ lấy `url`). Cùng tinh thần "commission ẩn khỏi catalog".
+
+**RPC public cho END-USER (mẫu MỚI):** `request_tool_service(_provider_id,_note)` — CTA "Sử dụng dịch vụ" (bắt buộc đăng nhập), grant `authenticated` nhưng **KHÔNG** gác `admin_has_permission` (khác các RPC chuyển đổi CRM); tạo lead (`source='tool_marketplace'`) + opportunity `stage='selling'` gắn service của provider, dedup theo (`created_by`, `tool_provider_id`, stage mở). Provider chưa gắn `service_id` ⇒ UI đổi CTA sang "Liên hệ tư vấn". Admin chốt thắng qua `admin_win_opportunity` như thường → khách hàng + đơn + hoa hồng. Truy vết: `leads.source='tool_marketplace'` + cột `tool_provider_id` trên `leads` & `opportunities`.
 
 ---
 

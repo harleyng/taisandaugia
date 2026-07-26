@@ -14,6 +14,14 @@ export const STATUS_BADGE_CLASS: Record<TaskStatus, string> = {
   cancelled: "bg-gray-200 text-gray-600",
 };
 
+/** Màu chấm đặc (đậm hơn badge) cho view Tuần/Tháng. */
+export const STATUS_DOT_CLASS: Record<TaskStatus, string> = {
+  todo: "bg-slate-400",
+  in_progress: "bg-blue-500",
+  done: "bg-green-500",
+  cancelled: "bg-gray-400",
+};
+
 export const TYPE_LABELS: Record<TaskType, string> = {
   call: "Gọi điện",
   email: "Gửi email",
@@ -42,8 +50,8 @@ export const STATUS_TABS: StatusTab[] = [
   { key: "all", label: "Tất cả" },
   { key: "todo", label: "Cần làm" },
   { key: "in_progress", label: "Đang làm" },
-  { key: "overdue", label: "Quá hạn" },
   { key: "done", label: "Hoàn thành" },
+  { key: "cancelled", label: "Đã hủy" },
 ];
 
 export const isTerminal = (s: TaskStatus): boolean => s === "done" || s === "cancelled";

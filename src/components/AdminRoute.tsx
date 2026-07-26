@@ -8,8 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
  * Cổng cho toàn bộ khu `/admin`.
  *
  * Chặn ở HAI mức, khớp với RLS phía database:
- * 1. Chưa đăng nhập → về trang đăng nhập.
- * 2. Đã đăng nhập nhưng KHÔNG có role ADMIN → về trang chủ.
+ * 1. Chưa đăng nhập → về cổng đăng nhập admin (/admin/login).
+ * 2. Đã đăng nhập nhưng KHÔNG có role ADMIN → về /admin/login (trang này
+ *    hiển thị thông báo "không có quyền quản trị" + nút đăng xuất đổi tài khoản).
  *
  * Không có bước 2 thì bất kỳ ai cũng mở được giao diện admin (RLS vẫn
  * che dữ liệu, nhưng cấu trúc/route admin bị lộ).
@@ -42,11 +43,11 @@ export const AdminRoute = () => {
   }
 
   if (!session) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 
   if (!isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin/login" replace />;
   }
 
   return <Outlet />;

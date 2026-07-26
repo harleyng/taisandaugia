@@ -27,6 +27,7 @@ import AuctionDetail from "./pages/AuctionDetail";
 import NotFound from "./pages/NotFound";
 
 // Admin pages — lazy
+const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminKYCPage = lazy(() => import("./pages/AdminKYCPage"));
 const AdminKYCDetail = lazy(() => import("./pages/admin/AdminKYCDetail"));
@@ -221,6 +222,7 @@ const App = () => (
               </Route>
 
               {/* Admin Portal */}
+              <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminRoute />}>
                 <Route element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />

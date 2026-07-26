@@ -26,6 +26,7 @@ import {
   Target,
   ListTodo,
   Ticket,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,6 +105,7 @@ const NAV: NavSection[] = [
       { to: "/admin/tin-tuc", label: "Tin tức", icon: Newspaper, module: "tin-tuc" },
       { to: "/admin/doi-tac-tren-san", label: "Đối tác trên sàn", icon: Building2, module: "doi-tac" },
       { to: "/admin/phap-ly", label: "Văn bản pháp lý", icon: ScrollText, module: "phap-ly" },
+      { to: "/admin/cong-cu-dau-gia", label: "Công cụ đấu giá", icon: Wrench, module: "cong-cu-dau-gia" },
     ],
   },
   {
@@ -161,7 +163,7 @@ export default function AdminLayout() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     toast.success("Đã đăng xuất");
-    navigate("/");
+    navigate("/admin/login");
   };
 
   return (

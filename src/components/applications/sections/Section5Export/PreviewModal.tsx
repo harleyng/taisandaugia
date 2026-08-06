@@ -3,10 +3,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Application, ExportFormat } from '@/types/application'
 import { CapacityProfile } from '@/types/capacity-profile'
 import { ASSET_CATEGORY_LABELS } from '@/lib/applications/labels'
-import { loadGeneralInfo } from '@/lib/general-info/storage'
-import { getInfrastructure, createDefaultInfrastructure } from '@/lib/infrastructure/storage'
-import { listAuctioneers } from '@/lib/auctioneers/storage'
-import { listTaxRecords } from '@/lib/tax/storage'
+import { useGeneralInfo } from '@/hooks/useGeneralInfo'
+import { useInfrastructure } from '@/hooks/useInfrastructure'
+import { useAuctioneers } from '@/hooks/useAuctioneers'
+import { useTaxRecords } from '@/hooks/useTaxRecords'
 import { ORG_TYPE_LABELS } from '@/types/general-info'
 import { POSITION_LABELS, CONTRACT_TYPE_LABELS } from '@/types/auctioneer'
 import { TAX_RECORD_TYPE_LABELS } from '@/types/tax'
@@ -22,10 +22,14 @@ interface Props {
 }
 
 export function PreviewModal({ open, onOpenChange, format, app }: Props) {
-  const generalInfo = useMemo(() => loadGeneralInfo(), [])
-  const infra = useMemo(() => getInfrastructure() ?? createDefaultInfrastructure(), [])
-  const auctioneers = useMemo(() => listAuctioneers().filter((a) => a.isActive), [])
-  const taxRecords = useMemo(() => listTaxRecords().filter((r) => !r.isDeleted), [])
+  // Dùng lại chính các hook của từng module thay vì đọc thẳng repo: chúng đã có
+  // React Query nên dữ liệu được chia sẻ cache với các trang khác, không nạp lại.
+  const { generalInfo } = useGeneralInfo()
+  const { infra } = useInfrastructure()
+  const { auctioneers: allAuctioneers } = useAuctioneers()
+  const auctioneers = useMemo(() => allAuctioneers.filter((a) => a.isActive), [allAuctioneers])
+  // useTaxRecords đã lọc bản ghi đã xoá mềm.
+  const { records: taxRecords } = useTaxRecords()
 
   const { announcement, auctionPlan, sectionVCriteria } = app
 

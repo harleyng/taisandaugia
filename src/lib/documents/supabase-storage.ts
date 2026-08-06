@@ -3,24 +3,33 @@ import { saveAs } from 'file-saver'
 import JSZip from 'jszip'
 
 const BUCKET = 'org-documents'
-const ORG_ID = 'default'
 
+/**
+ * Đường dẫn PHẢI bắt đầu bằng organization_id.
+ *
+ * Trước đây segment đầu là hằng 'default' cho mọi tổ chức, và policy của bucket
+ * chỉ kiểm `auth.uid() IS NOT NULL` — nghĩa là ai đăng nhập cũng đọc/ghi/xoá
+ * được file của mọi tổ chức. Migration 20260806000030 đổi policy sang gate theo
+ * organization_id lấy từ segment đầu, nên prefix 'default' nay bị TỪ CHỐI.
+ */
 export function buildStoragePath(
+  organizationId: string,
   docId: string,
   version: number,
   filename: string,
 ): string {
   const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '_')
-  return `${ORG_ID}/${docId}/v${version}/${safe}`
+  return `${organizationId}/${docId}/v${version}/${safe}`
 }
 
 export async function uploadFile(
+  organizationId: string,
   docId: string,
   version: number,
   file: File,
   onProgress?: (pct: number) => void,
 ): Promise<{ path: string; error: Error | null }> {
-  const path = buildStoragePath(docId, version, file.name)
+  const path = buildStoragePath(organizationId, docId, version, file.name)
 
   // For small files (<1MB), skip XHR progress and use SDK directly
   if (file.size < 1024 * 1024) {
@@ -109,12 +118,13 @@ export async function getSignedUrl(
 }
 
 export async function deleteDocumentAllVersions(
+  organizationId: string,
   docId: string,
 ): Promise<{ error: Error | null }> {
-  const prefix = `${ORG_ID}/${docId}/`
+  const prefix = `${organizationId}/${docId}/`
   const { data, error: listErr } = await supabase.storage
     .from(BUCKET)
-    .list(`${ORG_ID}/${docId}`, { limit: 100 })
+    .list(`${organizationId}/${docId}`, { limit: 100 })
 
   if (listErr) return { error: new Error(listErr.message) }
 

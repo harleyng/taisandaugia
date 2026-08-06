@@ -65,13 +65,18 @@ export function FolderFormDialog({
     return true
   }
 
-  const handleSubmit = () => {
+  // Tạo/đổi tên nay đi Supabase nên phải await: onDone cần id THẬT của thư mục
+  // vừa tạo (call site dùng nó để chọn ngay thư mục đó).
+  const handleSubmit = async () => {
     if (!validate()) return
     if (mode === 'create') {
-      const f = folders.createFolder(name.trim(), parentId ?? null)
+      const f = await folders.createFolder(name.trim(), parentId ?? null)
+      // undefined khi ghi thất bại — guard trong useFolders đã hiện toast, giữ
+      // dialog mở để user thử lại thay vì đóng như thể đã thành công.
+      if (!f) return
       onDone?.({ id: f.id })
     } else if (folderId) {
-      folders.renameFolder(folderId, name.trim())
+      await folders.renameFolder(folderId, name.trim())
       onDone?.({ id: folderId })
     }
     onOpenChange(false)

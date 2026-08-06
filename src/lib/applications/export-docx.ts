@@ -1,117 +1,51 @@
-import {
-  Document,
-  Paragraph,
-  TextRun,
-  HeadingLevel,
-  BorderStyle,
-  Table,
-  TableRow,
-  TableCell,
-  WidthType,
-  Packer,
-} from 'docx'
+import { Document, Paragraph, Table, Packer } from 'docx'
+import { h1, h2, h3, p, paras, divider, infoTable, dataTable } from './docx-primitives'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { Application, ExportFormat } from '@/types/application'
 import { ASSET_CATEGORY_LABELS } from './labels'
-import { loadGeneralInfo } from '@/lib/general-info/storage'
-import { getInfrastructure, createDefaultInfrastructure } from '@/lib/infrastructure/storage'
-import { listAuctioneers } from '@/lib/auctioneers/storage'
-import { listTaxRecords } from '@/lib/tax/storage'
+import { getGeneralInfo } from '@/lib/general-info/supabase-repo'
+import type { Infrastructure } from '@/types/infrastructure'
+import type { OrgGeneralInfo } from '@/types/general-info'
+import type { TaxRecord } from '@/types/tax'
+import type { CapacityProfile } from '@/types/capacity-profile'
+import { getInfrastructure } from '@/lib/infrastructure/supabase-repo'
+import { createDefaultInfrastructure } from '@/lib/infrastructure/defaults'
+import { listByOrg } from '@/lib/auctioneers/supabase-repo'
+import type { Auctioneer } from '@/types/auctioneer'
+import { listTaxRecords } from '@/lib/tax/supabase-repo'
 import { ORG_TYPE_LABELS } from '@/types/general-info'
 import { POSITION_LABELS, CONTRACT_TYPE_LABELS } from '@/types/auctioneer'
 import { TAX_RECORD_TYPE_LABELS } from '@/types/tax'
 import { getTargetYear } from '@/lib/tax/scoring'
-import { getCapacityProfile } from '@/lib/applications/storage'
-
-// ---------------------------------------------------------------------------
-// Primitive builders
-// ---------------------------------------------------------------------------
-
-function h1(text: string): Paragraph {
-  return new Paragraph({ text, heading: HeadingLevel.HEADING_1, spacing: { before: 360, after: 160 } })
-}
-
-function h2(text: string): Paragraph {
-  return new Paragraph({ text, heading: HeadingLevel.HEADING_2, spacing: { before: 280, after: 120 } })
-}
-
-function h3(text: string): Paragraph {
-  return new Paragraph({ text, heading: HeadingLevel.HEADING_3, spacing: { before: 200, after: 80 } })
-}
-
-function p(text: string, bold = false, indent = false): Paragraph {
-  return new Paragraph({
-    children: [new TextRun({ text: text || '—', bold, size: 24 })],
-    spacing: { after: 100 },
-    indent: indent ? { left: 360 } : undefined,
-  })
-}
-
-function paras(text: string): Paragraph[] {
-  if (!text || !text.trim()) return [p('—')]
-  return text.split('\n').map((line) => p(line))
-}
-
-function divider(): Paragraph {
-  return new Paragraph({
-    border: { bottom: { color: 'CCCCCC', space: 1, style: BorderStyle.SINGLE, size: 4 } },
-    spacing: { after: 160 },
-  })
-}
-
-function infoTable(rows: [string, string][]): Table {
-  return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: rows.map(
-      ([label, value]) =>
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [p(label, true)],
-              width: { size: 32, type: WidthType.PERCENTAGE },
-            }),
-            new TableCell({
-              children: [p(value || '—')],
-              width: { size: 68, type: WidthType.PERCENTAGE },
-            }),
-          ],
-        })
-    ),
-  })
-}
-
-function dataTable(headers: string[], rows: string[][]): Table {
-  const headerRow = new TableRow({
-    children: headers.map(
-      (h) =>
-        new TableCell({
-          children: [p(h, true)],
-          shading: { fill: 'F0F4F8' },
-        })
-    ),
-  })
-  const dataRows = rows.map(
-    (cells) =>
-      new TableRow({
-        children: cells.map((c) => new TableCell({ children: [p(c || '—')] })),
-      })
-  )
-  return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: [headerRow, ...dataRows],
-  })
-}
+import { getCapacityProfile } from '@/lib/applications/supabase-repo'
+import { EMPTY_CAPACITY_PROFILE } from '@/lib/applications/capacity-sync'
 
 // ---------------------------------------------------------------------------
 // Capacity section children
 // ---------------------------------------------------------------------------
 
-function buildCapacityChildren(app: Application): (Paragraph | Table)[] {
-  const generalInfo = loadGeneralInfo()
-  const infra = getInfrastructure() ?? createDefaultInfrastructure()
-  const auctioneers = listAuctioneers().filter((a) => a.isActive)
-  const taxRecords = listTaxRecords().filter((r) => !r.isDeleted)
+/**
+ * Dữ liệu tổ chức cần cho file xuất.
+ *
+ * Trước đây từng hàm dựng tự đọc localStorage ĐỒNG BỘ. Với Supabase thì phải
+ * nạp một lần ở generateExport rồi truyền xuống — nếu để từng hàm tự await sẽ
+ * thành hàng chục lượt gọi mạng giữa lúc dựng tài liệu.
+ */
+export interface ExportOrgData {
+  generalInfo: Awaited<ReturnType<typeof getGeneralInfo>>
+  infra: Infrastructure
+  taxRecords: TaxRecord[]
+  profile: CapacityProfile
+}
+
+function buildCapacityChildren(
+  app: Application,
+  auctioneers: Auctioneer[],
+  org: ExportOrgData,
+): (Paragraph | Table)[] {
+  const { generalInfo, infra, taxRecords } = org
+  const activeAuctioneers = auctioneers.filter((a) => a.isActive)
   const { announcement } = app
 
   const fmtDate = (d?: string) => (d ? new Date(d).toLocaleDateString('vi-VN') : '—')
@@ -339,7 +273,7 @@ function buildCapacityChildren(app: Application): (Paragraph | Table)[] {
   // ── Mục IV ────────────────────────────────────────────────────────────────
   children.push(h2('MỤC IV: KINH NGHIỆM VÀ NĂNG LỰC'))
 
-  const profile = getCapacityProfile()
+  const profile = org.profile
 
   children.push(h3('IV.1-4. Lịch sử tổ chức đấu giá tài sản'))
   children.push(
@@ -365,12 +299,12 @@ function buildCapacityChildren(app: Application): (Paragraph | Table)[] {
     children.push(p('Chưa khai báo ngày thành lập.'))
   }
 
-  children.push(h3(`IV.6-8. Đội ngũ đấu giá viên (${auctioneers.length} người)`))
-  if (auctioneers.length > 0) {
+  children.push(h3(`IV.6-8. Đội ngũ đấu giá viên (${activeAuctioneers.length} người)`))
+  if (activeAuctioneers.length > 0) {
     children.push(
       dataTable(
         ['STT', 'Họ và tên', 'Số thẻ ĐGV', 'Ngày cấp thẻ', 'Vị trí', 'Loại HĐ', 'Ngày bắt đầu'],
-        auctioneers.map((a, i) => [
+        activeAuctioneers.map((a, i) => [
           (i + 1).toString(),
           a.fullName,
           a.licenseNumber,
@@ -485,18 +419,18 @@ function buildAuctionPlanChildren(app: Application): (Paragraph | Table)[] {
 // Document builders
 // ---------------------------------------------------------------------------
 
-function buildCapacityDoc(app: Application): Document {
-  return new Document({ sections: [{ children: buildCapacityChildren(app) }] })
+function buildCapacityDoc(app: Application, auctioneers: Auctioneer[], org: ExportOrgData): Document {
+  return new Document({ sections: [{ children: buildCapacityChildren(app, auctioneers, org) }] })
 }
 
 function buildAuctionPlanDoc(app: Application): Document {
   return new Document({ sections: [{ children: buildAuctionPlanChildren(app) }] })
 }
 
-function buildIntegratedDoc(app: Application): Document {
+function buildIntegratedDoc(app: Application, auctioneers: Auctioneer[], org: ExportOrgData): Document {
   return new Document({
     sections: [
-      { children: buildCapacityChildren(app) },
+      { children: buildCapacityChildren(app, auctioneers, org) },
       { children: buildAuctionPlanChildren(app) },
     ],
   })
@@ -509,14 +443,44 @@ function buildIntegratedDoc(app: Application): Document {
 export async function generateExport(
   app: Application,
   _profile: unknown,
-  format: ExportFormat
+  format: ExportFormat,
+  organizationId?: string | null
 ): Promise<void> {
   const safeTitle = (app.announcement.ownerName || 'HoSo').replace(/[^a-zA-Z0-9À-ỹ\s]/g, '').trim().slice(0, 30)
   const dateStr = new Date().toISOString().slice(0, 10)
 
+  // Đấu giá viên nay nằm ở Supabase chứ không còn đọc đồng bộ từ localStorage.
+  // Lỗi mạng ở đây KHÔNG được làm hỏng cả file: mục IV.6-8 sẽ in "chưa có dữ
+  // liệu" đúng như khi tổ chức thật sự chưa khai báo.
+  let auctioneers: Auctioneer[] = []
+  let org: ExportOrgData = {
+    generalInfo: null,
+    infra: createDefaultInfrastructure(),
+    taxRecords: [],
+    profile: EMPTY_CAPACITY_PROFILE,
+  }
+  if (organizationId) {
+    // Nạp song song, và lỗi từng phần KHÔNG làm hỏng cả file: mục thiếu sẽ in
+    // "—" đúng như khi tổ chức chưa khai báo.
+    const [au, gi, inf, tax, prof] = await Promise.all([
+      listByOrg(organizationId).catch((): Auctioneer[] => []),
+      getGeneralInfo(organizationId).catch((): OrgGeneralInfo | null => null),
+      getInfrastructure(organizationId).catch((): Infrastructure | null => null),
+      listTaxRecords(organizationId).catch((): TaxRecord[] => []),
+      getCapacityProfile(organizationId).catch((): CapacityProfile | null => null),
+    ])
+    auctioneers = au
+    org = {
+      generalInfo: gi,
+      infra: inf ?? createDefaultInfrastructure(organizationId),
+      taxRecords: tax.filter((r: TaxRecord) => !r.isDeleted),
+      profile: prof ?? EMPTY_CAPACITY_PROFILE,
+    }
+  }
+
   if (format === 'SEPARATED') {
     const zip = new JSZip()
-    const capDoc = buildCapacityDoc(app)
+    const capDoc = buildCapacityDoc(app, auctioneers, org)
     const planDoc = buildAuctionPlanDoc(app)
     const [capBuffer, planBuffer] = await Promise.all([Packer.toBlob(capDoc), Packer.toBlob(planDoc)])
     zip.file('01_Ho-so-nang-luc.docx', capBuffer)
@@ -524,7 +488,7 @@ export async function generateExport(
     const zipBlob = await zip.generateAsync({ type: 'blob' })
     saveAs(zipBlob, `HoSo-${safeTitle}-${dateStr}.zip`)
   } else {
-    const doc = buildIntegratedDoc(app)
+    const doc = buildIntegratedDoc(app, auctioneers, org)
     const blob = await Packer.toBlob(doc)
     saveAs(blob, `HoSo-Tich-hop-${safeTitle}-${dateStr}.docx`)
   }

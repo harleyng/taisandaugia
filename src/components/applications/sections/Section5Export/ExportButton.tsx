@@ -13,6 +13,7 @@ import {
 import { Application, ExportFormat } from '@/types/application'
 import { CapacityProfile } from '@/types/capacity-profile'
 import { generateExport } from '@/lib/applications/export-docx'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
 import { useCredits } from '@/hooks/useCredits'
 import { useServiceCatalog } from '@/hooks/useServiceCatalog'
 import { Download, Loader2 } from 'lucide-react'
@@ -31,6 +32,7 @@ export function ExportButton({ app, profile, format, disabled, onExported }: Pro
   const [isExporting, setIsExporting] = useState(false)
   const { balance, chargeExportProfile } = useCredits()
   const { costOf } = useServiceCatalog()
+  const { organizationId } = usePortalOrg()
   const EXPORT_COST = costOf('export_profile_company') || 30
 
   const canAfford = balance >= EXPORT_COST
@@ -44,7 +46,7 @@ export function ExportButton({ app, profile, format, disabled, onExported }: Pro
         toast.error(`Số dư không đủ. Cần ${EXPORT_COST} credit để xuất file.`)
         return
       }
-      await generateExport(app, profile, format)
+      await generateExport(app, profile, format, organizationId)
       toast.success('Xuất file thành công! File đang được tải về.')
       onExported()
     } catch (err) {

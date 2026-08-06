@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { listApplications } from '@/lib/applications/storage'
+import { useApplicationsList } from '@/hooks/useApplicationsList'
 import { ApplicationStatus } from '@/types/application'
 import { Plus, FileText, ChevronRight, Search, Clock, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -76,7 +76,7 @@ function ScoreBadge({ score }: { score: number }) {
 
 export default function ApplicationsPage() {
   const navigate = useNavigate()
-  const applications = listApplications()
+  const { applications, isLoading } = useApplicationsList()
 
   const [search, setSearch] = useState('')
   const [ownerFilter, setOwnerFilter] = useState('__all__')

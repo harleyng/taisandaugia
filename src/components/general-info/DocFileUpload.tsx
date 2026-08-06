@@ -4,7 +4,8 @@ import { Upload, Loader2, FileText, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/integrations/supabase/client'
-import { saveDocument, listFolders, seedDefaultFolders } from '@/lib/documents/storage'
+import * as docsRepo from '@/lib/documents/supabase-repo'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
 
 const ACCEPTED = {
   'application/pdf': ['.pdf'],
@@ -23,9 +24,12 @@ interface Props {
   label: string
 }
 
-function getLegalFolderId(): string | null {
-  seedDefaultFolders()
-  return listFolders().find((f) => f.name === 'Pháp lý công ty')?.id ?? null
+async function getLegalFolderId(organizationId: string): Promise<string | null> {
+  // Seed rồi tra cứu: tổ chức mới chưa có thư mục nào, và seedDefaultFolders là
+  // idempotent nên gọi mỗi lần tải lên vẫn an toàn.
+  await docsRepo.seedDefaultFolders(organizationId)
+  const folders = await docsRepo.listFolders(organizationId)
+  return folders.find((f) => f.name === 'Pháp lý công ty')?.id ?? null
 }
 
 function fileNameFromPath(path: string): string {
@@ -33,11 +37,18 @@ function fileNameFromPath(path: string): string {
 }
 
 export function DocFileUpload({ value, onChange, fieldId, label }: Props) {
+  const { organizationId } = usePortalOrg()
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const processFile = useCallback(
     async (file: File) => {
+      // Chặn sớm: đường dẫn Storage bắt đầu bằng organization_id nên thiếu nó
+      // sẽ dựng ra "undefined/..." và bị policy bucket từ chối.
+      if (!organizationId) {
+        toast.error('Chưa xác định được tổ chức. Vui lòng tải lại trang.')
+        return
+      }
       if (file.size > MAX_SIZE) {
         toast.error(`${file.name}: vượt quá 10MB`)
         return
@@ -45,7 +56,9 @@ export function DocFileUpload({ value, onChange, fieldId, label }: Props) {
       try {
         const docId = crypto.randomUUID()
         const ext = file.name.split('.').pop() ?? 'pdf'
-        const storagePath = `legal-docs/${fieldId}/${docId}.${ext}`
+        // Segment đầu PHẢI là organization_id — policy bucket gate theo nó
+        // (migration 20260806000030). Prefix cũ bị TỪ CHỐI.
+        const storagePath = `${organizationId}/legal-docs/${fieldId}/${docId}.${ext}`
 
         const { error: uploadError } = await supabase.storage
           .from(BUCKET)
@@ -56,9 +69,9 @@ export function DocFileUpload({ value, onChange, fieldId, label }: Props) {
         const mimeCategory = file.type === 'application/pdf' ? 'PDF' : 'IMAGE'
         const now = new Date().toISOString()
 
-        saveDocument({
+        await docsRepo.saveDocument({
           id: docId,
-          folderId: getLegalFolderId(),
+          folderId: await getLegalFolderId(organizationId),
           displayName: label,
           tags: ['Pháp lý công ty'],
           linkedEntities: [{ type: 'LEGAL_DOC', id: fieldId, label }],
@@ -71,7 +84,7 @@ export function DocFileUpload({ value, onChange, fieldId, label }: Props) {
           storagePath,
           createdAt: now,
           updatedAt: now,
-        })
+        }, organizationId)
 
         onChange(storagePath)
         toast.success(`Đã tải lên ${file.name}`)
@@ -79,7 +92,7 @@ export function DocFileUpload({ value, onChange, fieldId, label }: Props) {
         toast.error(`Lỗi tải lên: ${err instanceof Error ? err.message : 'Không xác định'}`)
       }
     },
-    [fieldId, label, onChange],
+    [organizationId, fieldId, label, onChange],
   )
 
   const onDrop = useCallback(

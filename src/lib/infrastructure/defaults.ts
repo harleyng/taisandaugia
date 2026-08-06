@@ -1,28 +1,21 @@
-import type { Infrastructure } from '@/types/infrastructure'
+// Bản khởi tạo rỗng của Cơ sở vật chất.
+//
+// Tách khỏi storage.ts (localStorage, đã xoá): đây là hàm THUẦN, không đụng tới
+// nơi lưu trữ, nên vẫn cần sau khi module chuyển sang Supabase.
 
-const KEY = 'tsd:infrastructure'
+import type { Infrastructure, PhotoAttachment } from '@/types/infrastructure'
+
 const now = () => new Date().toISOString()
 
-export function getInfrastructure(): Infrastructure | null {
-  try {
-    const raw = localStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as Infrastructure) : null
-  } catch {
-    return null
-  }
-}
-
-export function saveInfrastructure(infra: Infrastructure): void {
-  localStorage.setItem(KEY, JSON.stringify({ ...infra, updatedAt: now() }))
-}
-
-export function createDefaultInfrastructure(): Infrastructure {
+export function createDefaultInfrastructure(orgId = ''): Infrastructure {
   const ts = now()
-  const emptyPhotos = () => []
+  const emptyPhotos = (): PhotoAttachment[] => []
 
   return {
     id: crypto.randomUUID(),
-    orgId: 'default',
+    // Trước đây hardcode 'default' cho MỌI tổ chức — nguồn gốc việc dữ liệu
+    // cơ sở vật chất không hề được phân tách theo tổ chức.
+    orgId,
     headquarters: {
       address: '',
       ward: '',

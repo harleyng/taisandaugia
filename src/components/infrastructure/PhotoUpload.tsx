@@ -5,7 +5,8 @@ import { Loader2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/integrations/supabase/client'
-import { saveDocument, listFolders, seedDefaultFolders } from '@/lib/documents/storage'
+import * as docsRepo from '@/lib/documents/supabase-repo'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
 import type { PhotoAttachment } from '@/types/infrastructure'
 
 const ACCEPTED = {
@@ -27,17 +28,27 @@ interface Props {
   onAdd: (photo: PhotoAttachment) => void
 }
 
-function getInfraFolderId(): string | null {
-  seedDefaultFolders()
-  return listFolders().find((f) => f.name === 'Cơ sở vật chất')?.id ?? null
+async function getInfraFolderId(organizationId: string): Promise<string | null> {
+  // Seed rồi tra cứu: tổ chức mới chưa có thư mục nào, và seedDefaultFolders là
+  // idempotent nên gọi mỗi lần tải lên vẫn an toàn.
+  await docsRepo.seedDefaultFolders(organizationId)
+  const folders = await docsRepo.listFolders(organizationId)
+  return folders.find((f) => f.name === 'Cơ sở vật chất')?.id ?? null
 }
 
 export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAdd }: Props) {
+  const { organizationId } = usePortalOrg()
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const processFile = useCallback(
     async (file: File) => {
+      // Chặn sớm: đường dẫn Storage bắt đầu bằng organization_id nên thiếu nó
+      // sẽ dựng ra "undefined/..." và bị policy bucket từ chối.
+      if (!organizationId) {
+        toast.error('Chưa xác định được tổ chức. Vui lòng tải lại trang.')
+        return
+      }
       if (file.size > MAX_SIZE) {
         toast.error(`${file.name}: vượt quá 10MB`)
         return
@@ -59,7 +70,9 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
 
         const photoId = crypto.randomUUID()
         const ext = file.name.split('.').pop() ?? 'jpg'
-        const storagePath = `infrastructure/${sectionId}/${photoId}.${ext}`
+        // Segment đầu PHẢI là organization_id — policy bucket gate theo nó
+        // (migration 20260806000030). Prefix cũ bị TỪ CHỐI.
+        const storagePath = `${organizationId}/infrastructure/${sectionId}/${photoId}.${ext}`
 
         const { error: uploadError } = await supabase.storage
           .from(BUCKET)
@@ -74,9 +87,9 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
         const now = new Date().toISOString()
         const docId = crypto.randomUUID()
 
-        saveDocument({
+        await docsRepo.saveDocument({
           id: docId,
-          folderId: getInfraFolderId(),
+          folderId: await getInfraFolderId(organizationId),
           displayName: file.name,
           tags: ['Cơ sở vật chất'],
           linkedEntities: [{ type: 'INFRASTRUCTURE_SECTION', id: sectionId, label: sectionLabel }],
@@ -89,7 +102,7 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
           storagePath,
           createdAt: now,
           updatedAt: now,
-        })
+        }, organizationId)
 
         onAdd({
           id: photoId,
@@ -106,7 +119,7 @@ export function PhotoUpload({ photos, sectionId, sectionLabel, label, hint, onAd
         toast.error(`Lỗi tải lên: ${err instanceof Error ? err.message : 'Không xác định'}`)
       }
     },
-    [sectionId, sectionLabel, onAdd],
+    [organizationId, sectionId, sectionLabel, onAdd],
   )
 
   const onDrop = useCallback(

@@ -1,6 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Application, Announcement, AuctionPlan, SectionVCriterion, ExportFormat, ApplicationStatus } from '@/types/application'
-import { getApplication, saveApplication } from '@/lib/applications/storage'
+import * as repo from '@/lib/applications/supabase-repo'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
+import { qk } from '@/lib/queryKeys'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { calcMucIII, calcMucV, calcTotal } from '@/lib/applications/scoring'
 
 function createNewApplication(): Application {
@@ -8,7 +12,7 @@ function createNewApplication(): Application {
   const now = new Date().toISOString()
   return {
     id,
-    orgId: '',
+    orgId: '',  // điền ở lúc lưu (repo nhận organizationId)
     announcement: {
       ownerName: '',
       assetDescription: '',
@@ -72,23 +76,46 @@ interface UseApplicationReturn {
   setExportFormat: (format: ExportFormat) => void
   setStatus: (status: ApplicationStatus) => void
   addExportedFile: (file: Application['exportedFiles'][0]) => void
-  save: () => void
+  save: () => Promise<void>
   refreshCapacity: (snapshot: Application['capacitySnapshot']) => void
 }
 
 export function useApplication(id: string | 'new'): UseApplicationReturn {
+  const { organizationId } = usePortalOrg()
+  const qc = useQueryClient()
+
+  // `app` là bản NHÁP đang sửa, không render trực tiếp từ cache: đây là form dài
+  // nhiều bước, refetch giữa lúc gõ sẽ mất nội dung chưa lưu.
   const [app, setApp] = useState<Application | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDirty, setIsDirty] = useState(false)
 
   useEffect(() => {
-    if (id === 'new') {
-      setApp(createNewApplication())
-    } else {
-      const existing = getApplication(id)
-      setApp(existing ?? createNewApplication())
+    let cancelled = false
+    async function load() {
+      if (id === 'new') {
+        setApp(createNewApplication())
+        setIsLoading(false)
+        return
+      }
+      try {
+        const existing = await repo.getApplication(id)
+        if (cancelled) return
+        // Không có thì mở hồ sơ mới thay vì màn trắng — giữ hành vi bản cũ.
+        setApp(existing ?? createNewApplication())
+      } catch {
+        if (!cancelled) {
+          toast.error('Không tải được hồ sơ')
+          setApp(createNewApplication())
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
     }
-    setIsLoading(false)
+    void load()
+    return () => {
+      cancelled = true
+    }
   }, [id])
 
   const update = useCallback((updater: (prev: Application) => Application) => {
@@ -149,12 +176,22 @@ export function useApplication(id: string | 'new'): UseApplicationReturn {
     [update]
   )
 
-  const save = useCallback(() => {
-    if (app) {
-      saveApplication(app)
-      setIsDirty(false)
+  const save = useCallback(async () => {
+    if (!app) return
+    if (!organizationId) {
+      toast.error('Chưa xác định được tổ chức. Vui lòng tải lại trang.')
+      return
     }
-  }, [app])
+    try {
+      await repo.saveApplication(app, organizationId)
+      setIsDirty(false)
+      qc.invalidateQueries({ queryKey: qk.orgApplications.list(organizationId) })
+      qc.invalidateQueries({ queryKey: qk.orgApplications.detail(app.id) })
+    } catch {
+      // Hồ sơ dự tuyển là công sức nhập tay hàng chục phút — im lặng là mất hết.
+      toast.error('Không lưu được hồ sơ. Kiểm tra kết nối rồi thử lại.')
+    }
+  }, [app, organizationId, qc])
 
   return {
     app,

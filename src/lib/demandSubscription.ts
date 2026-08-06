@@ -1,9 +1,14 @@
-// Demand subscription system. Subscription state persisted in localStorage.
-// Credit deduction uses the Supabase-backed credits system.
+// Gói theo dõi nhu cầu.
+//
+// TRƯỚC: credit bị trừ THẬT qua Supabase nhưng trạng thái gói lại lưu ở
+// localStorage — nên đổi trình duyệt hoặc xoá cache là mất gói ĐÃ TRẢ TIỀN, và
+// không có cách nào đối chiếu vì ledger chỉ ghi "đã trừ", không ghi "còn hiệu
+// lực đến bao giờ".
+//
+// NAY: trạng thái nằm ở bảng user_demand_subscriptions (RLS "own rows" — đây là
+// dữ liệu cá nhân, không phải của tổ chức).
 import { CREDIT_PACKAGES } from "./credits";
 
-const KEY = "demandSubscription.v1";
-const EVT = "demandSubscription:change";
 
 export type DemandTierKey = "weekly" | "monthly" | "yearly";
 
@@ -37,127 +42,122 @@ export const DEMAND_TIERS: {
   },
 ];
 
+import { supabase } from "@/integrations/supabase/client";
+import { fetchCreditState } from "./credits";
+
 export type DemandStatus = "NOT_SUBSCRIBED" | "ACTIVE" | "EXPIRED";
-
-interface StoredState {
-  tier: DemandTierKey;
-  startedAt: number;
-  expiresAt: number;
-}
-
-let cached: StoredState | null | undefined;
-
-const read = (): StoredState | null => {
-  if (typeof window === "undefined") return null;
-  if (cached !== undefined) return cached;
-  try {
-    const raw = localStorage.getItem(KEY);
-    cached = raw ? (JSON.parse(raw) as StoredState) : null;
-  } catch {
-    cached = null;
-  }
-  return cached;
-};
-
-const write = (s: StoredState | null) => {
-  cached = s;
-  if (typeof window === "undefined") return;
-  if (s) localStorage.setItem(KEY, JSON.stringify(s));
-  else localStorage.removeItem(KEY);
-  window.dispatchEvent(new CustomEvent(EVT));
-};
-
-if (typeof window !== "undefined") {
-  window.addEventListener("storage", (e) => {
-    if (e.key === KEY) cached = undefined;
-  });
-}
-
-export const subscribe = (cb: () => void) => {
-  const handler = () => cb();
-  window.addEventListener(EVT, handler);
-  window.addEventListener("storage", handler);
-  // Re-evaluate periodically in case it expires
-  const interval = window.setInterval(handler, 60_000);
-  return () => {
-    window.removeEventListener(EVT, handler);
-    window.removeEventListener("storage", handler);
-    window.clearInterval(interval);
-  };
-};
 
 export interface DemandSubscriptionState {
   status: DemandStatus;
   tier: DemandTierKey | null;
+  /** epoch ms — giữ nguyên kiểu số của bản cũ để UI không phải đổi. */
   startedAt: number | null;
   expiresAt: number | null;
   daysRemaining: number;
 }
 
-let cachedSnapshot: DemandSubscriptionState | null = null;
+export const NOT_SUBSCRIBED: DemandSubscriptionState = {
+  status: "NOT_SUBSCRIBED",
+  tier: null,
+  startedAt: null,
+  expiresAt: null,
+  daysRemaining: 0,
+};
 
-const computeSnapshot = (): DemandSubscriptionState => {
-  const s = read();
-  if (!s) return { status: "NOT_SUBSCRIBED", tier: null, startedAt: null, expiresAt: null, daysRemaining: 0 };
-  const now = Date.now();
-  if (s.expiresAt < now) {
-    return { status: "EXPIRED", tier: s.tier, startedAt: s.startedAt, expiresAt: s.expiresAt, daysRemaining: 0 };
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+interface Row {
+  tier: string;
+  started_at: string;
+  expires_at: string;
+}
+
+/** Suy trạng thái hiển thị từ một dòng DB. Thuần — test được. */
+export const stateFromRow = (
+  row: Row | null,
+  now: number = Date.now(),
+): DemandSubscriptionState => {
+  if (!row) return NOT_SUBSCRIBED;
+  const startedAt = new Date(row.started_at).getTime();
+  const expiresAt = new Date(row.expires_at).getTime();
+  const tier = row.tier as DemandTierKey;
+  if (expiresAt < now) {
+    return { status: "EXPIRED", tier, startedAt, expiresAt, daysRemaining: 0 };
   }
   return {
     status: "ACTIVE",
-    tier: s.tier,
-    startedAt: s.startedAt,
-    expiresAt: s.expiresAt,
-    daysRemaining: Math.max(1, Math.ceil((s.expiresAt - now) / (24 * 60 * 60 * 1000))),
+    tier,
+    startedAt,
+    expiresAt,
+    // Math.max(1, …) để gói còn vài giờ vẫn hiện "1 ngày" thay vì "0 ngày".
+    daysRemaining: Math.max(1, Math.ceil((expiresAt - now) / DAY_MS)),
   };
 };
 
-const snapshotsEqual = (a: DemandSubscriptionState, b: DemandSubscriptionState) =>
-  a.status === b.status &&
-  a.tier === b.tier &&
-  a.startedAt === b.startedAt &&
-  a.expiresAt === b.expiresAt &&
-  a.daysRemaining === b.daysRemaining;
-
-export const getDemandSubscription = (): DemandSubscriptionState => {
-  const next = computeSnapshot();
-  if (cachedSnapshot && snapshotsEqual(cachedSnapshot, next)) return cachedSnapshot;
-  cachedSnapshot = next;
-  return cachedSnapshot;
+export const fetchDemandSubscription = async (
+  userId: string,
+): Promise<DemandSubscriptionState> => {
+  const { data, error } = await supabase
+    .from("user_demand_subscriptions")
+    .select("tier, started_at, expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return stateFromRow((data as Row | null) ?? null);
 };
-
-export const getState = getDemandSubscription;
-
-// Invalidate cached snapshot whenever underlying state may have changed
-const invalidateSnapshot = () => {
-  cachedSnapshot = null;
-};
-if (typeof window !== "undefined") {
-  window.addEventListener(EVT, invalidateSnapshot);
-  window.addEventListener("storage", invalidateSnapshot);
-}
-
-import { supabase } from "@/integrations/supabase/client";
-import { fetchCreditState } from "./credits";
 
 export const subscribeDemand = async (
-  tierKey: DemandTierKey
+  userId: string,
+  tierKey: DemandTierKey,
 ): Promise<{ ok: boolean; reason?: "insufficient" | "invalid" }> => {
   const tier = DEMAND_TIERS.find((t) => t.key === tierKey);
   if (!tier) return { ok: false, reason: "invalid" };
-
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
   if (!userId) return { ok: false, reason: "insufficient" };
 
   const state = await fetchCreditState(userId);
   if (state.balance < tier.cost) return { ok: false, reason: "insufficient" };
 
-  // Deduct credits via DB (addCredits with negative amount acts as deduction)
-  const { data } = await supabase.from("user_credits").select("balance").eq("user_id", userId).single();
-  const current = data?.balance ?? 0;
+  // Ghi GÓI TRƯỚC, trừ credit SAU. Ngược lại thì nếu bước ghi gói lỗi, user đã
+  // mất credit mà không có gói — đúng lỗi mà đợt này đi sửa. Ghi gói trước, nếu
+  // trừ credit lỗi thì user được gói "miễn phí": thiệt cho mình nhưng không mất
+  // tiền của khách, và ledger vẫn khớp vì chưa ghi gì.
+  const current = await supabase
+    .from("user_demand_subscriptions")
+    .select("started_at, expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const now = Date.now();
+  const prevExpires = current.data ? new Date(current.data.expires_at).getTime() : 0;
+  // Gia hạn thì CỘNG DỒN từ hạn cũ, không reset — cùng quy ước stacking của
+  // unlockCompany/unlockOwner.
+  const base = prevExpires > now ? prevExpires : now;
+  const startedAt =
+    current.data && prevExpires > now ? current.data.started_at : new Date(now).toISOString();
+
+  const { error: subErr } = await supabase.from("user_demand_subscriptions").upsert(
+    {
+      user_id: userId,
+      tier: tierKey,
+      started_at: startedAt,
+      expires_at: new Date(base + tier.days * DAY_MS).toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+  if (subErr) throw subErr;
+
+  const { data: bal } = await supabase
+    .from("user_credits")
+    .select("balance")
+    .eq("user_id", userId)
+    .single();
+  const balance = bal?.balance ?? 0;
   await Promise.all([
-    supabase.from("user_credits").update({ balance: current - tier.cost, updated_at: new Date().toISOString() }).eq("user_id", userId),
+    supabase
+      .from("user_credits")
+      .update({ balance: balance - tier.cost, updated_at: new Date().toISOString() })
+      .eq("user_id", userId),
+    // Ledger append-only: mỗi lần trừ là một dòng mới.
     supabase.from("credit_transactions").insert({
       user_id: userId,
       type: "subscribe_demand",
@@ -166,18 +166,10 @@ export const subscribeDemand = async (
     }),
   ]);
 
-  // Subscription state stays in localStorage (TODO: move to DB in a follow-up task)
-  const currentSub = read();
-  const now = Date.now();
-  const base = currentSub && currentSub.expiresAt > now ? currentSub.expiresAt : now;
-  const startedAt = currentSub && currentSub.expiresAt > now ? currentSub.startedAt : now;
-  write({
-    tier: tierKey,
-    startedAt,
-    expiresAt: base + tier.days * 24 * 60 * 60 * 1000,
-  });
-
   return { ok: true };
 };
 
-export const cancelDemandSubscription = () => write(null);
+export const cancelDemandSubscription = async (userId: string): Promise<void> => {
+  const { error } = await supabase.from("user_demand_subscriptions").delete().eq("user_id", userId);
+  if (error) throw error;
+};

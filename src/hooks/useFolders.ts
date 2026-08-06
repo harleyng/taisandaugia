@@ -1,169 +1,207 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import type { Folder } from '@/types/document'
-import {
-  listFolders,
-  saveFolders,
-  seedDefaultFolders,
-  upsertFolder,
-} from '@/lib/documents/storage'
+import { qk } from '@/lib/queryKeys'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
+import * as repo from '@/lib/documents/supabase-repo'
 
+/**
+ * Cây thư mục của tủ tài liệu.
+ *
+ * Trước đây đọc/ghi localStorage nên đồng bộ. Nay đi Supabase (bảng
+ * org_document_folders): các hàm ghi thành async, nhưng GIỮ NGUYÊN tên và thứ tự
+ * tham số để hai component đang dùng (DocumentCabinetPage, DocumentsTabInModule)
+ * không phải đổi. Không call site nào dùng giá trị trả về, nên gọi không await
+ * vẫn đúng; ai cần chờ thì await được.
+ */
 export function useFolders() {
-  const [folders, setFolders] = useState<Folder[]>(() => {
-    seedDefaultFolders()
-    return listFolders()
+  const { organizationId } = usePortalOrg()
+  const qc = useQueryClient()
+  const queryKey = qk.orgDocuments.folders(organizationId)
+
+  const { data: allFolders = [], isLoading } = useQuery({
+    queryKey,
+    enabled: !!organizationId,
+    // CỐ Ý KHÔNG seed trong queryFn: tổ chức mới phải thấy OnboardingView
+    // (danh sách rỗng) rồi tự bấm bắt đầu. Seed tự động ở đây sẽ khiến màn
+    // onboarding không bao giờ xuất hiện.
+    queryFn: () => repo.listFolders(organizationId!),
   })
 
-  const reload = useCallback(() => setFolders(listFolders()), [])
+  const reload = useCallback(() => {
+    qc.invalidateQueries({ queryKey })
+  }, [qc, queryKey])
 
-  useEffect(() => {
-    reload()
-  }, [reload])
+  // ── Đọc dẫn xuất (thuần, logic không đổi so với bản cũ) ────────────────────
+
+  const folders = allFolders.filter((f) => !f.deletedAt)
 
   const rootFolders = folders
-    .filter((f) => f.parentId === null && !f.deletedAt)
+    .filter((f) => f.parentId === null)
     .sort((a, b) => a.order - b.order)
 
   const getChildren = useCallback(
     (parentId: string) =>
-      folders
+      allFolders
         .filter((f) => f.parentId === parentId && !f.deletedAt)
         .sort((a, b) => a.order - b.order),
-    [folders],
+    [allFolders],
   )
 
   const getFolderPath = useCallback(
     (folderId: string): Folder[] => {
       const path: Folder[] = []
-      let current = folders.find((f) => f.id === folderId)
+      let current = allFolders.find((f) => f.id === folderId)
       while (current) {
         path.unshift(current)
-        current = current.parentId
-          ? folders.find((f) => f.id === current!.parentId)
-          : undefined
+        const parentId = current.parentId
+        current = parentId ? allFolders.find((f) => f.id === parentId) : undefined
       }
       return path
     },
-    [folders],
+    [allFolders],
   )
 
   const getDepth = useCallback(
     (folderId: string): number => {
       let depth = 0
-      let current = folders.find((f) => f.id === folderId)
+      let current = allFolders.find((f) => f.id === folderId)
       while (current?.parentId) {
+        const parentId = current.parentId
+        current = allFolders.find((f) => f.id === parentId)
         depth++
-        current = folders.find((f) => f.id === current!.parentId)
       }
       return depth
     },
-    [folders],
+    [allFolders],
   )
 
   const hasDuplicateName = useCallback(
-    (name: string, parentId: string | null, excludeId?: string): boolean => {
-      return folders.some(
+    (name: string, parentId: string | null, excludeId?: string): boolean =>
+      allFolders.some(
         (f) =>
           f.parentId === parentId &&
           !f.deletedAt &&
           f.name.toLowerCase() === name.toLowerCase() &&
           f.id !== excludeId,
-      )
+      ),
+    [allFolders],
+  )
+
+  // ── Ghi ────────────────────────────────────────────────────────────────────
+
+  /**
+   * Bọc lỗi một lần cho mọi thao tác ghi. Với localStorage thì ghi không bao giờ
+   * lỗi; đi mạng + RLS thì có, và im lặng nuốt lỗi sẽ khiến user tưởng đã lưu.
+   */
+  const guard = useCallback(
+    async <T,>(action: () => Promise<T>, failMsg: string): Promise<T | undefined> => {
+      if (!organizationId) {
+        toast.error('Chưa xác định được tổ chức. Vui lòng tải lại trang.')
+        return undefined
+      }
+      try {
+        const result = await action()
+        reload()
+        return result
+      } catch {
+        toast.error(failMsg)
+        return undefined
+      }
     },
-    [folders],
+    [organizationId, reload],
+  )
+
+  /** Tạo bộ thư mục mặc định — gọi từ OnboardingView. Idempotent. */
+  const seedDefaults = useCallback(
+    () => guard(() => repo.seedDefaultFolders(organizationId!), 'Không tạo được thư mục mặc định'),
+    [guard, organizationId],
   )
 
   const createFolder = useCallback(
-    (name: string, parentId: string | null): Folder => {
-      const siblings = folders.filter(
-        (f) => f.parentId === parentId && !f.deletedAt,
-      )
-      const now = new Date().toISOString()
-      const folder: Folder = {
-        id: crypto.randomUUID(),
-        name,
-        parentId,
-        order: siblings.length,
-        createdAt: now,
-        updatedAt: now,
-      }
-      upsertFolder(folder)
-      reload()
-      return folder
-    },
-    [folders, reload],
+    (name: string, parentId: string | null) =>
+      guard(
+        () =>
+          repo.upsertFolder(
+            {
+              id: crypto.randomUUID(),
+              name,
+              parentId,
+              order: allFolders.filter((f) => f.parentId === parentId && !f.deletedAt).length,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            organizationId!,
+          ),
+        'Không tạo được thư mục',
+      ),
+    [allFolders, guard, organizationId],
   )
 
   const renameFolder = useCallback(
     (id: string, name: string) => {
-      const folder = folders.find((f) => f.id === id)
-      if (!folder) return
-      upsertFolder({ ...folder, name, updatedAt: new Date().toISOString() })
-      reload()
+      const folder = allFolders.find((f) => f.id === id)
+      if (!folder) return Promise.resolve(undefined)
+      return guard(
+        () => repo.upsertFolder({ ...folder, name }, organizationId!),
+        'Không đổi được tên thư mục',
+      )
     },
-    [folders, reload],
+    [allFolders, guard, organizationId],
   )
 
   const moveFolder = useCallback(
     (id: string, newParentId: string | null) => {
-      const folder = folders.find((f) => f.id === id)
-      if (!folder) return
-      // Prevent moving into own descendant
+      const folder = allFolders.find((f) => f.id === id)
+      if (!folder) return Promise.resolve(undefined)
+
+      // Chặn kéo thư mục vào chính nhánh con của nó: sẽ tạo chu trình và
+      // getFolderPath/getDepth lặp vô hạn.
       const isDescendant = (targetId: string | null): boolean => {
         if (!targetId) return false
         if (targetId === id) return true
-        const target = folders.find((f) => f.id === targetId)
-        return isDescendant(target?.parentId ?? null)
+        return isDescendant(allFolders.find((f) => f.id === targetId)?.parentId ?? null)
       }
-      if (isDescendant(newParentId)) return
-      upsertFolder({
-        ...folder,
-        parentId: newParentId,
-        updatedAt: new Date().toISOString(),
-      })
-      reload()
+      if (isDescendant(newParentId)) {
+        toast.error('Không thể chuyển thư mục vào chính nhánh con của nó')
+        return Promise.resolve(undefined)
+      }
+
+      return guard(
+        () => repo.upsertFolder({ ...folder, parentId: newParentId }, organizationId!),
+        'Không chuyển được thư mục',
+      )
     },
-    [folders, reload],
+    [allFolders, guard, organizationId],
   )
 
   const reorderFolders = useCallback(
-    (parentId: string | null, orderedIds: string[]) => {
-      const all = listFolders()
-      orderedIds.forEach((id, i) => {
-        const idx = all.findIndex((f) => f.id === id)
-        if (idx >= 0) all[idx] = { ...all[idx], order: i, updatedAt: new Date().toISOString() }
-      })
-      saveFolders(all)
-      reload()
-    },
-    [reload],
+    // `_parentId` giữ lại cho khớp signature cũ mà call site đang truyền; thứ tự
+    // suy hoàn toàn từ orderedIds nên không cần tới nó.
+    (_parentId: string | null, orderedIds: string[]) =>
+      guard(
+        () => repo.reorderFolders(orderedIds, organizationId!),
+        'Không lưu được thứ tự thư mục',
+      ),
+    [guard, organizationId],
   )
 
   const deleteFolder = useCallback(
-    (id: string) => {
-      // Also delete all descendant folders (soft-delete via deletedAt)
-      const collectIds = (fid: string): string[] => {
-        const children = folders.filter((f) => f.parentId === fid)
-        return [fid, ...children.flatMap((c) => collectIds(c.id))]
-      }
-      const ids = collectIds(id)
-      const all = listFolders()
-      const now = new Date().toISOString()
-      const updated = all.map((f) =>
-        ids.includes(f.id) ? { ...f, deletedAt: now, updatedAt: now } : f,
-      )
-      saveFolders(updated)
-      reload()
-    },
-    [folders, reload],
+    (id: string) =>
+      guard(() => repo.softDeleteFolderTree(id, organizationId!), 'Không xoá được thư mục'),
+    [guard, organizationId],
   )
 
   return {
-    folders: folders.filter((f) => !f.deletedAt),
+    folders,
     rootFolders,
+    isLoading,
     getChildren,
     getFolderPath,
     getDepth,
     hasDuplicateName,
+    seedDefaults,
     createFolder,
     renameFolder,
     moveFolder,

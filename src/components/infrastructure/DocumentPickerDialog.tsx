@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { CheckCircle2, FolderOpen, Loader2, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { supabase } from '@/integrations/supabase/client'
-import { listDocuments, getDocument } from '@/lib/documents/storage'
+import * as docsRepo from '@/lib/documents/supabase-repo'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
 import type { DocumentListItem } from '@/types/document'
 import type { PhotoAttachment } from '@/types/infrastructure'
 
@@ -30,28 +31,24 @@ interface Props {
 }
 
 export function DocumentPickerDialog({ open, alreadyLinked, onClose, onSelect }: Props) {
+  const { organizationId } = usePortalOrg()
   const [docs, setDocs] = useState<DocWithUrl[]>([])
   const [loading, setLoading] = useState(false)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  useEffect(() => {
-    if (!open) return
-    setSelected(new Set())
-    setQuery('')
-    loadDocs()
-  }, [open])
-
-  async function loadDocs() {
+  const loadDocs = useCallback(async () => {
+    if (!organizationId) return
     setLoading(true)
-    const items = listDocuments().filter(
+    // listDocuments nay trả bản ghi ĐẦY ĐỦ (đã join versions/links), nên không
+    // cần lượt getDocument thứ hai cho từng item như bản localStorage.
+    const items = (await docsRepo.listDocuments(organizationId)).filter(
       (d) => d.mimeCategory === 'IMAGE' && !d.deletedAt,
     )
 
     const withUrls = await Promise.all(
       items.map(async (item) => {
-        const full = getDocument(item.id)
-        const storagePath = full?.storagePath ?? ''
+        const storagePath = item.storagePath
         let signedUrl: string | null = null
         if (storagePath) {
           const { data } = await supabase.storage
@@ -65,7 +62,14 @@ export function DocumentPickerDialog({ open, alreadyLinked, onClose, onSelect }:
 
     setDocs(withUrls)
     setLoading(false)
-  }
+  }, [organizationId])
+
+  useEffect(() => {
+    if (!open) return
+    setSelected(new Set())
+    setQuery('')
+    loadDocs()
+  }, [open, loadDocs])
 
   function toggle(id: string) {
     setSelected((prev) => {

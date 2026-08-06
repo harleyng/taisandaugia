@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { toast } from 'sonner'
 import type {
   AuctionRecord,
   AuctionRecordWithComputed,
@@ -8,13 +8,16 @@ import type {
 } from '@/types/auction-record'
 import { computePriceDifference, computeEnrichmentStatus, getAuctionBadgeSource } from '@/types/auction-record'
 import {
-  deleteAuctionRecord as deleteFromStorage,
   getImportSessions,
   saveImportSession,
   getLastImportSession,
 } from '@/lib/auction-history/storage'
+import type { ColumnMapping } from '@/lib/auction-history/import-parser'
+import * as repo from '@/lib/auction-history/supabase-repo'
+import { useAuctioneers } from '@/hooks/useAuctioneers'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
 import { calcAuctionHistoryScore, getTargetYear } from '@/lib/auction-history/scoring'
-import { getCapacityProfile, saveCapacityProfile } from '@/lib/applications/storage'
+import { patchCapacityProfile } from '@/lib/applications/capacity-sync'
 import type { ValidationResult } from '@/lib/auction-history/import-parser'
 import { validateRows, TEMPLATE_MAPPING } from '@/lib/auction-history/import-parser'
 
@@ -36,22 +39,6 @@ export interface ImportFlowState {
   result?: ImportSession
 }
 
-const ENRICHMENT_STORE_KEY = 'tsd:auction-enrichments'
-
-function loadEnrichments(): Record<string, Partial<AuctionRecord>> {
-  try {
-    return JSON.parse(localStorage.getItem(ENRICHMENT_STORE_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
-}
-
-function saveEnrichment(id: string, patch: Partial<AuctionRecord>): void {
-  const store = loadEnrichments()
-  store[id] = { ...store[id], ...patch }
-  localStorage.setItem(ENRICHMENT_STORE_KEY, JSON.stringify(store))
-}
-
 // Parse any date string into YYYY-MM-DD. Handles ISO, DD/MM/YYYY, and ISO with time.
 function toISODate(raw: unknown): string | undefined {
   if (!raw) return undefined
@@ -59,7 +46,7 @@ function toISODate(raw: unknown): string | undefined {
   // Already ISO date
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
   // Vietnamese DD/MM/YYYY or DD/MM/YYYY HH:MM
-  const vn = s.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/)
+  const vn = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/)
   if (vn) return `${vn[3]}-${vn[2].padStart(2, '0')}-${vn[1].padStart(2, '0')}`
   // Fallback: try Date parse
   const d = new Date(s)
@@ -68,65 +55,42 @@ function toISODate(raw: unknown): string | undefined {
 }
 
 // Map a Supabase listing row to an AuctionRecord
-function listingToRecord(listing: Record<string, unknown>, enrichments: Record<string, Partial<AuctionRecord>>): AuctionRecord {
-  const ca = (listing.custom_attributes ?? {}) as Record<string, unknown>
-  const rawDate = ca.auction_time ?? ca.auction_date
-  const auctionDate = toISODate(rawDate) ?? toISODate(listing.created_at) ?? new Date().toISOString().slice(0, 10)
-  const enrichment = enrichments[listing.id as string] ?? {}
-  const hasEnrichment = Object.keys(enrichment).length > 0
 
-  return {
-    id: listing.id as string,
-    orgId: 'default',
-    source: hasEnrichment ? 'CRAWLED_USER_ENRICHED' : 'CRAWLED',
-    auctionDate,
-    auctionNumber: ca.auction_number as string | undefined,
-    assetDescription: (listing.title as string | null) ?? '',
-    assetCategory: 'OTHER',
-    assetLocation: ca.auction_location as string | undefined,
-    legalStatus: (listing.legal_status ?? ca.legal_status) as string | undefined,
-    ownerName: (ca.asset_owner_name as string | undefined) ?? '',
-    startingPrice: (listing.price as number | null) ?? 0,
-    winningPrice: enrichment.winningPrice ?? (ca.winning_price ?? ca.win_price) as number | undefined,
-    isSuccessful: enrichment.isSuccessful ?? (listing.status === 'SOLD_RENTED' ? true : undefined),
-    failureReason: enrichment.failureReason,
-    assetResults: enrichment.assetResults,
-    auctionFormat: enrichment.auctionFormat ?? (ca.auction_format as AuctionRecord['auctionFormat'] | undefined),
-    biddingMethod: enrichment.biddingMethod ?? (ca.bidding_method as AuctionRecord['biddingMethod'] | undefined),
-    auctioneer: enrichment.auctioneer,
-    bidStep: enrichment.bidStep ?? ((ca.bid_step ?? ca.step_price) as number | undefined),
-    maxRounds: enrichment.maxRounds ?? (ca.max_rounds as number | undefined),
-    actualRounds: enrichment.actualRounds ?? (ca.actual_rounds as number | undefined),
-    numberOfParticipants: enrichment.numberOfParticipants ?? (ca.number_of_participants as number | undefined),
-    depositPercentage: enrichment.depositPercentage ?? (ca.deposit_percentage as number | undefined),
-    contractNumber: enrichment.contractNumber,
-    internalNotes: enrichment.internalNotes,
-    fieldSources: { auctionDate: 'PUBLIC', assetDescription: 'PUBLIC', ownerName: 'PUBLIC', startingPrice: 'PUBLIC' },
-    overrides: [],
-    attachedDocuments: [],
-    isVerifiedByUser: false,
-    isDisputed: false,
-    crawledAt: listing.created_at as string,
-    crawledFromUrl: (ca.source_urls as string[] | undefined)?.[0],
-    importedAt: enrichment.importedAt,
-    importBatchId: enrichment.importBatchId,
-    createdAt: listing.created_at as string,
-    updatedAt: enrichment.updatedAt ?? listing.updated_at as string,
-  }
-}
-
-function syncCapacityProfile(records: AuctionRecord[]): void {
+async function syncCapacityProfile(
+  records: AuctionRecord[],
+  organizationId: string,
+): Promise<void> {
   const score = calcAuctionHistoryScore(records)
-  const existing = getCapacityProfile()
-  saveCapacityProfile({
-    ...existing,
-    scoreIV1to4: score.total,
-    auctionsCompleted: records.filter((r) => r.isSuccessful === true).length,
-    auctionsMissingPrice: records.filter((r) => r.winningPrice === undefined && r.isSuccessful !== false).length,
-  })
+  await patchCapacityProfile(
+    organizationId,
+    {
+      scoreIV1to4: score.total,
+      auctionsCompleted: records.filter((r) => r.isSuccessful === true).length,
+      auctionsMissingPrice: records.filter(
+        (r) => r.winningPrice === undefined && r.isSuccessful !== false,
+      ).length,
+    },
+    'scoreIV1to4',
+  )
 }
 
 export function useAuctionHistory() {
+  const { organizationId, auctionOrgId } = usePortalOrg()
+  const { auctioneers } = useAuctioneers()
+
+  // Người điều hành lưu bằng FK; UI vẫn thao tác theo tên như trước.
+  const auctioneerNameById = useMemo(
+    () => new Map(auctioneers.map((a) => [a.id, a.fullName])),
+    [auctioneers],
+  )
+  const writeCtx = useMemo(
+    () => ({
+      organizationId: organizationId!,
+      auctionOrgId,
+      auctioneerIdByName: new Map(auctioneers.map((a) => [a.fullName.trim(), a.id])),
+    }),
+    [organizationId, auctionOrgId, auctioneers],
+  )
   const [isLoading, setIsLoading] = useState(true)
   const [records, setRecords] = useState<AuctionRecord[]>([])
   const [rawListings, setRawListings] = useState<Record<string, Record<string, unknown>>>({})
@@ -147,39 +111,19 @@ export function useAuctionHistory() {
     async function load() {
       setIsLoading(true)
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user?.id) { setIsLoading(false); return }
+        if (!organizationId) { setRecords([]); setRawListings({}); setIsLoading(false); return }
 
-        // Get the user's organization via owner_id (same pattern as CompanyTab)
-        const { data: orgRows } = await supabase
-          .from('organizations')
-          .select('license_info')
-          .eq('owner_id', session.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-        const org = orgRows?.[0] ?? null
-
-        const auctionOrgId = (org?.license_info as Record<string, unknown> | null)?.auction_org_id as string | undefined
-        if (!auctionOrgId) { setIsLoading(false); return }
-
-        // 3. Fetch all listings for this auction org
-        const { data: listings } = await supabase
-          .from('listings')
-          .select('id, title, description, price, status, area, legal_status, asset_owner_id, custom_attributes, created_at, updated_at, auction_org_id')
-          .eq('auction_org_id', auctionOrgId)
-          .in('status', ['ACTIVE', 'SOLD_RENTED', 'INACTIVE'])
-          .order('created_at', { ascending: false })
-
+        const rows = await repo.listByOrg(organizationId)
         if (cancelled) return
-        const enrichments = loadEnrichments()
-        const rawMap: Record<string, Record<string, unknown>> = {}
-        const mapped = (listings ?? []).map((l) => {
-          rawMap[l.id as string] = l as Record<string, unknown>
-          return listingToRecord(l as Record<string, unknown>, enrichments)
-        })
-        setRawListings(rawMap)
+
+        const mapped = rows.map((r) =>
+          repo.rowToRecord(r, r.auctioneer_id ? auctioneerNameById.get(r.auctioneer_id) : undefined),
+        )
         setRecords(mapped)
-        syncCapacityProfile(mapped)
+        void syncCapacityProfile(mapped, organizationId!)
+
+        // custom_attributes chỉ có với bản ghi sinh từ tin rao; việc cũ thì không.
+        setRawListings(await repo.fetchLinkedListings(rows))
       } catch {
         // silently fail — show empty state
       } finally {
@@ -188,7 +132,7 @@ export function useAuctionHistory() {
     }
     void load()
     return () => { cancelled = true }
-  }, [])
+  }, [organizationId, auctioneerNameById])
 
   const enriched = useMemo((): AuctionRecordWithComputed[] => {
     return records.map((r) => ({
@@ -203,38 +147,27 @@ export function useAuctionHistory() {
   const targetYear = useMemo(() => getTargetYear(), [])
 
   const updateRecord = useCallback((record: AuctionRecord) => {
-    // Persist only enrichment fields in localStorage
-    const enrichmentFields: (keyof AuctionRecord)[] = [
-      'winningPrice', 'isSuccessful', 'failureReason', 'auctionFormat', 'biddingMethod',
-      'bidStep', 'maxRounds', 'actualRounds', 'numberOfParticipants',
-      'depositPercentage', 'contractNumber', 'auctioneer', 'internalNotes', 'updatedAt',
-      'assetResults',
-    ]
-    const patch: Partial<AuctionRecord> = {}
-    for (const k of enrichmentFields) {
-      if ((record as Record<string, unknown>)[k] !== undefined) {
-        ;(patch as Record<string, unknown>)[k] = (record as Record<string, unknown>)[k]
-      }
-    }
-    saveEnrichment(record.id, patch)
+    if (!organizationId) return
     setRecords((prev) => {
       const idx = prev.findIndex((r) => r.id === record.id)
-      if (idx < 0) return prev
-      const updated = [...prev]
-      updated[idx] = record
-      syncCapacityProfile(updated)
+      const updated = idx < 0 ? [...prev, record] : prev.map((r, i) => (i === idx ? record : r))
+      void syncCapacityProfile(updated, organizationId!)
       return updated
     })
-  }, [])
+    // Ghi nền: UI đã cập nhật lạc quan, lỗi mạng thì báo và nạp lại.
+    void repo.upsertRecord(record, writeCtx).catch(() => {
+      toast.error('Lưu cuộc đấu giá thất bại. Tải lại trang để xem dữ liệu mới nhất.')
+    })
+  }, [organizationId, writeCtx])
 
   const removeRecord = useCallback((id: string) => {
-    deleteFromStorage(id)
     setRecords((prev) => {
       const updated = prev.filter((r) => r.id !== id)
-      syncCapacityProfile(updated)
+      void syncCapacityProfile(updated, organizationId!)
       return updated
     })
-  }, [])
+    void repo.deleteRecord(id).catch(() => toast.error('Xoá cuộc đấu giá thất bại.'))
+  }, [organizationId])
 
   const openImport = useCallback(() => {
     setImportFlow({ step: 'upload', headers: [], rawRows: [], mapping: {}, duplicateStrategy: 'SKIP', progress: 0 })
@@ -319,7 +252,6 @@ export function useAuctionHistory() {
               updatedAt: now,
             }
           }
-          saveEnrichment(target.id, patch)
           updated[matchIdx] = {
             ...target,
             ...patch,
@@ -335,7 +267,13 @@ export function useAuctionHistory() {
       }
 
       setRecords(updated)
-      syncCapacityProfile(updated)
+      void syncCapacityProfile(updated, organizationId!)
+      // Ghi cả lô lên Supabase; trước đây chỉ nằm ở localStorage máy đang dùng.
+      try {
+        await repo.upsertMany(updated, writeCtx)
+      } catch {
+        toast.error('Nhập dữ liệu lên hệ thống thất bại. Vui lòng thử lại.')
+      }
 
       const session: ImportSession = {
         id: crypto.randomUUID(),
@@ -353,7 +291,7 @@ export function useAuctionHistory() {
       setLastImport(session)
       setImportFlow((prev) => ({ ...prev, step: 'done', result: session }))
     },
-    [importFlow, records],
+    [importFlow, organizationId, records, writeCtx],
   )
 
   return {

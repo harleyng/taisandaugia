@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import type {
   Document,
   DocumentFilter,
@@ -9,16 +11,9 @@ import type {
   ViewMode,
 } from '@/types/document'
 import { DEFAULT_FILTER, STORAGE_LIMIT_BYTES } from '@/types/document'
-import {
-  getAllTags,
-  getDocument as lsGetDocument,
-  getUsedBytes,
-  hardDeleteDocument as lsHardDelete,
-  listDocuments,
-  restoreDocument as lsRestore,
-  saveDocument,
-  softDeleteDocument as lsSoftDelete,
-} from '@/lib/documents/storage'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
+import { qk } from '@/lib/queryKeys'
+import * as repo from '@/lib/documents/supabase-repo'
 import {
   deleteDocumentAllVersions,
   downloadAsZip,
@@ -26,7 +21,6 @@ import {
   getSignedUrl,
   uploadFile,
 } from '@/lib/documents/supabase-storage'
-import { buildStoragePath } from '@/lib/documents/supabase-storage'
 
 function mimeCategory(file: File): MimeCategory {
   if (file.type === 'application/pdf') return 'PDF'
@@ -41,10 +35,10 @@ function mimeCategory(file: File): MimeCategory {
   return 'OTHER'
 }
 
-function applyFilter(
-  items: DocumentListItem[],
-  filter: DocumentFilter,
-): DocumentListItem[] {
+// Nhận Document[] chứ không còn DocumentListItem[]: truy vấn mới trả về bản ghi
+// ĐẦY ĐỦ (đã join versions + links), và Document là siêu tập của DocumentListItem
+// nên mọi trường hàm này đọc vẫn còn nguyên.
+function applyFilter(items: Document[], filter: DocumentFilter): Document[] {
   let result = items
 
   if (!filter.showTrashed) result = result.filter((d) => !d.deletedAt)
@@ -85,19 +79,62 @@ function applyFilter(
 }
 
 export function useDocuments() {
-  const [allDocuments, setAllDocuments] = useState<DocumentListItem[]>(() =>
-    listDocuments(),
-  )
+  // Đường dẫn Storage nay bắt buộc bắt đầu bằng organization_id — policy của
+  // bucket gate theo segment đó (migration 20260806000030). Prefix 'default'
+  // hardcode trước đây bị TỪ CHỐI.
+  const { organizationId } = usePortalOrg()
+
+  const qc = useQueryClient()
+  const queryKey = qk.orgDocuments.list(organizationId)
+
+  const { data: allDocuments = [], isLoading } = useQuery({
+    queryKey,
+    enabled: !!organizationId,
+    queryFn: () => repo.listDocuments(organizationId!),
+  })
+
   const [filter, setFilterState] = useState<DocumentFilter>(DEFAULT_FILTER)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [uploadSession, setUploadSession] = useState<UploadSession | null>(null)
-  const [usedBytes, setUsedBytes] = useState(() => getUsedBytes())
 
   const reload = useCallback(() => {
-    setAllDocuments(listDocuments())
-    setUsedBytes(getUsedBytes())
-  }, [])
+    qc.invalidateQueries({ queryKey })
+  }, [qc, queryKey])
+
+  // Dung lượng đã dùng suy từ danh sách, không còn là state riêng — trước đây
+  // hai nguồn này lệch nhau được (usedBytes chỉ cập nhật khi gọi reload()).
+  const usedBytes = useMemo(
+    () => allDocuments.filter((d) => !d.deletedAt).reduce((sum, d) => sum + d.sizeBytes, 0),
+    [allDocuments],
+  )
+
+  const getAllTags = useCallback(
+    () => Array.from(new Set(allDocuments.flatMap((d) => d.tags))).sort(),
+    [allDocuments],
+  )
+
+  /**
+   * Bọc lỗi cho mọi thao tác ghi. localStorage không bao giờ lỗi; đi mạng + RLS
+   * thì có, và nuốt lỗi im lặng sẽ khiến user tưởng đã lưu.
+   */
+  const guard = useCallback(
+    async (action: () => Promise<unknown>, failMsg: string): Promise<boolean> => {
+      if (!organizationId) {
+        toast.error('Chưa xác định được tổ chức. Vui lòng tải lại trang.')
+        return false
+      }
+      try {
+        await action()
+        reload()
+        return true
+      } catch {
+        toast.error(failMsg)
+        return false
+      }
+    },
+    [organizationId, reload],
+  )
 
   const documents = useMemo(
     () => applyFilter(allDocuments, filter),
@@ -127,39 +164,29 @@ export function useDocuments() {
 
   // ── CRUD ───────────────────────────────────────────────────────────────────
 
+  // Vẫn ĐỒNG BỘ: truy vấn đã nạp bản ghi đầy đủ nên chỉ cần tra cứu tại chỗ.
+  // Nhờ vậy mọi consumer giữ nguyên, không phải đổi sang await.
   const getDocument = useCallback(
-    (id: string): Document | null => lsGetDocument(id),
-    [],
+    (id: string): Document | null => allDocuments.find((d) => d.id === id) ?? null,
+    [allDocuments],
   )
 
   const renameDocument = useCallback(
-    (id: string, displayName: string) => {
-      const doc = lsGetDocument(id)
-      if (!doc) return
-      saveDocument({ ...doc, displayName, updatedAt: new Date().toISOString() })
-      reload()
-    },
-    [reload],
+    (id: string, displayName: string) =>
+      guard(() => repo.patchDocument(id, { displayName }), 'Không đổi được tên tài liệu'),
+    [guard],
   )
 
   const moveDocument = useCallback(
-    (id: string, folderId: string | null) => {
-      const doc = lsGetDocument(id)
-      if (!doc) return
-      saveDocument({ ...doc, folderId, updatedAt: new Date().toISOString() })
-      reload()
-    },
-    [reload],
+    (id: string, folderId: string | null) =>
+      guard(() => repo.patchDocument(id, { folderId }), 'Không chuyển được tài liệu'),
+    [guard],
   )
 
   const starDocument = useCallback(
-    (id: string, starred: boolean) => {
-      const doc = lsGetDocument(id)
-      if (!doc) return
-      saveDocument({ ...doc, isStarred: starred, updatedAt: new Date().toISOString() })
-      reload()
-    },
-    [reload],
+    (id: string, starred: boolean) =>
+      guard(() => repo.patchDocument(id, { isStarred: starred }), 'Không đổi được trạng thái sao'),
+    [guard],
   )
 
   const updateMetadata = useCallback(
@@ -169,43 +196,49 @@ export function useDocuments() {
         Pick<Document, 'description' | 'tags' | 'linkedEntities' | 'expiryDate'>
       >,
     ) => {
-      const doc = lsGetDocument(id)
-      if (!doc) return
-      saveDocument({ ...doc, ...patch, updatedAt: new Date().toISOString() })
-      reload()
+      // linkedEntities nằm ở bảng riêng nên tách khỏi patch cột vô hướng.
+      const { linkedEntities, ...scalar } = patch
+      return guard(async () => {
+        if (Object.keys(scalar).length > 0) await repo.patchDocument(id, scalar)
+        if (linkedEntities) await repo.replaceLinks(id, linkedEntities)
+      }, 'Không lưu được thông tin tài liệu')
     },
-    [reload],
+    [guard],
   )
 
   const softDeleteDocument = useCallback(
-    (id: string) => {
-      lsSoftDelete(id)
-      reload()
-    },
-    [reload],
+    (id: string) => guard(() => repo.softDeleteDocuments([id]), 'Không xoá được tài liệu'),
+    [guard],
   )
 
   const restoreDocument = useCallback(
-    (id: string) => {
-      lsRestore(id)
-      reload()
-    },
-    [reload],
+    (id: string) => guard(() => repo.restoreDocument(id), 'Không phục hồi được tài liệu'),
+    [guard],
   )
 
   const hardDeleteDocument = useCallback(
-    async (id: string) => {
-      await deleteDocumentAllVersions(id)
-      lsHardDelete(id)
-      reload()
-    },
-    [reload],
+    (id: string) =>
+      guard(async () => {
+        // Xoá FILE trước, bản ghi sau. Ngược lại thì nếu bước xoá file lỗi ta sẽ
+        // mất luôn đường dẫn ⇒ file mồ côi vĩnh viễn trên Storage, vẫn tính tiền
+        // mà không ai tìm lại được. Đây đúng là lỗi mà đợt này đang đi sửa.
+        await deleteDocumentAllVersions(organizationId!, id)
+        await repo.hardDeleteDocument(id)
+      }, 'Không xoá vĩnh viễn được tài liệu'),
+    [guard, organizationId],
   )
 
   // ── Upload ─────────────────────────────────────────────────────────────────
 
   const startUpload = useCallback(
     (files: File[], targetFolderId: string | null) => {
+      // Chặn sớm thay vì để `organizationId!` dựng đường dẫn "null/..." rồi bị
+      // policy của bucket từ chối với lỗi khó hiểu. organizationId còn null khi
+      // usePortalOrg đang tải, hoặc khi user chưa thuộc tổ chức nào.
+      if (!organizationId) {
+        toast.error('Chưa xác định được tổ chức. Vui lòng tải lại trang.')
+        return
+      }
       const session: UploadSession = {
         id: crypto.randomUUID(),
         files: files.map((f) => ({
@@ -233,7 +266,7 @@ export function useDocuments() {
           }
         })
 
-        uploadFile(docId, 1, uf.file, (pct) => {
+        uploadFile(organizationId, docId, 1, uf.file, (pct) => {
           setUploadSession((prev) => {
             if (!prev) return prev
             return {
@@ -282,8 +315,10 @@ export function useDocuments() {
             createdAt: now,
             updatedAt: now,
           }
-          saveDocument(doc)
-          reload()
+          repo
+            .saveDocument(doc, organizationId)
+            .then(() => reload())
+            .catch(() => toast.error(`Đã tải lên "${uf.file.name}" nhưng không lưu được thông tin`))
 
           setUploadSession((prev) => {
             if (!prev) return prev
@@ -299,7 +334,7 @@ export function useDocuments() {
         })
       })
     },
-    [reload],
+    [organizationId, reload],
   )
 
   const clearUploadSession = useCallback(
@@ -309,74 +344,81 @@ export function useDocuments() {
 
   // ── Download & preview ─────────────────────────────────────────────────────
 
-  const downloadDocument = useCallback(async (id: string) => {
-    const doc = lsGetDocument(id)
-    if (!doc) return
-    await downloadFile(doc.storagePath, doc.originalFilename)
-  }, [])
+  const downloadDocument = useCallback(
+    async (id: string) => {
+      const doc = getDocument(id)
+      if (!doc) return
+      await downloadFile(doc.storagePath, doc.originalFilename)
+    },
+    [getDocument],
+  )
 
   const getPreviewUrl = useCallback(
     async (id: string): Promise<string | null> => {
-      const doc = lsGetDocument(id)
+      const doc = getDocument(id)
       if (!doc) return null
       const { url } = await getSignedUrl(doc.storagePath)
       return url
     },
-    [],
+    [getDocument],
   )
 
   // ── Bulk ──────────────────────────────────────────────────────────────────
 
   const bulkMove = useCallback(
-    (ids: string[], folderId: string | null) => {
-      ids.forEach((id) => {
-        const doc = lsGetDocument(id)
-        if (doc)
-          saveDocument({ ...doc, folderId, updatedAt: new Date().toISOString() })
-      })
-      reload()
-      clearSelection()
+    async (ids: string[], folderId: string | null) => {
+      const ok = await guard(
+        () => Promise.all(ids.map((id) => repo.patchDocument(id, { folderId }))),
+        'Không chuyển được tài liệu',
+      )
+      if (ok) clearSelection()
     },
-    [reload, clearSelection],
+    [guard, clearSelection],
   )
 
   const bulkTag = useCallback(
-    (ids: string[], tags: string[]) => {
-      ids.forEach((id) => {
-        const doc = lsGetDocument(id)
-        if (doc) {
-          const merged = Array.from(new Set([...doc.tags, ...tags]))
-          saveDocument({ ...doc, tags: merged, updatedAt: new Date().toISOString() })
-        }
-      })
-      reload()
-    },
-    [reload],
+    (ids: string[], tags: string[]) =>
+      guard(
+        () =>
+          Promise.all(
+            ids.map((id) => {
+              const doc = allDocuments.find((d) => d.id === id)
+              if (!doc) return Promise.resolve()
+              // GỘP tag, không ghi đè — giữ đúng hành vi bản cũ.
+              return repo.patchDocument(id, {
+                tags: Array.from(new Set([...doc.tags, ...tags])),
+              })
+            }),
+          ),
+        'Không gắn được thẻ',
+      ),
+    [allDocuments, guard],
   )
 
   const bulkSoftDelete = useCallback(
-    (ids: string[]) => {
-      ids.forEach((id) => lsSoftDelete(id))
-      reload()
-      clearSelection()
+    async (ids: string[]) => {
+      // Một lượt UPDATE ... IN (...) thay vì N lượt như bản localStorage.
+      const ok = await guard(() => repo.softDeleteDocuments(ids), 'Không xoá được tài liệu')
+      if (ok) clearSelection()
     },
-    [reload, clearSelection],
+    [guard, clearSelection],
   )
 
   const bulkDownload = useCallback(
     async (ids: string[]) => {
       const files = ids
-        .map((id) => lsGetDocument(id))
-        .filter(Boolean)
-        .map((doc) => ({ path: doc!.storagePath, filename: doc!.originalFilename }))
+        .map((id) => getDocument(id))
+        .filter((d): d is Document => d !== null)
+        .map((doc) => ({ path: doc.storagePath, filename: doc.originalFilename }))
       await downloadAsZip(files, 'tai-lieu.zip')
     },
-    [],
+    [getDocument],
   )
 
   return {
     documents,
     allDocuments,
+    isLoading,
     filter,
     viewMode,
     selectedIds,

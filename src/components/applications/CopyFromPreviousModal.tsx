@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Application, AuctionPlan } from '@/types/application'
-import { listApplications, getApplication } from '@/lib/applications/storage'
+import { getApplication } from '@/lib/applications/supabase-repo'
+import { useApplicationsList } from '@/hooks/useApplicationsList'
 import { ASSET_CATEGORY_LABELS } from '@/lib/applications/labels'
 import { ClipboardCopy, FileText } from 'lucide-react'
 
@@ -22,13 +23,14 @@ export function CopyFromPreviousModal({
   currentCategory,
   onCopyPlan,
 }: Props) {
-  const list = useMemo(() => {
-    return listApplications()
-      .filter((a) => a.id !== currentId)
-  }, [currentId])
+  const { applications } = useApplicationsList()
+  const list = useMemo(
+    () => applications.filter((a) => a.id !== currentId),
+    [applications, currentId],
+  )
 
-  function handleCopy(id: string) {
-    const app = getApplication(id)
+  async function handleCopy(id: string) {
+    const app = await getApplication(id)
     if (!app) return
     const { format, receptionPlan, participantConditions, antiCollusionMeasures } = app.auctionPlan
     onCopyPlan({ format, receptionPlan, participantConditions, antiCollusionMeasures })
@@ -49,9 +51,9 @@ export function CopyFromPreviousModal({
         ) : (
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {list.map((item) => {
-              const full = getApplication(item.id)
-              const category = full?.announcement.assetCategory ?? ''
-              const isSameCategory = category === currentCategory
+              // Lấy từ list item, KHÔNG nạp cả hồ sơ: xem chú thích ở
+              // ApplicationListItem.assetCategory.
+              const isSameCategory = item.assetCategory === currentCategory
               return (
                 <div
                   key={item.id}
@@ -61,9 +63,9 @@ export function CopyFromPreviousModal({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.title}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      {category && (
+                      {item.assetCategory && (
                         <Badge variant="outline" className="text-[10px]">
-                          {ASSET_CATEGORY_LABELS[category] ?? category}
+                          {ASSET_CATEGORY_LABELS[item.assetCategory] ?? item.assetCategory}
                         </Badge>
                       )}
                       {isSameCategory && (

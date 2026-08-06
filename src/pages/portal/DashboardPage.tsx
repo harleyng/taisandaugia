@@ -2,11 +2,13 @@ import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useCapacityProfile } from '@/hooks/useCapacityProfile'
-import { listApplications } from '@/lib/applications/storage'
+import { useOrgCpd } from '@/hooks/useOrgCpd'
+import { useApplicationsList } from '@/hooks/useApplicationsList'
 import { cn } from '@/lib/utils'
 import {
   ArrowRight,
   FileText,
+  GraduationCap,
   Plus,
   TrendingUp,
   XCircle,
@@ -27,7 +29,10 @@ function relativeTime(iso: string): string {
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { profile } = useCapacityProfile()
-  const applications = listApplications()
+  const cpdYear = new Date().getFullYear()
+  const { summary: cpdSummary } = useOrgCpd(cpdYear)
+  const cpdPending = cpdSummary.short + cpdSummary.overdue
+  const { applications } = useApplicationsList()
   const draftApps = applications.filter((a) => a.status === 'DRAFT')
 
   const scorePercent = Math.round((profile.totalCapacityScore / 76) * 100)
@@ -72,6 +77,30 @@ export default function DashboardPage() {
             onClick={() => navigate('/portal/nang-luc/thong-tin-chung')}
           >
             Khai báo ngay <ArrowRight className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+
+      {/* Bồi dưỡng bắt buộc: rủi ro tuân thủ, đứng ngay sau Mục I */}
+      {cpdPending > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/5 p-4">
+          <GraduationCap className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-warning">
+              {cpdPending} đấu giá viên chưa hoàn thành nghĩa vụ bồi dưỡng năm {cpdYear}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Tối thiểu 8 giờ/năm theo Thông tư 19/2024/TT-BTP. Hạn nộp giấy tờ cho
+              Sở Tư pháp là 15/12 hằng năm.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs shrink-0 gap-1"
+            onClick={() => navigate('/portal/boi-duong')}
+          >
+            Mở sổ bồi dưỡng <ArrowRight className="h-3 w-3" />
           </Button>
         </div>
       )}

@@ -1,113 +1,152 @@
-import { useState, useCallback, useMemo } from 'react'
-import { loadGeneralInfo, saveGeneralInfo } from '@/lib/general-info/storage'
-import { calcYearsOfOperation, calcMucIV5, calcCompletionPercentage } from '@/lib/general-info/scoring'
-import type { OrgGeneralInfo, Branch, BankAccount } from '@/types/general-info'
-import { getCapacityProfile, saveCapacityProfile } from '@/lib/applications/storage'
+import { useCallback, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import {
+  calcCompletionPercentage,
+  calcMucIV5,
+  calcYearsOfOperation,
+} from '@/lib/general-info/scoring'
+import type { BankAccount, Branch, OrgGeneralInfo } from '@/types/general-info'
+import * as repo from '@/lib/general-info/supabase-repo'
+import { patchCapacityProfile } from '@/lib/applications/capacity-sync'
+import { qk } from '@/lib/queryKeys'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
 
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 10)
-}
-
+/**
+ * Thông tin chung của tổ chức (mục I + IV.5 của bộ tiêu chí năng lực).
+ *
+ * Chuyển từ localStorage sang org_general_info + org_bank_accounts + org_branches.
+ * Chi nhánh và tài khoản ngân hàng nay là BẢNG RIÊNG, nên các hàm add/update/remove
+ * ghi thẳng vào bảng con thay vì sửa mảng lồng rồi lưu lại cả object — nhờ vậy hai
+ * người cùng sửa hai chi nhánh khác nhau không ghi đè lẫn nhau.
+ */
 export function useGeneralInfo() {
-  const [generalInfo, setGeneralInfo] = useState<OrgGeneralInfo | null>(() => loadGeneralInfo())
+  const { organizationId } = usePortalOrg()
+  const qc = useQueryClient()
+  const queryKey = qk.orgGeneralInfo(organizationId)
+
+  const { data: generalInfo = null, isLoading } = useQuery({
+    queryKey,
+    enabled: !!organizationId,
+    queryFn: () => repo.getGeneralInfo(organizationId!),
+  })
 
   const yearsOfOperation = useMemo(() => {
     if (!generalInfo?.foundedDate) return null
     return calcYearsOfOperation(generalInfo.foundedDate)
   }, [generalInfo?.foundedDate])
 
-  const mucIV5Score = useMemo(() => {
-    if (!yearsOfOperation) return 0
-    return calcMucIV5(yearsOfOperation.years)
-  }, [yearsOfOperation])
+  const mucIV5Score = useMemo(
+    () => (yearsOfOperation ? calcMucIV5(yearsOfOperation.years) : 0),
+    [yearsOfOperation],
+  )
 
-  const completionPercentage = useMemo(() => {
-    if (!generalInfo) return 0
-    return calcCompletionPercentage(generalInfo)
-  }, [generalInfo])
+  const completionPercentage = useMemo(
+    () => (generalInfo ? calcCompletionPercentage(generalInfo) : 0),
+    [generalInfo],
+  )
 
-  const save = useCallback((info: Omit<OrgGeneralInfo, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }) => {
-    const now = new Date().toISOString()
-    const existing = loadGeneralInfo()
-    const updated: OrgGeneralInfo = {
-      ...info,
-      id: info.id ?? existing?.id ?? generateId(),
-      createdAt: info.createdAt ?? existing?.createdAt ?? now,
-      updatedAt: now,
-      bankAccounts: info.bankAccounts ?? existing?.bankAccounts ?? [],
-      branches: info.branches ?? existing?.branches ?? [],
-    }
-    saveGeneralInfo(updated)
-    setGeneralInfo(updated)
-    if (updated.foundedDate) {
-      const yrs = calcYearsOfOperation(updated.foundedDate)
-      const iv5 = calcMucIV5(yrs.years)
-      const profile = getCapacityProfile()
-      saveCapacityProfile({
-        ...profile,
-        scoreIV5: iv5,
-        yearsActive: yrs.years,
-        totalCapacityScore: profile.totalCapacityScore - profile.scoreIV5 + iv5,
-      })
-    }
-  }, [])
+  const guard = useCallback(
+    async (action: () => Promise<unknown>, failMsg: string) => {
+      if (!organizationId) {
+        toast.error('Chưa xác định được tổ chức. Vui lòng tải lại trang.')
+        return
+      }
+      try {
+        await action()
+        qc.invalidateQueries({ queryKey })
+      } catch {
+        toast.error(failMsg)
+      }
+    },
+    [organizationId, qc, queryKey],
+  )
 
-  const addBranch = useCallback((branch: Omit<Branch, 'id'>) => {
-    setGeneralInfo((prev) => {
-      if (!prev) return prev
-      const updated = { ...prev, branches: [...prev.branches, { ...branch, id: generateId() }], updatedAt: new Date().toISOString() }
-      saveGeneralInfo(updated)
-      return updated
-    })
-  }, [])
+  const save = useCallback(
+    (
+      info: Omit<OrgGeneralInfo, 'id' | 'createdAt' | 'updatedAt'> & {
+        id?: string
+        createdAt?: string
+      },
+    ) =>
+      guard(async () => {
+        const now = new Date().toISOString()
+        const full: OrgGeneralInfo = {
+          ...info,
+          // id/createdAt do DB quản; giá trị ở đây chỉ để thoả kiểu.
+          id: info.id ?? '',
+          createdAt: info.createdAt ?? now,
+          updatedAt: now,
+          bankAccounts: info.bankAccounts ?? [],
+          branches: info.branches ?? [],
+        }
+        await repo.saveGeneralInfo(full, organizationId!)
 
-  const updateBranch = useCallback((branch: Branch) => {
-    setGeneralInfo((prev) => {
-      if (!prev) return prev
-      const updated = { ...prev, branches: prev.branches.map((b) => (b.id === branch.id ? branch : b)), updatedAt: new Date().toISOString() }
-      saveGeneralInfo(updated)
-      return updated
-    })
-  }, [])
+        // Cập nhật điểm IV.5 (số năm hoạt động) + mục I trong hồ sơ năng lực.
+        if (full.foundedDate) {
+          const yrs = calcYearsOfOperation(full.foundedDate)
+          await patchCapacityProfile(
+            organizationId!,
+            {
+              onMinistryList: full.isListedInMOJDirectory,
+              companyName: full.name || undefined,
+              scoreIV5: calcMucIV5(yrs.years),
+              yearsActive: yrs.years,
+            },
+            'scoreIV5',
+          )
+          qc.invalidateQueries({ queryKey: qk.orgCapacityProfile(organizationId) })
+        }
+      }, 'Không lưu được thông tin chung'),
+    [guard, organizationId, qc],
+  )
 
-  const removeBranch = useCallback((id: string) => {
-    setGeneralInfo((prev) => {
-      if (!prev) return prev
-      const updated = { ...prev, branches: prev.branches.filter((b) => b.id !== id), updatedAt: new Date().toISOString() }
-      saveGeneralInfo(updated)
-      return updated
-    })
-  }, [])
+  // ── Chi nhánh ──────────────────────────────────────────────────────────────
 
-  const addBankAccount = useCallback((account: Omit<BankAccount, 'id'>) => {
-    setGeneralInfo((prev) => {
-      if (!prev) return prev
-      const updated = { ...prev, bankAccounts: [...prev.bankAccounts, { ...account, id: generateId() }], updatedAt: new Date().toISOString() }
-      saveGeneralInfo(updated)
-      return updated
-    })
-  }, [])
+  const addBranch = useCallback(
+    (branch: Omit<Branch, 'id'>) =>
+      guard(() => repo.addBranch(branch, organizationId!), 'Không thêm được chi nhánh'),
+    [guard, organizationId],
+  )
 
-  const updateBankAccount = useCallback((account: BankAccount) => {
-    setGeneralInfo((prev) => {
-      if (!prev) return prev
-      const updated = { ...prev, bankAccounts: prev.bankAccounts.map((a) => (a.id === account.id ? account : a)), updatedAt: new Date().toISOString() }
-      saveGeneralInfo(updated)
-      return updated
-    })
-  }, [])
+  const updateBranch = useCallback(
+    (branch: Branch) => guard(() => repo.updateBranch(branch), 'Không cập nhật được chi nhánh'),
+    [guard],
+  )
 
-  const removeBankAccount = useCallback((id: string) => {
-    setGeneralInfo((prev) => {
-      if (!prev) return prev
-      const updated = { ...prev, bankAccounts: prev.bankAccounts.filter((a) => a.id !== id), updatedAt: new Date().toISOString() }
-      saveGeneralInfo(updated)
-      return updated
-    })
-  }, [])
+  const removeBranch = useCallback(
+    (id: string) => guard(() => repo.removeBranch(id), 'Không xoá được chi nhánh'),
+    [guard],
+  )
+
+  // ── Tài khoản ngân hàng ────────────────────────────────────────────────────
+
+  const addBankAccount = useCallback(
+    (account: Omit<BankAccount, 'id'>) =>
+      guard(
+        () => repo.addBankAccount(account, organizationId!),
+        'Không thêm được tài khoản ngân hàng',
+      ),
+    [guard, organizationId],
+  )
+
+  const updateBankAccount = useCallback(
+    (account: BankAccount) =>
+      guard(
+        () => repo.updateBankAccount(account, organizationId!),
+        'Không cập nhật được tài khoản ngân hàng',
+      ),
+    [guard, organizationId],
+  )
+
+  const removeBankAccount = useCallback(
+    (id: string) => guard(() => repo.removeBankAccount(id), 'Không xoá được tài khoản ngân hàng'),
+    [guard],
+  )
 
   return {
     generalInfo,
+    isLoading,
     yearsOfOperation,
     mucIV5Score,
     completionPercentage,

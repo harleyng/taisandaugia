@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   graphql_public: {
     Tables: {
@@ -714,12 +714,14 @@ export type Database = {
       }
       asset_owner_org_kyc: {
         Row: {
+          aliases: string[]
           authorization_doc_url: string | null
           created_at: string
           created_by: string
           email_domain: string | null
           establishment_doc_url: string | null
           id: string
+          linked_asset_owner_id: string | null
           linked_auction_org_id: string | null
           official_email: string | null
           org_name: string | null
@@ -743,12 +745,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aliases?: string[]
           authorization_doc_url?: string | null
           created_at?: string
           created_by: string
           email_domain?: string | null
           establishment_doc_url?: string | null
           id?: string
+          linked_asset_owner_id?: string | null
           linked_auction_org_id?: string | null
           official_email?: string | null
           org_name?: string | null
@@ -772,12 +776,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aliases?: string[]
           authorization_doc_url?: string | null
           created_at?: string
           created_by?: string
           email_domain?: string | null
           establishment_doc_url?: string | null
           id?: string
+          linked_asset_owner_id?: string | null
           linked_auction_org_id?: string | null
           official_email?: string | null
           org_name?: string | null
@@ -806,6 +812,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_org_kyc_linked_asset_owner_id_fkey"
+            columns: ["linked_asset_owner_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owners"
             referencedColumns: ["id"]
           },
           {
@@ -881,23 +894,59 @@ export type Database = {
       asset_owners: {
         Row: {
           address: string | null
+          aliases: string[]
           created_at: string
+          group_id: string | null
           id: string
           name: string
+          name_tokens: string[] | null
+          normalized_name: string | null
+          owner_kind: string | null
+          parent_owner_id: string | null
+          parent_source: string | null
         }
         Insert: {
           address?: string | null
+          aliases?: string[]
           created_at?: string
+          group_id?: string | null
           id?: string
           name: string
+          name_tokens?: string[] | null
+          normalized_name?: string | null
+          owner_kind?: string | null
+          parent_owner_id?: string | null
+          parent_source?: string | null
         }
         Update: {
           address?: string | null
+          aliases?: string[]
           created_at?: string
+          group_id?: string | null
           id?: string
           name?: string
+          name_tokens?: string[] | null
+          normalized_name?: string | null
+          owner_kind?: string | null
+          parent_owner_id?: string | null
+          parent_source?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "asset_owners_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_unit_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owners_parent_owner_id_fkey"
+            columns: ["parent_owner_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       asset_postings: {
         Row: {
@@ -1073,10 +1122,15 @@ export type Database = {
           address: string | null
           created_at: string
           email: string | null
+          group_id: string | null
           id: string
           logo_url: string | null
           name: string
+          name_tokens: string[] | null
+          normalized_name: string | null
           org_type: number | null
+          parent_org_id: string | null
+          parent_source: string | null
           phone: string | null
           province: string | null
           tax_code: string | null
@@ -1085,10 +1139,15 @@ export type Database = {
           address?: string | null
           created_at?: string
           email?: string | null
+          group_id?: string | null
           id?: string
           logo_url?: string | null
           name: string
+          name_tokens?: string[] | null
+          normalized_name?: string | null
           org_type?: number | null
+          parent_org_id?: string | null
+          parent_source?: string | null
           phone?: string | null
           province?: string | null
           tax_code?: string | null
@@ -1097,15 +1156,35 @@ export type Database = {
           address?: string | null
           created_at?: string
           email?: string | null
+          group_id?: string | null
           id?: string
           logo_url?: string | null
           name?: string
+          name_tokens?: string[] | null
+          normalized_name?: string | null
           org_type?: number | null
+          parent_org_id?: string | null
+          parent_source?: string | null
           phone?: string | null
           province?: string | null
           tax_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "auction_organizations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_unit_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_organizations_parent_org_id_fkey"
+            columns: ["parent_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       auction_tool_providers: {
         Row: {
@@ -1384,6 +1463,149 @@ export type Database = {
         }
         Relationships: []
       }
+      cpd_activity_roles: {
+        Row: {
+          activity_type_id: string
+          code: string
+          created_at: string
+          credit_mode: string
+          description: string | null
+          fixed_hours: number | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          activity_type_id: string
+          code: string
+          created_at?: string
+          credit_mode?: string
+          description?: string | null
+          fixed_hours?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          activity_type_id?: string
+          code?: string
+          created_at?: string
+          credit_mode?: string
+          description?: string | null
+          fixed_hours?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cpd_activity_roles_activity_type_id_fkey"
+            columns: ["activity_type_id"]
+            isOneToOne: false
+            referencedRelation: "cpd_activity_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cpd_activity_types: {
+        Row: {
+          code: string
+          created_at: string
+          credit_mode: string
+          description: string | null
+          evidence_hint: string | null
+          fixed_hours: number | null
+          has_roles: boolean
+          id: string
+          is_active: boolean
+          legal_basis: string | null
+          name: string
+          org_label: string
+          sort_order: number
+          title_label: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          credit_mode?: string
+          description?: string | null
+          evidence_hint?: string | null
+          fixed_hours?: number | null
+          has_roles?: boolean
+          id?: string
+          is_active?: boolean
+          legal_basis?: string | null
+          name: string
+          org_label?: string
+          sort_order?: number
+          title_label?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          credit_mode?: string
+          description?: string | null
+          evidence_hint?: string | null
+          fixed_hours?: number | null
+          has_roles?: boolean
+          id?: string
+          is_active?: boolean
+          legal_basis?: string | null
+          name?: string
+          org_label?: string
+          sort_order?: number
+          title_label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cpd_exemption_reasons: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          legal_basis: string | null
+          name: string
+          requires_evidence: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          legal_basis?: string | null
+          name: string
+          requires_evidence?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          legal_basis?: string | null
+          name?: string
+          requires_evidence?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount_vnd: number | null
@@ -1448,6 +1670,8 @@ export type Database = {
           name: string
           note: string | null
           phone: string | null
+          prospect_id: string | null
+          prospect_kind: string | null
           segment: string
           source_lead_id: string | null
           status: string
@@ -1467,6 +1691,8 @@ export type Database = {
           name: string
           note?: string | null
           phone?: string | null
+          prospect_id?: string | null
+          prospect_kind?: string | null
           segment?: string
           source_lead_id?: string | null
           status?: string
@@ -1486,6 +1712,8 @@ export type Database = {
           name?: string
           note?: string | null
           phone?: string | null
+          prospect_id?: string | null
+          prospect_kind?: string | null
           segment?: string
           source_lead_id?: string | null
           status?: string
@@ -1519,6 +1747,8 @@ export type Database = {
           name: string
           note: string | null
           phone: string | null
+          prospect_id: string | null
+          prospect_kind: string | null
           province: string | null
           source: string
           status: string
@@ -1540,6 +1770,8 @@ export type Database = {
           name: string
           note?: string | null
           phone?: string | null
+          prospect_id?: string | null
+          prospect_kind?: string | null
           province?: string | null
           source?: string
           status?: string
@@ -1561,6 +1793,8 @@ export type Database = {
           name?: string
           note?: string | null
           phone?: string | null
+          prospect_id?: string | null
+          prospect_kind?: string | null
           province?: string | null
           source?: string
           status?: string
@@ -2222,11 +2456,1676 @@ export type Database = {
           },
         ]
       }
+      org_application_criteria: {
+        Row: {
+          application_id: string
+          attached_doc_ids: string[]
+          auto_match_items: string[]
+          auto_match_matched: boolean | null
+          criterion_key: string
+          evidence: string
+          id: string
+          label: string
+          max_points: number
+          meets: boolean | null
+          nature: string
+          nature_auto_detected: boolean
+          sort_order: number
+        }
+        Insert: {
+          application_id: string
+          attached_doc_ids?: string[]
+          auto_match_items?: string[]
+          auto_match_matched?: boolean | null
+          criterion_key: string
+          evidence?: string
+          id?: string
+          label?: string
+          max_points?: number
+          meets?: boolean | null
+          nature?: string
+          nature_auto_detected?: boolean
+          sort_order?: number
+        }
+        Update: {
+          application_id?: string
+          attached_doc_ids?: string[]
+          auto_match_items?: string[]
+          auto_match_matched?: boolean | null
+          criterion_key?: string
+          evidence?: string
+          id?: string
+          label?: string
+          max_points?: number
+          meets?: boolean | null
+          nature?: string
+          nature_auto_detected?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_application_criteria_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "org_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_application_exports: {
+        Row: {
+          application_id: string
+          exported_at: string
+          id: string
+          name: string
+          url: string
+        }
+        Insert: {
+          application_id: string
+          exported_at?: string
+          id?: string
+          name?: string
+          url: string
+        }
+        Update: {
+          application_id?: string
+          exported_at?: string
+          id?: string
+          name?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_application_exports_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "org_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_applications: {
+        Row: {
+          ann_asset_category: string | null
+          ann_asset_description: string
+          ann_asset_location: string
+          ann_date: string | null
+          ann_deadline: string | null
+          ann_number: string | null
+          ann_owner_name: string
+          ann_province: string
+          ann_starting_price: number | null
+          ann_url: string | null
+          cap_score_i: number
+          cap_score_ii: number
+          cap_score_iv_1_to_4: number
+          cap_score_iv_5: number
+          cap_score_iv_6_to_8: number
+          cap_score_iv_9: number
+          cap_snapshot_at: string | null
+          cap_total_score: number
+          cap_warnings: string[]
+          created_at: string
+          export_format: string | null
+          id: string
+          name: string | null
+          organization_id: string
+          plan_anti_collusion_measures: string
+          plan_format: string
+          plan_participant_conditions: string
+          plan_reception_plan: string
+          plan_score: number
+          section_v_score: number
+          status: string
+          total_score: number
+          updated_at: string
+        }
+        Insert: {
+          ann_asset_category?: string | null
+          ann_asset_description?: string
+          ann_asset_location?: string
+          ann_date?: string | null
+          ann_deadline?: string | null
+          ann_number?: string | null
+          ann_owner_name?: string
+          ann_province?: string
+          ann_starting_price?: number | null
+          ann_url?: string | null
+          cap_score_i?: number
+          cap_score_ii?: number
+          cap_score_iv_1_to_4?: number
+          cap_score_iv_5?: number
+          cap_score_iv_6_to_8?: number
+          cap_score_iv_9?: number
+          cap_snapshot_at?: string | null
+          cap_total_score?: number
+          cap_warnings?: string[]
+          created_at?: string
+          export_format?: string | null
+          id?: string
+          name?: string | null
+          organization_id: string
+          plan_anti_collusion_measures?: string
+          plan_format?: string
+          plan_participant_conditions?: string
+          plan_reception_plan?: string
+          plan_score?: number
+          section_v_score?: number
+          status?: string
+          total_score?: number
+          updated_at?: string
+        }
+        Update: {
+          ann_asset_category?: string | null
+          ann_asset_description?: string
+          ann_asset_location?: string
+          ann_date?: string | null
+          ann_deadline?: string | null
+          ann_number?: string | null
+          ann_owner_name?: string
+          ann_province?: string
+          ann_starting_price?: number | null
+          ann_url?: string | null
+          cap_score_i?: number
+          cap_score_ii?: number
+          cap_score_iv_1_to_4?: number
+          cap_score_iv_5?: number
+          cap_score_iv_6_to_8?: number
+          cap_score_iv_9?: number
+          cap_snapshot_at?: string | null
+          cap_total_score?: number
+          cap_warnings?: string[]
+          created_at?: string
+          export_format?: string | null
+          id?: string
+          name?: string | null
+          organization_id?: string
+          plan_anti_collusion_measures?: string
+          plan_format?: string
+          plan_participant_conditions?: string
+          plan_reception_plan?: string
+          plan_score?: number
+          section_v_score?: number
+          status?: string
+          total_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_auction_records: {
+        Row: {
+          asset_category: string
+          asset_description: string
+          asset_location: string | null
+          auction_date: string
+          auction_number: string | null
+          auction_org_id: string | null
+          auctioneer_id: string | null
+          contract_number: string | null
+          contract_signed_date: string | null
+          created_at: string
+          details: Json
+          failure_reason: string | null
+          id: string
+          internal_notes: string | null
+          is_successful: boolean | null
+          listing_id: string | null
+          number_of_bids: number | null
+          number_of_participants: number | null
+          organization_id: string
+          owner_name: string | null
+          source: string
+          starting_price: number | null
+          updated_at: string
+          winning_price: number | null
+        }
+        Insert: {
+          asset_category?: string
+          asset_description: string
+          asset_location?: string | null
+          auction_date: string
+          auction_number?: string | null
+          auction_org_id?: string | null
+          auctioneer_id?: string | null
+          contract_number?: string | null
+          contract_signed_date?: string | null
+          created_at?: string
+          details?: Json
+          failure_reason?: string | null
+          id?: string
+          internal_notes?: string | null
+          is_successful?: boolean | null
+          listing_id?: string | null
+          number_of_bids?: number | null
+          number_of_participants?: number | null
+          organization_id: string
+          owner_name?: string | null
+          source?: string
+          starting_price?: number | null
+          updated_at?: string
+          winning_price?: number | null
+        }
+        Update: {
+          asset_category?: string
+          asset_description?: string
+          asset_location?: string | null
+          auction_date?: string
+          auction_number?: string | null
+          auction_org_id?: string | null
+          auctioneer_id?: string | null
+          contract_number?: string | null
+          contract_signed_date?: string | null
+          created_at?: string
+          details?: Json
+          failure_reason?: string | null
+          id?: string
+          internal_notes?: string | null
+          is_successful?: boolean | null
+          listing_id?: string | null
+          number_of_bids?: number | null
+          number_of_participants?: number | null
+          organization_id?: string
+          owner_name?: string | null
+          source?: string
+          starting_price?: number | null
+          updated_at?: string
+          winning_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_auction_records_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auction_records_auctioneer_id_fkey"
+            columns: ["auctioneer_id"]
+            isOneToOne: false
+            referencedRelation: "org_auctioneers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auction_records_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auction_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_auctioneer_cpd_exemptions: {
+        Row: {
+          attachments: string[]
+          auctioneer_id: string
+          created_at: string
+          filed_at: string | null
+          id: string
+          note: string | null
+          organization_id: string
+          reason: string | null
+          reason_id: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          attachments?: string[]
+          auctioneer_id: string
+          created_at?: string
+          filed_at?: string | null
+          id?: string
+          note?: string | null
+          organization_id: string
+          reason?: string | null
+          reason_id?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          attachments?: string[]
+          auctioneer_id?: string
+          created_at?: string
+          filed_at?: string | null
+          id?: string
+          note?: string | null
+          organization_id?: string
+          reason?: string | null
+          reason_id?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_auctioneer_cpd_exemptions_auctioneer_id_fkey"
+            columns: ["auctioneer_id"]
+            isOneToOne: false
+            referencedRelation: "org_auctioneers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auctioneer_cpd_exemptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auctioneer_cpd_exemptions_reason_id_fkey"
+            columns: ["reason_id"]
+            isOneToOne: false
+            referencedRelation: "cpd_exemption_reasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_auctioneer_documents: {
+        Row: {
+          auctioneer_id: string
+          created_at: string
+          doc_number: string | null
+          doc_type: string
+          expiry_date: string | null
+          file_paths: string[]
+          id: string
+          issued_date: string | null
+          issuer: string | null
+          notes: string | null
+          organization_id: string
+          sort_order: number
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          auctioneer_id: string
+          created_at?: string
+          doc_number?: string | null
+          doc_type: string
+          expiry_date?: string | null
+          file_paths?: string[]
+          id?: string
+          issued_date?: string | null
+          issuer?: string | null
+          notes?: string | null
+          organization_id: string
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auctioneer_id?: string
+          created_at?: string
+          doc_number?: string | null
+          doc_type?: string
+          expiry_date?: string | null
+          file_paths?: string[]
+          id?: string
+          issued_date?: string | null
+          issuer?: string | null
+          notes?: string | null
+          organization_id?: string
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_auctioneer_documents_auctioneer_id_fkey"
+            columns: ["auctioneer_id"]
+            isOneToOne: false
+            referencedRelation: "org_auctioneers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auctioneer_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_auctioneer_events: {
+        Row: {
+          amount: number | null
+          attachments: string[]
+          auctioneer_id: string
+          cpd_activity_role_id: string | null
+          cpd_activity_type_id: string | null
+          cpd_kind: string | null
+          cpd_year: number | null
+          created_at: string
+          ended_on: string | null
+          event_type: string
+          hours: number | null
+          id: string
+          is_accredited_provider: boolean
+          is_state_auction_center: boolean
+          notes: string | null
+          organization_id: string
+          organization_name: string | null
+          outcome: string | null
+          reference_no: string | null
+          role: string | null
+          sort_order: number
+          source_record_id: string | null
+          started_on: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          attachments?: string[]
+          auctioneer_id: string
+          cpd_activity_role_id?: string | null
+          cpd_activity_type_id?: string | null
+          cpd_kind?: string | null
+          cpd_year?: number | null
+          created_at?: string
+          ended_on?: string | null
+          event_type: string
+          hours?: number | null
+          id?: string
+          is_accredited_provider?: boolean
+          is_state_auction_center?: boolean
+          notes?: string | null
+          organization_id: string
+          organization_name?: string | null
+          outcome?: string | null
+          reference_no?: string | null
+          role?: string | null
+          sort_order?: number
+          source_record_id?: string | null
+          started_on?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          attachments?: string[]
+          auctioneer_id?: string
+          cpd_activity_role_id?: string | null
+          cpd_activity_type_id?: string | null
+          cpd_kind?: string | null
+          cpd_year?: number | null
+          created_at?: string
+          ended_on?: string | null
+          event_type?: string
+          hours?: number | null
+          id?: string
+          is_accredited_provider?: boolean
+          is_state_auction_center?: boolean
+          notes?: string | null
+          organization_id?: string
+          organization_name?: string | null
+          outcome?: string | null
+          reference_no?: string | null
+          role?: string | null
+          sort_order?: number
+          source_record_id?: string | null
+          started_on?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_auctioneer_events_auctioneer_id_fkey"
+            columns: ["auctioneer_id"]
+            isOneToOne: false
+            referencedRelation: "org_auctioneers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auctioneer_events_cpd_activity_role_id_fkey"
+            columns: ["cpd_activity_role_id"]
+            isOneToOne: false
+            referencedRelation: "cpd_activity_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auctioneer_events_cpd_activity_type_id_fkey"
+            columns: ["cpd_activity_type_id"]
+            isOneToOne: false
+            referencedRelation: "cpd_activity_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auctioneer_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_auctioneers: {
+        Row: {
+          alma_mater: string | null
+          attached_documents: string[]
+          auction_org_id: string | null
+          contract_type: string
+          crawled_at: string | null
+          crawled_from_url: string | null
+          created_at: string
+          date_of_birth: string | null
+          dossier_updated_at: string | null
+          education_level: string | null
+          email: string | null
+          ended_date: string | null
+          ethnicity: string | null
+          field_sources: Json
+          full_name: string
+          gender: string | null
+          hometown: string | null
+          id: string
+          id_issued_date: string | null
+          id_issued_place: string | null
+          id_number: string | null
+          id_type: string | null
+          internal_notes: string | null
+          is_active: boolean
+          is_public_profile: boolean
+          is_verified_by_public_source: boolean
+          joined_date: string
+          license_expiry_date: string | null
+          license_issued_date: string
+          license_number: string
+          major: string | null
+          management_start_date: string | null
+          nationality: string | null
+          organization_id: string
+          overrides: Json
+          permanent_address: string | null
+          phone: string | null
+          portrait_url: string | null
+          position: string
+          practice_start_date: string | null
+          professional_cert_issued_date: string | null
+          professional_cert_number: string
+          public_title: string | null
+          show_public_stats: boolean
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          alma_mater?: string | null
+          attached_documents?: string[]
+          auction_org_id?: string | null
+          contract_type?: string
+          crawled_at?: string | null
+          crawled_from_url?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          dossier_updated_at?: string | null
+          education_level?: string | null
+          email?: string | null
+          ended_date?: string | null
+          ethnicity?: string | null
+          field_sources?: Json
+          full_name: string
+          gender?: string | null
+          hometown?: string | null
+          id?: string
+          id_issued_date?: string | null
+          id_issued_place?: string | null
+          id_number?: string | null
+          id_type?: string | null
+          internal_notes?: string | null
+          is_active?: boolean
+          is_public_profile?: boolean
+          is_verified_by_public_source?: boolean
+          joined_date: string
+          license_expiry_date?: string | null
+          license_issued_date: string
+          license_number: string
+          major?: string | null
+          management_start_date?: string | null
+          nationality?: string | null
+          organization_id: string
+          overrides?: Json
+          permanent_address?: string | null
+          phone?: string | null
+          portrait_url?: string | null
+          position?: string
+          practice_start_date?: string | null
+          professional_cert_issued_date?: string | null
+          professional_cert_number?: string
+          public_title?: string | null
+          show_public_stats?: boolean
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          alma_mater?: string | null
+          attached_documents?: string[]
+          auction_org_id?: string | null
+          contract_type?: string
+          crawled_at?: string | null
+          crawled_from_url?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          dossier_updated_at?: string | null
+          education_level?: string | null
+          email?: string | null
+          ended_date?: string | null
+          ethnicity?: string | null
+          field_sources?: Json
+          full_name?: string
+          gender?: string | null
+          hometown?: string | null
+          id?: string
+          id_issued_date?: string | null
+          id_issued_place?: string | null
+          id_number?: string | null
+          id_type?: string | null
+          internal_notes?: string | null
+          is_active?: boolean
+          is_public_profile?: boolean
+          is_verified_by_public_source?: boolean
+          joined_date?: string
+          license_expiry_date?: string | null
+          license_issued_date?: string
+          license_number?: string
+          major?: string | null
+          management_start_date?: string | null
+          nationality?: string | null
+          organization_id?: string
+          overrides?: Json
+          permanent_address?: string | null
+          phone?: string | null
+          portrait_url?: string | null
+          position?: string
+          practice_start_date?: string | null
+          professional_cert_issued_date?: string | null
+          professional_cert_number?: string
+          public_title?: string | null
+          show_public_stats?: boolean
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_auctioneers_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_auctioneers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_bank_accounts: {
+        Row: {
+          account_holder: string
+          account_number: string
+          bank_name: string
+          branch: string | null
+          created_at: string
+          id: string
+          is_primary: boolean
+          organization_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          account_holder?: string
+          account_number?: string
+          bank_name?: string
+          branch?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          organization_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          account_holder?: string
+          account_number?: string
+          bank_name?: string
+          branch?: string | null
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          organization_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_bank_accounts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_branches: {
+        Row: {
+          address: string
+          created_at: string
+          district: string | null
+          email: string | null
+          established_date: string | null
+          id: string
+          is_active: boolean
+          manager_name: string | null
+          name: string
+          organization_id: string
+          phone: string | null
+          province: string
+          type: string
+          updated_at: string
+          ward: string | null
+        }
+        Insert: {
+          address?: string
+          created_at?: string
+          district?: string | null
+          email?: string | null
+          established_date?: string | null
+          id?: string
+          is_active?: boolean
+          manager_name?: string | null
+          name?: string
+          organization_id: string
+          phone?: string | null
+          province?: string
+          type?: string
+          updated_at?: string
+          ward?: string | null
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          district?: string | null
+          email?: string | null
+          established_date?: string | null
+          id?: string
+          is_active?: boolean
+          manager_name?: string | null
+          name?: string
+          organization_id?: string
+          phone?: string | null
+          province?: string
+          type?: string
+          updated_at?: string
+          ward?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_branches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_capacity_profile: {
+        Row: {
+          auctioneer_count: number
+          auctions_completed: number
+          auctions_missing_price: number
+          company_name: string | null
+          created_at: string
+          on_ministry_list: boolean
+          organization_id: string
+          score_ii: number
+          score_iv_1_to_4: number
+          score_iv_5: number
+          score_iv_6_to_8: number
+          score_iv_9: number
+          tax_paid_previous_year: number
+          total_capacity_score: number
+          updated_at: string
+          warnings: string[]
+          years_active: number
+        }
+        Insert: {
+          auctioneer_count?: number
+          auctions_completed?: number
+          auctions_missing_price?: number
+          company_name?: string | null
+          created_at?: string
+          on_ministry_list?: boolean
+          organization_id: string
+          score_ii?: number
+          score_iv_1_to_4?: number
+          score_iv_5?: number
+          score_iv_6_to_8?: number
+          score_iv_9?: number
+          tax_paid_previous_year?: number
+          total_capacity_score?: number
+          updated_at?: string
+          warnings?: string[]
+          years_active?: number
+        }
+        Update: {
+          auctioneer_count?: number
+          auctions_completed?: number
+          auctions_missing_price?: number
+          company_name?: string | null
+          created_at?: string
+          on_ministry_list?: boolean
+          organization_id?: string
+          score_ii?: number
+          score_iv_1_to_4?: number
+          score_iv_5?: number
+          score_iv_6_to_8?: number
+          score_iv_9?: number
+          tax_paid_previous_year?: number
+          total_capacity_score?: number
+          updated_at?: string
+          warnings?: string[]
+          years_active?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_capacity_profile_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_document_folders: {
+        Row: {
+          color: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          organization_id: string
+          parent_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_document_folders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_document_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "org_document_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_document_links: {
+        Row: {
+          created_at: string
+          document_id: string
+          entity_id: string
+          entity_type: string
+          id: string
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          label?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_document_links_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "org_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_document_versions: {
+        Row: {
+          document_id: string
+          id: string
+          size_bytes: number
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string | null
+          version: number
+        }
+        Insert: {
+          document_id: string
+          id?: string
+          size_bytes?: number
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version: number
+        }
+        Update: {
+          document_id?: string
+          id?: string
+          size_bytes?: number
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "org_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_documents: {
+        Row: {
+          created_at: string
+          current_version: number
+          deleted_at: string | null
+          description: string | null
+          display_name: string
+          expiry_date: string | null
+          folder_id: string | null
+          id: string
+          is_starred: boolean
+          mime_category: string
+          organization_id: string
+          original_filename: string
+          size_bytes: number
+          storage_path: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_version?: number
+          deleted_at?: string | null
+          description?: string | null
+          display_name: string
+          expiry_date?: string | null
+          folder_id?: string | null
+          id?: string
+          is_starred?: boolean
+          mime_category?: string
+          organization_id: string
+          original_filename: string
+          size_bytes?: number
+          storage_path: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_version?: number
+          deleted_at?: string | null
+          description?: string | null
+          display_name?: string
+          expiry_date?: string | null
+          folder_id?: string | null
+          id?: string
+          is_starred?: boolean
+          mime_category?: string
+          organization_id?: string
+          original_filename?: string
+          size_bytes?: number
+          storage_path?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "org_document_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_general_info: {
+        Row: {
+          address: string
+          alternative_email: string | null
+          alternative_phone: string | null
+          brand_color: string | null
+          business_license_date: string | null
+          business_license_file: string | null
+          business_license_issuer: string | null
+          business_license_number: string | null
+          created_at: string
+          district: string | null
+          email: string
+          establishment_decision_date: string | null
+          establishment_decision_file: string | null
+          establishment_decision_issuer: string | null
+          establishment_decision_number: string | null
+          fax: string | null
+          founded_date: string | null
+          id: string
+          is_listed_in_moj_directory: boolean
+          last_updated_by: string | null
+          legal_rep_id_issued_date: string | null
+          legal_rep_id_issued_place: string | null
+          legal_rep_id_number: string | null
+          legal_rep_name: string
+          legal_rep_position: string | null
+          logo_initials: string | null
+          logo_url: string | null
+          moj_listing_notes: string | null
+          name: string
+          org_type: string | null
+          organization_id: string
+          phone: string
+          province: string
+          registration_code: string | null
+          short_name: string | null
+          tax_code: string
+          updated_at: string
+          ward: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string
+          alternative_email?: string | null
+          alternative_phone?: string | null
+          brand_color?: string | null
+          business_license_date?: string | null
+          business_license_file?: string | null
+          business_license_issuer?: string | null
+          business_license_number?: string | null
+          created_at?: string
+          district?: string | null
+          email?: string
+          establishment_decision_date?: string | null
+          establishment_decision_file?: string | null
+          establishment_decision_issuer?: string | null
+          establishment_decision_number?: string | null
+          fax?: string | null
+          founded_date?: string | null
+          id?: string
+          is_listed_in_moj_directory?: boolean
+          last_updated_by?: string | null
+          legal_rep_id_issued_date?: string | null
+          legal_rep_id_issued_place?: string | null
+          legal_rep_id_number?: string | null
+          legal_rep_name?: string
+          legal_rep_position?: string | null
+          logo_initials?: string | null
+          logo_url?: string | null
+          moj_listing_notes?: string | null
+          name?: string
+          org_type?: string | null
+          organization_id: string
+          phone?: string
+          province?: string
+          registration_code?: string | null
+          short_name?: string | null
+          tax_code?: string
+          updated_at?: string
+          ward?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string
+          alternative_email?: string | null
+          alternative_phone?: string | null
+          brand_color?: string | null
+          business_license_date?: string | null
+          business_license_file?: string | null
+          business_license_issuer?: string | null
+          business_license_number?: string | null
+          created_at?: string
+          district?: string | null
+          email?: string
+          establishment_decision_date?: string | null
+          establishment_decision_file?: string | null
+          establishment_decision_issuer?: string | null
+          establishment_decision_number?: string | null
+          fax?: string | null
+          founded_date?: string | null
+          id?: string
+          is_listed_in_moj_directory?: boolean
+          last_updated_by?: string | null
+          legal_rep_id_issued_date?: string | null
+          legal_rep_id_issued_place?: string | null
+          legal_rep_id_number?: string | null
+          legal_rep_name?: string
+          legal_rep_position?: string | null
+          logo_initials?: string | null
+          logo_url?: string | null
+          moj_listing_notes?: string | null
+          name?: string
+          org_type?: string | null
+          organization_id?: string
+          phone?: string
+          province?: string
+          registration_code?: string | null
+          short_name?: string | null
+          tax_code?: string
+          updated_at?: string
+          ward?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_general_info_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_infrastructure: {
+        Row: {
+          ar_address: string | null
+          ar_area: number | null
+          ar_is_at_headquarters: boolean
+          ar_last_updated_at: string
+          ar_security_measures: string[]
+          ar_storage_type: string
+          cam_auction_can_extract_recording: boolean
+          cam_auction_can_store_with_case: boolean
+          cam_auction_has_system: boolean
+          cam_auction_is_same_as_office: boolean
+          cam_auction_last_updated_at: string
+          cam_auction_locations: string[]
+          cam_auction_technical_notes: string | null
+          cam_office_can_extract_recording: boolean
+          cam_office_can_store_with_case: boolean
+          cam_office_has_system: boolean
+          cam_office_last_updated_at: string
+          cam_office_locations: string[]
+          cam_office_technical_notes: string | null
+          completion_percentage: number
+          created_at: string
+          hq_address: string
+          hq_district: string
+          hq_email: string
+          hq_floor_count: number | null
+          hq_is_owned: boolean
+          hq_last_updated_at: string
+          hq_lease_end_date: string | null
+          hq_phone: string
+          hq_province: string
+          hq_ward: string
+          hq_working_area: number | null
+          id: string
+          oap_approval_date: string | null
+          oap_approval_document: string | null
+          oap_approval_document_number: string | null
+          oap_approved_by: string | null
+          oap_is_own_platform: boolean | null
+          oap_last_updated_at: string
+          oap_last_year_auction_count: number | null
+          oap_platform_provider: string | null
+          oap_qualification_type: string
+          oap_url: string | null
+          organization_id: string
+          rp_address: string | null
+          rp_is_at_headquarters: boolean
+          rp_last_updated_at: string
+          rp_public_notice_method: string
+          rp_working_days: string[]
+          rp_working_hours: string
+          score_ii_1_1: number
+          score_ii_1_2: number
+          score_ii_2_1: number
+          score_ii_2_2: number
+          score_ii_3: number
+          score_ii_4: number
+          score_ii_5: number
+          sections_needing_update: string[]
+          total_score: number
+          updated_at: string
+          web_has_regular_updates: boolean
+          web_is_reachable: boolean | null
+          web_last_checked: string | null
+          web_last_content_update_date: string | null
+          web_last_updated_at: string
+          web_type: string
+          web_url: string
+        }
+        Insert: {
+          ar_address?: string | null
+          ar_area?: number | null
+          ar_is_at_headquarters?: boolean
+          ar_last_updated_at?: string
+          ar_security_measures?: string[]
+          ar_storage_type?: string
+          cam_auction_can_extract_recording?: boolean
+          cam_auction_can_store_with_case?: boolean
+          cam_auction_has_system?: boolean
+          cam_auction_is_same_as_office?: boolean
+          cam_auction_last_updated_at?: string
+          cam_auction_locations?: string[]
+          cam_auction_technical_notes?: string | null
+          cam_office_can_extract_recording?: boolean
+          cam_office_can_store_with_case?: boolean
+          cam_office_has_system?: boolean
+          cam_office_last_updated_at?: string
+          cam_office_locations?: string[]
+          cam_office_technical_notes?: string | null
+          completion_percentage?: number
+          created_at?: string
+          hq_address?: string
+          hq_district?: string
+          hq_email?: string
+          hq_floor_count?: number | null
+          hq_is_owned?: boolean
+          hq_last_updated_at?: string
+          hq_lease_end_date?: string | null
+          hq_phone?: string
+          hq_province?: string
+          hq_ward?: string
+          hq_working_area?: number | null
+          id?: string
+          oap_approval_date?: string | null
+          oap_approval_document?: string | null
+          oap_approval_document_number?: string | null
+          oap_approved_by?: string | null
+          oap_is_own_platform?: boolean | null
+          oap_last_updated_at?: string
+          oap_last_year_auction_count?: number | null
+          oap_platform_provider?: string | null
+          oap_qualification_type?: string
+          oap_url?: string | null
+          organization_id: string
+          rp_address?: string | null
+          rp_is_at_headquarters?: boolean
+          rp_last_updated_at?: string
+          rp_public_notice_method?: string
+          rp_working_days?: string[]
+          rp_working_hours?: string
+          score_ii_1_1?: number
+          score_ii_1_2?: number
+          score_ii_2_1?: number
+          score_ii_2_2?: number
+          score_ii_3?: number
+          score_ii_4?: number
+          score_ii_5?: number
+          sections_needing_update?: string[]
+          total_score?: number
+          updated_at?: string
+          web_has_regular_updates?: boolean
+          web_is_reachable?: boolean | null
+          web_last_checked?: string | null
+          web_last_content_update_date?: string | null
+          web_last_updated_at?: string
+          web_type?: string
+          web_url?: string
+        }
+        Update: {
+          ar_address?: string | null
+          ar_area?: number | null
+          ar_is_at_headquarters?: boolean
+          ar_last_updated_at?: string
+          ar_security_measures?: string[]
+          ar_storage_type?: string
+          cam_auction_can_extract_recording?: boolean
+          cam_auction_can_store_with_case?: boolean
+          cam_auction_has_system?: boolean
+          cam_auction_is_same_as_office?: boolean
+          cam_auction_last_updated_at?: string
+          cam_auction_locations?: string[]
+          cam_auction_technical_notes?: string | null
+          cam_office_can_extract_recording?: boolean
+          cam_office_can_store_with_case?: boolean
+          cam_office_has_system?: boolean
+          cam_office_last_updated_at?: string
+          cam_office_locations?: string[]
+          cam_office_technical_notes?: string | null
+          completion_percentage?: number
+          created_at?: string
+          hq_address?: string
+          hq_district?: string
+          hq_email?: string
+          hq_floor_count?: number | null
+          hq_is_owned?: boolean
+          hq_last_updated_at?: string
+          hq_lease_end_date?: string | null
+          hq_phone?: string
+          hq_province?: string
+          hq_ward?: string
+          hq_working_area?: number | null
+          id?: string
+          oap_approval_date?: string | null
+          oap_approval_document?: string | null
+          oap_approval_document_number?: string | null
+          oap_approved_by?: string | null
+          oap_is_own_platform?: boolean | null
+          oap_last_updated_at?: string
+          oap_last_year_auction_count?: number | null
+          oap_platform_provider?: string | null
+          oap_qualification_type?: string
+          oap_url?: string | null
+          organization_id?: string
+          rp_address?: string | null
+          rp_is_at_headquarters?: boolean
+          rp_last_updated_at?: string
+          rp_public_notice_method?: string
+          rp_working_days?: string[]
+          rp_working_hours?: string
+          score_ii_1_1?: number
+          score_ii_1_2?: number
+          score_ii_2_1?: number
+          score_ii_2_2?: number
+          score_ii_3?: number
+          score_ii_4?: number
+          score_ii_5?: number
+          sections_needing_update?: string[]
+          total_score?: number
+          updated_at?: string
+          web_has_regular_updates?: boolean
+          web_is_reachable?: boolean | null
+          web_last_checked?: string | null
+          web_last_content_update_date?: string | null
+          web_last_updated_at?: string
+          web_type?: string
+          web_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_infrastructure_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_infrastructure_photos: {
+        Row: {
+          caption: string | null
+          document_id: string | null
+          file_name: string
+          file_size: number
+          height: number
+          id: string
+          infrastructure_id: string
+          section: string
+          sort_order: number
+          storage_path: string
+          taken_at: string | null
+          uploaded_at: string
+          width: number
+        }
+        Insert: {
+          caption?: string | null
+          document_id?: string | null
+          file_name?: string
+          file_size?: number
+          height?: number
+          id?: string
+          infrastructure_id: string
+          section: string
+          sort_order?: number
+          storage_path: string
+          taken_at?: string | null
+          uploaded_at?: string
+          width?: number
+        }
+        Update: {
+          caption?: string | null
+          document_id?: string | null
+          file_name?: string
+          file_size?: number
+          height?: number
+          id?: string
+          infrastructure_id?: string
+          section?: string
+          sort_order?: number
+          storage_path?: string
+          taken_at?: string | null
+          uploaded_at?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_infrastructure_photos_infrastructure_id_fkey"
+            columns: ["infrastructure_id"]
+            isOneToOne: false
+            referencedRelation: "org_infrastructure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_role_permissions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          module: string
+          role_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          module: string
+          role_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          module?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "org_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_roles: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_tax_record_documents: {
+        Row: {
+          created_at: string
+          doc_id: string
+          doc_type: string
+          file_name: string
+          id: string
+          tax_record_id: string
+        }
+        Insert: {
+          created_at?: string
+          doc_id: string
+          doc_type?: string
+          file_name?: string
+          id?: string
+          tax_record_id: string
+        }
+        Update: {
+          created_at?: string
+          doc_id?: string
+          doc_type?: string
+          file_name?: string
+          id?: string
+          tax_record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_tax_record_documents_tax_record_id_fkey"
+            columns: ["tax_record_id"]
+            isOneToOne: false
+            referencedRelation: "org_tax_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_tax_records: {
+        Row: {
+          amount: number
+          created_at: string
+          finalized_date: string | null
+          id: string
+          is_deleted: boolean
+          is_finalized: boolean
+          notes: string | null
+          organization_id: string
+          record_type: string
+          score_contribution: number
+          updated_at: string
+          vat_excluded: boolean
+          year: number
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          finalized_date?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_finalized?: boolean
+          notes?: string | null
+          organization_id: string
+          record_type: string
+          score_contribution?: number
+          updated_at?: string
+          vat_excluded?: boolean
+          year: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          finalized_date?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_finalized?: boolean
+          notes?: string | null
+          organization_id?: string
+          record_type?: string
+          score_contribution?: number
+          updated_at?: string
+          vat_excluded?: boolean
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_tax_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_memberships: {
         Row: {
           created_at: string
           id: string
           invite_email: string | null
+          invite_expires_at: string | null
           invite_token: string | null
           invited_by: string | null
           joined_at: string | null
@@ -2240,6 +4139,7 @@ export type Database = {
           created_at?: string
           id?: string
           invite_email?: string | null
+          invite_expires_at?: string | null
           invite_token?: string | null
           invited_by?: string | null
           joined_at?: string | null
@@ -2253,6 +4153,7 @@ export type Database = {
           created_at?: string
           id?: string
           invite_email?: string | null
+          invite_expires_at?: string | null
           invite_token?: string | null
           invited_by?: string | null
           joined_at?: string | null
@@ -2281,7 +4182,7 @@ export type Database = {
             foreignKeyName: "organization_memberships_role_id_fkey"
             columns: ["role_id"]
             isOneToOne: false
-            referencedRelation: "organization_roles"
+            referencedRelation: "org_roles"
             referencedColumns: ["id"]
           },
           {
@@ -2292,30 +4193,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      organization_roles: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          permissions: Json
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          permissions?: Json
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          permissions?: Json
-        }
-        Relationships: []
       }
       organizations: {
         Row: {
@@ -2503,6 +4380,90 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_claims: {
+        Row: {
+          claimed_at: string
+          txn_ref: string
+          unlock_param: string | null
+          user_id: string
+          variant_key: string | null
+        }
+        Insert: {
+          claimed_at?: string
+          txn_ref: string
+          unlock_param?: string | null
+          user_id: string
+          variant_key?: string | null
+        }
+        Update: {
+          claimed_at?: string
+          txn_ref?: string
+          unlock_param?: string | null
+          user_id?: string
+          variant_key?: string | null
+        }
+        Relationships: []
+      }
+      personnel_dossier_exports: {
+        Row: {
+          auctioneer_id: string | null
+          auctioneer_name: string
+          credits_charged: number
+          file_path: string | null
+          file_size_bytes: number | null
+          format: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          license_number: string | null
+          organization_id: string
+          template: string
+        }
+        Insert: {
+          auctioneer_id?: string | null
+          auctioneer_name: string
+          credits_charged?: number
+          file_path?: string | null
+          file_size_bytes?: number | null
+          format: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          license_number?: string | null
+          organization_id: string
+          template: string
+        }
+        Update: {
+          auctioneer_id?: string | null
+          auctioneer_name?: string
+          credits_charged?: number
+          file_path?: string | null
+          file_size_bytes?: number | null
+          format?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          license_number?: string | null
+          organization_id?: string
+          template?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personnel_dossier_exports_auctioneer_id_fkey"
+            columns: ["auctioneer_id"]
+            isOneToOne: false
+            referencedRelation: "org_auctioneers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personnel_dossier_exports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           activated: boolean
@@ -2589,6 +4550,36 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prospect_unit_groups: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          parent_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          name: string
+          parent_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          parent_id?: string
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []
@@ -3139,6 +5130,33 @@ export type Database = {
           },
         ]
       }
+      user_demand_subscriptions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          started_at: string
+          tier: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          started_at?: string
+          tier: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          started_at?: string
+          tier?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_owner_unlocks: {
         Row: {
           created_at: string
@@ -3294,6 +5312,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_org_invite: {
+        Args: { _confirm_email_mismatch?: boolean; _token: string }
+        Returns: Json
+      }
       admin_access_report: {
         Args: { _from: string; _granularity?: string; _to: string }
         Returns: Json
@@ -3301,6 +5323,20 @@ export type Database = {
       admin_convert_lead: {
         Args: { _customer_id?: string; _lead_id: string }
         Returns: string
+      }
+      admin_cpd_report: {
+        Args: {
+          _org_id?: string
+          _province?: string
+          _q?: string
+          _year: number
+        }
+        Returns: Json
+      }
+      admin_cpd_report_filters: { Args: never; Returns: Json }
+      admin_delete_prospect_group: {
+        Args: { p_group_id: string }
+        Returns: Json
       }
       admin_grant_credits: {
         Args: { _amount: number; _note?: string; _user_id: string }
@@ -3311,13 +5347,116 @@ export type Database = {
         Returns: boolean
       }
       admin_is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      admin_listings_report: {
+        Args: {
+          _from: string
+          _granularity?: string
+          _org_id?: string
+          _owner_id?: string
+          _parent?: string
+          _province?: string
+          _q?: string
+          _status?: string
+          _to: string
+        }
+        Returns: Json
+      }
+      admin_listings_rows: {
+        Args: {
+          _from: string
+          _limit?: number
+          _offset?: number
+          _org_id?: string
+          _owner_id?: string
+          _parent?: string
+          _province?: string
+          _q?: string
+          _status?: string
+          _to: string
+        }
+        Returns: Json
+      }
+      admin_listings_scope: {
+        Args: {
+          _from: string
+          _org_id?: string
+          _owner_id?: string
+          _parent?: string
+          _province?: string
+          _q?: string
+          _status?: string
+          _to: string
+        }
+        Returns: {
+          id: string
+        }[]
+      }
+      admin_prospect_detail: {
+        Args: { p_id: string; p_kind: string }
+        Returns: Json
+      }
+      admin_prospects: {
+        Args: {
+          p_kind?: string
+          p_limit?: number
+          p_offset?: number
+          p_province?: string
+          p_search?: string
+        }
+        Returns: {
+          address: string
+          aliases: string[]
+          branch_count: number
+          entity_type: string
+          first_seen_at: string
+          id: string
+          kind: string
+          last_seen_at: string
+          lead_id: string
+          name: string
+          onboard_status: string
+          parent_id: string
+          parent_name: string
+          posting_count: number
+          province_count: number
+          subtype: string
+          top_asset_type: string
+          top_province: string
+          total_listings: number
+          total_starting_price: number
+          workspace_id: string
+        }[]
+      }
+      admin_set_prospect_group: {
+        Args: { p_group_id?: string; p_kind: string; p_unit_ids: string[] }
+        Returns: Json
+      }
+      admin_set_prospect_parent: {
+        Args: { p_child_id: string; p_kind: string; p_parent_id?: string }
+        Returns: Json
+      }
+      admin_set_prospect_parents: {
+        Args: { p_child_ids: string[]; p_kind: string; p_parent_id?: string }
+        Returns: Json
+      }
       admin_set_role_permissions: {
         Args: { _perms: Json; _role_id: string }
         Returns: undefined
       }
+      admin_sync_prospect_leads: { Args: { p_kind?: string }; Returns: Json }
       admin_unwin_opportunity: {
         Args: { _opportunity_id: string }
         Returns: undefined
+      }
+      admin_upsert_prospect_group: {
+        Args: {
+          p_group_id?: string
+          p_kind: string
+          p_name: string
+          p_parent_id: string
+          p_sort_order?: number
+        }
+        Returns: Json
       }
       admin_win_opportunity: {
         Args: {
@@ -3329,10 +5468,38 @@ export type Database = {
         }
         Returns: Json
       }
+      asset_parent_slug: { Args: { _slug: string }; Returns: string }
+      can_access_org_capacity: { Args: { _org_id: string }; Returns: boolean }
+      can_access_org_documents: { Args: { _org_id: string }; Returns: boolean }
+      can_manage_org_auctioneers: {
+        Args: { _action: string; _org_id: string }
+        Returns: boolean
+      }
+      can_manage_org_cpd: {
+        Args: { _action: string; _org_id: string }
+        Returns: boolean
+      }
       check_email_exists: { Args: { _email: string }; Returns: boolean }
+      claim_payment_txn: {
+        Args: {
+          _txn_ref: string
+          _unlock_param?: string
+          _variant_key?: string
+        }
+        Returns: boolean
+      }
       count_campaign_audience: {
         Args: { _respect_optin?: boolean; _spec: Json }
         Returns: number
+      }
+      create_org_invite: {
+        Args: {
+          _days?: number
+          _email: string
+          _org_id: string
+          _role_id: string
+        }
+        Returns: Json
       }
       credit_fallback_service_id: { Args: never; Returns: string }
       get_listing_save_counts: {
@@ -3342,11 +5509,8 @@ export type Database = {
           save_count: number
         }[]
       }
+      get_org_invite_preview: { Args: { _token: string }; Returns: Json }
       get_user_email: { Args: { _user_id: string }; Returns: string }
-      has_org_role: {
-        Args: { _org_id: string; _role_names: string[]; _user_id: string }
-        Returns: boolean
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3354,6 +5518,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      infer_org_parents: { Args: never; Returns: Json }
       is_org_member: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
@@ -3370,6 +5535,66 @@ export type Database = {
           title: string
           url: string
           visibility: string
+        }[]
+      }
+      listing_auction_bucket: {
+        Args: { p_custom: Json; p_round_count: number; p_status: string }
+        Returns: string
+      }
+      listing_session_status: {
+        Args: {
+          _ca: Json
+          _now?: string
+          _status: Database["public"]["Enums"]["listing_status"]
+        }
+        Returns: string
+      }
+      listing_start_value: {
+        Args: {
+          _area: number
+          _price: number
+          _unit: Database["public"]["Enums"]["price_unit"]
+        }
+        Returns: number
+      }
+      normalize_org_name: { Args: { p_name: string }; Returns: string }
+      org_branch_marker: { Args: { p_name: string }; Returns: string }
+      org_check_invite_email: {
+        Args: { _email: string; _org_id: string }
+        Returns: Json
+      }
+      org_documents_path_org: { Args: { _name: string }; Returns: string }
+      org_has_permission: {
+        Args: { _action: string; _module: string; _org_id: string }
+        Returns: boolean
+      }
+      org_is_owner: { Args: { _org_id: string }; Returns: boolean }
+      org_name_similarity: {
+        Args: { p_a: string; p_b: string }
+        Returns: number
+      }
+      org_new_invite_token: { Args: never; Returns: string }
+      org_seed_default_roles: { Args: { _org_id: string }; Returns: string }
+      org_set_role_permissions: {
+        Args: { _perms: Json; _role_id: string }
+        Returns: undefined
+      }
+      org_significant_tokens: { Args: { p_name: string }; Returns: string[] }
+      personnel_folder_org: { Args: { _name: string }; Returns: string }
+      public_org_auctioneers: {
+        Args: { _auction_org_id: string }
+        Returns: {
+          full_name: string
+          id: string
+          license_issued_date: string
+          license_number: string
+          portrait_url: string
+          successful_auctions: number
+          title: string
+          top_category: string
+          total_auctions: number
+          total_winning_value: number
+          years_of_experience: number
         }[]
       }
       request_tool_service: {
@@ -3390,6 +5615,17 @@ export type Database = {
           user_id: string
         }[]
       }
+      revoke_org_invite: {
+        Args: { _membership_id: string }
+        Returns: undefined
+      }
+      rotate_org_invite: {
+        Args: { _days?: number; _membership_id: string }
+        Returns: Json
+      }
+      run_workspace_match: { Args: { p_workspace_id: string }; Returns: Json }
+      suggest_org_aliases: { Args: { p_name: string }; Returns: Json }
+      try_timestamptz: { Args: { _t: string }; Returns: string }
       unlock_tool_showcase: {
         Args: { _id: string; _password: string }
         Returns: string

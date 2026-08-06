@@ -123,6 +123,10 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /portal/nang-luc/co-so-vat-chat    CoSoVatChatPage     │
 /portal/nang-luc/lich-su-dau-gia   LichSuDauGiaPage    │
 /portal/nang-luc/tai-chinh         TaiChinhPage        ┘
+/portal/nang-luc/dau-gia-vien/:id  DauGiaVienDetailPage  (hồ sơ số hoá một người)
+/portal/nang-luc/tu-tai-lieu       TuTaiLieuPage         (có route, KHÔNG có mục nav)
+/portal/nhan-su                    HoSoNhanSuPage        (mục cấp cao; gate module 'nhan-su')
+/portal/boi-duong                  BoiDuongPage          (mục cấp cao; gate module 'boi-duong')
 /portal/ho-so-du-tuyen             ApplicationsPage
 /portal/ho-so-du-tuyen/new         ApplicationEditPage
 /portal/ho-so-du-tuyen/:id         ApplicationEditPage
@@ -162,9 +166,15 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /admin/bao-cao                  → redirect /admin/bao-cao/giao-dich
 /admin/bao-cao/doanh-thu        RevenueReportPage    ("Doanh thu": credit nạp + đơn direct; by-audience + top-variant + growth; RBAC doanh-thu)
 /admin/bao-cao/giao-dich        TransactionReportPage (Giao dịch credit: doanh thu credit + tiêu dùng)
+/admin/bao-cao/boi-duong        CpdReportPage        ("Bồi dưỡng chuyên môn": tuân thủ toàn sàn; RBAC boi-duong)
+/admin/quan-tri/boi-duong       CpdCatalogPage       ("Bồi dưỡng ĐGV": DANH MỤC cách tính; RBAC dm-boi-duong)
 
 *                          NotFound
 ```
+
+> **Hai mục "bồi dưỡng" là hai việc khác nhau, đừng gộp:** `bao-cao/boi-duong` là BÁO CÁO tuân thủ (module `boi-duong`), `quan-tri/boi-duong` là DANH MỤC định nghĩa cách tính (module `dm-boi-duong`). Mã module cố ý khác nhau.
+
+> **Danh mục bồi dưỡng = master data, đọc mở / ghi ADMIN** (`20260806000040`). `cpd_activity_types` · `cpd_activity_roles` · `cpd_exemption_reasons`, RLS `SELECT USING (true)` + `admin_all`. Đọc **KHÔNG lọc `is_active`** — cố ý khác pattern `services` (`USING (is_active = true)`): ở đây danh mục còn là TỪ ĐIỂN NHÃN cho dữ liệu lịch sử, lọc dòng đã tắt sẽ làm bản ghi cũ mất tên hình thức trên hồ sơ đã in. Lọc ở ĐIỂM CHỌN (`selectableTypes/Roles/Reasons` trong `lib/personnel/cpd-catalog.ts`). FK từ `org_auctioneer_events` là **ON DELETE RESTRICT** — muốn gỡ khỏi ô chọn thì tắt `is_active`, không xoá; hook dịch lỗi `23503` sang câu tiếng Việt chỉ đúng lối đi đó. Query key duy nhất `qk.cpdCatalog`, đọc qua `useCpdCatalog()`, ghi qua `useCpdCatalogAdmin()`.
 
 > `AdminLayout` NAV = mảng `NavSection[]` (khối có `title` in hoa + `items: NavItem[]` link phẳng), KHÔNG còn submenu collapsible. Section marketing đổi tên hiển thị **"Sale & Marketing"** (category CODE vẫn `marketing`) — gồm Email, Quảng cáo, **Dịch vụ, Đơn hàng**, Khách hàng. Báo cáo gồm **Doanh thu tổng, Giao dịch credit**, Phân tích truy cập. RBAC module code mới `dich-vu`/`don-hang`/`doanh-thu` khai báo trong `MODULE_DEFINITIONS` (`adminPermissions.ts`) — code-only, không migration.
 
@@ -228,7 +238,8 @@ npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integr
 | `profiles` | Auth-linked user rows; `invoice_info JSONB` billing |
 | `auction_organizations` | Auction-company registry (name, tax_code, province, phone, logo_url, org_type) |
 | `organizations` | KYC onboarding records (`kyc_status`, linked user) |
-| `organization_roles` | Built-in Owner / Manager / Agent |
+| `org_roles` / `org_role_permissions` | Per-org RBAC. Replaced the dropped global `organization_roles` |
+| `organization_memberships` | User ↔ org + `role_id` (the row IS the role assignment) + `PENDING_INVITE` |
 | `user_credits` | Per-user balance (PK = user_id) |
 | `credit_transactions` | Append-only ledger of every credit change |
 | `user_asset_unlocks` | **Permanent** asset unlocks |
@@ -254,6 +265,15 @@ Every credit/unlock table has one **`"own rows"`** policy: `USING (auth.uid() = 
 ### Admin RBAC — "Quản trị" module (`/admin/quan-tri/*`)
 Granular per-module admin permissions layered ON TOP of the binary `user_roles.ADMIN` gate (which still gates `/admin`). Do NOT confuse with `organization_roles` (auction-company RBAC) — these are prefixed `admin_`. Tables (`20260713000010_admin_rbac.sql`): `admin_roles` (name/`code` unique/`is_system`), `admin_role_permissions(role_id,module,action)`, `admin_role_assignments(user_id,role_id)`. **Permission catalog lives in code** — `src/lib/adminPermissions.ts` (modules grouped by nav category × actions `view/create/update/delete/approve/export`); DB stores only granted `(module,action)` rows. Effective perms = union across assigned roles, OR all-allowed if assigned the seeded `SUPER_ADMIN` `is_system` role (short-circuit by `code`). **New SECURITY-DEFINER helpers mirroring `has_role`**: `admin_has_permission(_module,_action)` + `admin_is_super_admin(_uid)` — use these in RLS/RPC for anything gated by a specific admin permission. RLS on the 3 tables: SELECT open to any ADMIN; writes gated `admin_has_permission('vai-tro',*)` (roles/perms) or `('tai-khoan','update')` (assignments); matrix replaced atomically via RPC `admin_set_role_permissions(role_id,jsonb)`; trigger `admin_roles_protect_system` blocks deleting/renaming `is_system` roles. **Frontend**: `useAdminPermissions()` (→ `{isSuperAdmin,matrix,ready}`), `useHasAdminPermission(module,action)`, and route guard `AdminPermissionRoute` (`src/components/admin/`); `AdminLayout` NAV items carry a `module` and are filtered by `view` perm. **Scope caveat:** enforcement is currently **UI + new-tables-RLS only** — the EXISTING admin modules still use the coarse ADMIN gate at the DB level; per-module DB enforcement is a follow-up. "Xóa" an admin = revoke (`useRevokeAdmin`: delete assignments + `user_roles` ADMIN), keeping the login.
 
+### Org RBAC — portal tổ chức (`/portal/to-chuc/*`)
+Per-organization RBAC, mirroring admin RBAC but with one deliberate divergence: **there is no assignment table**. `organization_memberships` already carries `role_id NOT NULL` + `UNIQUE(user_id, organization_id)`, so the membership row *is* the assignment; a third table would be a second, conflicting source of truth. Tables (`20260805000020_org_rbac.sql`): `org_roles(organization_id, name, code, is_system, UNIQUE(organization_id, code))` and `org_role_permissions(role_id, module, action)`. The legacy global `organization_roles` + `has_org_role()` were dropped in `20260805000022`.
+**Helpers** (SECURITY DEFINER, mirroring `admin_has_permission`): `org_has_permission(_org_id,_module,_action)` and `org_is_owner(_org_id)` — use these in every RLS policy / RPC, never a role-name string match. Both read memberships without RLS so they don't recurse when used in those tables' own policies (same trick as `is_org_member`).
+**Catalog in code**: `src/lib/orgPermissions.ts`. Module `tin-dang` has **no nav entry** — it exists solely to back the rewritten `listings` UPDATE/DELETE policies (`hiddenFromNav: true`).
+**Invite RPCs** (`20260805000021`, token fixed in `...23`): `org_check_invite_email` (returns 5 booleans only — not an email-enumeration oracle), `create_org_invite`, `get_org_invite_preview` (granted to **anon** — the accept page renders before login), `accept_org_invite`, `revoke_org_invite`, `rotate_org_invite`. Tokens come from `org_new_invite_token()` which uses `gen_random_uuid()` — **not `gen_random_bytes()`**, see common-pitfalls.
+**Frontend**: `useMyOrganizations()` (query hook, usable anywhere — `["my-orgs", userId]`) is split from `OrgContext` (selection state). `OrgProvider` mounts inside **`PortalLayout`, not `App.tsx`**, so the documented provider order stays untouched. `useOrgPermissions(orgId)` → `{isOwner, matrix, ready}` (fail-closed); guard `PortalPermissionRoute`; `PortalNoOrgGate` requires ≥1 ACTIVE membership to enter `/portal`. Nav items in `nav-config.ts` carry `module` and are filtered by `view` — a section whose children are all filtered out is itself removed (admin doesn't need this rule).
+`PermissionMatrixEditor` was generalized to `src/components/permissions/` and takes its catalog via props; the admin and org versions are thin adapters.
+**Scope caveat:** `nl-*` and `ho-so-du-tuyen` permissions are **UI-only** — that data still lives in localStorage, so there is nothing to enforce against. Only `thanh-vien`, `vai-tro`, `tin-dang` are RLS-backed.
+
 ### Email Marketing (admin)
 `/admin/marketing/email/*` — greenfield campaign feature. `useCampaigns.ts` mirrors `useArticles.ts` (array queryKeys `["marketing_campaigns"]`/`["marketing_campaign",id]`/`["campaign_recipients",id]`, mutations invalidate + toast; uses `(supabase as any)` because `types.ts` isn't regenerated yet — **all 4 marketing migrations ARE pushed** to live project `dvdpfjprncvkhfwcvqmp`, regen just needs a personal access token). Audience = a mode-gated jsonb `audience_spec` (criteria ∪ import ∪ specific), resolved server-side by the RPCs above; account rows are **filtered by `notifications_enabled` opt-in**, but import emails that match **no** profile are emitted as **external recipients (`user_id=NULL`) and ALWAYS sent** (opt-in can't apply — no account), so `count_campaign_audience` and the send snapshot include them (`20260712000007_campaign_audience_external_emails.sql`). **Send is stubbed** (`useSendCampaign`: resolve → snapshot `campaign_recipients` → transition status); a future `supabase/functions/send-campaign` edge function consumes the snapshot. Lifecycle `draft→scheduled→sending→sent`, `ended` = manual archive; only `draft` is editable.
 
@@ -269,7 +289,22 @@ Granular per-module admin permissions layered ON TOP of the binary `user_roles.A
 **Vị trí = "phiên trả giá":** `ad_positions` có `auction_ends_at` (đếm ngược "Kết thúc sau") + `bidder_count` (số người đang trả giá); `price` = "Mức giá hiện tại". Component `AdvertisementBlock` (prop-driven `endsAt`/`bidderCount`/`price`, dùng `formatVnd`) render card "Vị trí quảng cáo" + nút "Liên hệ để trả giá" (→ /lien-he). Hiện dùng làm **preview trong `AdPositionFormDialog`**; đặt card ra trang công khai + mở RLS public-read cho `ad_positions` = việc SAU.
 
 ### Khách hàng (admin, NGOÀI Marketing)
-`/admin/khach-hang/*` — module khách hàng **generic dùng chung nhiều dịch vụ** (không riêng quảng cáo). Bảng `customers`; banner tham chiếu optional qua `advertisements.customer_id` (ON DELETE SET NULL). Trang chi tiết KH hiển thị "banner liên kết" qua `useCustomerAdvertisements(customerId)`.
+`/admin/khach-hang/*` — module khách hàng **generic dùng chung nhiều dịch vụ** (không riêng quảng cáo). Bảng `customers`; banner tham chiếu optional qua `advertisements.customer_id` (ON DELETE SET NULL). Route gác `<AdminPermissionRoute module="khach-hang">`; module khai đủ `view/create/update/delete/export`.
+
+**Dựng ngang tầm module lead** (`20260806000010`): danh sách có pill trạng thái + lọc Phân khúc/Loại hình/Nguồn lead + cột Loại hình & Tài sản; chi tiết chia tab điều khiển bằng `?tab=` — `thong-tin` / `don-hang` / `chien-dich` / `co-hoi` / `cong-viec` / `tickets` / `lich-su` / `chi-nhanh`. Types ở `src/types/customers.ts` (dọn khỏi `types/advertising.ts`, file cũ re-export ngược); nhãn trạng thái ở `src/lib/customers/customerStatus.ts`.
+
+**Ba con trỏ trên `customers`, ba mục đích khác nhau — đừng lẫn:**
+| Cột | Trỏ tới | Mở ra cái gì |
+|---|---|---|
+| `source_lead_id` | `leads.id` | **Mã lead** nguồn (badge `← TN…` + card "Chuyển đổi từ KHTN"). Select phải hint `leads!customers_source_lead_id_fkey` — có 2 FK giữa 2 bảng |
+| `prospect_kind`/`prospect_id` | pháp nhân trên sàn | tab **Lịch sử đấu giá** + **Chi nhánh/AMC** (không phụ thuộc lead còn tồn tại) |
+| `user_id` | `auth.users.id` (UNIQUE partial) | tab **Chiến dịch**/email marketing (`campaign_recipients.user_id`) + đơn **nạp credit** (`orders.user_id`) |
+
+`user_id` là **cầu nối DUY NHẤT** tới email marketing — `marketing_campaigns` không có `customer_id`, đối tượng nhận là người dùng sàn theo tiêu chí. Gắn hai đường: `admin_convert_lead` tự khớp email (rồi 9 số cuối SĐT qua `auth.users.phone`) và `UserPickerField` gắn/gỡ tay trong `CustomerFormDialog`. Cả hai đều bỏ qua tài khoản đã gắn khách khác; RPC bọc `EXCEPTION WHEN unique_violation` để tranh chấp đồng thời không làm hỏng chuyển đổi.
+
+**Tab Đơn hàng gộp hai nguồn:** `useCustomerAllOrders(customerId, userId)` dùng `.or(customer_id.eq,user_id.eq)` — `orders_party_check` cho phép một trong hai, đơn nạp credit chỉ có `user_id`, bỏ vế đó là mất hẳn doanh thu B2C. Nhãn dòng suy từ `!o.customer_id` → "Nạp credit".
+
+**Hai tab prospect dùng chung lead ↔ khách hàng:** `ProspectAuctionHistoryTab` / `ProspectBranchesTab` ở `src/components/admin/crm/prospect/` (component con ở `parts/`), chỉ nhận `{ kind, prospectId }`. Đừng nhân bản sang module khác.
 
 ### Công cụ đấu giá (Nội dung admin + MKP công khai)
 `/admin/cong-cu-dau-gia` (module quyền `cong-cu-dau-gia`, category `noi-dung`) + MKP `/cong-cu-dau-gia` (list 4 công cụ) & `/cong-cu-dau-gia/:slug` (chi tiết provider). Bảng (`20260726000001-4`): `auction_tools` (4 công cụ cố định seed: `so-hoa/dinh-gia/vay-von/phap-ly`, `public_read` theo `is_active`), `auction_tool_providers` (gắn `supplier_id`+`service_id`+`service_variant_id` để quy doanh thu — đối tác ngoài dùng service `kind='commission'`, công cụ nhà SSCorp `is_own=true` dùng `direct`; `public_read` theo `status='active'`), `auction_tool_showcases`. Hooks: admin `useAuctionTools.ts`, MKP `usePublicAuctionTools.ts`; types `src/types/auctionTools.ts`; truy cập DB qua `(supabase as any)` như module CRM.
@@ -297,6 +332,11 @@ Granular per-module admin permissions layered ON TOP of the binary `user_roles.A
 - Positive `purchase` with no package match = **"Nạp khác"** (VND 0, shown separately, excluded from avg). Negative `purchase` = a mislabeled spend ("Xuất hồ sơ") → count as consumption.
 - **Consumption rows** = `credit_delta<0`, grouped by `type`; Vietnamese labels in `FEATURE_LABELS` (`src/lib/reports/transactionReport.ts`, the one catalog).
 - Pattern (`Giao dịch credit`, `/admin/bao-cao/giao-dich`): pure aggregation in `src/lib/reports/transactionReport.ts` (unit-tested) + `useTransactionReport` hook (React Query keyed on **range only**; granularity re-buckets via `useMemo` with no refetch; paginated fetch 1000/page, 50k cap). RLS SELECT on `credit_transactions` is open to authenticated users (admin gate is UI-only) — future hardening = SECURITY DEFINER admin RPC.
+- **Tin đấu giá** (`/admin/bao-cao/tin-dau-gia`, `listingsReport.ts` + `useListingsReport`) — báo cáo **tồn kho tài sản**, không phải tiền. Nguồn DUY NHẤT là `listings` (gồm cả `DRAFT/PENDING_APPROVAL/INACTIVE` — admin RLS thấy hết); khoảng ngày lọc theo `created_at`. Server tổng hợp ⇒ **granularity NẰM TRONG queryKey** (giống `useAccessAnalytics`, khác `useTransactionReport`).
+  - **Bộ lọc là CẤP TRANG** (`ListingsFilterBar`: thời gian + tìm kiếm + trạng thái/nhóm/tỉnh/tổ chức ĐG/chủ tài sản) và chi phối **cả biểu đồ lẫn bảng**. `public.admin_listings_scope()` là **định nghĩa bộ lọc DUY NHẤT**; `admin_listings_report()` và `admin_listings_rows()` đều JOIN vào đó — đừng bao giờ lọc lại ở client, biểu đồ sẽ lệch bảng. Quy ước: tham số `NULL` = không lọc, client chuẩn hoá `"all"` → `null`.
+  - Hai RPC tách nhau vì bảng đổi trang liên tục, không nên kéo theo 10 section tổng hợp. `useAdminListingsTable` gọi `admin_listings_rows` (phân trang + đếm phía server, các trường suy diễn tính sẵn trong SQL nên client không map lại).
+  - `kpis.total` cố tình **không** lọc gì cả (tồn kho ≠ lưu lượng) — chỉ là mốc tham chiếu; UI chỉ hiện dòng "Đang xem N/M tin toàn sàn" **khi bộ lọc thực sự thu hẹp**, nếu không nó lặp y hệt thẻ KPI.
+  - Combobox tổ chức/chủ tài sản tìm **phía server** (`useEntityOptions`, limit 50, chỉ query khi mở dropdown) — `asset_owners` phình theo số claim, không kéo hết về client.
 - **Doanh thu tổng** (`/admin/bao-cao/doanh-thu`, `revenueReport.ts` + `useRevenueReport`) = credit-purchase VND (reuse `isPurchase`/`resolvePurchase`) + direct `orders.amount` (excl. `cancelled`). **Rule: credit counts at TOP-UP only, never at spend** — see `business-rules.md`. Reuses exported `enumerateBuckets`/`bucketKeyOf` from `transactionReport.ts`; `customers` (orders) and `profiles` (credit) are distinct populations, so NO by-customer view — reconcile only at VND + source level.
 
 ---

@@ -100,6 +100,73 @@ Locking is a **real GoTrue ban** (`auth.admin.updateUserById(id, { ban_duration 
 
 ---
 
+## "Giá trị khởi điểm" của một tin đấu giá (fixed rule)
+
+Quy đổi ra VND bằng `startValueOf()` (`src/lib/reports/listingsReport.ts`) ↔ `public.listing_start_value()` — dùng ở mọi nơi tổng hợp giá trị kho tin:
+- `price_unit='TOTAL'` → `price`.
+- `price_unit='PER_SQM'` → `price × area` (area = 0 coi như 1).
+- **`price_unit='PER_MONTH'` → NULL, bị loại khỏi Σ và trung vị.** Giá thuê/tháng không phải giá khởi điểm đấu giá; cộng vào tổng là sai đơn vị. Các tin này gom vào khoảng giá **"Chưa quy đổi"** — hiện ra chứ không giấu đi.
+- `price` NULL hoặc ≤ 0 cũng trả NULL. KPI luôn kèm `valuedCount/total` để biết tổng đang dựa trên bao nhiêu tin.
+
+---
+
+## Khách hàng tiềm năng — loại hình & quan hệ chi nhánh (fixed rule)
+
+Nguồn: `admin_prospects` / `admin_prospect_detail` / `admin_set_prospect_parent` (đều SECURITY DEFINER + gate `has_role ADMIN`). Nhãn ở `src/lib/prospects/types.ts`.
+
+- **`entity_type`** chỉ có 2 giá trị `individual | organization`, và **chỉ chủ tài sản mới có thể là cá nhân** (`asset_owners.owner_kind = 'individual'`). Tổ chức đấu giá theo luật luôn là pháp nhân ⇒ cố định `'organization'`.
+- **Loại hình hiển thị là 3 giá trị** — `Cá nhân` / `Tổ chức - Chính` / `Tổ chức - Chi nhánh` — do `entityRole(entity_type, parent_id)` suy ra, **không phải cột DB**. Chi nhánh cũng là một khách hàng tiềm năng độc lập trong danh sách nên badge này là thứ duy nhất phân biệt nó với trụ sở. Tab "Chi nhánh / AMC" **chỉ hiện với `role === 'main'`**.
+- **`subtype`** là hình thức chi tiết, hai từ điển gộp chung một Record: chủ tài sản dùng `owner_kind` (`individual/bank_credit/amc/enforcement/state_agency/company/other`); tổ chức đấu giá quy đổi từ `auction_organizations.org_type` (`0→center, 1→enterprise, 2→company, 11→branch`). Không có cột `entity_type`/`subtype` trong DB — RPC suy ra tại chỗ.
+- **Quan hệ mẹ–con** nằm ở `asset_owners.parent_owner_id` và `auction_organizations.parent_org_id`, kèm `parent_source`:
+  - `'inferred'` — do `infer_org_parents()` suy ra. **Điều kiện CẦN: tên con tự nhận là đơn vị thành viên** (`org_branch_marker()` khớp chi nhánh / phòng giao dịch / sở giao dịch / AMC / quản lý nợ / quản lý tài sản / khai thác tài sản) hoặc `org_type = 11`. Cha phải `name_tokens <@` token con (strict subset) và đủ đặc trưng (≥2 token, hoặc 1 token dài ≥4 ký tự).
+  - `'confirmed'` — do admin gán qua `admin_set_prospect_parent()`. **`infer_org_parents()` chỉ ghi vào dòng có cột cha đang NULL**, nên chạy lại không bao giờ đè lên quyết định của người.
+- `org_branch_marker()` phải giữ đồng bộ với regex backfill `owner_kind` ở `20260805000001` — lệch một mẫu là bản ghi được gắn `owner_kind='amc'` nhưng không đủ điều kiện làm đơn vị thành viên.
+- Chi nhánh **cũng là một prospect độc lập** trong danh sách — bảng phải hiện "Thuộc «mẹ»" để khỏi đếm trùng khi rà khách hàng.
+
+### Cụm đơn vị & lịch sử đấu giá theo cụm (fixed rule)
+
+- **Cụm** (`prospect_unit_groups`, VD "Cụm miền Bắc") **thuộc về MỘT công ty mẹ cụ thể**, không phải nhãn tự do toàn sàn: `admin_set_prospect_group` chỉ nhận đơn vị đang trực thuộc đúng công ty mẹ của cụm, sai thì `no_eligible_units`. Rời công ty mẹ ⇒ `group_id` NULL luôn.
+- `prospect_unit_groups.parent_id` **cố ý không có FK** (trỏ vào `asset_owners` hoặc `auction_organizations` tuỳ `kind` — Postgres không có FK đa đích). Ràng buộc ép ở RPC; mọi lối ghi đều qua SECURITY DEFINER.
+- **Xoá cụm KHÔNG làm mất chi nhánh** (`ON DELETE SET NULL`) — thành viên chỉ quay về "Chưa xếp cụm".
+- `admin_prospect_detail.history` **gộp tin của cả cụm** (mẹ + chi nhánh), mỗi dòng mang `unit_id`/`unit_name` + `group_id`/`group_name`. **"Đơn vị" là một chiều thống nhất: công ty mẹ cũng là một lát cắt mang tên chính nó**, không phải "phần còn lại".
+- **Lệch số có chủ đích:** KPI tab Lịch sử đấu giá (cả cụm) ≠ cột "Tài sản" ngoài danh sách lead (chỉ riêng đơn vị đó). Cột danh sách KHÔNG được gộp — chi nhánh cũng là dòng riêng, gộp là đếm trùng.
+- `legal_flags` / `postings_count` giữ phạm vi công ty mẹ: khác nguồn (`asset_postings` qua workspace claim), gộp vào là sai đơn vị đo.
+- `units` CTE chỉ đi **một cấp**. Muốn hỗ trợ chuỗi 3 cấp thì phải đổi sang đệ quy.
+- `admin_set_prospect_parent` (đơn lẻ) chỉ là vỏ bọc gọi `admin_set_prospect_parents` (mảng) — sửa luật gán cha ở đúng một chỗ.
+
+---
+
+## Bồi dưỡng chuyên môn hằng năm của đấu giá viên (fixed rule)
+
+Căn cứ **Thông tư 19/2024/TT-BTP** (hiệu lực 01/01/2025). Chu kỳ là **NĂM DƯƠNG LỊCH**, không phải chu kỳ theo thẻ ĐGV.
+
+Nguồn sự thật DUY NHẤT của **quy tắc kết luận**: `src/lib/personnel/cpd.ts`. Lõi `evaluateCpd(agg, year, now)` nhận struct **đã gộp** (`CpdAggregate`), không nhận sự kiện thô — portal gộp từ `org_auctioneer_events`, admin nhận gộp sẵn từ `admin_cpd_report`. **Đừng viết nhánh tính thứ hai ở đâu khác**, kể cả trong SQL.
+
+**CÁCH TÍNH GIỜ KHÔNG Ở TRONG CODE — nó là MASTER DATA admin quản lý** (`/admin/quan-tri/boi-duong`, module quyền `dm-boi-duong`). Ba bảng: `cpd_activity_types` (hình thức) · `cpd_activity_roles` (vai trò trong hình thức) · `cpd_exemption_reasons` (trường hợp miễn). Engine chỉ nhận một `CpdRuleResolver` (`makeCpdResolver(catalog)` trong `cpd-catalog.ts`) rồi hỏi từng bản ghi *"tính giờ hay đạt cả năm"*.
+
+**VAI TRÒ THẮNG HÌNH THỨC.** Khi `cpd_activity_types.has_roles = true`, `credit_mode`/`fixed_hours` lấy từ vai trò, KHÔNG lấy từ hình thức. Đây là lý do cả mô hình tồn tại: cùng một hội thảo, *báo cáo viên* hoàn thành nghĩa vụ cả năm (Đ26.2) còn *người tham dự* chỉ được quy đổi 4 giờ. Quy tắc này **nhân bản ở CTE `records` của `admin_cpd_report`** — sửa một bên phải sửa cả hai.
+
+Thứ tự kết luận — bỏ bước nào cũng ra kết luận SAI LUẬT:
+
+| # | Căn cứ | Điều | `status` / `reason` |
+|---|---|---|---|
+| 1 | Có bản ghi trong `org_auctioneer_cpd_exemptions` cho năm đó | 26.3 | `MIEN` / `exempt` |
+| 2 | Có ≥1 bản ghi mà quy tắc cho `credit_mode = 'FULL_YEAR'` | 26.2 | `DAT` / `full_year_form` — **đạt bất kể số giờ** |
+| 3 | Tổng giờ ĐÃ QUY ĐỔI của các bản ghi `credit_mode = 'HOURS'` ≥ **8** | 26.1 | `DAT` / `hours_met` |
+| 4 | Thiếu giờ, `year < năm hiện tại` | | `QUA_HAN` / `year_closed` |
+| 5 | Thiếu giờ, năm còn chạy | | `CHUA_DU` / `hours_short` |
+
+- Giờ quy đổi của một bản ghi = `fixed_hours` nếu danh mục khai, ngược lại `events.hours` do tổ chức nhập (`creditedHoursOf`). Với `FULL_YEAR` thì `hours` vẫn được LƯU và IN ra hồ sơ nhưng **không cộng** vào mốc 8 giờ.
+- Sửa danh mục **ÁP DỤNG HỒI TỐ** — hệ thống luôn chấm lại theo cấu hình hiện hành, kể cả năm đã đóng. Không snapshot. Trang admin có cảnh báo tương ứng; đừng bỏ nó đi.
+- `missingProof` (bản ghi không có `attachments`, Điều 27.1) là **CỜ PHỤ — không đổi `status`**. Tính hợp lệ pháp lý do Sở Tư pháp phán; hệ thống chỉ cảnh báo. Đừng biến nó thành điều kiện loại.
+- **KHÔNG còn cờ "đơn vị được công nhận" trên từng bản ghi.** Tính được-công-nhận (Điều 25) nay nằm trong ĐỊNH NGHĨA của hình thức (`COURSE` = "Lớp bồi dưỡng do đơn vị được công nhận tổ chức"). Cột `org_auctioneer_events.is_accredited_provider` là LEGACY, không đọc/ghi nữa.
+- `cpd_activity_type_id IS NULL` trên một dòng TRAINING = bản ghi đào tạo **không thuộc diện bồi dưỡng bắt buộc** (vd chứng chỉ tốt nghiệp đào tạo nghề đấu giá) ⇒ không tính. Cột `cpd_kind` là LEGACY.
+- Năm tính nghĩa vụ đọc từ `cpd_year`; bản ghi cũ chưa có thì suy từ `started_on` (`cpdEventYear`). **Logic này nhân bản trong SQL của `admin_cpd_report` — sửa một bên phải sửa cả hai.**
+- Phạm vi áp dụng: chỉ ĐGV `is_active = true`.
+- Mốc cảnh báo (tính phía client, KHÔNG có cron/email): đến 30/9 `none` · 01/10–14/12 `warning` · từ **15/12** (hạn nộp Sở Tư pháp, Đ26.3) `urgent` · năm đã đóng `critical`. Sở Tư pháp đăng danh sách hoàn thành chậm nhất **31/12** (Đ27.2).
+- Xuất CSV danh sách tuân thủ **KHÔNG trừ credit** — khác "Xuất hồ sơ nhân sự" (`export_personnel_dossier`, có tính phí).
+- Hồ sơ kết xuất nhận danh mục qua `DossierBundle.cpdCatalog` — **truyền vào, builder không tự fetch**. Thiếu nó thì mục VI mất tên hình thức và mục VII chấm mọi người thành "chưa đủ giờ" ngay trên sản phẩm có tính phí.
+
 ## KYC onboarding — 3-milestone flow
 
 Route `/dang-ky-to-chuc`, rendered by `MilestoneProgress`. Components in `src/components/company-onboarding/`.
@@ -145,16 +212,28 @@ Never invent a status outside `{ PENDING_KYC, APPROVED, REJECTED }`. Transitions
 
 ## Organization roles & permissions
 
-Three roles seeded in `organization_roles`, wired by the `create_owner_membership` trigger.
+Roles are **per-organization and user-creatable** (`org_roles`, since `20260805000020`). The old global `organization_roles` table — three fixed names + an `ALL_PERMISSIONS` JSONB that no code ever read — has been **dropped**; so has `has_org_role()`.
 
-| Role | Permissions |
-|------|-------------|
-| Owner | `ALL_PERMISSIONS` |
-| Manager | `CAN_POST_LISTING`, `CAN_INVITE_AGENT`, `CAN_REMOVE_AGENT`, `CAN_MANAGE_LISTINGS`, `CAN_VIEW_ANALYTICS` |
-| Agent | `CAN_POST_LISTING`, `CAN_VIEW_OWN_LISTINGS` |
+- `org_seed_default_roles(org_id)` seeds every new org with **Chủ sở hữu** (`OWNER`, `is_system`), **Quản lý** (`MANAGER`), **Nhân viên** (`AGENT`). Called by the `create_owner_membership` trigger — never insert the owner membership manually.
+- `OWNER` stores **no permission rows**; full access short-circuits inside `org_has_permission()`. Its matrix is not editable (RPC refuses it).
+- Permission catalog lives in **code**: `src/lib/orgPermissions.ts` (module × action `view/create/update/delete/export`). DB stores only granted `(module, action)` rows. **Module codes are immutable** — renaming one strips that permission from every role of every org.
+- **Splitting a module out** (e.g. `nhan-su` out of `nl-dau-gia-vien`, `20260805000040`): always ship a backfill that *preserves what users could already do*, mapping across renamed actions where needed — there, `view` also had to grant `export`, because the "Xuất hồ sơ" button previously required only view. Also `CREATE OR REPLACE org_seed_default_roles()` so new orgs get the same presets.
+- Gate by **permission, never by role name** — `org_has_permission(org_id, module, action)` / `org_is_owner(org_id)`, both SECURITY DEFINER.
 
-- The org creator is auto-granted **Owner** membership via trigger — don't insert the membership manually.
-- Gate actions by permission, not by role name where possible, so re-seeding roles doesn't break gates.
+**Invariants enforced in the database (not just UI):**
+- A tổ chức must always keep ≥ 1 ACTIVE `OWNER` — trigger `org_protect_last_owner`.
+- Only an Owner may grant or remove the `OWNER` role (RLS `WITH CHECK` + `create_org_invite`).
+- A membership's `role_id` must belong to the *same* org (RLS `WITH CHECK`) — the escalation vector that per-org roles introduce.
+- `is_system` roles can't be deleted, renamed, or moved between orgs — trigger `org_roles_protect_system`.
+
+### Member invites
+
+`organization_memberships.status = 'PENDING_INVITE'` = "Đang mời". No email is sent anywhere — `create_org_invite` returns a token and the inviter copies `/loi-moi/:token` by hand (same choice as admin's `CreateUserDialog`).
+
+- Invites may be created for **any** email; the dialog only warns (Chưa có tài khoản / Chưa kích hoạt / Tài khoản bị khóa). Only duplicates hard-block (already a member, or an invite already pending).
+- **Acceptance requires `profiles.activated = true`** — enforced server-side by `accept_org_invite`, which returns `{ok:false, reason:'not_activated'}`. The UI then shows `DepositCard` and retries after activation.
+- RPCs return `{ok:false, reason}` for *expected* failures (expired / already_claimed / email_mismatch / locked) and `RAISE` only for abnormal ones, so Vietnamese copy stays in the UI instead of parsing Postgres errors.
+- Email mismatch is a **two-step confirm**, not a hard block (`_confirm_email_mismatch`): links are hand-carried, so recipients often hold a different address and would otherwise dead-end.
 
 ---
 

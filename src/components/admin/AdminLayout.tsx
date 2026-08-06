@@ -27,11 +27,14 @@ import {
   ListTodo,
   Ticket,
   Wrench,
+  Gavel,
+  GraduationCap,
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 interface NavItem {
   to: string;
@@ -114,6 +117,8 @@ const NAV: NavSection[] = [
       { to: "/admin/bao-cao/doanh-thu", label: "Doanh thu", icon: Wallet, module: "doanh-thu" },
       { to: "/admin/bao-cao/giao-dich", label: "Giao dịch credit", icon: ArrowLeftRight, module: "giao-dich" },
       { to: "/admin/bao-cao/truy-cap", label: "Phân tích truy cập", icon: Activity, module: "truy-cap" },
+      { to: "/admin/bao-cao/tin-dau-gia", label: "Tin đấu giá", icon: Gavel, module: "tin-dau-gia" },
+      { to: "/admin/bao-cao/boi-duong", label: "Bồi dưỡng chuyên môn", icon: GraduationCap, module: "boi-duong" },
     ],
   },
   {
@@ -121,6 +126,7 @@ const NAV: NavSection[] = [
     items: [
       { to: "/admin/quan-tri/tai-khoan", label: "Tài khoản quản trị", icon: ShieldCheck, module: "tai-khoan" },
       { to: "/admin/quan-tri/vai-tro", label: "Vai trò", icon: KeyRound, module: "vai-tro" },
+      { to: "/admin/quan-tri/boi-duong", label: "Bồi dưỡng ĐGV", icon: GraduationCap, module: "dm-boi-duong" },
     ],
   },
 ];
@@ -270,7 +276,11 @@ export default function AdminLayout() {
 
       {/* Main content */}
       <main className="flex-1 min-w-0 overflow-y-auto">
-        <Outlet />
+        {/* Tầng 3 — lỗi ở một trang con không xoá sidebar/topbar, người
+            dùng vẫn điều hướng đi nơi khác được. */}
+        <ErrorBoundary label="Quản trị" compact>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );

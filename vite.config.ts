@@ -42,6 +42,10 @@ export default defineConfig(() => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+        // pdfmake + font Roboto ~1.8MB, chỉ dùng khi xuất hồ sơ ra PDF ở
+        // /portal. PWA lại có scope /broker/, nên precache chúng là bắt mọi
+        // người cài app tải thừa 1.8MB. Để runtime tự nạp khi cần.
+        globIgnores: ["**/{pdfmake,vfs_fonts}-*.js"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
@@ -61,6 +65,33 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // Tách vendor để cache line ỔN ĐỊNH giữa các lần deploy. Trước đây
+        // react + 30 package radix + react-query + supabase-js nằm chung khối
+        // với code ứng dụng, nên sửa MỘT dòng code là toàn bộ ~475 kB gzip bị
+        // cache-bust và user phải tải lại từ đầu.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+
+          // react + react-dom + scheduler PHẢI cùng một chunk: tách rời chúng
+          // gây lỗi thứ tự khởi tạo (react-dom đọc internals của react).
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
+            return "react-vendor";
+          }
+          if (id.includes("react-router")) return "react-vendor";
+
+          if (id.includes("@radix-ui")) return "radix-vendor";
+          if (id.includes("@tanstack")) return "data-vendor";
+          if (id.includes("@supabase")) return "data-vendor";
+
+          // recharts/leaflet/pdfmake/xlsx đã tự tách theo lazy import — để
+          // Rollup tự quyết, đừng gom vào vendor chung kẻo kéo lại vào entry.
+        },
+      },
     },
   },
   // Pre-bundle deps that are only reached from lazy routes/components (e.g. the

@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { OwnerPortalSidebar } from './OwnerPortalSidebar'
 import { OwnerPortalTopBar } from './OwnerPortalTopBar'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export function OwnerPortalLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -27,7 +28,11 @@ export function OwnerPortalLayout() {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          {/* Tầng 3 — lỗi ở một trang con không xoá sidebar/topbar, người
+              dùng vẫn điều hướng đi nơi khác được. */}
+          <ErrorBoundary label='Cổng chủ tài sản' compact>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

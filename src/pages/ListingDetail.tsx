@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useListingContact } from "@/hooks/useListingContact";
@@ -12,12 +13,21 @@ import { AuctionInfoCard } from "@/components/listings/AuctionInfoCard";
 import { OrganizationContactCard } from "@/components/listings/OrganizationContactCard";
 import { AuctionDetailTable } from "@/components/listings/AuctionDetailTable";
 import { AssetOwnerCard } from "@/components/listings/AssetOwnerCard";
-import { LocationMap } from "@/components/listings/LocationMap";
 import {
   Maximize, MapPin, Building2, Scale, Compass, Home, FileText, ArrowLeft, ImageOff,
 } from "lucide-react";
 
 import { formatPrice, formatDate, formatAddress } from "@/utils/formatters";
+import { caString } from "@/types/listing";
+import type { LucideIcon } from "lucide-react";
+
+// ─── Tách khỏi entry chunk ────────────────────────────────────────────────────
+// LocationMap kéo theo leaflet (~107 refs). Bản đồ nằm dưới màn hình đầu và chỉ
+// render khi tin đăng có toạ độ, nên không cần nằm trong bundle mà mọi khách
+// vãng lai phải tải.
+const LocationMap = lazy(() =>
+  import("@/components/listings/LocationMap").then((m) => ({ default: m.LocationMap })),
+);
 
 const ListingDetail = () => {
   const { id } = useParams();
@@ -97,7 +107,7 @@ const ListingDetail = () => {
     listing.depth && { icon: Maximize, label: "Chiều sâu", value: `${listing.depth} m` },
     listing.num_floors && { icon: Building2, label: "Số tầng", value: listing.num_floors },
     listing.land_type && { icon: Scale, label: "Loại đất", value: listing.land_type },
-  ].filter(Boolean) as { icon: any; label: string; value: string | number }[];
+  ].filter(Boolean) as { icon: LucideIcon; label: string; value: string | number }[];
 
   return (
     <div className="min-h-screen bg-background">
@@ -153,8 +163,8 @@ const ListingDetail = () => {
 
             {/* Asset Owner */}
             <AssetOwnerCard
-              name={customAttributes.asset_owner_name}
-              address={customAttributes.asset_owner_address}
+              name={caString(customAttributes.asset_owner_name)}
+              address={caString(customAttributes.asset_owner_address)}
               ownerId={listing.asset_owner_id}
             />
 
@@ -208,7 +218,9 @@ const ListingDetail = () => {
                     </div>
                   )}
                   {coordinates.lat && coordinates.lng && (
-                    <LocationMap latitude={coordinates.lat} longitude={coordinates.lng} />
+                    <Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
+                      <LocationMap latitude={coordinates.lat} longitude={coordinates.lng} />
+                    </Suspense>
                   )}
                 </div>
               </Card>

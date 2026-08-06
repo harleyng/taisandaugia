@@ -13,18 +13,25 @@ import { AdminRoute } from "@/components/AdminRoute";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { AdminPermissionRoute } from "@/components/admin/AdminPermissionRoute";
 import { PortalLayout } from "@/components/portal/PortalLayout";
+import { PortalPermissionRoute } from "@/components/portal/PortalPermissionRoute";
 import { OwnerPortalLayout } from "@/components/owner-portal/OwnerPortalLayout";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 
-// Critical path — eager
+// Critical path — eager. CHỈ trang chủ, trang tìm kiếm và 404: đây là những gì
+// khách vãng lai thấy đầu tiên nên đáng nằm trong entry bundle.
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import SetPassword from "./pages/SetPassword";
 import Listings from "./pages/Listings";
-import ListingDetail from "./pages/ListingDetail";
-import AuctionDetail from "./pages/AuctionDetail";
 import NotFound from "./pages/NotFound";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Điều hướng tới sau — lazy như 84 route còn lại. Hai trang chi tiết là phần
+// nặng nhất của entry chunk cũ mà không ai thấy khi vừa vào site.
+const ListingDetail = lazy(() => import("./pages/ListingDetail"));
+const AuctionDetail = lazy(() => import("./pages/AuctionDetail"));
+const Auth = lazy(() => import("./pages/Auth"));
+const SetPassword = lazy(() => import("./pages/SetPassword"));
 
 // Admin pages — lazy
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
@@ -49,6 +56,7 @@ const AdminCustomerDetail = lazy(() => import("./pages/admin/customers/AdminCust
 const AdminServicesPage = lazy(() => import("./pages/admin/services/AdminServicesPage"));
 const AdminSuppliersPage = lazy(() => import("./pages/admin/suppliers/AdminSuppliersPage"));
 const AdminLeadsPage = lazy(() => import("./pages/admin/leads/AdminLeadsPage"));
+const AdminLeadDetail = lazy(() => import("./pages/admin/leads/AdminLeadDetail"));
 const AdminOpportunitiesPage = lazy(() => import("./pages/admin/opportunities/AdminOpportunitiesPage"));
 const AdminTasksPage = lazy(() => import("./pages/admin/tasks/AdminTasksPage"));
 const AdminTicketsPage = lazy(() => import("./pages/admin/tickets/AdminTicketsPage"));
@@ -61,12 +69,15 @@ const AdminLegalDetail = lazy(() => import("./pages/admin/legal/AdminLegalDetail
 const TransactionReportPage = lazy(() => import("./pages/admin/reports/TransactionReportPage"));
 const RevenueReportPage = lazy(() => import("./pages/admin/reports/RevenueReportPage"));
 const AccessAnalyticsReportPage = lazy(() => import("./pages/admin/reports/AccessAnalyticsReportPage"));
+const ListingsReportPage = lazy(() => import("./pages/admin/reports/ListingsReportPage"));
+const CpdReportPage = lazy(() => import("./pages/admin/reports/CpdReportPage"));
 const AdminUsersPage = lazy(() => import("./pages/admin/users/AdminUsersPage"));
 const AdminUserDetail = lazy(() => import("./pages/admin/users/AdminUserDetail"));
 const AdminAccountsPage = lazy(() => import("./pages/admin/quan-tri/AdminAccountsPage"));
 const AdminRolesPage = lazy(() => import("./pages/admin/quan-tri/AdminRolesPage"));
 const AdminRoleDetail = lazy(() => import("./pages/admin/quan-tri/AdminRoleDetail"));
 const AdminAccountDetail = lazy(() => import("./pages/admin/quan-tri/AdminAccountDetail"));
+const CpdCatalogPage = lazy(() => import("./pages/admin/quan-tri/CpdCatalogPage"));
 
 // Protected pages — lazy
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -76,12 +87,20 @@ const AssetOwnerDetail = lazy(() => import("./pages/AssetOwnerDetail"));
 const DashboardPage = lazy(() => import("./pages/portal/DashboardPage"));
 const ThongTinChungPage = lazy(() => import("./pages/portal/nang-luc/ThongTinChungPage"));
 const DauGiaVienPage = lazy(() => import("./pages/portal/nang-luc/DauGiaVienPage"));
+const DauGiaVienDetailPage = lazy(() => import("./pages/portal/nang-luc/DauGiaVienDetailPage"));
+const HoSoNhanSuPage = lazy(() => import("./pages/portal/nang-luc/HoSoNhanSuPage"));
+const BoiDuongPage = lazy(() => import("./pages/portal/BoiDuongPage"));
+const TuTaiLieuPage = lazy(() => import("./pages/portal/nang-luc/TuTaiLieuPage"));
 const CoSoVatChatPage = lazy(() => import("./pages/portal/nang-luc/CoSoVatChatPage"));
 const LichSuDauGiaPage = lazy(() => import("./pages/portal/nang-luc/LichSuDauGiaPage"));
 const TaiChinhPage = lazy(() => import("./pages/portal/nang-luc/TaiChinhPage"));
 const PortalCreditsPage = lazy(() => import("./pages/portal/PortalCreditsPage"));
 const ApplicationsPage = lazy(() => import("./pages/ApplicationsPage"));
 const ApplicationEditPage = lazy(() => import("./pages/ApplicationEditPage"));
+const OrgMembersPage = lazy(() => import("./pages/portal/to-chuc/OrgMembersPage"));
+const OrgRolesPage = lazy(() => import("./pages/portal/to-chuc/OrgRolesPage"));
+const OrgRoleDetailPage = lazy(() => import("./pages/portal/to-chuc/OrgRoleDetailPage"));
+const InviteAcceptPage = lazy(() => import("./pages/InviteAcceptPage"));
 
 // Secondary public pages — lazy
 const CompanyDetail = lazy(() => import("./pages/CompanyDetail"));
@@ -114,6 +133,14 @@ function RedirectApplicationId() {
   return <Navigate to={`/portal/ho-so-du-tuyen/${id}`} replace />
 }
 
+// Link cũ /nang-luc/ho-so-nhan-su/:id từng là chi tiết một người. Chi tiết nay
+// nằm ở Hồ sơ năng lực (nơi dữ liệu sống), nên trỏ thẳng về đó thay vì đi vòng
+// qua /nhan-su/:id — màn đó giờ chỉ là danh sách kết xuất.
+function RedirectNhanSuId() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/portal/nang-luc/dau-gia-vien/${id}`} replace />
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -125,7 +152,29 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Skeleton trong lúc chờ chunk của route. Trước đây fallback là một div trống
+ * min-h-screen — về mặt thị giác không khác gì màn hình trắng, nên user không
+ * biết app đang tải hay đã treo.
+ */
+const RouteFallback = () => (
+  <div className="min-h-screen bg-background">
+    <div className="container mx-auto space-y-4 px-4 py-8">
+      <Skeleton className="h-8 w-64" />
+      <Skeleton className="h-4 w-40" />
+      <div className="grid grid-cols-1 gap-4 pt-4 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-56 rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const App = () => (
+  // Tầng 1 — bọc NGOÀI mọi provider: lỗi trong chính provider (AuthProvider,
+  // PaywallProvider) cũng phải có chỗ đỡ, nếu không vẫn là màn hình trắng.
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
     <TermsGate />
@@ -137,7 +186,10 @@ const App = () => (
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <PaywallProvider>
           <AnalyticsTracker />
-          <Suspense fallback={<div className="min-h-screen bg-background" />}>
+          {/* Tầng 2 — trong Router: lỗi ở một route không kéo sập toàn app,
+              và ChunkLoadError sau deploy được tự phục hồi tại đây. */}
+          <ErrorBoundary>
+          <Suspense fallback={<RouteFallback />}>
             <Routes>
               {/* Public Marketplace */}
               <Route path="/" element={<Index />} />
@@ -167,6 +219,9 @@ const App = () => (
               {/* Auth */}
               <Route path="/auth" element={<Auth />} />
               <Route path="/tao-mat-khau" element={<SetPassword />} />
+
+              {/* Lời mời vào tổ chức — công khai, tự xử lý đăng nhập + kích hoạt */}
+              <Route path="/loi-moi/:token" element={<InviteAcceptPage />} />
 
               {/* Redirects: old ho-so-du-tuyen paths → portal */}
               <Route path="/ho-so-du-tuyen" element={<Navigate to="/portal/ho-so-du-tuyen" replace />} />
@@ -201,9 +256,43 @@ const App = () => (
                   {/* Hồ sơ năng lực */}
                   <Route path="nang-luc/thong-tin-chung" element={<ThongTinChungPage />} />
                   <Route path="nang-luc/dau-gia-vien" element={<DauGiaVienPage />} />
+                  <Route path="nang-luc/dau-gia-vien/:id" element={<DauGiaVienDetailPage />} />
+                  <Route path="nang-luc/tu-tai-lieu" element={<TuTaiLieuPage />} />
                   <Route path="nang-luc/co-so-vat-chat" element={<CoSoVatChatPage />} />
                   <Route path="nang-luc/lich-su-dau-gia" element={<LichSuDauGiaPage />} />
                   <Route path="nang-luc/tai-chinh" element={<TaiChinhPage />} />
+
+                  {/* Hồ sơ nhân sự — mục cấp cao riêng (tách khỏi Hồ sơ năng lực) */}
+                  <Route
+                    path="nhan-su"
+                    element={
+                      <PortalPermissionRoute module="nhan-su">
+                        <HoSoNhanSuPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  {/* Chi tiết một người nay thuộc Hồ sơ năng lực (nơi dữ liệu sống);
+                      /nhan-su chỉ còn là màn kết xuất. */}
+                  <Route
+                    path="nhan-su/:id"
+                    element={<Navigate to="/portal/nang-luc/dau-gia-vien" replace />}
+                  />
+                  {/* Giữ URL cũ sống: link/bookmark đã phát ra trước khi tách menu */}
+                  <Route
+                    path="nang-luc/ho-so-nhan-su"
+                    element={<Navigate to="/portal/nhan-su" replace />}
+                  />
+                  <Route path="nang-luc/ho-so-nhan-su/:id" element={<RedirectNhanSuId />} />
+
+                  {/* Bồi dưỡng chuyên môn hằng năm — TT 19/2024/TT-BTP */}
+                  <Route
+                    path="boi-duong"
+                    element={
+                      <PortalPermissionRoute module="boi-duong">
+                        <BoiDuongPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
 
                   {/* Hồ sơ dự tuyển */}
                   <Route path="ho-so-du-tuyen" element={<ApplicationsPage />} />
@@ -212,6 +301,33 @@ const App = () => (
 
                   {/* Credit */}
                   <Route path="credits" element={<PortalCreditsPage />} />
+
+                  {/* Tổ chức — thành viên & vai trò */}
+                  <Route path="to-chuc" element={<Navigate to="/portal/to-chuc/thanh-vien" replace />} />
+                  <Route
+                    path="to-chuc/thanh-vien"
+                    element={
+                      <PortalPermissionRoute module="thanh-vien">
+                        <OrgMembersPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="to-chuc/vai-tro"
+                    element={
+                      <PortalPermissionRoute module="vai-tro">
+                        <OrgRolesPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="to-chuc/vai-tro/:id"
+                    element={
+                      <PortalPermissionRoute module="vai-tro">
+                        <OrgRoleDetailPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
                 </Route>
               </Route>
 
@@ -253,9 +369,10 @@ const App = () => (
                   <Route path="nguoi-dung" element={<AdminUsersPage />} />
                   <Route path="nguoi-dung/:id" element={<AdminUserDetail />} />
                   <Route path="khach-hang-tiem-nang" element={<AdminPermissionRoute module="khach-hang-tiem-nang"><AdminLeadsPage /></AdminPermissionRoute>} />
+                  <Route path="khach-hang-tiem-nang/:id" element={<AdminPermissionRoute module="khach-hang-tiem-nang"><AdminLeadDetail /></AdminPermissionRoute>} />
                   <Route path="co-hoi" element={<AdminPermissionRoute module="co-hoi"><AdminOpportunitiesPage /></AdminPermissionRoute>} />
-                  <Route path="khach-hang" element={<AdminCustomersPage />} />
-                  <Route path="khach-hang/:id" element={<AdminCustomerDetail />} />
+                  <Route path="khach-hang" element={<AdminPermissionRoute module="khach-hang"><AdminCustomersPage /></AdminPermissionRoute>} />
+                  <Route path="khach-hang/:id" element={<AdminPermissionRoute module="khach-hang"><AdminCustomerDetail /></AdminPermissionRoute>} />
                   <Route path="doi-tac" element={<AdminPermissionRoute module="nha-cung-cap"><AdminSuppliersPage /></AdminPermissionRoute>} />
                   <Route path="dich-vu" element={<AdminPermissionRoute module="dich-vu"><AdminServicesPage /></AdminPermissionRoute>} />
                   <Route path="don-hang" element={<AdminPermissionRoute module="don-hang"><AdminOrdersPage /></AdminPermissionRoute>} />
@@ -269,11 +386,15 @@ const App = () => (
                   <Route path="bao-cao/doanh-thu" element={<AdminPermissionRoute module="doanh-thu"><RevenueReportPage /></AdminPermissionRoute>} />
                   <Route path="bao-cao/giao-dich" element={<TransactionReportPage />} />
                   <Route path="bao-cao/truy-cap" element={<AccessAnalyticsReportPage />} />
+                  <Route path="bao-cao/tin-dau-gia" element={<AdminPermissionRoute module="tin-dau-gia"><ListingsReportPage /></AdminPermissionRoute>} />
+                  <Route path="bao-cao/boi-duong" element={<AdminPermissionRoute module="boi-duong"><CpdReportPage /></AdminPermissionRoute>} />
                   <Route path="quan-tri" element={<Navigate to="/admin/quan-tri/tai-khoan" replace />} />
                   <Route path="quan-tri/tai-khoan" element={<AdminPermissionRoute module="tai-khoan"><AdminAccountsPage /></AdminPermissionRoute>} />
                   <Route path="quan-tri/tai-khoan/:id" element={<AdminPermissionRoute module="tai-khoan"><AdminAccountDetail /></AdminPermissionRoute>} />
                   <Route path="quan-tri/vai-tro" element={<AdminPermissionRoute module="vai-tro"><AdminRolesPage /></AdminPermissionRoute>} />
                   <Route path="quan-tri/vai-tro/:id" element={<AdminPermissionRoute module="vai-tro"><AdminRoleDetail /></AdminPermissionRoute>} />
+                  {/* Danh mục bồi dưỡng — master data cho cách chấm nghĩa vụ TT 19/2024/TT-BTP */}
+                  <Route path="quan-tri/boi-duong" element={<AdminPermissionRoute module="dm-boi-duong"><CpdCatalogPage /></AdminPermissionRoute>} />
                 </Route>
               </Route>
 
@@ -281,12 +402,14 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </ErrorBoundary>
         </PaywallProvider>
       </BrowserRouter>
       </AuthDialogProvider>
     </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

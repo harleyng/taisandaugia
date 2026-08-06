@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useListingById } from "@/hooks/useListingById";
@@ -31,7 +32,6 @@ import { AuctionOrganizerInfo } from "@/components/auction/AuctionOrganizerInfo"
 import { AuctionScheduleInfo } from "@/components/auction/AuctionScheduleInfo";
 import { AuctionAttachments } from "@/components/auction/AuctionAttachments";
 import { AuctionAssetOwnerCard } from "@/components/auction/AuctionAssetOwnerCard";
-import { AuctionPriceHistory } from "@/components/auction/AuctionPriceHistory";
 import { AuctionSimilarAssets } from "@/components/auction/AuctionSimilarAssets";
 import { Link } from "react-router-dom";
 import { formatAddress } from "@/utils/formatters";
@@ -41,10 +41,21 @@ import { useCredits } from "@/hooks/useCredits";
 import { usePaywall } from "@/contexts/PaywallContext";
 import { LockedBlur } from "@/components/paywall/LockedBlur";
 import { useCompanyViewTracker } from "@/hooks/useCompanyViewTracker";
-import { AuctionPricePrediction } from "@/components/auction/AuctionPricePrediction";
 import { Sparkles, X } from "lucide-react";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { AuctionAssetCard, type AuctionAsset } from "@/components/auction/AuctionAssetCard";
+import { caNumber, caString, caStringArray } from "@/types/listing";
+
+// ─── Tách khỏi entry chunk ────────────────────────────────────────────────────
+// Hai khối này kéo theo recharts (~400 kB raw). Cả hai đều nằm dưới màn hình
+// đầu nên lazy không ảnh hưởng LCP, nhưng cứu được entry bundle mà MỌI khách
+// vãng lai phải tải.
+const AuctionPriceHistory = lazy(() =>
+  import("@/components/auction/AuctionPriceHistory").then((m) => ({ default: m.AuctionPriceHistory })),
+);
+const AuctionPricePrediction = lazy(() =>
+  import("@/components/auction/AuctionPricePrediction").then((m) => ({ default: m.AuctionPricePrediction })),
+);
 
 const AuctionDetail = () => {
   const { id } = useParams();
@@ -102,10 +113,10 @@ const AuctionDetail = () => {
 
   const addressText = formatAddress(listing.address || {});
   const ca = listing.custom_attributes || {};
-  const sourceUrls: string[] = ca.source_urls || [];
+  const sourceUrls = caStringArray(ca.source_urls);
 
-  const winPrice = ca.winning_price ?? ca.win_price;
-  const auctionDateStr = ca.auction_date;
+  const winPrice = caNumber(ca.winning_price ?? ca.win_price);
+  const auctionDateStr = caString(ca.auction_date);
   const auctionDate = auctionDateStr ? new Date(auctionDateStr) : null;
   const isUpcoming = !winPrice && (!auctionDate || auctionDate >= new Date());
 
@@ -259,25 +270,29 @@ const AuctionDetail = () => {
             <AuctionAttachments listing={listing} />
 
             {/* 6. Price history (Bất động sản only) — paywall preview tự xử lý trong block (AC8) */}
-            <AuctionPriceHistory
-              listing={listing}
-              isUnlocked={isUnlocked}
-              isLoggedIn={isLoggedIn}
-              onLogin={() => openAuthDialog(() => openAssetPaywall(listing.id, listing.title))}
-              onUnlock={() => openAssetPaywall(listing.id, listing.title)}
-            />
+            <Suspense fallback={<Skeleton className="h-72 w-full rounded-2xl" />}>
+              <AuctionPriceHistory
+                listing={listing}
+                isUnlocked={isUnlocked}
+                isLoggedIn={isLoggedIn}
+                onLogin={() => openAuthDialog(() => openAssetPaywall(listing.id, listing.title))}
+                onUnlock={() => openAssetPaywall(listing.id, listing.title)}
+              />
+            </Suspense>
 
             {/* 7. Dự đoán giá trúng (chỉ hiển thị với phiên chưa kết thúc) — paywall preview tự xử lý trong block, giống Lịch sử giá */}
             {isUpcoming && (
-              <AuctionPricePrediction
-                listing={listing}
-                isUnlocked={isUnlocked}
-                onUnlock={() =>
-                  isLoggedIn
-                    ? openAssetPaywall(listing.id, listing.title)
-                    : openAuthDialog(() => openAssetPaywall(listing.id, listing.title))
-                }
-              />
+              <Suspense fallback={<Skeleton className="h-56 w-full rounded-2xl" />}>
+                <AuctionPricePrediction
+                  listing={listing}
+                  isUnlocked={isUnlocked}
+                  onUnlock={() =>
+                    isLoggedIn
+                      ? openAssetPaywall(listing.id, listing.title)
+                      : openAuthDialog(() => openAssetPaywall(listing.id, listing.title))
+                  }
+                />
+              </Suspense>
             )}
 
             {/* 7. Sources */}

@@ -21,4 +21,4 @@ export function TicketPriorityBadge({ priority }: { priority: TicketPriority }) 
   );
 }
 
-export const sourceLabel = (s: TicketSource): string => SOURCE_LABELS[s] ?? s;
+// sourceLabel đã chuyển sang ./ticketLabels (file component chỉ xuất component).

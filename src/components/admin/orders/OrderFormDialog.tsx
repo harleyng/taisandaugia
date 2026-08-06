@@ -25,7 +25,8 @@ import { useServices } from "@/hooks/useServices";
 import { useServiceVariants } from "@/hooks/useServiceVariants";
 import { useAdvertisements } from "@/hooks/useAdvertisements";
 import { useUpsertOrder, orderErrorMessage } from "@/hooks/useOrders";
-import { OrderCommissionFields, previewCommission } from "./OrderCommissionFields";
+import { OrderCommissionFields, } from "./OrderCommissionFields";
+import { previewCommission } from "./commission";
 import type { Order, FulfillmentStatus, CommissionType } from "@/types/orders";
 
 interface Props {

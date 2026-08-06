@@ -155,7 +155,7 @@ export function AudienceSection({ spec, onChange, count, isFetching, isError }: 
       .map((e) => ({
         key: `e:${e}`,
         primary: e,
-        secondary: null,
+        secondary: null as string | null,
         // undefined khi chưa tra xong → chưa gắn badge (tránh nhầm lúc đang tải).
         noAccount: emailAccount[e.toLowerCase()] === false,
       })),

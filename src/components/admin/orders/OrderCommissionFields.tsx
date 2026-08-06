@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { groupNumber, parseNumber, formatVnd } from "@/lib/advertising/slug";
 import type { CommissionType } from "@/types/orders";
+import { previewCommission } from "./commission";
 
 interface Props {
   supplierName: string | null;
@@ -21,15 +22,6 @@ interface Props {
   onValueChange: (v: number) => void;
 }
 
-/** Bản xem trước phải khớp CÔNG THỨC TRIGGER trong DB:
- *  percent → round(gross * value / 100) · fixed → round(value * quantity) */
-export const previewCommission = (
-  type: CommissionType,
-  value: number,
-  gross: number,
-  quantity: number,
-): number =>
-  type === "percent" ? Math.round((gross * value) / 100) : Math.round(value * quantity);
 
 export function OrderCommissionFields({
   supplierName,

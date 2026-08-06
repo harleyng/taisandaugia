@@ -3,7 +3,8 @@ import { ChevronRight, Pencil, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatVnd } from "@/lib/advertising/slug";
-import { ServiceKindBadge, AudienceBadge, categoryLabel } from "./ServiceKindBadge";
+import { ServiceKindBadge, AudienceBadge } from "./ServiceKindBadge";
+import { categoryLabel } from "./serviceLabels";
 import type { Service, ServiceGroup, ServiceVariant } from "@/types/orders";
 
 const TH = "px-4 py-2.5 text-left text-xs font-medium text-muted-foreground";

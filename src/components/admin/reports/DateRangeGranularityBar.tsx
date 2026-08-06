@@ -1,27 +1,16 @@
 import { CalendarIcon } from "lucide-react";
-import { subDays, subMonths, startOfMonth, startOfYear, format } from "date-fns";
+import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Granularity } from "@/lib/reports/transactionReport";
 
-export type PresetKey = "7d" | "30d" | "thisMonth" | "3m" | "12m" | "thisYear" | "custom";
-
-export interface PresetDef {
-  key: PresetKey;
-  label: string;
-  range: () => { from: Date; to: Date };
-}
-
-export const REPORT_PRESETS: PresetDef[] = [
-  { key: "7d", label: "7 ngày", range: () => ({ from: subDays(new Date(), 6), to: new Date() }) },
-  { key: "30d", label: "30 ngày", range: () => ({ from: subDays(new Date(), 29), to: new Date() }) },
-  { key: "thisMonth", label: "Tháng này", range: () => ({ from: startOfMonth(new Date()), to: new Date() }) },
-  { key: "3m", label: "3 tháng", range: () => ({ from: subMonths(new Date(), 3), to: new Date() }) },
-  { key: "12m", label: "12 tháng", range: () => ({ from: subMonths(new Date(), 12), to: new Date() }) },
-  { key: "thisYear", label: "Năm nay", range: () => ({ from: startOfYear(new Date()), to: new Date() }) },
-];
+// PresetKey/PresetDef/REPORT_PRESETS nay ở ./reportPresets — re-export type để
+// call site cũ không phải đổi (re-export CHỈ type không vi phạm react-refresh).
+import { REPORT_PRESETS, type PresetDef, type PresetKey } from "./reportPresets";
+// Re-export type cho call site cũ (re-export CHỈ type không vi phạm react-refresh).
+export type { PresetKey, PresetDef } from "./reportPresets";
 
 const GRANULARITIES: { key: Granularity; label: string }[] = [
   { key: "day", label: "Theo ngày" },

@@ -16,7 +16,7 @@ function normalizePath(pathname: string): string {
  * /admin — báo cáo là về hành vi người dùng cuối, không phải thao tác admin) và
  * đồng bộ user_id hiện tại cho các trackFeature() rải rác trong app.
  */
-export default function AnalyticsTracker() {
+export default function AnalyticsTracker(): null {
   const { pathname } = useLocation();
   const { userId } = useAuth();
 

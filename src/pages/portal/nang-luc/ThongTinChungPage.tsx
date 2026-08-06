@@ -5,6 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useGeneralInfo } from '@/hooks/useGeneralInfo'
+import { useOrg } from '@/contexts/OrgContext'
+import type { MyOrg } from '@/types/orgRbac'
 import { ScoreInlineBar } from '@/components/portal/ScoreInlineBar'
 import { ScoreBreakdownDialog } from '@/components/portal/ScoreBreakdownDialog'
 import { MUC_IV5_BREAKDOWN } from '@/lib/portal/scoreBreakdowns'
@@ -15,7 +17,7 @@ import { ProfileEditCard } from '@/components/general-info/ProfileEditCard'
 import { DocsEditCard } from '@/components/general-info/DocsEditCard'
 import { BranchesCard } from '@/components/general-info/BranchesCard'
 import { BranchFormDialog } from '@/components/general-info/BranchFormDialog'
-import { editSchema, buildDefaults } from '@/components/general-info/EditInfoSheet'
+import { editSchema, buildDefaults } from '@/components/general-info/editSchema'
 import type { EditFormValues } from '@/components/general-info/EditInfoSheet'
 import type { OrgGeneralInfo, Branch, OrgType } from '@/types/general-info'
 
@@ -27,21 +29,12 @@ function mapOrgType(n: number | null): OrgType {
   return 'CONG_TY_HOP_DANH'
 }
 
-async function fetchLinkedAuctionOrg(): Promise<Partial<OrgGeneralInfo> | null> {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+// Nhận tổ chức đang chọn từ OrgContext thay vì tự query bằng owner_id — cách cũ
+// bỏ sót mọi thành viên không phải chủ sở hữu.
+async function fetchLinkedAuctionOrg(org: MyOrg | null): Promise<Partial<OrgGeneralInfo> | null> {
+  if (!org?.licenseInfo) return null
 
-  const { data: orgs } = await supabase
-    .from('organizations')
-    .select('license_info, kyc_status')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-
-  const org = orgs?.[0] ?? null
-  if (!org?.license_info) return null
-
-  const auctionOrgId = (org.license_info as Record<string, unknown>)?.auction_org_id as string | undefined
+  const auctionOrgId = (org.licenseInfo as Record<string, unknown>)?.auction_org_id as string | undefined
   if (!auctionOrgId) return null
 
   const { data: company } = await supabase
@@ -79,6 +72,7 @@ export default function ThongTinChungPage() {
     updateBranch,
     removeBranch,
   } = useGeneralInfo()
+  const { currentOrg } = useOrg()
 
   const [editingSection, setEditingSection] = useState<EditingSection>(null)
   const [saving, setSaving] = useState(false)
@@ -100,11 +94,11 @@ export default function ThongTinChungPage() {
   useEffect(() => {
     if (generalInfo !== null || prefillDone) return
     setPrefilling(true)
-    fetchLinkedAuctionOrg()
+    fetchLinkedAuctionOrg(currentOrg)
       .then((partial) => { save({ ...emptyInfo(), ...(partial ?? {}) } as OrgGeneralInfo) })
       .catch(() => { save(emptyInfo()) })
       .finally(() => { setPrefilling(false); setPrefillDone(true) })
-  }, [generalInfo, prefillDone, save])
+  }, [generalInfo, prefillDone, save, currentOrg])
 
   const handleSaveProfile = async () => {
     const profileFields: (keyof EditFormValues)[] = [

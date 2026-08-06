@@ -1,4 +1,5 @@
 import type { ServiceKind, ServiceAudience } from "@/types/orders";
+import { AUDIENCE_LABELS } from "./serviceLabels";
 
 const LABELS: Record<ServiceKind, string> = {
   credit: "Credit",
@@ -20,26 +21,7 @@ export function ServiceKindBadge({ kind }: { kind: ServiceKind }) {
   );
 }
 
-// Nhãn tiếng Việt cho nhóm dịch vụ (category).
-export const CATEGORY_LABELS: Record<string, string> = {
-  package: "Gói credit",
-  unlock: "Tính năng credit",
-  feature: "Tính năng theo lượt",
-  advertising: "Quảng cáo",
-  brokerage: "Môi giới",
-};
-
-export const categoryLabel = (c: string | null | undefined): string =>
-  (c && CATEGORY_LABELS[c]) || c || "—";
-
-// ─── Đối tượng (audience) ────────────────────────────────────────────────────
-
-export const AUDIENCE_LABELS: Record<ServiceAudience, string> = {
-  buyer: "Người mua",
-  owner: "Chủ tài sản",
-  company: "Công ty đấu giá",
-  all: "Dùng chung",
-};
+// Nhãn dùng chung đã chuyển sang ./serviceLabels (file component chỉ xuất component).
 
 const AUDIENCE_CLASS: Record<ServiceAudience, string> = {
   buyer: "bg-sky-100 text-sky-700",

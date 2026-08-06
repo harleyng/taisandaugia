@@ -2,7 +2,8 @@ import { format } from "date-fns";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TicketStatusBadge, TicketPriorityBadge, sourceLabel } from "./TicketStatusBadge";
+import { TicketStatusBadge, TicketPriorityBadge } from "@/components/admin/tickets/TicketStatusBadge";
+import { sourceLabel } from "@/components/admin/tickets/ticketLabels";
 import { RelationCell } from "@/components/admin/crm/RelationCell";
 import type { Ticket } from "@/types/tickets";
 

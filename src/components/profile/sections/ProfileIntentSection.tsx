@@ -29,6 +29,7 @@ import { countMatches } from "@/lib/demandMatch";
 import {
   isIntentComplete,
   AgentInfoShape,
+  type OnboardingIntent,
   IntentRegion,
   LegalCategoryKey,
   SessionStatusKey,
@@ -196,7 +197,9 @@ export const ProfileIntentSection = () => {
       deposit_min: depositMin ? Number(depositMin) : null,
       deposit_max: depositMax ? Number(depositMax) : null,
       legal_categories: legalCategories,
-      session_statuses: [],
+      // Union hẹp của OnboardingIntent, không phải string[] — nếu nới ra
+      // thì mọi chỗ nhận intent sẽ mất kiểm tra giá trị hợp lệ.
+      session_statuses: [] as NonNullable<OnboardingIntent['session_statuses']>,
     };
 
     const willBeComplete = isIntentComplete(nextIntent);

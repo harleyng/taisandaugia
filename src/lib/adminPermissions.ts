@@ -76,7 +76,7 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   // Bán hàng
   { module: "khach-hang-tiem-nang", label: "Khách hàng tiềm năng", category: "ban-hang", actions: ["view", "create", "update", "delete", "export"] },
   { module: "co-hoi", label: "Cơ hội", category: "ban-hang", actions: ["view", "create", "update", "delete", "approve", "export"] },
-  { module: "khach-hang", label: "Khách hàng", category: "ban-hang", actions: ["view", "update", "export"] },
+  { module: "khach-hang", label: "Khách hàng", category: "ban-hang", actions: ["view", "create", "update", "delete", "export"] },
   { module: "don-hang", label: "Đơn hàng", category: "ban-hang", actions: ["view", "create", "update", "delete", "export"] },
   // Sổ đăng ký công ty (bảng suppliers). Mã giữ "nha-cung-cap" —
   // "doi-tac" đã thuộc về module thẻ hiển thị trang chủ từ trước.
@@ -103,9 +103,16 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   { module: "doanh-thu", label: "Doanh thu", category: "bao-cao", actions: ["view", "export"] },
   { module: "giao-dich", label: "Giao dịch credit", category: "bao-cao", actions: ["view", "export"] },
   { module: "truy-cap", label: "Phân tích truy cập", category: "bao-cao", actions: ["view", "export"] },
+  { module: "tin-dau-gia", label: "Tin đấu giá", category: "bao-cao", actions: ["view", "export"] },
+  // Mã trùng tên với module portal "boi-duong" là vô hại: hai danh mục khác
+  // nhau, lưu ở admin_role_permissions vs org_role_permissions.
+  { module: "boi-duong", label: "Bồi dưỡng chuyên môn", category: "bao-cao", actions: ["view", "export"] },
   // Quản trị hệ thống (phân quyền)
   { module: "tai-khoan", label: "Tài khoản quản trị", category: "he-thong", actions: ["view", "create", "update", "delete"] },
   { module: "vai-tro", label: "Vai trò", category: "he-thong", actions: ["view", "create", "update", "delete"] },
+  // Danh mục bồi dưỡng: hình thức, vai trò, cách quy đổi giờ, trường hợp miễn.
+  // Mã "dm-" để không đụng "boi-duong" — mã đó là BÁO CÁO tuân thủ, khác việc.
+  { module: "dm-boi-duong", label: "Bồi dưỡng ĐGV", category: "he-thong", actions: ["view", "create", "update", "delete"] },
 ];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

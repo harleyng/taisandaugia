@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { NAV_SECTIONS, NavItem } from './nav-config'
+import { OrgSwitcher } from './OrgSwitcher'
 import { useCapacityProfile } from '@/hooks/useCapacityProfile'
+import { useOrgPermissions } from '@/hooks/useOrgPermissions'
+import { orgMatrixHas } from '@/lib/orgPermissions'
 import { ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
@@ -34,6 +37,26 @@ export function PortalSidebar({ onNavigate }: Props) {
   const location = useLocation()
   const navigate = useNavigate()
   const { profile } = useCapacityProfile()
+  const { isOwner, matrix, ready } = useOrgPermissions()
+
+  // Lọc nav theo quyền 'view'. Khi CHƯA nạp xong chỉ hiện mục không gắn module —
+  // tránh nháy link mà người dùng không có quyền vào.
+  const visibleSections = useMemo(() => {
+    const canView = (m?: string) =>
+      !m || isOwner || orgMatrixHas(matrix, m, 'view')
+
+    return NAV_SECTIONS.map((section) => {
+      if (!section.children) return section
+      return {
+        ...section,
+        children: section.children.filter((c) => (ready ? canView(c.module) : !c.module)),
+      }
+    }).filter((section) =>
+      // Section có children mà bị lọc sạch thì chính nó cũng phải biến mất,
+      // nếu không sẽ còn lại một mục xổ xuống rỗng.
+      section.children ? section.children.length > 0 : ready ? canView(section.module) : !section.module,
+    )
+  }, [isOwner, matrix, ready])
 
   // Sections with children default to open if any child is active
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
@@ -64,9 +87,13 @@ export function PortalSidebar({ onNavigate }: Props) {
         </div>
       </div>
 
+      {/* Bộ chuyển tổ chức / chi nhánh — trên cùng, tách khỏi danh sách module
+          bằng đường kẻ. Tự ẩn khi chỉ thuộc một tổ chức. */}
+      <OrgSwitcher className="border-b border-border px-3 py-3 shrink-0" />
+
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
-        {NAV_SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
           // Section is a direct link
           if (section.href && !section.children) {
             return (

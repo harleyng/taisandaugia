@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -11,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useCredits } from '@/hooks/useCredits'
+import { useOrg } from '@/contexts/OrgContext'
 import { supabase } from '@/integrations/supabase/client'
 import { CreditCard, LogOut, Menu, Plus, ChevronRight, ArrowLeft } from 'lucide-react'
 
@@ -18,12 +18,27 @@ const PAGE_META: Record<string, { title: string; parent?: string }> = {
   '/portal/dashboard': { title: 'Tổng quan' },
   '/portal/nang-luc/thong-tin-chung': { title: 'Thông tin chung', parent: 'Hồ sơ năng lực' },
   '/portal/nang-luc/dau-gia-vien': { title: 'Đấu giá viên', parent: 'Hồ sơ năng lực' },
+  '/portal/nhan-su': { title: 'Hồ sơ nhân sự' },
+  '/portal/nang-luc/tu-tai-lieu': { title: 'Tủ tài liệu', parent: 'Hồ sơ năng lực' },
   '/portal/nang-luc/co-so-vat-chat': { title: 'Cơ sở vật chất', parent: 'Hồ sơ năng lực' },
   '/portal/nang-luc/lich-su-dau-gia': { title: 'Lịch sử đấu giá', parent: 'Hồ sơ năng lực' },
   '/portal/nang-luc/tai-chinh': { title: 'Tài chính & Thuế', parent: 'Hồ sơ năng lực' },
   '/portal/ho-so-du-tuyen': { title: 'Hồ sơ dự tuyển' },
   '/portal/ho-so-du-tuyen/new': { title: 'Lập hồ sơ dự tuyển', parent: 'Hồ sơ dự tuyển' },
   '/portal/credits': { title: 'Credit & Thanh toán' },
+  '/portal/to-chuc/thanh-vien': { title: 'Thành viên', parent: 'Tổ chức' },
+  '/portal/to-chuc/vai-tro': { title: 'Vai trò', parent: 'Tổ chức' },
+}
+
+// Route động (/vai-tro/:id, /ho-so-du-tuyen/:id) không có khóa khớp chính xác —
+// lùi về mục cha dài nhất thay vì để breadcrumb trống.
+function resolvePage(pathname: string) {
+  const exact = PAGE_META[pathname]
+  if (exact) return exact
+  const prefix = Object.keys(PAGE_META)
+    .filter((k) => pathname.startsWith(k + '/'))
+    .sort((a, b) => b.length - a.length)[0]
+  return prefix ? PAGE_META[prefix] : undefined
 }
 
 interface Props {
@@ -34,29 +49,14 @@ export function PortalTopBar({ onMenuClick }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
   const { balance } = useCredits()
-  const page = PAGE_META[location.pathname]
-  const [companyName, setCompanyName] = useState('')
-  const [companyIdentifier, setCompanyIdentifier] = useState('')
+  const { currentOrg } = useOrg()
+  const page = resolvePage(location.pathname)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return
-      supabase
-        .from('organizations')
-        .select('name, license_info')
-        .eq('owner_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-        .then(({ data }) => {
-          if (data) {
-            setCompanyName(data.name)
-            const info = data.license_info as Record<string, string> | null
-            setCompanyIdentifier(info?.tax_code ?? info?.registrationCode ?? '')
-          }
-        })
-    })
-  }, [])
+  // Trước đây tên công ty được query bằng owner_id ⇒ thành viên không phải chủ
+  // sở hữu luôn thấy trống. Nay lấy từ membership qua OrgContext.
+  const companyName = currentOrg?.name ?? ''
+  const licenseInfo = currentOrg?.licenseInfo as Record<string, string> | null | undefined
+  const companyIdentifier = licenseInfo?.tax_code ?? licenseInfo?.registrationCode ?? ''
 
   const initials = companyName
     ? companyName.trim().split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
@@ -78,8 +78,8 @@ export function PortalTopBar({ onMenuClick }: Props) {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Desktop: page breadcrumb */}
-      <nav className="hidden lg:flex items-center gap-1 text-sm min-w-0">
+      {/* Desktop: page breadcrumb — bộ chuyển tổ chức đã dời sang đầu sidebar */}
+      <nav className="hidden lg:flex flex-1 items-center gap-1 text-sm min-w-0">
         {page?.parent && (
           <>
             <span className="text-muted-foreground truncate">{page.parent}</span>

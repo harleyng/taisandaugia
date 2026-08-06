@@ -1,33 +1,13 @@
-import type { AuctionRecord, AuctionCrawlSession, ImportSession } from '@/types/auction-record'
+import type { AuctionCrawlSession, ImportSession } from '@/types/auction-record'
 
-const RECORDS_KEY = 'tsd:auction-records'
 const CRAWL_SESSIONS_KEY = 'tsd:auction-crawl-sessions'
 const IMPORT_SESSIONS_KEY = 'tsd:auction-import-sessions'
 
-export function listAuctionRecords(): AuctionRecord[] {
-  try {
-    const raw = localStorage.getItem(RECORDS_KEY)
-    return raw ? (JSON.parse(raw) as AuctionRecord[]) : []
-  } catch {
-    return []
-  }
-}
-
-export function saveAuctionRecords(records: AuctionRecord[]): void {
-  localStorage.setItem(RECORDS_KEY, JSON.stringify(records))
-}
-
-export function upsertAuctionRecord(record: AuctionRecord): void {
-  const all = listAuctionRecords()
-  const idx = all.findIndex((r) => r.id === record.id)
-  if (idx >= 0) all[idx] = record
-  else all.push(record)
-  saveAuctionRecords(all)
-}
-
-export function deleteAuctionRecord(id: string): void {
-  saveAuctionRecords(listAuctionRecords().filter((r) => r.id !== id))
-}
+// Bản ghi đấu giá nay ở Supabase (org_auction_records — xem supabase-repo.ts).
+// Bốn hàm listAuctionRecords/saveAuctionRecords/upsertAuctionRecord/
+// deleteAuctionRecord đã gỡ: chúng đọc/ghi key 'tsd:auction-records' mà KHÔNG
+// nơi nào ghi vào, nên mọi consumer đều âm thầm nhận mảng rỗng.
+// Phần còn lại của file chỉ giữ phiên crawl/import — thuần nhật ký cục bộ.
 
 export function getCrawlSessions(): AuctionCrawlSession[] {
   try {

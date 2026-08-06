@@ -15,7 +15,7 @@ import { ChevronLeft, ChevronRight, SkipForward, Zap } from 'lucide-react'
 import type { AuctionRecord, AssetResult } from '@/types/auction-record'
 import { AUCTION_FORMAT_LABELS, BIDDING_METHOD_LABELS, type AuctionFormat, type BiddingMethod } from '@/types/auction-record'
 import type { AuctionAsset } from '@/components/auction/AuctionAssetCard'
-import { listAuctioneers } from '@/lib/auctioneers/storage'
+import { useAuctioneers } from '@/hooks/useAuctioneers'
 import { format } from 'date-fns'
 
 const assetResultSchema = z.object({
@@ -59,7 +59,8 @@ interface RecordFormProps {
 }
 
 function RecordForm({ record, rawListings, onSave, onSkip, onClose, isBatch }: RecordFormProps) {
-  const activeAuctioneers = listAuctioneers().filter((a) => a.isActive)
+  const { auctioneers } = useAuctioneers()
+  const activeAuctioneers = auctioneers.filter((a) => a.isActive)
 
   const ca = (rawListings?.[record.id]?.custom_attributes ?? {}) as Record<string, unknown>
   const assets: AuctionAsset[] = Array.isArray(ca.assets) && (ca.assets as unknown[]).length > 0

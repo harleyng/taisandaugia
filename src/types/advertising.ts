@@ -8,8 +8,17 @@ export type NavType = "none" | "link";
 export type AdStartType = "immediate" | "scheduled";
 export type AdEndType = "continuous" | "scheduled";
 export type StatDevice = "desktop" | "mobile";
-export type CustomerType = "individual" | "company";
-export type CustomerStatus = "active" | "inactive";
+
+// Customer đã dọn sang types/customers.ts (nó không còn là khái niệm của module
+// quảng cáo nữa). Re-export để các file import từ đây không phải sửa.
+export type {
+  Customer,
+  CustomerFields,
+  CustomerStatus,
+  CustomerType,
+  CustomerUpsert,
+} from "./customers";
+import type { Customer } from "./customers";
 
 export interface AdPage {
   id: string;
@@ -39,23 +48,6 @@ export interface AdPosition {
   created_at: string;
   updated_at: string;
   page?: Pick<AdPage, "id" | "name" | "slug"> | null;
-}
-
-export interface Customer {
-  id: string;
-  code: string | null;
-  name: string;
-  customer_type: CustomerType;
-  contact_name: string | null;
-  phone: string | null;
-  email: string | null;
-  tax_code: string | null;
-  address: string | null;
-  note: string | null;
-  status: CustomerStatus;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface Advertisement {
@@ -147,17 +139,4 @@ export interface AdPositionUpsert {
   is_active?: boolean;
   auction_ends_at?: string | null;
   bidder_count?: number;
-}
-
-export interface CustomerUpsert {
-  id?: string;
-  name: string;
-  customer_type: CustomerType;
-  contact_name?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  tax_code?: string | null;
-  address?: string | null;
-  note?: string | null;
-  status: CustomerStatus;
 }

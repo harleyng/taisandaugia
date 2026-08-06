@@ -90,6 +90,15 @@ export interface CampaignRecipient {
   created_at: string;
 }
 
+/** Người nhận kèm chiến dịch — dùng ở tab Chiến dịch của một khách hàng, nơi
+ *  ta đi NGƯỢC từ tài khoản ra danh sách chiến dịch đã gửi tới họ. */
+export interface CampaignRecipientWithCampaign extends CampaignRecipient {
+  campaign: Pick<
+    Campaign,
+    "id" | "name" | "status" | "subject" | "channel" | "sent_at" | "scheduled_at"
+  > | null;
+}
+
 /** Row shape returned by the resolve_campaign_audience RPC. */
 export interface ResolvedAudienceRow {
   /** null = email ngoài hệ thống (không có tài khoản). */

@@ -138,7 +138,7 @@ export function AuctionDetailDrawer({ open, onClose, record, rawListing, onEdit 
                 {rawListing && (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lịch trình đấu giá</p>
-                    <AuctionScheduleInfo listing={rawListing} />
+                    <AuctionScheduleInfo listing={{ custom_attributes: ca }} />
                   </div>
                 )}
 
@@ -146,7 +146,7 @@ export function AuctionDetailDrawer({ open, onClose, record, rawListing, onEdit 
                 {rawListing && (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">File đính kèm</p>
-                    <AuctionAttachments listing={rawListing} />
+                    <AuctionAttachments listing={{ custom_attributes: ca }} />
                   </div>
                 )}
               </TabsContent>

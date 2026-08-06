@@ -36,3 +36,10 @@ dist-ssr
 supabase/.temp/
 .env.local
 *.local
+
+# PID của dev server chạy tay — không phải nguồn
+srv.pid
+
+# Khoá Supabase public (URL + anon key) nhưng vẫn không nên track:
+# lần sau ai thêm secret thật vào .env sẽ lọt lên remote.
+.env

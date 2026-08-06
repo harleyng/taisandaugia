@@ -4,6 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { expandUnlock, formatPeriodLabel, parsePeriod } from "./reportPeriods";
 import { getVariantCost, getVariantPackage } from "./serviceCatalog";
+import type { Json } from "@/integrations/supabase/types";
 
 // ─── Constants (stay as code, not in DB) ────────────────────────────────────
 
@@ -53,7 +54,8 @@ export type TransactionType =
   | "unlock_deep_report"
   | "owner_report_view"
   | "unlock_opp_report"
-  | "export_profile";
+  | "export_profile"
+  | "export_personnel_dossier";
 
 export const OWNER_REPORT_COST = 4;
 
@@ -157,6 +159,33 @@ const ensureCreditsRow = async (userId: string) => {
   await supabase
     .from("user_credits")
     .upsert({ user_id: userId, balance: 0 }, { onConflict: "user_id", ignoreDuplicates: true });
+};
+
+/**
+ * Nhận "vé" xử lý một giao dịch thanh toán. TRUE = lần đầu, hãy cộng credit /
+ * mở khoá. FALSE = đã xử lý rồi, BỎ QUA hết.
+ *
+ * Khoá nằm ở SERVER (RPC claim_payment_txn, migration 20260806000070) vì đây là
+ * tiền: guard phía client không sống qua được F5 hay back/forward.
+ */
+export const claimPaymentTxn = async (
+  txnRef: string,
+  variantKey?: string | null,
+  unlockParam?: string | null,
+): Promise<boolean> => {
+  const { data, error } = await supabase.rpc("claim_payment_txn", {
+    _txn_ref: txnRef,
+    _variant_key: variantKey ?? null,
+    _unlock_param: unlockParam ?? null,
+  });
+  if (error) {
+    // Không xác định được ⇒ CHO PHÉP đi tiếp. Thà chịu rủi ro cộng đôi (đối
+    // soát được qua ledger) hơn là chặn một giao dịch thật và khách mất tiền
+    // trắng.
+    console.error("[claimPaymentTxn]", error);
+    return true;
+  }
+  return data === true;
 };
 
 export const addCredits = async (
@@ -318,7 +347,9 @@ export const unlockOwner = async (
 export const chargeOwnerReport = async (
   userId: string,
   workspaceId: string,
-  filterCombo: object,
+  // Ghi thẳng vào cột JSONB owner_report_views.filter_combo — dùng Json thay
+  // `object` để khớp kiểu sinh tự động.
+  filterCombo: Json,
   isDefault: boolean,
 ): Promise<{ ok: boolean; reason?: "insufficient" }> => {
   const cost = isDefault ? 0 : await getVariantCost("report_portfolio_owner");
@@ -421,6 +452,31 @@ export const chargeExportProfile = async (
   return { ok: true };
 };
 
+// Xuất hồ sơ đấu giá viên — 1 credit/hồ sơ/lần, giá lấy từ catalog.
+//
+// MỘT lần trừ N x đơn giá và MỘT dòng sổ cái, không phải N lần: credit_transactions
+// không có FK theo thực thể nên N dòng giống hệt nhau chỉ gây rối, và deductCredits
+// là read-then-write KHÔNG atomic — gọi tuần tự N lần nhân N cửa sổ tranh chấp và
+// có thể hỏng nửa chừng, để lại người dùng bị trừ một phần mà không rollback được.
+export const chargePersonnelDossierExport = async (
+  userId: string,
+  count: number,
+): Promise<{ ok: boolean; reason?: "insufficient"; unitCost?: number }> => {
+  await ensureCreditsRow(userId);
+  const unit = await getVariantCost("export_personnel_dossier");
+  const total = unit * Math.max(1, count);
+  const ok = await deductCredits(userId, total);
+  if (!ok) return { ok: false, reason: "insufficient", unitCost: unit };
+  await supabase.from("credit_transactions").insert({
+    user_id: userId,
+    type: "export_personnel_dossier",
+    description: `Xuất hồ sơ đấu giá viên (${count} hồ sơ)`,
+    credit_delta: -total,
+    variant_key: "export_personnel_dossier",
+  });
+  return { ok: true, unitCost: unit };
+};
+
 // ─── Invoice info ─────────────────────────────────────────────────────────────
 
 export const getInvoiceInfo = async (userId: string): Promise<InvoiceInfo | null> => {
@@ -429,12 +485,12 @@ export const getInvoiceInfo = async (userId: string): Promise<InvoiceInfo | null
     .select("invoice_info")
     .eq("id", userId)
     .single();
-  return (data?.invoice_info as InvoiceInfo | null) ?? null;
+  return (data?.invoice_info as unknown as InvoiceInfo | null) ?? null;
 };
 
 export const saveInvoiceInfo = async (userId: string, info: InvoiceInfo): Promise<void> => {
   await supabase
     .from("profiles")
-    .update({ invoice_info: info as any })
+    .update({ invoice_info: info as unknown as Json })
     .eq("id", userId);
 };

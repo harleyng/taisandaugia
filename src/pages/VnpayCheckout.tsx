@@ -38,7 +38,13 @@ const VnpayCheckout = () => {
   const [step, setStep] = useState<"method" | "qr">("method");
   const [method, setMethod] = useState<Method>("qr");
   const [secondsLeft, setSecondsLeft] = useState(15 * 60);
+  // Mã hiển thị cho người dùng (6 số, dễ đọc lại qua điện thoại).
   const orderId = useMemo(() => Math.floor(100000 + Math.random() * 900000).toString(), []);
+  // Mã ĐỐI SOÁT gửi sang /payment-result. Phải là UUID, không dùng lại orderId
+  // 6 số: 900k khả năng ⇒ theo nghịch lý ngày sinh, chỉ ~1.100 giao dịch là đã
+  // có 50% xác suất trùng, và trùng nghĩa là giao dịch thật bị coi là "đã xử lý"
+  // rồi bỏ qua — khách trả tiền mà không được cộng credit.
+  const txnRef = useMemo(() => crypto.randomUUID(), []);
 
   useEffect(() => {
     if (!catalogLoading && !pkg) navigate("/profile?tab=credits", { replace: true });
@@ -66,6 +72,8 @@ const VnpayCheckout = () => {
     const sp = new URLSearchParams();
     sp.set("status", status);
     sp.set("package", pkg.variant_key);
+    // Khoá idempotent phía server dựa vào mã này (migration 20260806000070).
+    sp.set("txn", txnRef);
     if (returnPath) sp.set("return", returnPath);
     if (unlockParam) sp.set("unlock", unlockParam);
     navigate(`/payment-result?${sp.toString()}`);

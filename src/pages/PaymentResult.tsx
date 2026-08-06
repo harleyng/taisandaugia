@@ -6,26 +6,64 @@ import { CheckCircle2, XCircle, Coins } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useCredits, CompanyTierKey, OwnerTierKey } from "@/hooks/useCredits";
+import { useAuth } from "@/contexts/AuthContext";
 import { getVariantPackage } from "@/lib/serviceCatalog";
+import { claimPaymentTxn } from "@/lib/credits";
 
 const PaymentResult = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { userId, loading: authLoading } = useAuth();
   const { balance, addCredits, unlockAsset, unlockCompany, unlockOwner, unlockDeepReportPeriod } = useCredits();
   const status = params.get("status");
   const packageKey = params.get("package");
   const returnPath = params.get("return");
   const unlockParam = params.get("unlock");
+  const txnRef = params.get("txn");
   const ranRef = useRef(false);
   const [autoUnlocked, setAutoUnlocked] = useState<string | null>(null);
   const [pkg, setPkg] = useState<{ name: string; credits: number } | null>(null);
+  const [alreadyProcessed, setAlreadyProcessed] = useState(false);
 
   useEffect(() => {
+    // Phải chờ auth resolve xong TRƯỚC khi tiêu `ranRef`.
+    //
+    // VNPay redirect trình duyệt sang đây bằng một lần load mới, nên ở lần
+    // render đầu AuthContext vẫn đang `loading` và `userId` còn null (xem
+    // AuthContext.tsx:30-39 — getSession() là bất đồng bộ). Mọi hàm của
+    // useCredits đều `if (!userId) return` (useCredits.tsx:46,63,73,83,93).
+    // Nếu chạy thân effect lúc này thì: guard bị tiêu, addCredits/unlock*
+    // no-op câm lặng, và effect KHÔNG BAO GIỜ chạy lại → user đã trả tiền
+    // nhưng không được cộng credit.
+    if (authLoading || !userId) return;
     if (ranRef.current) return;
     ranRef.current = true;
     if (status !== "success") return;
 
     (async () => {
+      // ─── Khoá idempotent PHÍA SERVER ───────────────────────────────────────
+      // `ranRef` chỉ chặn double-invoke trong CÙNG một lần mount. F5 hoặc
+      // back/forward là mount mới ⇒ ref reset ⇒ trước đây chạy lại toàn bộ:
+      // cộng credit lần nữa, và unlockCompany/unlockOwner trừ tiền lần nữa
+      // (chúng stack thời hạn theo thiết kế nên không tự chặn trùng).
+      //
+      // claim_payment_txn chỉ trả true cho lượt gọi ĐẦU TIÊN của mỗi mã giao
+      // dịch. Không claim được ⇒ đã xử lý rồi ⇒ bỏ qua HẾT, chỉ hiển thị.
+      if (txnRef) {
+        const claimed = await claimPaymentTxn(txnRef, packageKey, unlockParam);
+        if (!claimed) {
+          setAlreadyProcessed(true);
+          // Vẫn hiện tên gói để trang không trống trơn khi user F5.
+          if (packageKey) {
+            const v = await getVariantPackage(packageKey);
+            if (v) setPkg({ name: v.name, credits: v.credits });
+          }
+          return;
+        }
+      }
+      // txnRef thiếu (link cũ trước bản này) thì giữ hành vi trước đó — vẫn tốt
+      // hơn là chặn giao dịch thật.
+
       // Cộng credit nếu có mua gói — giá/credits lấy từ catalog DB theo variant_key.
       if (packageKey) {
         const variant = await getVariantPackage(packageKey);
@@ -60,7 +98,22 @@ const PaymentResult = () => {
         }
       }
     })();
-  }, [status, unlockParam]);
+    // `ranRef` được set ngay dòng đầu, trước mọi `await`, nên dù effect có bị
+    // kích hoạt lại do các hàm unlock đổi tham chiếu thì thân effect vẫn chỉ
+    // chạy đúng một lần cho mỗi lần mount.
+  }, [
+    authLoading,
+    userId,
+    status,
+    unlockParam,
+    packageKey,
+    addCredits,
+    unlockAsset,
+    unlockCompany,
+    unlockOwner,
+    unlockDeepReportPeriod,
+    txnRef,
+  ]);
 
   const handleContinue = () => {
     if (returnPath) navigate(returnPath);
@@ -79,10 +132,17 @@ const PaymentResult = () => {
                   <CheckCircle2 className="h-9 w-9 text-[hsl(142,60%,40%)]" />
                 </div>
                 <h1 className="text-2xl font-bold text-foreground mb-2">Thanh toán thành công</h1>
-                {pkg && (
+                {pkg && !alreadyProcessed && (
                   <p className="text-sm text-muted-foreground inline-flex items-center gap-1 justify-center">
                     <Coins className="h-4 w-4 text-primary" />
                     +{pkg.credits} credit đã được cộng vào tài khoản
+                  </p>
+                )}
+                {/* F5 hay back/forward vào lại đúng link này: nói rõ giao dịch đã
+                    xử lý xong, thay vì để user tưởng vừa được cộng thêm lần nữa. */}
+                {alreadyProcessed && (
+                  <p className="text-sm text-muted-foreground">
+                    Giao dịch này đã được xử lý trước đó. Số dư bên dưới là số hiện tại.
                   </p>
                 )}
                 <div className="mt-4 inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm">

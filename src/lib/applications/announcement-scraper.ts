@@ -158,7 +158,7 @@ const STRING_PATTERNS: Record<FieldKey, RegExp[]> = {
   announcementNumber: [
     /số thông báo[:\s–-]+([^\n\r]+)/i,
     /thông báo số[:\s–-]+([^\n\r]+)/i,
-    /số[:\s]+([A-Z0-9\/\-]+\/(?:\d{4}|BTP|UBND|TB))/i,
+    /số[:\s]+([A-Z0-9/-]+\/(?:\d{4}|BTP|UBND|TB))/i,
   ],
   deadline: [
     /hạn nộp hồ sơ[:\s–-]+([^\n\r]+)/i,
@@ -170,7 +170,7 @@ const STRING_PATTERNS: Record<FieldKey, RegExp[]> = {
   ],
   announcementDate: [
     /ngày thông báo[:\s–-]+([^\n\r]+)/i,
-    /ngày[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i,
+    /ngày[:\s]+(\d{1,2}[/-]\d{1,2}[/-]\d{4})/i,
   ],
 }
 

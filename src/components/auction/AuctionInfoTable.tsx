@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
 import { formatAreaM2 } from "@/utils/formatters";
+import { caNumber, caRecordArray, caString, type AuctionListing } from "@/types/listing";
 
 const REAL_ESTATE_SLUGS = new Set([
   "dat-o", "dat-nen", "dat-nong-nghiep", "nha-pho", "nha-rieng",
@@ -14,17 +15,17 @@ const isRealEstateSlug = (slug?: string | null) => {
 };
 
 interface AuctionInfoTableProps {
-  listing: any;
+  listing: AuctionListing;
 }
 
-const formatDateRange = (start: string | undefined, end: string | undefined) => {
+const formatDateRange = (start: string | null | undefined, end: string | null | undefined) => {
   if (!start || !end) return null;
   const fmt = (d: Date) =>
     d.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" });
   return `${fmt(new Date(start))} → ${fmt(new Date(end))}`;
 };
 
-const formatSingleDate = (dateStr: string | undefined) => {
+const formatSingleDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return null;
   return new Date(dateStr).toLocaleString("vi-VN", {
     hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric",
@@ -33,34 +34,41 @@ const formatSingleDate = (dateStr: string | undefined) => {
 
 export const AuctionInfoTable = ({ listing }: AuctionInfoTableProps) => {
   const ca = listing.custom_attributes || {};
-  const attachments: { name: string; url: string }[] = ca.attachments || [];
+  const attachments = caRecordArray(ca.attachments).map((file) => ({
+    name: caString(file.name) ?? "Tệp đính kèm",
+    url: caString(file.url) ?? "",
+  }));
 
   const isRE = isRealEstateSlug(listing.property_type_slug);
   const areaValue = (typeof listing.area === "number" && listing.area > 0)
     ? listing.area
-    : (typeof ca.area === "number" ? ca.area : 0);
+    : (caNumber(ca.area) ?? 0);
   const areaText = isRE ? formatAreaM2(areaValue) : null;
+
+  const orgAddress = caString(ca.org_address);
+  const assetOwnerName = caString(ca.asset_owner_name);
+  const assetOwnerAddress = caString(ca.asset_owner_address);
 
   const rows = [
     ...(areaText ? [{ label: "Diện tích", value: areaText }] : []),
-    { label: "Tên đơn vị tổ chức đấu giá", value: ca.org_name },
-    { label: "Địa chỉ đơn vị đấu giá", value: ca.org_address },
-    
-    { label: "Tên đơn vị có tài sản", value: ca.asset_owner_name },
-    { label: "Địa chỉ đơn vị có tài sản", value: ca.asset_owner_address },
+    { label: "Tên đơn vị tổ chức đấu giá", value: caString(ca.org_name) },
+    { label: "Địa chỉ đơn vị đấu giá", value: orgAddress },
+
+    { label: "Tên đơn vị có tài sản", value: assetOwnerName },
+    { label: "Địa chỉ đơn vị có tài sản", value: assetOwnerAddress },
     {
       label: "Thời gian bán hồ sơ",
-      value: formatDateRange(ca.document_sale_start, ca.document_sale_end),
+      value: formatDateRange(caString(ca.document_sale_start), caString(ca.document_sale_end)),
     },
     {
       label: "Thời gian xem tài sản",
-      value: formatDateRange(ca.asset_viewing_start, ca.asset_viewing_end),
+      value: formatDateRange(caString(ca.asset_viewing_start), caString(ca.asset_viewing_end)),
     },
-    { label: "Thời gian đấu giá", value: formatSingleDate(ca.auction_time || ca.auction_date) },
-    { label: "Địa điểm đấu giá", value: ca.auction_location || ca.org_address },
-    { label: "Số điện thoại liên hệ", value: ca.org_phone },
-    { label: "Email liên hệ", value: ca.org_email },
-    { label: "Mã chuyển khoản", value: ca.bank_transfer_code },
+    { label: "Thời gian đấu giá", value: formatSingleDate(caString(ca.auction_time) ?? caString(ca.auction_date)) },
+    { label: "Địa điểm đấu giá", value: caString(ca.auction_location) || orgAddress },
+    { label: "Số điện thoại liên hệ", value: caString(ca.org_phone) },
+    { label: "Email liên hệ", value: caString(ca.org_email) },
+    { label: "Mã chuyển khoản", value: caString(ca.bank_transfer_code) },
   ].filter((r) => r.value);
 
   return (
@@ -107,22 +115,22 @@ export const AuctionInfoTable = ({ listing }: AuctionInfoTableProps) => {
       </Card>
 
       {/* Thông tin người có tài sản */}
-      {(ca.asset_owner_name || ca.asset_owner_address) && (
+      {(assetOwnerName || assetOwnerAddress) && (
         <Card className="overflow-hidden">
           <div className="bg-primary px-5 py-3">
             <h3 className="text-primary-foreground font-semibold text-base">Thông tin người có tài sản</h3>
           </div>
           <div className="divide-y divide-border">
-            {ca.asset_owner_name && (
+            {assetOwnerName && (
               <div className="grid grid-cols-[200px_1fr] md:grid-cols-[240px_1fr]">
                 <div className="px-5 py-3 text-sm text-muted-foreground bg-muted/30">Tên đơn vị</div>
-                <div className="px-5 py-3 text-sm text-foreground font-medium">{ca.asset_owner_name}</div>
+                <div className="px-5 py-3 text-sm text-foreground font-medium">{assetOwnerName}</div>
               </div>
             )}
-            {ca.asset_owner_address && (
+            {assetOwnerAddress && (
               <div className="grid grid-cols-[200px_1fr] md:grid-cols-[240px_1fr]">
                 <div className="px-5 py-3 text-sm text-muted-foreground bg-muted/30">Địa chỉ</div>
-                <div className="px-5 py-3 text-sm text-foreground font-medium">{ca.asset_owner_address}</div>
+                <div className="px-5 py-3 text-sm text-foreground font-medium">{assetOwnerAddress}</div>
               </div>
             )}
           </div>

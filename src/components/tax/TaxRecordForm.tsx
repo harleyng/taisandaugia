@@ -83,7 +83,9 @@ export function TaxRecordForm({
       year: existing?.year ?? defaultYear,
       recordType: existing?.recordType ?? defaultRecordType,
       amount: existing?.amount ?? 0,
-      vatExcluded: existing?.vatExcluded ?? (undefined as unknown as true),
+      // z.literal(true) — checkbox bắt buộc tick. Chưa tick thì để undefined
+      // để zod báo lỗi, thay vì false (false không hợp kiểu `true`).
+      vatExcluded: (existing?.vatExcluded ? true : undefined) as true,
       isFinalized: existing?.isFinalized ?? false,
       finalizedDate: existing?.finalizedDate ?? '',
       notes: existing?.notes ?? '',
@@ -105,7 +107,9 @@ export function TaxRecordForm({
         year: existing?.year ?? defaultYear,
         recordType: existing?.recordType ?? defaultRecordType,
         amount: existing?.amount ?? 0,
-        vatExcluded: existing?.vatExcluded ?? (undefined as unknown as true),
+        // z.literal(true) — checkbox bắt buộc tick. Chưa tick thì để undefined
+      // để zod báo lỗi, thay vì false (false không hợp kiểu `true`).
+      vatExcluded: (existing?.vatExcluded ? true : undefined) as true,
         isFinalized: existing?.isFinalized ?? false,
         finalizedDate: existing?.finalizedDate ?? '',
         notes: existing?.notes ?? '',

@@ -75,7 +75,9 @@ export const MyAssetsTab = ({ userId }: { userId: string | null }) => {
   const isLoading = !!userId && (indLoading || orgLoading);
   const hasAny = indKyc || orgKyc;
 
-  const indPending = indKyc?.status === "pending_review" || indKyc?.status === "under_review";
+  // AssetOwnerKYCStatus (cá nhân) không có "under_review" — chỉ hồ sơ tổ
+  // chức mới đi qua trạng thái đó.
+  const indPending = indKyc?.status === "pending_review";
   const orgPending = orgKyc?.status === "pending_review" || orgKyc?.status === "under_review";
 
   const handleRefresh = () => { refetchInd(); refetchOrg(); };

@@ -3,6 +3,7 @@ import { getDeltaFields } from "@/constants/asset-delta-fields";
 import type { NewAssetPosting } from "@/hooks/useAssetPosting";
 import type { MatchCriteria } from "@/lib/orgMatching";
 import type { AssetPosting } from "@/types/asset-posting";
+import type { Json } from "@/integrations/supabase/types";
 
 // Form dùng một useForm xuyên suốt 5 bước. Field bắt buộc được gate theo từng bước
 // qua form.trigger(STEP_FIELDS[step]); delta fields (riêng theo loại) validate thủ công.
@@ -205,7 +206,8 @@ export function buildPostingPayload(v: WizardValues): NewAssetPosting {
     is_seized: v.isSeized === "yes",
     right_to_sell: v.rightToSell,
     legal_notes: v.legalNotes || null,
-    delta_fields: coerceDelta(v.childSlug, v.deltaFields),
+    // cột JSONB listings.delta_fields
+    delta_fields: coerceDelta(v.childSlug, v.deltaFields) as unknown as Json,
     image_urls: v.imageUrls,
     doc_urls: v.docUrls,
   };

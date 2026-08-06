@@ -19,12 +19,13 @@ import { useState, useEffect } from "react";
 import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
+import { caNumber, caString, type AuctionListing, type ListingCustomAttributes } from "@/types/listing";
 
 interface AuctionQuickInfoProps {
   price: number;
   area: number;
-  customAttributes: Record<string, any>;
-  listing: any;
+  customAttributes: ListingCustomAttributes;
+  listing: AuctionListing;
   saveCount?: number;
   title?: string;
   propertyTypeName?: string;
@@ -73,11 +74,13 @@ export const AuctionQuickInfo = ({
   // For registration_open: countdown to registration deadline
   // For upcoming: no countdown (just show "sắp diễn ra" message)
   const countdownTarget =
-    status === "registration_open" ? ca.registration_deadline || ca.document_sale_end || ca.auction_time : null;
+    status === "registration_open"
+      ? caString(ca.registration_deadline) || caString(ca.document_sale_end) || caString(ca.auction_time)
+      : null;
   const countdown = useCountdown(countdownTarget);
 
   const pricePerSqm = area > 0 ? price / area : null;
-  const winningPrice = (ca.winning_price ?? ca.win_price) as number | undefined;
+  const winningPrice = caNumber(ca.winning_price ?? ca.win_price) ?? undefined;
   const growthPercent = winningPrice && price > 0 ? (((winningPrice - price) / price) * 100).toFixed(1) : null;
   const isRE = isRealEstateSlug(listing?.property_type_slug);
   const areaText = isRE ? formatAreaM2(area) : null;

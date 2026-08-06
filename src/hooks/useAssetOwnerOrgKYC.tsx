@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { AssetOwnerOrgKYC } from "@/types/asset-owner";
+import type { TablesInsert } from "@/integrations/supabase/types";
+
+type OrgKycWrite = TablesInsert<"asset_owner_org_kyc">;
 
 export function useAssetOwnerOrgKYC(userId: string | null) {
   const queryClient = useQueryClient();
@@ -26,7 +29,10 @@ export function useAssetOwnerOrgKYC(userId: string | null) {
 
   const saveDraft = useMutation({
     mutationFn: async (fields: Partial<AssetOwnerOrgKYC>): Promise<string> => {
-      const payload = { created_by: userId!, ...fields };
+      // registry_match_data ở tầng app là Record<string, unknown>, ở DB là cột
+      // JSONB (`Json`). Ép qua unknown đúng một lần tại ranh giới ghi thay vì
+      // để cả payload thành `any`.
+      const payload = { created_by: userId!, ...fields } as unknown as OrgKycWrite;
       if (orgKyc?.id) {
         // Update existing record
         const { error } = await supabase
@@ -98,15 +104,5 @@ export function useAssetOwnerOrgKYC(userId: string | null) {
     return path;
   };
 
-  const searchRegistry = async (query: string) => {
-    if (query.length < 2) return [];
-    const { data } = await supabase
-      .from("auction_organizations")
-      .select("id, name")
-      .ilike("name", `%${query}%`)
-      .limit(5);
-    return data ?? [];
-  };
-
-  return { orgKyc, isLoading, saveDraft, submit, uploadDoc, searchRegistry };
+  return { orgKyc, isLoading, saveDraft, submit, uploadDoc };
 }

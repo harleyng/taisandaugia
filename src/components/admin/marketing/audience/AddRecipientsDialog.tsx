@@ -21,6 +21,7 @@ import {
 } from "@/lib/marketing/importClassify";
 import { ImportReport } from "./ImportReport";
 import type { UserLabel } from "@/hooks/useUserLabels";
+import { qk } from "@/lib/queryKeys";
 
 type SearchRow = UserLabel & { notifications_enabled: boolean };
 
@@ -86,7 +87,7 @@ export function AddRecipientsDialog({
   const [q, setQ] = useState("");
   const term = q.trim().replace(/[,()%*]/g, " ").trim();
   const { data: results, isFetching } = useQuery<SearchRow[]>({
-    queryKey: ["profile_search", term],
+    queryKey: qk.profileSearch(term),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")

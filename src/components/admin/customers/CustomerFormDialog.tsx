@@ -18,8 +18,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useUpsertCustomer } from "@/hooks/useCustomers";
-import type { Customer, CustomerStatus, CustomerType } from "@/types/advertising";
+import { customerErrorMessage, useUpsertCustomer } from "@/hooks/useCustomers";
+import { UserPickerField } from "./UserPickerField";
+import { SEGMENT_OPTIONS, type CustomerSegment } from "@/lib/customers/customerSegment";
+import { STATUS_LABELS, CUSTOMER_TYPE_LABELS } from "@/lib/customers/customerStatus";
+import type { Customer, CustomerStatus, CustomerType } from "@/types/customers";
 
 interface Props {
   open: boolean;
@@ -30,6 +33,7 @@ interface Props {
 const EMPTY = {
   name: "",
   customer_type: "company" as CustomerType,
+  segment: "other" as CustomerSegment,
   contact_name: "",
   phone: "",
   email: "",
@@ -37,6 +41,7 @@ const EMPTY = {
   address: "",
   note: "",
   status: "active" as CustomerStatus,
+  user_id: null as string | null,
 };
 
 export function CustomerFormDialog({ open, onOpenChange, editing }: Props) {
@@ -49,6 +54,7 @@ export function CustomerFormDialog({ open, onOpenChange, editing }: Props) {
       setForm({
         name: editing.name,
         customer_type: editing.customer_type,
+        segment: editing.segment ?? "other",
         contact_name: editing.contact_name ?? "",
         phone: editing.phone ?? "",
         email: editing.email ?? "",
@@ -56,6 +62,7 @@ export function CustomerFormDialog({ open, onOpenChange, editing }: Props) {
         address: editing.address ?? "",
         note: editing.note ?? "",
         status: editing.status,
+        user_id: editing.user_id,
       });
     } else {
       setForm({ ...EMPTY });
@@ -68,10 +75,13 @@ export function CustomerFormDialog({ open, onOpenChange, editing }: Props) {
   const submit = async () => {
     if (form.name.trim().length < 2) return toast.error("Vui lòng nhập tên khách hàng");
     try {
-      await upsert.mutateAsync({
-        ...(editing ? { id: editing.id } : {}),
+      // CustomerUpsert là union phân biệt theo `id` ({id?: undefined} & Fields
+      // | {id: string} & Partial<Fields>). Spread có điều kiện tạo ra
+      // `id?: string` — không khớp nhánh nào, nên tách rõ hai trường hợp.
+      const fields = {
         name: form.name.trim(),
         customer_type: form.customer_type,
+        segment: form.segment,
         contact_name: form.contact_name.trim() || null,
         phone: form.phone.trim() || null,
         email: form.email.trim() || null,
@@ -79,17 +89,19 @@ export function CustomerFormDialog({ open, onOpenChange, editing }: Props) {
         address: form.address.trim() || null,
         note: form.note.trim() || null,
         status: form.status,
-      });
+        user_id: form.user_id,
+      };
+      await upsert.mutateAsync(editing ? { id: editing.id, ...fields } : fields);
       toast.success(editing ? "Đã cập nhật khách hàng" : "Đã thêm khách hàng");
       onOpenChange(false);
-    } catch {
-      toast.error("Thao tác thất bại");
+    } catch (err) {
+      toast.error(customerErrorMessage(err) ?? "Thao tác thất bại");
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editing ? "Sửa khách hàng" : "Thêm khách hàng"}</DialogTitle>
         </DialogHeader>
@@ -105,8 +117,8 @@ export function CustomerFormDialog({ open, onOpenChange, editing }: Props) {
               <Select value={form.customer_type} onValueChange={(v) => set("customer_type", v as CustomerType)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="company">Công ty</SelectItem>
-                  <SelectItem value="individual">Cá nhân</SelectItem>
+                  <SelectItem value="company">{CUSTOMER_TYPE_LABELS.company}</SelectItem>
+                  <SelectItem value="individual">{CUSTOMER_TYPE_LABELS.individual}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -115,8 +127,19 @@ export function CustomerFormDialog({ open, onOpenChange, editing }: Props) {
               <Select value={form.status} onValueChange={(v) => set("status", v as CustomerStatus)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Đang hoạt động</SelectItem>
-                  <SelectItem value="inactive">Ngừng</SelectItem>
+                  <SelectItem value="active">{STATUS_LABELS.active}</SelectItem>
+                  <SelectItem value="inactive">{STATUS_LABELS.inactive}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label>Phân khúc</Label>
+              <Select value={form.segment} onValueChange={(v) => set("segment", v as CustomerSegment)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SEGMENT_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -145,6 +168,9 @@ export function CustomerFormDialog({ open, onOpenChange, editing }: Props) {
             <Label>Địa chỉ</Label>
             <Input value={form.address} onChange={(e) => set("address", e.target.value)} />
           </div>
+
+          <UserPickerField value={form.user_id} onChange={(v) => set("user_id", v)} />
+
           <div className="space-y-1.5">
             <Label>Ghi chú</Label>
             <Textarea value={form.note} onChange={(e) => set("note", e.target.value)} rows={2} />

@@ -2,9 +2,11 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { ListingCustomAttributes } from "@/types/listing";
+import { caRecordArray, caString } from "@/types/listing";
 
 interface AuctionDetailTableProps {
-  attributes: Record<string, any>;
+  attributes: ListingCustomAttributes;
 }
 
 const formatDateTime = (dateStr: string | null | undefined): string => {
@@ -26,22 +28,25 @@ export const AuctionDetailTable = ({ attributes }: AuctionDetailTableProps) => {
   const a = attributes;
 
   const rows: { label: string; value: string | null | undefined }[] = [
-    { label: "Tên đơn vị tổ chức đấu giá", value: a.org_name },
-    { label: "Địa chỉ đơn vị đấu giá", value: a.org_address },
-    { label: "Địa điểm bán đấu giá", value: a.auction_location },
-    { label: "Tên đơn vị có tài sản", value: a.asset_owner_name },
-    { label: "Địa chỉ đơn vị có tài sản", value: a.asset_owner_address },
-    { label: "Thời gian bán hồ sơ", value: formatDateRange(a.document_sale_start, a.document_sale_end) },
-    { label: "Thời gian xem tài sản", value: formatDateRange(a.asset_viewing_start, a.asset_viewing_end) },
-    { label: "Thời gian đấu giá", value: formatDateTime(a.auction_time) },
-    { label: "Hạn đăng ký tham gia", value: formatDateTime(a.registration_deadline) },
-    { label: "Số điện thoại liên hệ", value: a.org_phone },
-    { label: "Email liên hệ", value: a.org_email },
-    { label: "Mã chuyển khoản", value: a.bank_transfer_code },
+    { label: "Tên đơn vị tổ chức đấu giá", value: caString(a.org_name) },
+    { label: "Địa chỉ đơn vị đấu giá", value: caString(a.org_address) },
+    { label: "Địa điểm bán đấu giá", value: caString(a.auction_location) },
+    { label: "Tên đơn vị có tài sản", value: caString(a.asset_owner_name) },
+    { label: "Địa chỉ đơn vị có tài sản", value: caString(a.asset_owner_address) },
+    { label: "Thời gian bán hồ sơ", value: formatDateRange(caString(a.document_sale_start), caString(a.document_sale_end)) },
+    { label: "Thời gian xem tài sản", value: formatDateRange(caString(a.asset_viewing_start), caString(a.asset_viewing_end)) },
+    { label: "Thời gian đấu giá", value: formatDateTime(caString(a.auction_time)) },
+    { label: "Hạn đăng ký tham gia", value: formatDateTime(caString(a.registration_deadline)) },
+    { label: "Số điện thoại liên hệ", value: caString(a.org_phone) },
+    { label: "Email liên hệ", value: caString(a.org_email) },
+    { label: "Mã chuyển khoản", value: caString(a.bank_transfer_code) },
   ];
 
   const visibleRows = rows.filter(r => r.value);
-  const attachments = a.attachments as { name: string; url: string }[] | undefined;
+  const attachments = caRecordArray(a.attachments).map((file) => ({
+    name: caString(file.name) ?? "Tệp đính kèm",
+    url: caString(file.url) ?? "",
+  }));
 
   if (visibleRows.length === 0 && !attachments?.length) return null;
 

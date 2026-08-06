@@ -3,7 +3,10 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 // Fix default marker icon issue in Leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+// Leaflet dựng URL icon theo đường dẫn tương đối, sai khi bundle. Xoá field
+// nội bộ này để buộc dùng iconUrl khai báo bên dưới. `_getIconUrl` không có
+// trong kiểu công khai của Leaflet nên phải đi vòng qua Record.
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
 import { LoginConsentNotice } from "@/components/auth/LoginConsentNotice";
+import { errorMessage } from "@/utils/errors";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -68,74 +69,23 @@ const Auth = () => {
       if (error) throw error;
 
       // Đăng nhập thành công — onAuthStateChange (useEffect) sẽ điều hướng:
-      // admin → /admin, user thường → /. Ở đây chỉ xử lý liên kết lời mời.
-      if (authData.user) {
-        // If there's an invite token, link the user to the organization
-        if (inviteToken) {
-          console.log("Login with invite token:", inviteToken);
-          
-          // First check if invite exists and hasn't been claimed
-          const { data: existingInvite, error: checkError } = await supabase
-            .from("organization_memberships")
-            .select("*")
-            .eq("invite_token", inviteToken)
-            .is("user_id", null)
-            .maybeSingle();
-
-          console.log("Existing invite on login:", existingInvite, "Check error:", checkError);
-
-          if (checkError || !existingInvite) {
-            console.error("Invite not found or already claimed:", checkError);
-            toast({
-              title: "Lỗi liên kết tổ chức",
-              description: "Không tìm thấy lời mời hoặc lời mời đã được sử dụng.",
-              variant: "destructive",
-            });
-          } else {
-            // Update the membership
-            const { data: updateData, error: inviteError } = await supabase
-              .from("organization_memberships")
-              .update({ 
-                user_id: authData.user.id,
-                status: 'ACTIVE',
-                joined_at: new Date().toISOString(),
-                invite_email: null 
-              })
-              .eq("invite_token", inviteToken)
-              .is("user_id", null)
-              .select();
-
-            console.log("Update result on login:", updateData, "Update error:", inviteError);
-
-            if (inviteError || !updateData || updateData.length === 0) {
-              console.error("Error linking invite on login:", inviteError);
-              toast({
-                title: "Lỗi liên kết tổ chức",
-                description: "Không thể thêm bạn vào tổ chức. Vui lòng thử lại.",
-                variant: "destructive",
-              });
-            } else {
-              toast({
-                title: "Đăng nhập thành công",
-                description: "Bạn đã được thêm vào tổ chức!",
-              });
-              // Redirect to broker dashboard
-              setTimeout(() => navigate("/broker/dashboard"), 2000);
-              setLoading(false);
-              return;
-            }
-          }
-        }
+      // admin → /admin, user thường → /.
+      // Lời mời vào tổ chức do trang /loi-moi/:token xử lý (RPC accept_org_invite),
+      // ở đây chỉ chuyển tiếp sang đó.
+      if (authData.user && inviteToken) {
+        navigate(`/loi-moi/${inviteToken}`, { replace: true });
+        setLoading(false);
+        return;
       }
 
       toast({
         title: "Đăng nhập thành công",
         description: "Chào mừng bạn trở lại!",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Lỗi đăng nhập",
-        description: error.message || "Vui lòng kiểm tra email và mật khẩu",
+        description: errorMessage(error, "Vui lòng kiểm tra email và mật khẩu"),
         variant: "destructive",
       });
     } finally {
@@ -158,59 +108,12 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // If there's an invite token, link the user to the organization
+      // Lời mời vào tổ chức: chuyển sang /loi-moi/:token — trang đó sẽ chặn nếu
+      // tài khoản chưa kích hoạt rồi mới gọi RPC accept_org_invite.
       if (inviteToken && authData.user) {
-        // First check if invite exists
-        const { data: existingInvite, error: checkError } = await supabase
-          .from("organization_memberships")
-          .select("*")
-          .eq("invite_token", inviteToken)
-          .is("user_id", null)
-          .maybeSingle();
-
-        console.log("Existing invite:", existingInvite, "Check error:", checkError);
-
-        if (checkError || !existingInvite) {
-          console.error("Invite not found or error:", checkError);
-          toast({
-            title: "Lỗi liên kết tổ chức",
-            description: "Không tìm thấy lời mời hoặc lời mời đã được sử dụng.",
-            variant: "destructive",
-          });
-        } else {
-          // Update the membership
-          const { data: updateData, error: inviteError } = await supabase
-            .from("organization_memberships")
-            .update({ 
-              user_id: authData.user.id,
-              status: 'ACTIVE',
-              joined_at: new Date().toISOString(),
-              invite_email: null 
-            })
-            .eq("invite_token", inviteToken)
-            .is("user_id", null)
-            .select();
-
-          console.log("Update result:", updateData, "Update error:", inviteError);
-
-          if (inviteError || !updateData || updateData.length === 0) {
-            console.error("Error linking invite:", inviteError);
-            toast({
-              title: "Lỗi liên kết tổ chức",
-              description: "Không thể thêm bạn vào tổ chức. Vui lòng thử lại.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Đăng ký thành công",
-              description: "Bạn đã được thêm vào tổ chức!",
-            });
-            // Redirect to broker dashboard
-            setTimeout(() => navigate("/broker/dashboard"), 2000);
-            setLoading(false);
-            return;
-          }
-        }
+        navigate(`/loi-moi/${inviteToken}`, { replace: true });
+        setLoading(false);
+        return;
       }
 
       toast({
@@ -221,10 +124,10 @@ const Auth = () => {
       // Clear form
       setSignupEmail("");
       setSignupPassword("");
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Lỗi đăng ký",
-        description: error.message || "Không thể tạo tài khoản",
+        description: errorMessage(error, "Không thể tạo tài khoản"),
         variant: "destructive",
       });
     } finally {

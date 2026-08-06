@@ -1,12 +1,13 @@
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
-import { getSessionStatus, type AuctionListing } from "@/hooks/useAuctionListings";
+import { getSessionStatus } from "@/hooks/useAuctionListings";
+import { caNumber, caString, type ListingCustomAttributes } from "@/types/listing";
 import type { OnboardingIntent } from "./onboardingTasks";
 
 interface ListingLike {
   property_type_slug?: string | null;
   price?: number | null;
   address?: { province?: string | null; district?: string | null } | null;
-  custom_attributes?: any;
+  custom_attributes?: ListingCustomAttributes | null;
   status?: string;
 }
 
@@ -48,15 +49,6 @@ const matchesRegion = (
   return r.districts.includes(district);
 };
 
-const numberFromCa = (v: unknown): number | null => {
-  if (typeof v === "number") return v;
-  if (typeof v === "string") {
-    const n = Number(v.replace(/[^0-9.-]/g, ""));
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
-};
-
 export const matchListingToIntent = (
   listing: ListingLike,
   intent?: OnboardingIntent | null
@@ -78,7 +70,7 @@ export const matchListingToIntent = (
   if (intent.price_min != null && price < intent.price_min) return false;
   if (intent.price_max != null && price > intent.price_max) return false;
 
-  const deposit = numberFromCa(listing.custom_attributes?.deposit_amount);
+  const deposit = caNumber(listing.custom_attributes?.deposit_amount);
   if (intent.deposit_min != null) {
     if (deposit == null || deposit < intent.deposit_min) return false;
   }
@@ -87,13 +79,18 @@ export const matchListingToIntent = (
   }
 
   if (intent.legal_categories && intent.legal_categories.length > 0) {
-    const lc = listing.custom_attributes?.legal_category as string | undefined;
-    if (!lc || !intent.legal_categories.includes(lc as any)) return false;
+    const lc = caString(listing.custom_attributes?.legal_category);
+    // includes() trên mảng union hẹp không nhận `string`; so khớp thủ công để
+    // khỏi phải ép kiểu.
+    if (!lc || !intent.legal_categories.some((c) => c === lc)) return false;
   }
 
   if (intent.session_statuses && intent.session_statuses.length > 0) {
-    const status = getSessionStatus(listing as AuctionListing);
-    if (!intent.session_statuses.includes(status as any)) return false;
+    const status = getSessionStatus({
+      status: listing.status,
+      custom_attributes: listing.custom_attributes,
+    });
+    if (!intent.session_statuses.some((s) => s === status)) return false;
   }
 
   return true;

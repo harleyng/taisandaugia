@@ -42,7 +42,7 @@ export function AuctionFilterDialog({ open, onOpenChange, filters, onApply }: Au
     onOpenChange(v);
   };
 
-  const update = (key: keyof AuctionFilters, value: any) => {
+  const update = <K extends keyof AuctionFilters>(key: K, value: AuctionFilters[K]) => {
     setDraft((d) => ({ ...d, [key]: value }));
   };
 

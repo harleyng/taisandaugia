@@ -9,6 +9,7 @@ import { AuctionCard } from "@/components/AuctionCard";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import auctionBg from "@/assets/auction-bg.png";
+import { caNumber, caString, getShortLocation, toAuctionListing, type ListingCustomAttributes } from "@/types/listing";
 
 const getCountdown = (auctionTime: string): string | null => {
   const diff = new Date(auctionTime).getTime() - Date.now();
@@ -16,11 +17,6 @@ const getCountdown = (auctionTime: string): string | null => {
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   return `${days}d${hours}h`;
-};
-
-const getShortLocation = (address: any): string => {
-  if (!address) return "";
-  return address.province || address.district || "";
 };
 
 export const AuctionSection = () => {
@@ -35,7 +31,7 @@ export const AuctionSection = () => {
         .order("created_at", { ascending: false })
         .limit(6);
       if (error) throw error;
-      return data || [];
+      return (data ?? []).map(toAuctionListing);
     },
   });
 
@@ -57,8 +53,8 @@ export const AuctionSection = () => {
       const rows = data || [];
       let today = 0, day7 = 0, day14 = 0;
       for (const row of rows) {
-        const attrs = (row.custom_attributes || {}) as Record<string, any>;
-        const t = attrs.auction_time ?? attrs.auction_date;
+        const attrs = (row.custom_attributes || {}) as ListingCustomAttributes;
+        const t = caString(attrs.auction_time ?? attrs.auction_date);
         if (!t) continue;
         const ts = new Date(t).toISOString();
         if (ts >= todayStart && ts < todayEnd) today++;
@@ -141,10 +137,14 @@ export const AuctionSection = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
             {auctions.map((item) => {
-              const customAttrs = (item.custom_attributes || {}) as Record<string, any>;
-              const countdown = customAttrs.auction_time ? getCountdown(customAttrs.auction_time) : null;
+              const customAttrs = item.custom_attributes || {};
+              const auctionTime = caString(customAttrs.auction_time);
+              const countdown = auctionTime ? getCountdown(auctionTime) : null;
               const location = getShortLocation(item.address);
-              const orgName = customAttrs.org_name || (item.auction_org_id ? orgNameById.get(item.auction_org_id) : "") || "";
+              const orgName =
+                caString(customAttrs.org_name) ||
+                (item.auction_org_id ? orgNameById.get(item.auction_org_id) : "") ||
+                "";
 
               return (
                 <AuctionCard
@@ -155,10 +155,10 @@ export const AuctionSection = () => {
                   address={location}
                   startingPrice={item.price}
                   priceUnit={item.price_unit}
-                  stepPrice={customAttrs.bid_step ?? customAttrs.step_price}
-                  depositAmount={customAttrs.deposit_amount}
-                  auctionDate={customAttrs.auction_date ?? customAttrs.auction_time}
-                  registrationDeadline={customAttrs.registration_deadline ?? customAttrs.document_sale_end}
+                  stepPrice={caNumber(customAttrs.bid_step ?? customAttrs.step_price)}
+                  depositAmount={caNumber(customAttrs.deposit_amount)}
+                  auctionDate={caString(customAttrs.auction_date) ?? auctionTime}
+                  registrationDeadline={caString(customAttrs.registration_deadline ?? customAttrs.document_sale_end)}
                   sessionStatus="registration_open"
                   categorySlug={item.property_type_slug}
                   variant="featured"

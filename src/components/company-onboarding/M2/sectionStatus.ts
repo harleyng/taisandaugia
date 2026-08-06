@@ -45,7 +45,7 @@ export function sectionStatus(form: KYCFormData) {
   ];
   const dRows = dReqKeys.map((k) => ({
     k,
-    ok: !!(form as Record<string, unknown>)[k],
+    ok: !!(form as unknown as Record<string, unknown>)[k],
   }));
   const d = { done: dRows.length > 0 && dRows.every((f) => f.ok), fields: dRows };
 

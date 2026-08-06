@@ -13,7 +13,11 @@ export const useListingPriceSessions = (listingId: string | undefined) =>
         .order("session_date", { ascending: false });
       if (error) throw error;
       return (data ?? []).map((r) => ({
-        date: r.session_date,
+        // RawSession.date là Date, không phải chuỗi: computeAnalytics gọi
+        // s.date.getFullYear() (auctionPriceAnalytics.ts:211) và so sánh
+        // s.date >= cutoff. Trả về chuỗi ISO là crash biểu đồ lịch sử giá
+        // ngay khi listing có phiên thật trong DB.
+        date: new Date(r.session_date),
         price: r.price,
         area: r.area ?? undefined,
         district: r.district ?? undefined,

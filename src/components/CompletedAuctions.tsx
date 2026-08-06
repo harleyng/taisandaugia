@@ -6,11 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionCard } from "@/components/AuctionCard";
 import { useAuctionOrgNames } from "@/hooks/useAuctionOrgNames";
-
-const getShortLocation = (address: any): string => {
-  if (!address) return "";
-  return address.province || address.district || "";
-};
+import { caNumber, caString, getShortLocation, toAuctionListing } from "@/types/listing";
 
 export const CompletedAuctions = () => {
   const { data: auctions = [], isLoading } = useQuery({
@@ -23,11 +19,11 @@ export const CompletedAuctions = () => {
         .order("updated_at", { ascending: false })
         .limit(8);
       if (error) throw error;
-      return data || [];
+      return (data ?? []).map(toAuctionListing);
     },
   });
 
-  const orgNameById = useAuctionOrgNames(auctions.map((a: any) => a.auction_org_id));
+  const orgNameById = useAuctionOrgNames(auctions.map((a) => a.auction_org_id));
 
   if (!isLoading && auctions.length === 0) return null;
 
@@ -59,11 +55,11 @@ export const CompletedAuctions = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
           {auctions.map((item) => {
-            const customAttrs = (item.custom_attributes || {}) as Record<string, any>;
+            const customAttrs = item.custom_attributes || {};
             const location = getShortLocation(item.address);
-            const fallbackOrgName = (item as any).auction_org_id ? orgNameById.get((item as any).auction_org_id) : "";
-            const orgName = customAttrs.org_name || fallbackOrgName || "";
-            const winPrice = customAttrs.win_price as number | undefined;
+            const fallbackOrgName = item.auction_org_id ? orgNameById.get(item.auction_org_id) : "";
+            const orgName = caString(customAttrs.org_name) || fallbackOrgName || "";
+            const winPrice = caNumber(customAttrs.win_price) ?? undefined;
 
             return (
               <AuctionCard
@@ -77,7 +73,7 @@ export const CompletedAuctions = () => {
                 sessionStatus="ended"
                 categorySlug={item.property_type_slug}
                 orgName={orgName}
-                orgId={(item as any).auction_org_id}
+                orgId={item.auction_org_id}
                 winPrice={winPrice}
               />
             );

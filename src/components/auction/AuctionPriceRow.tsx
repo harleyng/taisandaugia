@@ -1,10 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { formatPrice } from "@/utils/formatters";
 import { Lock } from "lucide-react";
+import { caNumber, type ListingCustomAttributes } from "@/types/listing";
 
 interface AuctionPriceRowProps {
   price: number;
-  customAttributes: any;
+  customAttributes: ListingCustomAttributes | null;
   isUnlocked?: boolean;
   isLoggedIn?: boolean;
   onLockedClick?: () => void;
@@ -58,13 +59,14 @@ export const AuctionPriceRow = ({
   const fmt = (v: number | undefined | null) =>
     v != null ? formatPrice(v, "TOTAL") : "–";
 
-  const bidStep = ca.bid_step ?? ca.step_price;
-  const winPrice = ca.winning_price ?? ca.win_price;
+  const attrs = ca ?? {};
+  const bidStep = caNumber(attrs.bid_step ?? attrs.step_price);
+  const winPrice = caNumber(attrs.winning_price ?? attrs.win_price);
 
   const cells = [
     { label: "Khởi điểm", rawValue: price, gated: false, loginRequired: false },
-    { label: "Đặt trước", rawValue: ca.deposit_amount, gated: false, loginRequired: false },
-    { label: "Hồ sơ", rawValue: ca.document_fee, gated: false, loginRequired: true },
+    { label: "Đặt trước", rawValue: caNumber(attrs.deposit_amount), gated: false, loginRequired: false },
+    { label: "Hồ sơ", rawValue: caNumber(attrs.document_fee), gated: false, loginRequired: true },
     { label: "Bước giá", rawValue: bidStep, gated: false, loginRequired: true },
     { label: "Giá trúng", rawValue: winPrice, gated: true, loginRequired: false, highlight: true },
   ];

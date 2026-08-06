@@ -42,7 +42,14 @@ export function BankAccountFormDialog({ open, onOpenChange, existing, onSave }: 
   }, [open, existing, form])
 
   const onSubmit = (values: FormValues) => {
-    onSave({ ...values, branch: values.branch || undefined })
+    // Liệt kê tường minh — xem chú thích cùng vấn đề ở BranchFormDialog.
+    onSave({
+      bankName: values.bankName,
+      accountNumber: values.accountNumber,
+      accountHolder: values.accountHolder,
+      isPrimary: values.isPrimary,
+      branch: values.branch || undefined,
+    })
     onOpenChange(false)
   }
 

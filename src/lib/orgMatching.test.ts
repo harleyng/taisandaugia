@@ -19,6 +19,13 @@ const mkOrg = (over: Partial<AuctionOrgRow> = {}): AuctionOrgRow => ({
   phone: null,
   province: "TP. Hồ Chí Minh",
   tax_code: null,
+  // Các cột thêm sau bởi luồng Chi nhánh/AMC (prospects). Fixture phải phủ đủ
+  // một dòng auction_organizations, nếu không kiểu AuctionOrgRow không thoả.
+  group_id: null,
+  name_tokens: null,
+  normalized_name: null,
+  parent_org_id: null,
+  parent_source: null,
   ...over,
 });
 

@@ -40,10 +40,11 @@ export const CompanyTypeahead = ({ value, onSelect }: CompanyTypeaheadProps) => 
       return res.json() as Promise<{ id: string; name: string; tax_code: string; address: string; province: string; phone: string }[]>;
     });
 
-    const linkedIdsFetch = supabase
-      .from("organizations")
-      .select("license_info")
-      .neq("kyc_status", "REJECTED")
+    // Promise.resolve(...) để có Promise thật: PostgrestBuilder chỉ là
+    // PromiseLike, `.then()` của nó không trả về thứ có `.catch`.
+    const linkedIdsFetch = Promise.resolve(
+      supabase.from("organizations").select("license_info").neq("kyc_status", "REJECTED"),
+    )
       .then(({ data }) => {
         if (!data) return new Set<string>();
         return new Set<string>(

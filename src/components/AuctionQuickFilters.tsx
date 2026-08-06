@@ -32,7 +32,7 @@ export function AuctionQuickFilters({
 }: AuctionQuickFiltersProps) {
   const navigate = useNavigate();
   const activeCount = countActiveFilters(filters);
-  const update = (key: keyof AuctionFilters, value: any) => {
+  const update = <K extends keyof AuctionFilters>(key: K, value: AuctionFilters[K]) => {
     onFiltersChange({ ...filters, [key]: value });
   };
 

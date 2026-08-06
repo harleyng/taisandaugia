@@ -152,7 +152,7 @@ export default function AdminArticleEditor() {
           source_url: values.source_type === "external" ? (values.source_url || null) : null,
           show_on_homepage: values.show_on_homepage ?? false,
           homepage_position: values.show_on_homepage ? (values.homepage_position ?? null) : null,
-          status: publish ? "published" : "draft",
+          status: (publish ? "published" : "draft") as "published" | "draft",
           published_at: publish
             ? existingArticle?.published_at ?? new Date().toISOString()
             : null,

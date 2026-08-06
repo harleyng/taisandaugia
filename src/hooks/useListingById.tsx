@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toAuctionListing } from "@/types/listing";
 
 export const PROPERTY_TYPES_QUERY_KEY = ["property-types-map"];
 
@@ -35,8 +36,10 @@ export function useListingById(id: string | undefined) {
       if (!data) throw new Error("Không tìm thấy tài sản");
 
       const pt = typeMap[data.property_type_slug];
+      // toAuctionListing ép address/custom_attributes từ `Json` về kiểu thật một
+      // lần duy nhất tại đây, thay vì để từng component tự `as any`.
       return {
-        ...data,
+        ...toAuctionListing(data),
         property_types: pt || { name: "BĐS", slug: data.property_type_slug },
       };
     },

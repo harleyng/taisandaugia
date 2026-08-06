@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -126,7 +126,7 @@ export default function AdminAssetOwnerKYCDetail() {
     });
   }, []);
 
-  const fetchRecord = async () => {
+  const fetchRecord = useCallback(async () => {
     setLoading(true);
     if (isInd) {
       const { data } = await supabase
@@ -142,7 +142,7 @@ export default function AdminAssetOwnerKYCDetail() {
     } else {
       const { data } = await supabase
         .from("asset_owner_org_kyc")
-        .select("*, profiles!asset_owner_org_kyc_created_by_fkey(name, email)")
+        .select("*, profiles!asset_owner_org_kyc_created_by_fkey(name, email), linked_owner:asset_owners(name, address)")
         .eq("id", id!)
         .maybeSingle();
       if (data) {
@@ -152,9 +152,9 @@ export default function AdminAssetOwnerKYCDetail() {
       }
     }
     setLoading(false);
-  };
+  }, [id, isInd]);
 
-  useEffect(() => { fetchRecord(); }, [id, isInd]);
+  useEffect(() => { fetchRecord(); }, [fetchRecord]);
 
   // ─── Signed URL viewer ────────────────────────────────────────────────────
 
@@ -359,6 +359,22 @@ export default function AdminAssetOwnerKYCDetail() {
                 <SectionCard letter="A" title="Thông tin tổ chức">
                   <InfoRow icon={Building2} label="Loại tổ chức" value={record.org_type ? ORG_TYPE_LABELS[record.org_type as OrgType] : "—"} />
                   <InfoRow icon={Building2} label="Tên tổ chức" value={record.org_name} />
+                  {/* Chọn từ danh bạ = tên khớp tuyệt đối với dữ liệu tài sản trên sàn;
+                      tự nhập tay thì tên có thể lệch, cần soi kỹ giấy tờ khi duyệt. */}
+                  <InfoRow icon={Shield} label="Nguồn tên tổ chức" value={
+                    record.linked_owner ? (
+                      <span className="text-green-600 font-semibold">
+                        Chọn từ danh bạ chủ tài sản
+                        {record.linked_owner.address && (
+                          <span className="block text-[11px] font-normal text-muted-foreground">
+                            {record.linked_owner.address}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 font-semibold">Người khai tự nhập</span>
+                    )
+                  } />
                   <InfoRow icon={CreditCard} label="Mã số thuế / Mã cơ quan" value={record.tax_code} />
                   <InfoRow icon={Mail} label="Email công vụ" value={record.official_email} />
                   <InfoRow icon={Shield} label="Domain email" value={record.email_domain} />

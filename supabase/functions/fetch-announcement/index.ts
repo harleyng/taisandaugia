@@ -107,11 +107,11 @@ const FIELD_PATTERNS: Record<keyof ExtractedData, RegExp[]> = {
   announcementNumber: [
     /số thông báo[:\s]+([^\n\r<|]+)/i,
     /thông báo số[:\s]+([^\n\r<|]+)/i,
-    /số[:\s]+([A-Z0-9\/\-]+\/(?:UBND|BTP|TB|TB-[A-Z]+))/i,
+    /số[:\s]+([A-Z0-9/-]+\/(?:UBND|BTP|TB|TB-[A-Z]+))/i,
   ],
   announcementDate: [
     /ngày thông báo[:\s]+([^\n\r<|]+)/i,
-    /ngày[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i,
+    /ngày[:\s]+(\d{1,2}[/-]\d{1,2}[/-]\d{4})/i,
     /date[:\s]+([^\n\r<|]+)/i,
   ],
   assetLocation: [

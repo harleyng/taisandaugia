@@ -1,24 +1,25 @@
 import { Card } from "@/components/ui/card";
 import { FileText, Eye, Paperclip } from "lucide-react";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { caRecordArray, caString, type AuctionListing } from "@/types/listing";
 
+// Chỉ nhận đúng trường được đọc — xem chú thích ở AuctionScheduleInfo.
 interface AuctionAttachmentsProps {
-  listing: any;
+  listing: Pick<AuctionListing, "custom_attributes">;
 }
 
 export const AuctionAttachments = ({ listing }: AuctionAttachmentsProps) => {
   const { openAuthDialog } = useAuthDialog();
-  const [session, setSession] = useState<any>(null);
+  // Dùng AuthContext thay vì tự getSession + onAuthStateChange. Provider sinh ra
+  // chính là để gom các subscription trùng lặp kiểu này về một mối.
+  const { session } = useAuth();
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, []);
   const ca = listing.custom_attributes || {};
-  const attachments: {name: string;url: string;}[] = ca.attachments || [];
+  const attachments = caRecordArray(ca.attachments).map((file) => ({
+    name: caString(file.name) ?? "Tệp đính kèm",
+    url: caString(file.url) ?? "",
+  }));
 
   if (attachments.length === 0) return null;
 

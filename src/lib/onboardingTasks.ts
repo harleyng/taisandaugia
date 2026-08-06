@@ -26,6 +26,12 @@ export interface OnboardingBasic {
   /** @deprecated kept for backward compat with older saved profiles */
   birth_year?: number;
   gender?: Gender;
+  /**
+   * Chủ tổ chức đã xem kết quả duyệt KYC chưa — CompanyTab dùng để chỉ hiện
+   * thông báo "vừa được duyệt" đúng một lần. Trước đây trường này được ghi vào
+   * agent_info nhưng không khai báo ở đây, nên bị `as any` che.
+   */
+  kyc_result_seen?: boolean;
 }
 
 export interface IntentRegion {

@@ -1,3 +1,5 @@
+import type { ListingAddress } from "@/types/listing";
+
 export const formatPrice = (price: number, priceUnit: string): string => {
   if (priceUnit === "PER_SQM" || priceUnit === "PER_MONTH") {
     if (price >= 1_000_000) {
@@ -41,7 +43,7 @@ export const formatDateISO = (dateStr?: string): string | null => {
   }
 };
 
-export const formatAddress = (address: any): string => {
+export const formatAddress = (address: ListingAddress | null | undefined): string => {
   const parts = [
     address?.street,
     address?.ward,

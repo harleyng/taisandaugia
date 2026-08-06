@@ -184,14 +184,14 @@ export default function AdminAssetOwnerKYCPage() {
           tabs={STATUS_TABS}
           active={statusFilter}
           countFor={countIndFor}
-          onChange={setStatusFilter}
+          onChange={(k) => setStatusFilter(k)}
         />
       ) : (
         <TabBar
           tabs={STATUS_TABS}
           active={statusFilter}
           countFor={countOrgFor}
-          onChange={setStatusFilter}
+          onChange={(k) => setStatusFilter(k)}
         />
       )}
 

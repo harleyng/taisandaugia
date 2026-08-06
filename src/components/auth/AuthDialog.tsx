@@ -14,6 +14,7 @@ import { RegisterConsent } from "@/components/auth/RegisterConsent";
 import { LoginConsentNotice } from "@/components/auth/LoginConsentNotice";
 import { TERMS_VERSION } from "@/constants/terms";
 import { useLegalActiveVersions } from "@/hooks/useLegalDocuments";
+import { errorMessage } from "@/utils/errors";
 
 type Step = "identifier" | "login" | "login-phone" | "register-email" | "register-phone-otp" | "register-phone-password" | "activate";
 type InputMode = "email" | "phone";
@@ -56,7 +57,10 @@ export const AuthDialog = () => {
   const isEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
   const isPhone = (val: string) => /^0\d{9,10}$/.test(val.replace(/\s/g, ""));
 
-  const withTimeout = <T,>(promise: Promise<T>, ms = 8000): Promise<T> =>
+  // Nhận PromiseLike chứ không phải Promise: supabase.rpc()/from() trả về
+  // PostgrestFilterBuilder — thenable nhưng KHÔNG phải Promise thật, nên
+  // signature cũ khiến TS suy `data`/`error` thành `{}`.
+  const withTimeout = <T,>(promise: PromiseLike<T>, ms = 8000): Promise<T> =>
     Promise.race([
       promise,
       new Promise<never>((_, reject) =>
@@ -87,8 +91,8 @@ export const AuthDialog = () => {
         if (phoneErr) throw phoneErr;
         setStep(exists ? "login-phone" : "register-phone-otp");
       }
-    } catch (err: any) {
-      toast({ title: "Lỗi kiểm tra tài khoản", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Lỗi kiểm tra tài khoản", description: errorMessage(err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -121,8 +125,8 @@ export const AuthDialog = () => {
       toast({ title: "Đăng nhập thành công!" });
       closeAuthDialog();
       setTimeout(() => executePendingAction(), 100);
-    } catch (err: any) {
-      toast({ title: "Đăng nhập thất bại", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Đăng nhập thất bại", description: errorMessage(err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -162,8 +166,8 @@ export const AuthDialog = () => {
         description: "Kích hoạt tài khoản để sử dụng đầy đủ tính năng.",
       });
       setStep("activate");
-    } catch (err: any) {
-      toast({ title: "Đăng ký thất bại", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Đăng ký thất bại", description: errorMessage(err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -209,8 +213,8 @@ export const AuthDialog = () => {
       if (error) throw error;
       toast({ title: "Tài khoản đã được tạo!" });
       setStep("activate");
-    } catch (err: any) {
-      toast({ title: "Đăng ký thất bại", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Đăng ký thất bại", description: errorMessage(err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -227,8 +231,8 @@ export const AuthDialog = () => {
       });
       if (error) throw error;
       // Không đóng dialog ở đây: luồng thành công sẽ điều hướng khỏi trang.
-    } catch (err: any) {
-      toast({ title: "Đăng nhập Google thất bại", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Đăng nhập Google thất bại", description: errorMessage(err), variant: "destructive" });
       setLoading(false);
     }
   };

@@ -18,6 +18,7 @@ import {
 import { LogOut, UserCircle } from "lucide-react";
 import { resolveDisplayName } from "@/lib/displayName";
 import { useToast } from "@/hooks/use-toast";
+import type { AgentInfoShape } from "@/lib/onboardingTasks";
 
 const navItems = [
   { label: "Cơ sở dữ liệu", to: "/listings" },
@@ -54,7 +55,7 @@ export const ReportTopNav = () => {
       .maybeSingle()
       .then(({ data }) => {
         setProfileName(data?.name ?? null);
-        const agentInfo = (data?.agent_info as any) || {};
+        const agentInfo = (data?.agent_info as AgentInfoShape | null) ?? {};
         setAvatarUrl(agentInfo?.profile_picture_url || null);
       });
   }, [session]);

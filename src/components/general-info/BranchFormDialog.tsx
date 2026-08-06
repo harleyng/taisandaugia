@@ -63,9 +63,17 @@ export function BranchFormDialog({ open, onOpenChange, existing, onSave }: Branc
     }
   }, [open, existing, form])
 
+  // Liệt kê tường minh các trường bắt buộc của Branch thay vì `...values`.
+  // Với `strictNullChecks: false`, z.infer đánh dấu MỌI trường là optional
+  // (`undefined extends string` thành true), nên spread không thoả được
+  // Omit<Branch, 'id'>. Zod vẫn kiểm ở runtime — đây chỉ là bù cho suy kiểu.
   const onSubmit = (values: FormValues) => {
     onSave({
-      ...values,
+      name: values.name,
+      type: values.type,
+      address: values.address,
+      province: values.province,
+      isActive: values.isActive,
       email: values.email || undefined,
       phone: values.phone || undefined,
       district: values.district || undefined,

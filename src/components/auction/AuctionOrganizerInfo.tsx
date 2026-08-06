@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthGuardedNavigate } from "@/hooks/useAuthGuardedNavigate";
 import logoAuctionOrg from "@/assets/logo-auction-org.png";
+import { caString, type AuctionListing } from "@/types/listing";
+import { qk } from "@/lib/queryKeys";
 
 interface AuctionOrganizerInfoProps {
-  listing: any;
+  listing: AuctionListing;
   isUnlocked?: boolean;
   onLockedClick?: () => void;
 }
@@ -17,7 +19,7 @@ export const AuctionOrganizerInfo = ({ listing, isUnlocked = true, onLockedClick
   const auctionOrgId = listing.auction_org_id;
 
   const { data: orgData } = useQuery({
-    queryKey: ["auction-org", auctionOrgId],
+    queryKey: qk.auctionOrg(auctionOrgId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("auction_organizations")
@@ -47,12 +49,12 @@ export const AuctionOrganizerInfo = ({ listing, isUnlocked = true, onLockedClick
     enabled: !!auctionOrgId,
   });
 
-  const orgName = orgData?.name || ca.org_name;
-  const orgAddress = orgData?.address || ca.org_address;
-  const orgPhone = orgData?.phone || ca.org_phone;
-  const orgEmail = orgData?.email || ca.org_email;
+  const orgName = orgData?.name || caString(ca.org_name);
+  const orgAddress = orgData?.address || caString(ca.org_address);
+  const orgPhone = orgData?.phone || caString(ca.org_phone);
+  const orgEmail = orgData?.email || caString(ca.org_email);
   const orgLogo = orgData?.logo_url || logoAuctionOrg;
-  const auctionLocation = ca.auction_location;
+  const auctionLocation = caString(ca.auction_location);
 
   const hasOrgInfo = orgName || orgAddress || orgPhone || orgEmail || auctionLocation;
 
@@ -85,7 +87,11 @@ export const AuctionOrganizerInfo = ({ listing, isUnlocked = true, onLockedClick
           onKeyDown={(e) => {
             if (isClickable && (e.key === "Enter" || e.key === " ")) {
               e.preventDefault();
-              handleClick?.(e as any);
+              e.stopPropagation();
+              // handleClick chỉ dùng tham số để preventDefault/stopPropagation —
+              // đã làm ở trên, nên gọi không tham số thay vì ép kiểu sự kiện
+              // bàn phím thành sự kiện chuột.
+              handleClick?.();
             }
           }}
           className={`rounded-lg border border-secondary/40 bg-secondary/30 p-4 ${

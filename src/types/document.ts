@@ -1,4 +1,10 @@
-export type LinkedEntityType = 'AUCTIONEER' | 'AUCTION' | 'TAX_YEAR' | 'INFRASTRUCTURE_SECTION'
+export type LinkedEntityType =
+  | 'AUCTIONEER'
+  | 'AUCTION'
+  | 'TAX_YEAR'
+  | 'INFRASTRUCTURE_SECTION'
+  /** Giấy tờ pháp lý công ty tải lên ở Thông tin chung (DocFileUpload). */
+  | 'LEGAL_DOC'
 
 export type MimeCategory = 'PDF' | 'WORD' | 'EXCEL' | 'IMAGE' | 'OTHER'
 

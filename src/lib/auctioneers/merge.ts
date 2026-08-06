@@ -75,7 +75,7 @@ export function mergeWithExisting(
     if (currentValue && currentValue !== crawledValue) {
       conflicts.push({ field, currentValue, newValueFromCrawl: crawledValue })
     } else if (!currentValue || currentValue !== crawledValue) {
-      ;(merged as Record<string, unknown>)[field] = crawledValue
+      ;(merged as unknown as Record<string, unknown>)[field] = crawledValue
     }
   }
 

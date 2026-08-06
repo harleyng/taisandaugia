@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatAddress } from "@/utils/formatters";
 import { AuctionCard } from "@/components/AuctionCard";
 import { getSessionStatus, type AuctionListing } from "@/hooks/useAuctionListings";
+import { caNumber, caString } from "@/types/listing";
 import { useAuctionOrgNames } from "@/hooks/useAuctionOrgNames";
 
 interface SavedAssetsTabProps {
@@ -95,7 +96,7 @@ export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProp
           {listings.map((listing) => {
             const ca = listing.custom_attributes || {};
             const fallbackOrgName = listing.auction_org_id ? orgNameById.get(listing.auction_org_id) : "";
-            const orgName = ca.org_name || fallbackOrgName || "";
+            const orgName = caString(ca.org_name) || fallbackOrgName || "";
             return (
               <AuctionCard
                 key={listing.id}
@@ -104,14 +105,14 @@ export const SavedAssetsTab = ({ fromNotifications = false }: SavedAssetsTabProp
                 title={listing.title}
                 address={formatAddress(listing.address) || "Chưa cập nhật"}
                 startingPrice={listing.price}
-                stepPrice={ca.bid_step ?? ca.step_price}
-                depositAmount={ca.deposit_amount}
-                auctionDate={ca.auction_date ?? ca.auction_time}
-                registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
+                stepPrice={caNumber(ca.bid_step ?? ca.step_price)}
+                depositAmount={caNumber(ca.deposit_amount)}
+                auctionDate={caString(ca.auction_date ?? ca.auction_time)}
+                registrationDeadline={caString(ca.registration_deadline ?? ca.document_sale_end)}
                 sessionStatus={getSessionStatus(listing)}
                 categorySlug={listing.property_type_slug}
                 viewMode="grid"
-                winPrice={ca.win_price ?? ca.winning_price}
+                winPrice={caNumber(ca.win_price ?? ca.winning_price)}
                 orgName={orgName}
                 orgId={listing.auction_org_id || undefined}
                 isSaved

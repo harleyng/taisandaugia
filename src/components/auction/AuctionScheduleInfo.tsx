@@ -1,8 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Clock, FileText, Eye, Gavel } from "lucide-react";
+import { caString, type AuctionListing } from "@/types/listing";
 
+// Chỉ nhận đúng trường được đọc: AuctionDetailDrawer truyền vào một dòng thô
+// (Record<string, unknown>) chứ không phải AuctionListing đầy đủ.
 interface AuctionScheduleInfoProps {
-  listing: any;
+  listing: Pick<AuctionListing, "custom_attributes">;
 }
 
 const formatDateTime = (dateStr: string | undefined) => {
@@ -27,28 +30,33 @@ const formatDateRange = (start: string | undefined, end: string | undefined) => 
 
 export const AuctionScheduleInfo = ({ listing }: AuctionScheduleInfoProps) => {
   const ca = listing.custom_attributes || {};
-  
-  const hasSchedule = ca.document_sale_start || ca.document_sale_end || 
-                      ca.asset_viewing_start || ca.asset_viewing_end || 
-                      ca.auction_time || ca.auction_date;
-  
+
+  const docSaleStart = caString(ca.document_sale_start) ?? undefined;
+  const docSaleEnd = caString(ca.document_sale_end) ?? undefined;
+  const viewingStart = caString(ca.asset_viewing_start) ?? undefined;
+  const viewingEnd = caString(ca.asset_viewing_end) ?? undefined;
+  const auctionAt = caString(ca.auction_time) ?? caString(ca.auction_date) ?? undefined;
+
+  const hasSchedule =
+    docSaleStart || docSaleEnd || viewingStart || viewingEnd || auctionAt;
+
   if (!hasSchedule) return null;
 
   const scheduleItems = [
     {
       icon: FileText,
       label: "Thời gian bán hồ sơ",
-      value: formatDateRange(ca.document_sale_start, ca.document_sale_end),
+      value: formatDateRange(docSaleStart, docSaleEnd),
     },
     {
       icon: Eye,
       label: "Thời gian xem tài sản",
-      value: formatDateRange(ca.asset_viewing_start, ca.asset_viewing_end),
+      value: formatDateRange(viewingStart, viewingEnd),
     },
     {
       icon: Gavel,
       label: "Thời gian đấu giá",
-      value: formatDateTime(ca.auction_time || ca.auction_date),
+      value: formatDateTime(auctionAt),
     },
   ].filter(item => item.value);
 

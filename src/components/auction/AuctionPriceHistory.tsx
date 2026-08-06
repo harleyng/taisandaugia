@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import { generateMockSessions } from "@/lib/mockAuctionSessions";
 import { useListingPriceSessions } from "@/hooks/useListingPriceSessions";
+import { caNumber, caString, type AuctionListing } from "@/types/listing";
 import {
   buildInsightModeA,
   buildInsightModeB,
@@ -28,7 +29,8 @@ import {
 } from "@/lib/auctionPriceAnalytics";
 
 interface AuctionPriceHistoryProps {
-  listing: any;
+  // Dòng listing kèm quan hệ property_types mà useListingById join sẵn.
+  listing: AuctionListing & { property_types?: { name: string; slug: string } | null };
   isUnlocked?: boolean;
   isLoggedIn?: boolean;
   onLogin?: () => void;
@@ -64,7 +66,16 @@ function isRealEstateSlug(slug?: string | null) {
 
 const fmtNum = (n: number) => n.toFixed(1).replace(".", ",");
 
-const TooltipContentFactory = (assetArea: number, showTotal: boolean) => ({ active, payload }: any) => {
+// Recharts truyền props tooltip theo kiểu generic rất rộng; chỉ khai báo đúng
+// hai trường được đọc thay vì `any`.
+interface PriceTooltipProps {
+  active?: boolean;
+  payload?: { payload?: MonthBucket }[];
+}
+
+const TooltipContentFactory =
+  (assetArea: number, showTotal: boolean) =>
+  ({ active, payload }: PriceTooltipProps) => {
   if (!active || !payload || !payload.length) return null;
   const b: MonthBucket | undefined = payload[0]?.payload;
   if (!b) return null;

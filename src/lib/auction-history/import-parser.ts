@@ -213,10 +213,11 @@ export async function parseExcelFile(file: File): Promise<{ headers: string[]; r
   const wb = XLSX.read(buffer, { type: 'array', cellDates: false })
   const sheetName = wb.SheetNames.find((n) => n.toLowerCase().includes('dữ liệu') || n.toLowerCase().includes('data')) ?? wb.SheetNames[0]
   const ws = wb.Sheets[sheetName]
-  const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { header: 1, defval: '' })
+  // header:1 => sheet_to_json trả về MẢNG cho mỗi dòng, không phải object.
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' })
   if (raw.length < 2) return { headers: [], rows: [] }
-  const headers = (raw[0] as unknown[]).map((h) => String(h).trim())
-  const rows = (raw.slice(1) as unknown[][]).map((row) => {
+  const headers = raw[0].map((h) => String(h).trim())
+  const rows = raw.slice(1).map((row) => {
     const obj: Record<string, unknown> = {}
     headers.forEach((h, i) => { obj[h] = (row as unknown[])[i] })
     return obj

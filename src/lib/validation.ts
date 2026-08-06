@@ -103,7 +103,7 @@ export const organizationSchema = z.object({
     .trim()
     .min(1, "Mã số thuế là bắt buộc")
     .max(20, "Mã số thuế không được vượt quá 20 ký tự")
-    .regex(/^[0-9\-]+$/, "Mã số thuế chỉ được chứa số và dấu gạch ngang"),
+    .regex(/^[0-9-]+$/, "Mã số thuế chỉ được chứa số và dấu gạch ngang"),
   businessLicenseNumber: z
     .string()
     .trim()

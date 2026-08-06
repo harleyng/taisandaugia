@@ -4,6 +4,7 @@ import { Building2, Phone, Mail, Eye } from "lucide-react";
 import { useState } from "react";
 import { SectionLabel } from "@/components/shared/SectionLabel";
 import { InfoCardShell } from "@/components/shared/InfoCardShell";
+import { caString, type ListingCustomAttributes } from "@/types/listing";
 
 interface ContactInfo {
   name: string;
@@ -14,17 +15,18 @@ interface ContactInfo {
 interface OrganizationContactCardProps {
   contactInfo: ContactInfo | null;
   loading: boolean;
-  customAttributes?: Record<string, any>;
+  customAttributes?: ListingCustomAttributes;
 }
 
 export const OrganizationContactCard = ({ contactInfo, loading, customAttributes }: OrganizationContactCardProps) => {
   const [showPhone, setShowPhone] = useState(false);
 
   // Fallback to custom_attributes if no listing_contacts record
-  const effectiveContact: ContactInfo | null = contactInfo || (customAttributes?.org_name ? {
-    name: customAttributes.org_name,
-    phone: customAttributes.org_phone || "",
-    email: customAttributes.org_email || "",
+  const caOrgName = caString(customAttributes?.org_name);
+  const effectiveContact: ContactInfo | null = contactInfo || (caOrgName ? {
+    name: caOrgName,
+    phone: caString(customAttributes?.org_phone) || "",
+    email: caString(customAttributes?.org_email) || "",
   } : null);
 
   return (

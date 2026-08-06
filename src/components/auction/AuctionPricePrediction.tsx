@@ -22,9 +22,10 @@ import { formatPrice } from "@/utils/formatters";
 import { generateMockSessions } from "@/lib/mockAuctionSessions";
 import { computeAnalytics, pickBucket } from "@/lib/auctionPriceAnalytics";
 import { useListingPriceSessions } from "@/hooks/useListingPriceSessions";
+import { caNumber, caString, type AuctionListing } from "@/types/listing";
 
 interface AuctionPricePredictionProps {
-  listing: any;
+  listing: AuctionListing;
   isUnlocked: boolean;
   onUnlock: () => void;
 }
@@ -81,13 +82,13 @@ export const AuctionPricePrediction = ({ listing, isUnlocked, onUnlock }: Auctio
   // Predicted range
   const minMultiplier = 1.1 + seed * 0.05;
   const maxMultiplier = 1.22 + seed * 0.08;
-  const predMin = ca.predicted_price_min ?? Math.round(listing.price * minMultiplier);
-  const predMax = ca.predicted_price_max ?? Math.round(listing.price * maxMultiplier);
+  const predMin = caNumber(ca.predicted_price_min) ?? Math.round(listing.price * minMultiplier);
+  const predMax = caNumber(ca.predicted_price_max) ?? Math.round(listing.price * maxMultiplier);
   const minPct = Math.round((minMultiplier - 1) * 100);
   const maxPct = Math.round((maxMultiplier - 1) * 100);
 
   // Confidence — capped at 80% per spec (no demand signal)
-  const rawConfidence = ca.confidence_score ?? Math.round(60 + seed * 25);
+  const rawConfidence = caNumber(ca.confidence_score) ?? Math.round(60 + seed * 25);
   const confidence = Math.min(80, rawConfidence);
   const cLabel = confidenceLabel(confidence);
 

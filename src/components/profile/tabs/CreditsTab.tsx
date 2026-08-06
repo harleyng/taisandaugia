@@ -72,6 +72,7 @@ const TYPE_ICON: Record<TransactionType, typeof ShoppingCart> = {
   owner_report_view: Eye,
   unlock_opp_report: FileText,
   export_profile: FileText,
+  export_personnel_dossier: FileText,
 };
 
 const TransactionRow = ({ tx }: { tx: Transaction }) => {

@@ -12,10 +12,12 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 type Status = "loading" | "ready" | "invalid";
 
 /**
- * Trang đích cho link "Chấp nhận lời mời" (invite) và "Đặt lại mật khẩu"
- * (recovery). Supabase redirect về đây kèm token; ta chờ session được thiết
- * lập rồi cho người dùng tạo mật khẩu. Không có trang này thì link invite rơi
- * về trang trống vì chẳng có UI nào xử lý token.
+ * Trang đích cho link "Đặt lại mật khẩu" (recovery) của Supabase Auth — dùng cho
+ * tài khoản do admin tạo. Supabase redirect về đây kèm token; ta chờ session
+ * được thiết lập rồi cho người dùng tạo mật khẩu.
+ *
+ * KHÔNG xử lý lời mời vào tổ chức: lời mời đi qua /loi-moi/:token với token
+ * riêng trong organization_memberships, không phải token của GoTrue.
  */
 const SetPassword = () => {
   const navigate = useNavigate();

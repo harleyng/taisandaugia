@@ -1,1 +1,14 @@
 project_id = "dvdpfjprncvkhfwcvqmp"
+
+# Tài khoản đăng ký mới được xác thực email NGAY, không cần bấm link trong mail.
+# Dự án chưa có SMTP riêng nên sender mặc định của Supabase bị giới hạn 2 email/giờ
+# — bật xác thực đồng nghĩa với việc phần lớn người đăng ký bị kẹt không đăng nhập được.
+#
+# Khối này áp dụng cho môi trường LOCAL (`supabase start`). Trên remote, thiết lập
+# tương ứng là Authentication → Email → "Confirm email" (GoTrue mailer_autoconfirm),
+# ĐÃ được tắt trực tiếp trên dự án dvdpfjprncvkhfwcvqmp.
+#
+# CẢNH BÁO: đừng chạy `supabase config push` với file này — nó sẽ ghi đè TOÀN BỘ
+# cấu hình auth trên remote (site_url, redirect URLs, provider…) về mặc định CLI.
+[auth.email]
+enable_confirmations = false

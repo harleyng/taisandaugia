@@ -1,5 +1,5 @@
 import type { Auctioneer } from '@/types/auctioneer'
-import { computeYearsOfExperience } from '@/types/auctioneer'
+import { computePracticeYears } from '@/types/auctioneer'
 
 export interface AuctioneerScoreDetail {
   scoreIV6: number  // /4 — số lượng ĐGV
@@ -25,7 +25,7 @@ export function calcAuctioneerScore(auctioneers: Auctioneer[]): AuctioneerScoreD
   // IV.7: KN Giám đốc (tính từ ngày cấp thẻ ĐGV)
   // 7.1: <5 năm → 2đ | 7.2: 5–9 năm → 3đ | 7.3: ≥10 năm → 4đ
   const director = active.find((a) => a.position === 'DIRECTOR')
-  const directorYears = director ? computeYearsOfExperience(director.licenseIssuedDate) : null
+  const directorYears = director ? computePracticeYears(director) : null
   let scoreIV7 = 0
   if (directorYears !== null) {
     if (directorYears >= 10) scoreIV7 = 4
@@ -36,7 +36,7 @@ export function calcAuctioneerScore(auctioneers: Auctioneer[]): AuctioneerScoreD
   // IV.8: KN ĐGV hành nghề ≥5 năm
   // 8.1: không có ai ≥5y (nhưng có ĐGV) → 3đ | 8.2: 01–03 → 4đ | 8.3: ≥04 → 5đ
   const peopleWithFiveYears = active.filter(
-    (a) => computeYearsOfExperience(a.licenseIssuedDate) >= 5,
+    (a) => computePracticeYears(a) >= 5,
   ).length
   let scoreIV8 = 0
   if (activeCount > 0) {

@@ -9,7 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Search, MoreVertical, Pencil, Trash2, ChevronDown, AlertTriangle } from 'lucide-react'
+import { Search, MoreVertical, Pencil, Trash2, ChevronDown, AlertTriangle, IdCard } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import type { AuctioneerWithComputed, Position, BadgeSource } from '@/types/auctioneer'
 import { POSITION_LABELS, CONTRACT_TYPE_LABELS } from '@/types/auctioneer'
 import { SourceBadge } from './SourceBadge'
@@ -125,6 +126,7 @@ function AuctioneerRow({
   onEdit: (id: string) => void
   onDelete: (id: string) => void
 }) {
+  const navigate = useNavigate()
   const expiryWarning =
     a.daysUntilLicenseExpiry !== undefined && a.daysUntilLicenseExpiry < 60
 
@@ -167,8 +169,14 @@ function AuctioneerRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => navigate(`/portal/nang-luc/dau-gia-vien/${a.id}`)}
+              className="gap-2"
+            >
+              <IdCard className="h-3.5 w-3.5" /> Mở hồ sơ
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(a.id)} className="gap-2">
-              <Pencil className="h-3.5 w-3.5" /> Sửa
+              <Pencil className="h-3.5 w-3.5" /> Sửa nhanh
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onDelete(a.id)}

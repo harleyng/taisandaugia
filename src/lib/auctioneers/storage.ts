@@ -4,6 +4,16 @@ const AUCTIONEERS_KEY = 'tsd:auctioneers'
 const CRAWL_SESSIONS_KEY = 'tsd:crawl-sessions'
 const TAX_CODE_KEY = 'tsd:org-tax-code'
 
+const MIGRATED_KEY = 'tsd:auctioneers-migrated'
+
+/**
+ * CHỈ CÒN DÙNG CHO VIỆC NHẬP DỮ LIỆU CŨ.
+ *
+ * Nguồn sự thật của đấu giá viên nay là bảng Supabase org_auctioneers (xem
+ * src/lib/auctioneers/supabase-repo.ts). Các hàm ghi localStorage đã bị gỡ bỏ
+ * có chủ đích để không nơi nào vô tình ghi ngược lại. Key `tsd:auctioneers`
+ * được GIỮ NGUYÊN, không xoá sau khi nhập — nhập lỗi thì còn khôi phục được.
+ */
 export function listAuctioneers(): Auctioneer[] {
   try {
     const raw = localStorage.getItem(AUCTIONEERS_KEY)
@@ -13,20 +23,12 @@ export function listAuctioneers(): Auctioneer[] {
   }
 }
 
-export function saveAuctioneers(auctioneers: Auctioneer[]): void {
-  localStorage.setItem(AUCTIONEERS_KEY, JSON.stringify(auctioneers))
+export function isLegacyImported(): boolean {
+  return localStorage.getItem(MIGRATED_KEY) === '1'
 }
 
-export function upsertAuctioneer(auctioneer: Auctioneer): void {
-  const all = listAuctioneers()
-  const idx = all.findIndex((a) => a.id === auctioneer.id)
-  if (idx >= 0) all[idx] = auctioneer
-  else all.push(auctioneer)
-  saveAuctioneers(all)
-}
-
-export function deleteAuctioneer(id: string): void {
-  saveAuctioneers(listAuctioneers().filter((a) => a.id !== id))
+export function markLegacyImported(): void {
+  localStorage.setItem(MIGRATED_KEY, '1')
 }
 
 export function getCrawlSessions(): CrawlSession[] {

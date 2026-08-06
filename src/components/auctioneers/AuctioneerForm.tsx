@@ -37,6 +37,7 @@ import {
   makeDefaultFieldSources,
 } from '@/types/auctioneer'
 import { OverrideFieldDialog } from './OverrideFieldDialog'
+import { usePortalOrg } from '@/hooks/usePortalOrg'
 
 const formSchema = z.object({
   fullName: z.string().min(2, 'Tên phải ít nhất 2 ký tự'),
@@ -82,6 +83,7 @@ function toFormValues(a?: Auctioneer): FormValues {
 }
 
 export function AuctioneerForm({ open, onOpenChange, existing, onSave }: Props) {
+  const { organizationId } = usePortalOrg()
   const isCrawled = existing?.source === 'CRAWLED' || existing?.source === 'CRAWLED_USER_ENRICHED'
 
   // Mirror of existing with applied overrides — updated as user overrides fields
@@ -129,7 +131,7 @@ export function AuctioneerForm({ open, onOpenChange, existing, onSave }: Props) 
     } else {
       const created: Auctioneer = {
         id: crypto.randomUUID(),
-        orgId: 'default',
+        orgId: organizationId ?? '',
         source: 'MANUAL',
         isVerifiedByPublicSource: false,
         fullName: values.fullName,

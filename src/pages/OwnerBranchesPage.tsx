@@ -33,6 +33,7 @@ import {
   type BranchInput,
 } from "@/hooks/useWorkspaceBranches";
 import { BranchImportDialog } from "@/components/owner-branches/BranchImportDialog";
+import { WorkspaceAliasPanel } from "@/components/owner-branches/WorkspaceAliasPanel";
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -157,6 +158,7 @@ const OwnerBranchesPage = () => {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="alias">Alias &amp; khớp tài sản</TabsTrigger>
         </TabsList>
 
         <TabsContent value="branches">
@@ -185,6 +187,16 @@ const OwnerBranchesPage = () => {
             isProcessing={updateBranch.isPending || toggleActive.isPending || deleteBranch.isPending}
             emptyLabel="Chưa phát hiện AMC nào. Nhấn 'Đồng bộ từ tài sản' để kiểm tra."
           />
+        </TabsContent>
+
+        <TabsContent value="alias">
+          {workspace ? (
+            <WorkspaceAliasPanel workspace={workspace} userId={userId} />
+          ) : (
+            <div className="text-sm text-muted-foreground py-8 text-center">
+              Chưa có workspace tổ chức.
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

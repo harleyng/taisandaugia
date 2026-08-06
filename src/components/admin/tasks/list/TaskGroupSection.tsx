@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ListPager } from "@/components/admin/crm/ListPager";
+import { usePager } from "@/hooks/usePager";
 import { TaskRowCard, type TaskActions } from "./TaskRowCard";
 import type { Task } from "@/types/tasks";
+
+// Nhóm không phân trang thì vẫn phải gọi usePager (thứ tự hook cố định) —
+// kích thước "vô hạn" này chỉ để nó trả về nguyên danh sách.
+const NO_PAGING = Number.MAX_SAFE_INTEGER;
 
 /** Một nhóm gập được (Quá hạn xử lý / Hôm nay / Sắp tới / Đã đóng). */
 export function TaskGroupSection({
@@ -11,14 +17,21 @@ export function TaskGroupSection({
   actions,
   accent,
   defaultOpen = true,
+  hideRelation,
+  pageSize,
 }: {
   title: string;
   tasks: Task[];
   actions: TaskActions;
   accent?: boolean;
   defaultOpen?: boolean;
+  hideRelation?: boolean;
+  /** Bật phân trang trong nhóm (panel nhúng ở trang chi tiết). */
+  pageSize?: number;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const { paged, pager } = usePager(tasks, pageSize ?? NO_PAGING);
+
   if (tasks.length === 0) return null;
 
   return (
@@ -35,9 +48,10 @@ export function TaskGroupSection({
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="space-y-2 px-3 pb-3">
-        {tasks.map((t) => (
-          <TaskRowCard key={t.id} task={t} actions={actions} />
+        {paged.map((t) => (
+          <TaskRowCard key={t.id} task={t} actions={actions} hideRelation={hideRelation} />
         ))}
+        {!!pageSize && <ListPager pager={pager} />}
       </CollapsibleContent>
     </Collapsible>
   );

@@ -71,6 +71,22 @@ export function resolveRelation(row: CrmRelated): ResolvedRelation | null {
   return null;
 }
 
+/**
+ * Suy ra quan hệ từ payload 4 cột (panel chi tiết chỉ truyền id, chưa có nhãn).
+ * Nhãn để rỗng — picker điền lại khi danh sách đối tượng tải xong.
+ */
+export function relationFromPartial(rel?: Partial<CrmRelation>): ResolvedRelation | null {
+  if (!rel) return null;
+  const kinds: [CrmRelationKind, string | null | undefined][] = [
+    ["lead", rel.lead_id],
+    ["customer", rel.customer_id],
+    ["opportunity", rel.opportunity_id],
+    ["order", rel.order_id],
+  ];
+  const hit = kinds.find(([, id]) => !!id);
+  return hit ? { kind: hit[0], id: hit[1] as string, label: "", code: null } : null;
+}
+
 /** Dựng payload 4 cột từ một quan hệ — đảm bảo chỉ đúng một cột có giá trị. */
 export function relationPayload(rel: { kind: CrmRelationKind; id: string } | null): CrmRelation {
   const base: CrmRelation = { lead_id: null, customer_id: null, opportunity_id: null, order_id: null };

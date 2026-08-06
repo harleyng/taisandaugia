@@ -16,7 +16,11 @@ import { useAdminUsers } from "@/hooks/useAdminUsers";
 import {
   STATUS_LABELS, TYPE_LABELS, PRIORITY_LABELS,
 } from "@/lib/tasks/taskStatus";
-import type { CrmRelation } from "@/lib/crm/relation";
+import { RelationPicker } from "@/components/admin/crm/RelationPicker";
+import {
+  relationFromPartial, relationPayload, resolveRelation,
+  type CrmRelation, type ResolvedRelation,
+} from "@/lib/crm/relation";
 import type { Task, TaskStatus, TaskType, TaskPriority } from "@/types/tasks";
 
 interface Props {
@@ -43,9 +47,15 @@ export function TaskFormDialog({ open, onOpenChange, editing, defaultRelation }:
   const upsert = useUpsertTask();
   const { data: admins } = useAdminUsers();
   const [form, setForm] = useState(empty());
+  const [relation, setRelation] = useState<ResolvedRelation | null>(null);
+
+  // Call site truyền object literal (`{ lead_id: id }`) nên định danh đổi mỗi
+  // lần cha render — so sánh bằng khóa chuỗi để không reset form đang nhập dở.
+  const relationKey = JSON.stringify(defaultRelation ?? null);
 
   useEffect(() => {
     if (!open) return;
+    setRelation(editing ? resolveRelation(editing) : relationFromPartial(JSON.parse(relationKey) ?? undefined));
     if (editing) {
       setForm({
         title: editing.title,
@@ -59,16 +69,19 @@ export function TaskFormDialog({ open, onOpenChange, editing, defaultRelation }:
     } else {
       setForm(empty());
     }
-  }, [open, editing]);
+  }, [open, editing, relationKey]);
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   const submit = async () => {
     if (form.title.trim().length < 2) return toast.error("Vui lòng nhập tên công việc");
+    if (relation && !relation.id) return toast.error("Vui lòng chọn đối tượng liên quan");
     try {
       await upsert.mutateAsync({
-        ...(editing ? { id: editing.id } : defaultRelation ?? {}),
+        ...(editing ? { id: editing.id } : {}),
+        // Gửi cả 4 cột ở mọi lần lưu — đổi hoặc gỡ đối tượng đều ghi được.
+        ...relationPayload(relation),
         title: form.title.trim(),
         description: form.description.trim() || null,
         task_type: form.task_type,
@@ -136,6 +149,8 @@ export function TaskFormDialog({ open, onOpenChange, editing, defaultRelation }:
               </Select>
             </div>
           </div>
+
+          <RelationPicker value={relation} onChange={setRelation} />
 
           <div className="space-y-1.5">
             <Label>Người phụ trách</Label>

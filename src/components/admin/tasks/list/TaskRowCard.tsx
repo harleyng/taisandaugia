@@ -23,7 +23,16 @@ function PriorityIcon({ priority }: { priority: TaskPriority }) {
   return null;
 }
 
-export function TaskRowCard({ task, actions }: { task: Task; actions: TaskActions }) {
+export function TaskRowCard({
+  task,
+  actions,
+  hideRelation,
+}: {
+  task: Task;
+  actions: TaskActions;
+  /** Ẩn badge "Liên quan" khi thẻ đã nằm trong trang của chính đối tượng đó. */
+  hideRelation?: boolean;
+}) {
   const overdue = isOverdue(task.status, task.due_at);
   const assignee = task.assignee?.name || task.assignee?.email || "Chưa giao";
   const dueFmt = task.due_at
@@ -60,7 +69,7 @@ export function TaskRowCard({ task, actions }: { task: Task; actions: TaskAction
               {dueFmt}
             </span>
           )}
-          <RelationCell row={task} />
+          {!hideRelation && <RelationCell row={task} />}
         </div>
       </div>
 

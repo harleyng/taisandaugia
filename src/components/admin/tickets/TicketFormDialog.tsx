@@ -14,8 +14,9 @@ import { toast } from "sonner";
 import { useUpsertTicket } from "@/hooks/useTickets";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { STATUS_LABELS, SOURCE_LABELS, PRIORITY_LABELS } from "@/lib/tickets/ticketStatus";
-import { resolveRelation, RELATION_LABELS } from "@/lib/crm/relation";
-import type { CrmRelation } from "@/lib/crm/relation";
+import { RelationPicker } from "@/components/admin/crm/RelationPicker";
+import { relationFromPartial, relationPayload, resolveRelation } from "@/lib/crm/relation";
+import type { CrmRelation, ResolvedRelation } from "@/lib/crm/relation";
 import type { Ticket, TicketStatus, TicketSource, TicketPriority } from "@/types/tickets";
 
 interface Props {
@@ -44,13 +45,18 @@ export function TicketFormDialog({ open, onOpenChange, editing, defaultRelation 
   const upsert = useUpsertTicket();
   const { data: admins } = useAdminUsers();
   const [form, setForm] = useState(empty());
+  const [relation, setRelation] = useState<ResolvedRelation | null>(null);
 
   // Ticket đến từ form công khai: nguồn là dữ kiện, không cho sửa.
   const fromForm = !!editing && (editing.source === "contact_form" || editing.source === "partnership");
-  const rel = editing ? resolveRelation(editing) : null;
+
+  // Call site truyền object literal (`{ lead_id: id }`) nên định danh đổi mỗi
+  // lần cha render — so sánh bằng khóa chuỗi để không reset form đang nhập dở.
+  const relationKey = JSON.stringify(defaultRelation ?? null);
 
   useEffect(() => {
     if (!open) return;
+    setRelation(editing ? resolveRelation(editing) : relationFromPartial(JSON.parse(relationKey) ?? undefined));
     if (editing) {
       setForm({
         subject: editing.subject,
@@ -67,16 +73,19 @@ export function TicketFormDialog({ open, onOpenChange, editing, defaultRelation 
     } else {
       setForm(empty());
     }
-  }, [open, editing]);
+  }, [open, editing, relationKey]);
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   const submit = async () => {
     if (form.subject.trim().length < 2) return toast.error("Vui lòng nhập tiêu đề");
+    if (relation && !relation.id) return toast.error("Vui lòng chọn đối tượng liên quan");
     try {
       await upsert.mutateAsync({
-        ...(editing ? { id: editing.id } : defaultRelation ?? {}),
+        ...(editing ? { id: editing.id } : {}),
+        // Gửi cả 4 cột ở mọi lần lưu — đổi hoặc gỡ đối tượng đều ghi được.
+        ...relationPayload(relation),
         subject: form.subject.trim(),
         body: form.body.trim() || null,
         source: form.source,
@@ -112,11 +121,6 @@ export function TicketFormDialog({ open, onOpenChange, editing, defaultRelation 
               <p className="text-muted-foreground">
                 Gửi lúc {format(new Date(editing.created_at), "HH:mm — dd/MM/yyyy")} · {SOURCE_LABELS[editing.source]}
               </p>
-              {rel && (
-                <p className="text-foreground">
-                  {RELATION_LABELS[rel.kind]}: {rel.label}
-                </p>
-              )}
               {meta.org_name && (
                 <p className="text-foreground">
                   Đơn vị: {meta.org_name}{meta.province ? ` · ${meta.province}` : ""}
@@ -185,6 +189,8 @@ export function TicketFormDialog({ open, onOpenChange, editing, defaultRelation 
               <Input value={form.requester_email} onChange={(e) => set("requester_email", e.target.value)} disabled={fromForm} />
             </div>
           </div>
+
+          <RelationPicker value={relation} onChange={setRelation} />
 
           <div className="space-y-1.5">
             <Label>Người xử lý</Label>

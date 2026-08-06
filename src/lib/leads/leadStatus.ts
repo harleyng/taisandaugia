@@ -44,8 +44,19 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   event: "Sự kiện",
   ads: "Quảng cáo",
   tool_marketplace: "Công cụ đấu giá",
+  market_data: "Dữ liệu sàn",
   other: "Khác",
 };
+
+/** Lead sinh từ dữ liệu tài sản trên sàn (RPC admin_sync_prospect_leads), không
+ *  do người nhập. Dùng để tách khỏi lead nhập tay khi lọc. */
+export const MARKET_DATA_SOURCE: LeadSource = "market_data";
+
+/** Nguồn admin được phép tự chọn khi nhập tay. Cố ý loại 'market_data' — nguồn
+ *  đó do hệ thống đóng dấu khi đồng bộ, chọn tay sẽ sai dữ liệu. */
+export const MANUAL_SOURCES = (Object.keys(SOURCE_LABELS) as LeadSource[]).filter(
+  (s) => s !== MARKET_DATA_SOURCE,
+);
 
 /** Loại lead dùng chung từ vựng với phân khúc khách hàng (chuyển đổi copy 1:1). */
 export const LEAD_TYPE_LABELS = SEGMENT_LABELS;

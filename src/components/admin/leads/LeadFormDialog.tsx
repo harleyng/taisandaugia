@@ -11,9 +11,11 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useUpsertLead } from "@/hooks/useLeads";
-import { STATUS_LABELS, SOURCE_LABELS, LEAD_TYPE_LABELS } from "@/lib/leads/leadStatus";
+import {
+  SOURCE_LABELS, LEAD_TYPE_LABELS, MANUAL_SOURCES, MARKET_DATA_SOURCE,
+} from "@/lib/leads/leadStatus";
 import { vietnamProvinces } from "@/constants/vietnam-locations";
-import type { Lead, LeadStatus, LeadSource, LeadType } from "@/types/leads";
+import type { Lead, LeadFields, LeadSource, LeadType } from "@/types/leads";
 import type { CustomerSegment } from "@/lib/customers/customerSegment";
 
 interface Props {
@@ -32,20 +34,16 @@ const empty = () => ({
   company_name: "",
   lead_type: "other" as LeadType,
   source: "other" as LeadSource,
-  status: "new" as LeadStatus,
   province: NO_PROVINCE,
   note: "",
 });
 
-/** Trạng thái 'converted' cố ý KHÔNG có trong danh sách chọn: nó chỉ do RPC
- *  admin_convert_lead đặt (DB có CHECK ràng hai chiều với converted_customer_id). */
-const SELECTABLE: LeadStatus[] = ["new", "contacted", "qualified", "nurturing", "disqualified"];
+// Trạng thái KHÔNG còn nằm ở hộp thoại này — đổi trực tiếp bằng badge ở góc
+// trên-phải trang chi tiết (LeadStatusMenu). Form chỉ còn dữ liệu mô tả.
 
 export function LeadFormDialog({ open, onOpenChange, editing }: Props) {
   const upsert = useUpsertLead();
   const [form, setForm] = useState(empty());
-
-  const isConverted = editing?.status === "converted";
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +56,6 @@ export function LeadFormDialog({ open, onOpenChange, editing }: Props) {
         company_name: editing.company_name ?? "",
         lead_type: editing.lead_type,
         source: editing.source,
-        status: editing.status,
         province: editing.province ?? NO_PROVINCE,
         note: editing.note ?? "",
       });
@@ -73,8 +70,7 @@ export function LeadFormDialog({ open, onOpenChange, editing }: Props) {
   const submit = async () => {
     if (form.name.trim().length < 2) return toast.error("Vui lòng nhập tên");
     try {
-      await upsert.mutateAsync({
-        ...(editing ? { id: editing.id } : {}),
+      const fields: LeadFields = {
         name: form.name.trim(),
         contact_name: form.contact_name.trim() || null,
         phone: form.phone.trim() || null,
@@ -82,11 +78,11 @@ export function LeadFormDialog({ open, onOpenChange, editing }: Props) {
         company_name: form.company_name.trim() || null,
         lead_type: form.lead_type,
         source: form.source,
-        // Đã chuyển đổi thì giữ nguyên status — không cho form hạ cấp về 'new'.
-        status: isConverted ? "converted" : form.status,
         province: form.province === NO_PROVINCE ? null : form.province,
         note: form.note.trim() || null,
-      });
+      };
+      // Tách hẳn hai lời gọi: tạo mới cần đủ trường, cập nhật là bản vá.
+      await upsert.mutateAsync(editing ? { id: editing.id, ...fields } : fields);
       toast.success(editing ? "Đã cập nhật" : "Đã thêm khách hàng tiềm năng");
       onOpenChange(false);
     } catch {
@@ -143,33 +139,16 @@ export function LeadFormDialog({ open, onOpenChange, editing }: Props) {
               <Select value={form.source} onValueChange={(v) => set("source", v as LeadSource)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(SOURCE_LABELS) as LeadSource[]).map((k) => (
+                  {/* 'Dữ liệu sàn' chỉ hiện khi lead đang sửa vốn đã mang nguồn đó,
+                      để Select không rỗng — không cho chọn mới. */}
+                  {(form.source === MARKET_DATA_SOURCE
+                    ? [MARKET_DATA_SOURCE, ...MANUAL_SOURCES]
+                    : MANUAL_SOURCES
+                  ).map((k) => (
                     <SelectItem key={k} value={k}>{SOURCE_LABELS[k]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Trạng thái</Label>
-              <Select
-                value={isConverted ? "converted" : form.status}
-                onValueChange={(v) => set("status", v as LeadStatus)}
-                disabled={isConverted}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {isConverted ? (
-                    <SelectItem value="converted">{STATUS_LABELS.converted}</SelectItem>
-                  ) : (
-                    SELECTABLE.map((k) => (
-                      <SelectItem key={k} value={k}>{STATUS_LABELS[k]}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {isConverted && (
-                <p className="text-[11px] text-muted-foreground">Đã chuyển đổi — không đổi trạng thái được.</p>
-              )}
             </div>
             <div className="space-y-1.5">
               <Label>Tỉnh/Thành</Label>

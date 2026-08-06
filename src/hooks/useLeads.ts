@@ -1,19 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Lead, LeadUpsert } from "@/types/leads";
+import { qk } from "@/lib/queryKeys";
 
 // Truy cập qua untyped cast — cùng convention với useOrders.ts / useCustomers.ts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const leadsTable = () => (supabase as any).from("leads");
 
+// PHẢI chỉ đích danh khoá ngoại cho customers: giữa leads và customers có HAI
+// quan hệ (customers.source_lead_id → leads.id, và leads.converted_customer_id
+// → customers.id), PostgREST không tự đoán được và trả PGRST201.
 const LEAD_SELECT =
-  "*, assignee:profiles(id,name,email), converted_customer:customers(id,name,code)";
+  "*, assignee:profiles(id,name,email), " +
+  "converted_customer:customers!leads_converted_customer_id_fkey(id,name,code)";
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
 export function useLeads() {
   return useQuery<Lead[]>({
-    queryKey: ["leads"],
+    queryKey: qk.leads.all,
     queryFn: async () => {
       const { data, error } = await leadsTable()
         .select(LEAD_SELECT)
@@ -53,7 +58,7 @@ export function useUpsertLead() {
       return data as Lead;
     },
     onSuccess: (data: Lead) => {
-      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: qk.leads.all });
       qc.invalidateQueries({ queryKey: ["lead", data.id] });
     },
   });
@@ -66,7 +71,7 @@ export function useDeleteLead() {
       const { error } = await leadsTable().delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.leads.all }),
   });
 }
 
@@ -85,9 +90,9 @@ export function useConvertLead() {
       return data as string; // customer id
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["leads"] });
-      qc.invalidateQueries({ queryKey: ["customers"] });
-      qc.invalidateQueries({ queryKey: ["opportunities"] });
+      qc.invalidateQueries({ queryKey: qk.leads.all });
+      qc.invalidateQueries({ queryKey: qk.customers.all });
+      qc.invalidateQueries({ queryKey: qk.opportunities.all });
     },
   });
 }

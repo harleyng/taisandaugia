@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { qk } from "@/lib/queryKeys";
 
 const EMPTY_SET: Set<string> = new Set();
 
@@ -83,7 +84,7 @@ export function useAssetActions() {
         .from("profiles")
         .update({ notifications_enabled: true } as never)
         .eq("id", uid);
-      queryClient.invalidateQueries({ queryKey: ["profile", uid] });
+      queryClient.invalidateQueries({ queryKey: qk.profile.byUser(uid) });
     }
   }, [queryClient]);
 

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeMessage } from "@/hooks/useAdminUsers";
 import type { AdminAccount, AdminAccountDetail } from "@/types/adminRbac";
+import { qk } from "@/lib/queryKeys";
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
@@ -103,8 +104,8 @@ export function useAdminAccount(userId?: string) {
 
 function invalidateAccounts(qc: ReturnType<typeof useQueryClient>, userId?: string) {
   qc.invalidateQueries({ queryKey: ["admin-accounts"] });
-  qc.invalidateQueries({ queryKey: ["admin-users"] });
-  qc.invalidateQueries({ queryKey: ["admin-permissions"] });
+  qc.invalidateQueries({ queryKey: qk.adminUsers.all });
+  qc.invalidateQueries({ queryKey: qk.adminPermissions.all });
   if (userId) qc.invalidateQueries({ queryKey: ["admin-account", userId] });
 }
 

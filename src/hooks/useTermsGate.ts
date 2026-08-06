@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useLegalActiveVersions } from "@/hooks/useLegalDocuments";
 import { stampConsent } from "@/lib/consent";
+import { qk } from "@/lib/queryKeys";
 
 /**
  * Cổng đồng ý điều khoản theo phiên bản (gắn MỘT lần cho toàn app — xem TermsGate).
@@ -40,7 +41,7 @@ export function useTermsGate() {
     if (stampedForRef.current === userId) return;
     stampedForRef.current = userId;
     stampConsent(userId, active).then(() => {
-      qc.invalidateQueries({ queryKey: ["profile", userId] });
+      qc.invalidateQueries({ queryKey: qk.profile.byUser(userId) });
     });
   }, [authEvent, userId, active, qc]);
 

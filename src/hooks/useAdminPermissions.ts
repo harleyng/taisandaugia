@@ -9,6 +9,7 @@ import {
   type AdminAction,
   type PermissionMatrix,
 } from "@/lib/adminPermissions";
+import { qk } from "@/lib/queryKeys";
 
 export interface AdminPermState {
   isSuperAdmin: boolean;
@@ -23,7 +24,7 @@ export function useAdminPermissions(): AdminPermState {
   const { userId } = useAuth();
 
   const q = useQuery({
-    queryKey: ["admin-permissions", userId],
+    queryKey: qk.adminPermissions.byUser(userId),
     enabled: !!userId,
     queryFn: async (): Promise<{ isSuperAdmin: boolean; matrix: PermissionMatrix }> => {
       // 1) Vai trò được gán cho user hiện tại.

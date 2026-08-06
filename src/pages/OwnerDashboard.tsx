@@ -11,6 +11,7 @@ import { UpcomingAuctionsBlock } from "@/components/asset-owner-portal/dashboard
 import { PendingConfirmationsBlock } from "@/components/asset-owner-portal/dashboard/PendingConfirmationsBlock";
 import { StuckAssetsBlock } from "@/components/asset-owner-portal/dashboard/StuckAssetsBlock";
 import type { ListingRow } from "@/hooks/useOwnerPortfolioMetrics";
+import { qk } from "@/lib/queryKeys";
 
 const OwnerDashboard = () => {
   const navigate = useNavigate();
@@ -65,7 +66,7 @@ const OwnerDashboard = () => {
 
       toast.success(`Đã cập nhật ${toUpdate.length} claim → chờ xác nhận`);
       queryClient.invalidateQueries({ queryKey: ["pending-claims-dashboard", workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ["owner-portfolio-claims", workspaceId] });
+      queryClient.invalidateQueries({ queryKey: qk.ownerPortfolioClaims(workspaceId) });
     } catch (e) {
       toast.error("Seed thất bại: " + String(e));
     } finally {

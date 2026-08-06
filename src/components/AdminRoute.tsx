@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { qk } from "@/lib/queryKeys";
 
 /**
  * Cổng cho toàn bộ khu `/admin`.
@@ -20,7 +21,7 @@ export const AdminRoute = () => {
   const location = useLocation();
 
   const { data: isAdmin, isLoading: roleLoading } = useQuery({
-    queryKey: ["is-admin", userId],
+    queryKey: qk.isAdmin(userId),
     enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase

@@ -5,6 +5,7 @@ import { getSessionStatus } from "@/hooks/useAuctionListings";
 import { formatPrice } from "@/utils/formatters";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import type { ClaimStatus } from "@/types/asset-owner";
+import { qk } from "@/lib/queryKeys";
 
 // Flat slug → display name map (parent + children)
 const SLUG_NAME_MAP: Record<string, string> = {};
@@ -164,7 +165,7 @@ export function useOwnerPortfolioMetrics(
 ) {
   // Q1: claims + listings (all, unfiltered — filter applied client-side)
   const { data: rawClaims, isLoading: claimsLoading } = useQuery({
-    queryKey: ["owner-portfolio-claims", workspaceId],
+    queryKey: qk.ownerPortfolioClaims(workspaceId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("asset_owner_claims")
@@ -230,30 +231,15 @@ export function useOwnerPortfolioMetrics(
         : l.auction_organizations;
       const history = sessionsByListing[l.id] ?? [];
 
-      const pseudoListing = {
-        id: l.id,
-        title: l.title,
-        status: l.status,
-        custom_attributes: ca,
-        auction_org_id: l.auction_org_id,
-        asset_owner_id: null,
-        description: null,
-        price: l.price,
-        property_type_slug: l.property_type_slug,
-        address: l.address,
-        image_url: l.image_url,
-        area: 0,
-        created_at: "",
-        views_count: null,
-      };
-
       return [{
         id: l.id,
         title: l.title,
         price: Number(l.price),
         priceUnit: l.price_unit ?? "TOTAL",
         listingStatus: l.status,
-        sessionStatus: getSessionStatus(pseudoListing),
+        // getSessionStatus chỉ đọc đúng hai trường này. Trước đây phải dựng cả
+        // một `pseudoListing` 14 trường giả để lọt qua signature cũ.
+        sessionStatus: getSessionStatus({ status: l.status, custom_attributes: ca }),
         propertyTypeSlug: l.property_type_slug ?? "",
         province: address.province ?? address.city ?? "",
         auctionOrgId: l.auction_org_id ?? null,

@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { ServiceVariant, ServiceAudience } from "@/types/orders";
+import { qk } from "@/lib/queryKeys";
 
 export interface CatalogVariantRow extends ServiceVariant {
   group: {
@@ -29,7 +30,7 @@ async function fetchCatalog(): Promise<CatalogVariantRow[]> {
 
 export function useServiceCatalog() {
   const query = useQuery({
-    queryKey: ["service-catalog"],
+    queryKey: qk.serviceCatalog,
     queryFn: fetchCatalog,
     staleTime: 5 * 60 * 1000,
   });

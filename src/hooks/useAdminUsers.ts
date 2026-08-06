@@ -7,6 +7,7 @@ import type {
   AdminUserTransaction,
   AdminUserUnlocks,
 } from "@/types/adminUser";
+import { qk } from "@/lib/queryKeys";
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
@@ -17,7 +18,7 @@ const PROFILE_COLS =
 // client-side across three small tables instead of relying on PostgREST embeds.
 export function useAdminUsers() {
   return useQuery<AdminUser[]>({
-    queryKey: ["admin-users"],
+    queryKey: qk.adminUsers.all,
     queryFn: async () => {
       const [profilesRes, creditsRes, rolesRes] = await Promise.all([
         supabase.from("profiles").select(PROFILE_COLS).order("created_at", { ascending: false }),
@@ -127,7 +128,7 @@ export function useAdminUserStats() {
 // ─── Writes ──────────────────────────────────────────────────────────────────
 
 function invalidateUser(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  qc.invalidateQueries({ queryKey: ["admin-users"] });
+  qc.invalidateQueries({ queryKey: qk.adminUsers.all });
   qc.invalidateQueries({ queryKey: ["admin-user-stats"] });
   if (id) {
     qc.invalidateQueries({ queryKey: ["admin-user", id] });

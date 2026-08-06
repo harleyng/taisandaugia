@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Order, OrderUpsert } from "@/types/orders";
+import { qk } from "@/lib/queryKeys";
 
 // Truy cập qua untyped cast — cùng convention với useCustomers.ts / useAdvertisements.ts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -13,7 +14,7 @@ const ORDER_SELECT =
 
 export function useOrders() {
   return useQuery<Order[]>({
-    queryKey: ["orders"],
+    queryKey: qk.orders.all,
     queryFn: async () => {
       const { data, error } = await ordersTable()
         .select(ORDER_SELECT)
@@ -39,7 +40,7 @@ export function useOrder(id?: string) {
 // Đơn hàng của 1 khách hàng (dùng ở trang chi tiết khách hàng).
 export function useCustomerOrders(customerId?: string) {
   return useQuery<Order[]>({
-    queryKey: ["orders", "by-customer", customerId],
+    queryKey: qk.orders.byCustomer(customerId),
     queryFn: async () => {
       const { data, error } = await ordersTable()
         .select(ORDER_SELECT)
@@ -52,10 +53,32 @@ export function useCustomerOrders(customerId?: string) {
   });
 }
 
+/** Toàn bộ đơn của một khách hàng: hợp đơn dịch vụ (customer_id) VÀ đơn nạp
+ *  credit của tài khoản đã gắn (chỉ có user_id). Ràng buộc orders_party_check
+ *  cho phép một trong hai, nên thiếu vế user_id là mất hẳn doanh thu B2C.
+ *  Cả hai vế đều đi index (idx_orders_customer / idx_orders_user). */
+export function useCustomerAllOrders(customerId?: string, userId?: string | null) {
+  return useQuery<Order[]>({
+    queryKey: qk.orders.byCustomerUser(customerId, userId),
+    queryFn: async () => {
+      let q = ordersTable().select(ORDER_SELECT);
+      // Chỉ dựng chuỗi .or() khi chắc chắn có customerId — enabled đã chặn
+      // undefined lọt vào filter string.
+      q = userId
+        ? q.or(`customer_id.eq.${customerId},user_id.eq.${userId}`)
+        : q.eq("customer_id", customerId);
+      const { data, error } = await q.order("ordered_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Order[];
+    },
+    enabled: !!customerId,
+  });
+}
+
 // Đơn hàng gắn với 1 banner quảng cáo (truy vết ngược từ chi tiết quảng cáo).
 export function useAdvertisementOrders(advertisementId?: string) {
   return useQuery<Order[]>({
-    queryKey: ["orders", "by-advertisement", advertisementId],
+    queryKey: qk.orders.byAdvertisement(advertisementId),
     queryFn: async () => {
       const { data, error } = await ordersTable()
         .select(ORDER_SELECT)
@@ -109,10 +132,10 @@ export function useUpsertOrder() {
       return data as Order;
     },
     onSuccess: (data: Order) => {
-      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: qk.orders.all });
       qc.invalidateQueries({ queryKey: ["order", data.id] });
       if (data.customer_id) {
-        qc.invalidateQueries({ queryKey: ["orders", "by-customer", data.customer_id] });
+        qc.invalidateQueries({ queryKey: qk.orders.byCustomer(data.customer_id) });
       }
       // Đơn hàng giờ là nguồn doanh thu duy nhất → báo cáo phải làm mới theo.
       qc.invalidateQueries({ queryKey: ["admin", "revenue-report"] });
@@ -128,7 +151,7 @@ export function useDeleteOrder() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: qk.orders.all });
       qc.invalidateQueries({ queryKey: ["admin", "revenue-report"] });
     },
   });

@@ -5,8 +5,10 @@ import type {
   AudienceSpec,
   Campaign,
   CampaignRecipient,
+  CampaignRecipientWithCampaign,
   ResolvedAudienceRow,
 } from "@/types/marketing";
+import { qk } from "@/lib/queryKeys";
 
 // Tables/RPCs are not yet in the generated types (migration pending push), so we
 // access them through an untyped client cast — same convention as useArticles.ts.
@@ -50,7 +52,7 @@ export function useCampaign(id?: string) {
 
 export function useCampaignRecipients(campaignId?: string) {
   return useQuery<CampaignRecipient[]>({
-    queryKey: ["campaign_recipients", campaignId],
+    queryKey: qk.campaignRecipients.byCampaign(campaignId),
     queryFn: async () => {
       const { data, error } = await recipientsTable()
         .select("*")
@@ -60,6 +62,26 @@ export function useCampaignRecipients(campaignId?: string) {
       return data as CampaignRecipient[];
     },
     enabled: !!campaignId,
+  });
+}
+
+/** Chiến dịch email đã gửi tới TÀI KHOẢN gắn với một khách hàng CRM.
+ *  customers.user_id là cầu nối duy nhất — khách chưa gắn tài khoản thì không
+ *  có gì để hiện (hook tự tắt). Đi index idx_campaign_recipients_user. */
+export function useUserCampaignRecipients(userId?: string | null) {
+  return useQuery<CampaignRecipientWithCampaign[]>({
+    queryKey: qk.campaignRecipients.byUser(userId),
+    queryFn: async () => {
+      const { data, error } = await recipientsTable()
+        .select(
+          "*, campaign:marketing_campaigns(id,name,status,subject,channel,sent_at,scheduled_at)",
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as CampaignRecipientWithCampaign[];
+    },
+    enabled: !!userId,
   });
 }
 
@@ -212,7 +234,7 @@ export function useSendCampaign() {
     onSuccess: (_res, campaign: Campaign) => {
       qc.invalidateQueries({ queryKey: ["marketing_campaigns"] });
       qc.invalidateQueries({ queryKey: ["marketing_campaign", campaign.id] });
-      qc.invalidateQueries({ queryKey: ["campaign_recipients", campaign.id] });
+      qc.invalidateQueries({ queryKey: qk.campaignRecipients.all });
     },
   });
 }

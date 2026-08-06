@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Supplier, SupplierUpsert } from "@/types/supplier";
+import { qk } from "@/lib/queryKeys";
 
 // Truy cập qua untyped cast — cùng convention với useOrders.ts / useCustomers.ts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,8 +68,8 @@ export function useUpsertSupplier() {
       qc.invalidateQueries({ queryKey: ["suppliers"] });
       qc.invalidateQueries({ queryKey: ["supplier", data.id] });
       // Nhóm dịch vụ và thẻ hiển thị đều nhắc tên đối tác.
-      qc.invalidateQueries({ queryKey: ["services"] });
-      qc.invalidateQueries({ queryKey: ["partners"] });
+      qc.invalidateQueries({ queryKey: qk.services.all });
+      qc.invalidateQueries({ queryKey: qk.partners.all });
     },
   });
 }

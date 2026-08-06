@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { flattenMatrix, matrixFromRows, type PermissionMatrix } from "@/lib/adminPermissions";
 import type { AdminRole, AdminRoleWithMeta } from "@/types/adminRbac";
+import { qk } from "@/lib/queryKeys";
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ function invalidateRoles(qc: ReturnType<typeof useQueryClient>, id?: string) {
   qc.invalidateQueries({ queryKey: ["admin-roles"] });
   if (id) qc.invalidateQueries({ queryKey: ["admin-role", id] });
   // Đổi vai trò/quyền có thể đổi quyền hiệu lực của admin hiện tại.
-  qc.invalidateQueries({ queryKey: ["admin-permissions"] });
+  qc.invalidateQueries({ queryKey: qk.adminPermissions.all });
 }
 
 export function useCreateRole() {

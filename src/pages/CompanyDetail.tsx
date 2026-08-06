@@ -19,6 +19,10 @@ import { formatAddress } from "@/utils/formatters";
 import { useCredits } from "@/hooks/useCredits";
 import { usePaywall } from "@/contexts/PaywallContext";
 import { LockedBlur } from "@/components/paywall/LockedBlur";
+import { AuctioneerTeamSection } from "@/components/company/AuctioneerTeamSection";
+import { caNumber, caString, toAuctionListing } from "@/types/listing";
+import type { AgentInfoShape } from "@/lib/onboardingTasks";
+import { qk } from "@/lib/queryKeys";
 
 const CompanyDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +38,7 @@ const CompanyDetail = () => {
   const [showClaimBanner, setShowClaimBanner] = useState(false);
 
   const { data: org, isLoading: orgLoading } = useQuery({
-    queryKey: ["auction-org", id],
+    queryKey: qk.auctionOrg(id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("auction_organizations")
@@ -57,7 +61,7 @@ const CompanyDetail = () => {
         .in("status", ["ACTIVE", "SOLD_RENTED"])
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data ?? []).map(toAuctionListing);
     },
     enabled: !!id,
   });
@@ -67,14 +71,14 @@ const CompanyDetail = () => {
   const enrichedListings = useMemo(() => {
     return listings.map((l) => ({
       ...l,
-      _sessionStatus: getSessionStatus(l as any),
+      _sessionStatus: getSessionStatus(l),
     }));
   }, [listings]);
 
   const stats = useMemo(() => {
     const total = enrichedListings.length;
     const successful = enrichedListings.filter(
-      (l) => l.status === "SOLD_RENTED" || (l.custom_attributes as any)?.win_price
+      (l) => l.status === "SOLD_RENTED" || caNumber(l.custom_attributes?.win_price)
     ).length;
     const rate = total > 0 ? Math.round((successful / total) * 100) : 0;
     return { total, successful, rate };
@@ -110,7 +114,7 @@ const CompanyDetail = () => {
         .select("agent_info")
         .eq("id", session.user.id)
         .single();
-      const role = (profile?.agent_info as any)?.basic?.role;
+      const role = (profile?.agent_info as AgentInfoShape | null)?.basic?.role;
       if (role !== "company") setShowClaimBanner(true);
     });
   }, [id, org?.name]);
@@ -184,7 +188,7 @@ const CompanyDetail = () => {
                       2: "Công ty đấu giá",
                       11: "Chi nhánh công ty đấu giá",
                     };
-                    const label = (org as any).org_type != null ? orgTypeLabels[(org as any).org_type as number] : null;
+                    const label = org.org_type != null ? orgTypeLabels[org.org_type] : null;
                     return label ? (
                       <Badge variant="secondary" className="mb-2 font-medium">{label}</Badge>
                     ) : null;
@@ -232,6 +236,10 @@ const CompanyDetail = () => {
                 </button>
               </div>
             )}
+
+            {/* Đội ngũ ĐGV — tổ chức tự bật chia sẻ từng người, nên hiển thị
+                cho cả khách vãng lai (ngoài nhánh paywall bên dưới). */}
+            {id && <AuctioneerTeamSection auctionOrgId={id} />}
 
             {isCompanyUnlocked ? (
               <>
@@ -303,7 +311,7 @@ const CompanyDetail = () => {
                 {filtered.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filtered.map((listing) => {
-                      const ca = (listing.custom_attributes || {}) as Record<string, any>;
+                      const ca = listing.custom_attributes || {};
                       return (
                         <AuctionCard
                           key={listing.id}
@@ -312,13 +320,13 @@ const CompanyDetail = () => {
                           title={listing.title}
                           address={formatAddress(listing.address) || "Chưa cập nhật"}
                           startingPrice={listing.price}
-                          stepPrice={ca.bid_step ?? ca.step_price}
-                          depositAmount={ca.deposit_amount}
-                          auctionDate={ca.auction_date ?? ca.auction_time}
-                          registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
+                          stepPrice={caNumber(ca.bid_step ?? ca.step_price)}
+                          depositAmount={caNumber(ca.deposit_amount)}
+                          auctionDate={caString(ca.auction_date ?? ca.auction_time)}
+                          registrationDeadline={caString(ca.registration_deadline ?? ca.document_sale_end)}
                           sessionStatus={listing._sessionStatus}
                           categorySlug={listing.property_type_slug}
-                          winPrice={ca.win_price ?? ca.winning_price}
+                          winPrice={caNumber(ca.win_price ?? ca.winning_price)}
                           orgName={org.name}
                           isSaved={savedIds.has(listing.id)}
                           onToggleSave={toggleSave}

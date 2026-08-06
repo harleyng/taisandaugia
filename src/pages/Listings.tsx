@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Map, Search, Megaphone, Loader2, LogIn, FileText, Coins, Building2, RefreshCw } from "lucide-react";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useAuctionListings, getSessionStatus } from "@/hooks/useAuctionListings";
+import { caNumber, caRecordArray, caString } from "@/types/listing";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { useAssetActions } from "@/hooks/useAssetActions";
@@ -25,6 +26,7 @@ import { countMatches, hasIntent } from "@/lib/demandMatch";
 import { DemandUpsellBanner } from "@/components/demand/DemandUpsellBanner";
 import { DemandEmptyMatch } from "@/components/demand/DemandEmptyMatch";
 import { DemandStatusBadge } from "@/components/demand/DemandStatusBadge";
+import { qk } from "@/lib/queryKeys";
 
 type SortMode = "newest" | "price-asc" | "price-desc" | "upcoming";
 
@@ -76,7 +78,7 @@ const Listings = () => {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const { data: allCompanies = [] } = useQuery({
-    queryKey: ["auction-organizations-list"],
+    queryKey: qk.auctionOrganizationsList,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("auction_organizations")
@@ -143,7 +145,7 @@ const Listings = () => {
       const dMin = filters.depositMin ? Number(filters.depositMin) : 0;
       const dMax = filters.depositMax ? Number(filters.depositMax) : Infinity;
       result = result.filter((l) => {
-        const dep = (l.custom_attributes as any)?.deposit_amount;
+        const dep = caNumber(l.custom_attributes?.deposit_amount);
         if (dep == null) return false;
         return dep >= dMin && dep <= dMax;
       });
@@ -164,9 +166,9 @@ const Listings = () => {
 
     if (filters.legalCategory) {
       result = result.filter((l) => {
-        const ca = l.custom_attributes as any;
-        const ed = ca?.enforcement_decision?.toLowerCase() || "";
-        const lc = ca?.legal_category?.toLowerCase() || "";
+        const ca = l.custom_attributes;
+        const ed = caString(ca?.enforcement_decision)?.toLowerCase() || "";
+        const lc = caString(ca?.legal_category)?.toLowerCase() || "";
         const filterVal = filters.legalCategory;
         if (filterVal === "thi-hanh-an") return ed.includes("thi hành án") || lc.includes("thi hành án");
         if (filterVal === "no-xau") return ed.includes("nợ xấu") || lc.includes("nợ xấu") || ed.includes("vamc") || lc.includes("vamc");
@@ -180,8 +182,8 @@ const Listings = () => {
       if (sortMode === "price-asc") return a.price - b.price;
       if (sortMode === "price-desc") return b.price - a.price;
       if (sortMode === "upcoming") {
-        const aTime = (a.custom_attributes as any)?.auction_time ?? (a.custom_attributes as any)?.auction_date;
-        const bTime = (b.custom_attributes as any)?.auction_time ?? (b.custom_attributes as any)?.auction_date;
+        const aTime = caString(a.custom_attributes?.auction_time ?? a.custom_attributes?.auction_date);
+        const bTime = caString(b.custom_attributes?.auction_time ?? b.custom_attributes?.auction_date);
         if (!aTime && !bTime) return 0;
         if (!aTime) return 1;
         if (!bTime) return -1;
@@ -203,7 +205,7 @@ const Listings = () => {
   const lastUpdated = useMemo(() => {
     if (!listings || listings.length === 0) return null;
     const max = listings.reduce((latest, l) => {
-      const t = new Date((l as any).updated_at || l.created_at).getTime();
+      const t = new Date(l.updated_at || l.created_at).getTime();
       return t > latest ? t : latest;
     }, 0);
     return max ? new Date(max) : null;
@@ -390,8 +392,12 @@ const Listings = () => {
                 }
 
                 const fallbackOrgName = listing.auction_org_id ? orgNameById.get(listing.auction_org_id) : "";
-                const orgName = ca.org_name || fallbackOrgName || "";
-                const displayTitle = ca.assets?.[0]?.title || listing.description || listing.title;
+                const orgName = caString(ca.org_name) || fallbackOrgName || "";
+                // ca.assets là JSONB — thu hẹp qua helper thay vì index thẳng
+                // vào `unknown`.
+                const firstAsset = caRecordArray(ca.assets)[0];
+                const displayTitle =
+                  caString(firstAsset?.title) || listing.description || listing.title;
 
                   items.push(
                     <AuctionCard
@@ -401,16 +407,16 @@ const Listings = () => {
                       title={displayTitle}
                       address={formatAddress(listing.address) || "Chưa cập nhật"}
                       startingPrice={listing.price}
-                      stepPrice={ca.bid_step ?? ca.step_price}
-                      depositAmount={ca.deposit_amount}
-                      auctionDate={ca.auction_date ?? ca.auction_time}
-                      registrationDeadline={ca.registration_deadline ?? ca.document_sale_end}
+                      stepPrice={caNumber(ca.bid_step ?? ca.step_price)}
+                      depositAmount={caNumber(ca.deposit_amount)}
+                      auctionDate={caString(ca.auction_date ?? ca.auction_time)}
+                      registrationDeadline={caString(ca.registration_deadline ?? ca.document_sale_end)}
                       sessionStatus={listing._sessionStatus}
                       categorySlug={listing.property_type_slug}
                       viewMode="grid"
-                      winPrice={ca.win_price ?? ca.winning_price}
+                      winPrice={caNumber(ca.win_price ?? ca.winning_price)}
                       orgName={orgName}
-                      orgId={(listing as any).auction_org_id}
+                      orgId={listing.auction_org_id}
                       isSaved={savedIds.has(listing.id)}
                       onToggleSave={toggleSave}
                       saveCount={saveCounts.get(listing.id) || 0}

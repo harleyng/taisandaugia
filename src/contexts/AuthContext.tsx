@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { useQueryClient } from "@tanstack/react-query";
 import { type AuthChangeEvent, type Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { qk } from "@/lib/queryKeys";
 
 interface AuthContextValue {
   session: Session | null;
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Listener toàn cục cho `notifyProfileUpdated()` — invalidate mọi query profile.
   useEffect(() => {
     const handler = () => {
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: qk.profile.all });
     };
     window.addEventListener("onboarding:profile-updated", handler);
     return () => window.removeEventListener("onboarding:profile-updated", handler);

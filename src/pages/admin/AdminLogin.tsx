@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ShieldCheck, ShieldAlert } from "lucide-react";
+import { qk } from "@/lib/queryKeys";
 
 /**
  * Cổng đăng nhập RIÊNG cho khu quản trị (`/admin/login`).
@@ -34,7 +35,7 @@ const AdminLogin = () => {
 
   // Cùng queryKey với AdminRoute → tận dụng cache, không gọi thừa.
   const { data: isAdmin, isLoading: roleLoading } = useQuery({
-    queryKey: ["is-admin", userId],
+    queryKey: qk.isAdmin(userId),
     enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase

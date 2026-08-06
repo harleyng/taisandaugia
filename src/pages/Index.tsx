@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-image.jpg";
+import { qk } from "@/lib/queryKeys";
 
 const heroLocations = [
   { value: "all", label: "Toàn quốc" },
@@ -97,7 +98,7 @@ const Index = () => {
   const [ownerType, setOwnerType] = useState("all");
 
   const { data: companies = [] } = useQuery({
-    queryKey: ["auction-organizations-list"],
+    queryKey: qk.auctionOrganizationsList,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("auction_organizations")

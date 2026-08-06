@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { AgentInfoShape } from "@/lib/onboardingTasks";
+import { qk } from "@/lib/queryKeys";
 
 export interface ProfileData {
   name: string | null;
@@ -21,7 +22,7 @@ export interface ProfileData {
  */
 export function useProfile(userId: string | null | undefined) {
   return useQuery<ProfileData>({
-    queryKey: ["profile", userId],
+    queryKey: qk.profile.byUser(userId),
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")

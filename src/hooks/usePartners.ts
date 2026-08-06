@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Partner, PartnerUpsert } from "@/types/partner";
+import { qk } from "@/lib/queryKeys";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const partnersTable = () => (supabase as any).from("partners");
@@ -8,7 +9,7 @@ const partnersTable = () => (supabase as any).from("partners");
 /** Admin: tất cả đối tác, theo thứ tự hiển thị. */
 export function usePartners() {
   return useQuery<Partner[]>({
-    queryKey: ["partners"],
+    queryKey: qk.partners.all,
     queryFn: async () => {
       const { data, error } = await partnersTable()
         .select("*")
@@ -23,7 +24,7 @@ export function usePartners() {
 /** Homepage: chỉ đối tác active (RLS cũng chặn, nhưng lọc rõ để chắc chắn). */
 export function usePublicPartners() {
   return useQuery<Partner[]>({
-    queryKey: ["partners", "public"],
+    queryKey: qk.partners.public,
     queryFn: async () => {
       const { data, error } = await partnersTable()
         .select("*")
@@ -37,7 +38,7 @@ export function usePublicPartners() {
 }
 
 function invalidatePartners(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: ["partners"] });
+  qc.invalidateQueries({ queryKey: qk.partners.all });
 }
 
 export function useUpsertPartner() {

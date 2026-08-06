@@ -6,6 +6,7 @@ import type {
   PublicShowcase,
   RequestToolServiceResult,
 } from "@/types/auctionTools";
+import { qk } from "@/lib/queryKeys";
 
 // Truy cập qua untyped cast — cùng convention với usePartners.ts.
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -21,7 +22,7 @@ const PROVIDER_PUBLIC_SELECT =
 /** 4 công cụ + provider công khai (một truy vấn, gom client-side theo tool). */
 export function usePublicTools() {
   return useQuery<{ tools: AuctionTool[]; providers: AuctionToolProvider[] }>({
-    queryKey: ["auction-tools", "public"],
+    queryKey: qk.auctionTools.public,
     queryFn: async () => {
       const [toolsRes, provRes] = await Promise.all([
         toolsTable().select("*").eq("is_active", true).order("sort_order"),
@@ -56,7 +57,7 @@ export function useProviderBySlug(slug?: string) {
 /** Showcase công khai qua RPC — url chỉ có với showcase public, còn lại is_locked. */
 export function usePublicShowcases(providerId?: string) {
   return useQuery<PublicShowcase[]>({
-    queryKey: ["tool-showcases", "public", providerId],
+    queryKey: qk.toolShowcases.publicByProvider(providerId),
     queryFn: async () => {
       const { data, error } = await rpc("list_tool_showcases", { _provider_id: providerId });
       if (error) throw error;

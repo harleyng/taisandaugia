@@ -8,6 +8,7 @@ import type {
   AuctionToolShowcase,
   AuctionToolShowcaseUpsert,
 } from "@/types/auctionTools";
+import { qk } from "@/lib/queryKeys";
 
 // Truy cập qua untyped cast — cùng convention với useSuppliers.ts / useOrders.ts.
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -23,7 +24,7 @@ const PROVIDER_SELECT =
 
 export function useAuctionTools() {
   return useQuery<AuctionTool[]>({
-    queryKey: ["auction-tools"],
+    queryKey: qk.auctionTools.all,
     queryFn: async () => {
       const { data, error } = await toolsTable().select("*").order("sort_order");
       if (error) throw error;
@@ -42,8 +43,8 @@ export function useUpsertTool() {
       return data as AuctionTool;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["auction-tools"] });
-      qc.invalidateQueries({ queryKey: ["auction-tools", "public"] });
+      qc.invalidateQueries({ queryKey: qk.auctionTools.all });
+      qc.invalidateQueries({ queryKey: qk.auctionTools.public });
     },
   });
 }
@@ -84,7 +85,7 @@ export function useUpsertProvider() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tool-providers"] });
-      qc.invalidateQueries({ queryKey: ["auction-tools", "public"] });
+      qc.invalidateQueries({ queryKey: qk.auctionTools.public });
     },
   });
 }
@@ -104,7 +105,7 @@ export function useDeleteProvider() {
 
 export function useProviderShowcases(providerId?: string) {
   return useQuery<AuctionToolShowcase[]>({
-    queryKey: ["tool-showcases", providerId],
+    queryKey: qk.toolShowcases.byProvider(providerId),
     queryFn: async () => {
       const { data, error } = await showcasesTable()
         .select("*")
@@ -131,7 +132,7 @@ export function useUpsertShowcase() {
       return data as AuctionToolShowcase;
     },
     onSuccess: (data: AuctionToolShowcase) => {
-      qc.invalidateQueries({ queryKey: ["tool-showcases", data.provider_id] });
+      qc.invalidateQueries({ queryKey: qk.toolShowcases.byProvider(data.provider_id) });
       qc.invalidateQueries({ queryKey: ["tool-providers"] });
     },
   });
@@ -145,7 +146,7 @@ export function useDeleteShowcase() {
       if (error) throw error;
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ["tool-showcases", vars.providerId] });
+      qc.invalidateQueries({ queryKey: qk.toolShowcases.byProvider(vars.providerId) });
       qc.invalidateQueries({ queryKey: ["tool-providers"] });
     },
   });

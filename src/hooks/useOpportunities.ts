@@ -6,6 +6,7 @@ import type {
   OpportunityUpsert,
   WinOpportunityResult,
 } from "@/types/opportunities";
+import { qk } from "@/lib/queryKeys";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const oppTable = () => (supabase as any).from("opportunities");
@@ -18,7 +19,7 @@ const OPP_SELECT =
 
 export function useOpportunities() {
   return useQuery<Opportunity[]>({
-    queryKey: ["opportunities"],
+    queryKey: qk.opportunities.all,
     queryFn: async () => {
       const { data, error } = await oppTable()
         .select(OPP_SELECT)
@@ -44,7 +45,7 @@ export function useOpportunity(id?: string) {
 
 export function useLeadOpportunities(leadId?: string) {
   return useQuery<Opportunity[]>({
-    queryKey: ["opportunities", "by-lead", leadId],
+    queryKey: qk.opportunities.byLead(leadId),
     queryFn: async () => {
       const { data, error } = await oppTable().select(OPP_SELECT).eq("lead_id", leadId);
       if (error) throw error;
@@ -56,7 +57,7 @@ export function useLeadOpportunities(leadId?: string) {
 
 export function useCustomerOpportunities(customerId?: string) {
   return useQuery<Opportunity[]>({
-    queryKey: ["opportunities", "by-customer", customerId],
+    queryKey: qk.opportunities.byCustomer(customerId),
     queryFn: async () => {
       const { data, error } = await oppTable().select(OPP_SELECT).eq("customer_id", customerId);
       if (error) throw error;
@@ -69,10 +70,10 @@ export function useCustomerOpportunities(customerId?: string) {
 // ─── Writes ──────────────────────────────────────────────────────────────────
 
 function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: ["opportunities"] });
-  qc.invalidateQueries({ queryKey: ["leads"] });
-  qc.invalidateQueries({ queryKey: ["customers"] });
-  qc.invalidateQueries({ queryKey: ["orders"] });
+  qc.invalidateQueries({ queryKey: qk.opportunities.all });
+  qc.invalidateQueries({ queryKey: qk.leads.all });
+  qc.invalidateQueries({ queryKey: qk.customers.all });
+  qc.invalidateQueries({ queryKey: qk.orders.all });
   qc.invalidateQueries({ queryKey: ["admin", "revenue-report"] });
 }
 
@@ -91,7 +92,7 @@ export function useUpsertOpportunity() {
       return data as Opportunity;
     },
     onSuccess: (data: Opportunity) => {
-      qc.invalidateQueries({ queryKey: ["opportunities"] });
+      qc.invalidateQueries({ queryKey: qk.opportunities.all });
       qc.invalidateQueries({ queryKey: ["opportunity", data.id] });
     },
   });
@@ -104,7 +105,7 @@ export function useDeleteOpportunity() {
       const { error } = await oppTable().delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["opportunities"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.opportunities.all }),
   });
 }
 
@@ -128,9 +129,9 @@ export function useMoveOpportunityStage() {
     },
     // setQueriesData (số nhiều) để phủ cả key scoped by-lead / by-customer.
     onMutate: async ({ id, stage }) => {
-      await qc.cancelQueries({ queryKey: ["opportunities"] });
-      const snapshot = qc.getQueriesData<Opportunity[]>({ queryKey: ["opportunities"] });
-      qc.setQueriesData<Opportunity[]>({ queryKey: ["opportunities"] }, (old) =>
+      await qc.cancelQueries({ queryKey: qk.opportunities.all });
+      const snapshot = qc.getQueriesData<Opportunity[]>({ queryKey: qk.opportunities.all });
+      qc.setQueriesData<Opportunity[]>({ queryKey: qk.opportunities.all }, (old) =>
         (old ?? []).map((o) => (o.id === id ? { ...o, stage } : o)),
       );
       return { snapshot };
@@ -138,7 +139,7 @@ export function useMoveOpportunityStage() {
     onError: (_e, _v, ctx) => {
       ctx?.snapshot?.forEach(([key, data]) => qc.setQueryData(key, data));
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["opportunities"] }),
+    onSettled: () => qc.invalidateQueries({ queryKey: qk.opportunities.all }),
   });
 }
 

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -17,17 +17,22 @@ import {
   unlockDeepReportPeriod as unlockDeepReportPeriodImpl,
   chargeOppReport as chargeOppReportImpl,
   chargeExportProfile as chargeExportProfileImpl,
+  chargePersonnelDossierExport as chargePersonnelDossierExportImpl,
   type CompanyTierKey,
   type OwnerTierKey,
   type CreditPackageKey,
   type Transaction,
 } from "@/lib/credits";
+import { qk } from "@/lib/queryKeys";
 
 export const useCredits = () => {
   const { userId } = useAuth();
 
   const qc = useQueryClient();
-  const queryKey = ["user-credits", userId];
+  // Memo hoá để `invalidate` (và mọi hàm unlock phụ thuộc nó) giữ được tham
+  // chiếu ổn định giữa các lần render. Mảng tạo mới mỗi render sẽ khiến toàn
+  // bộ useCallback bên dưới đổi identity liên tục.
+  const queryKey = useMemo(() => qk.userCredits.byUser(userId), [userId]);
 
   const { data: creditsState, isLoading } = useQuery({
     queryKey,
@@ -38,7 +43,7 @@ export const useCredits = () => {
 
   const invalidate = useCallback(() => {
     qc.invalidateQueries({ queryKey });
-  }, [qc, userId]);
+  }, [qc, queryKey]);
 
   const unlockAsset = useCallback(
     async (id: string, label?: string) => {
@@ -110,6 +115,13 @@ export const useCredits = () => {
     return result;
   }, [userId, invalidate]);
 
+  const chargePersonnelDossierExport = useCallback(async (count: number) => {
+    if (!userId) return { ok: false, reason: "insufficient" as const };
+    const result = await chargePersonnelDossierExportImpl(userId, count);
+    if (result.ok) invalidate();
+    return result;
+  }, [userId, invalidate]);
+
   const assetUnlocked = useCallback(
     (id: string) => creditsState?.assetUnlocks.includes(id) ?? false,
     [creditsState],
@@ -155,6 +167,7 @@ export const useCredits = () => {
     addCredits,
     chargeOppReport,
     chargeExportProfile,
+    chargePersonnelDossierExport,
     isLoading,
     ASSET_COST,
     COMPANY_TIERS,

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { resetCatalogCache } from "@/lib/serviceCatalog";
 import type { Service, ServiceUpsert } from "@/types/orders";
+import { qk } from "@/lib/queryKeys";
 
 // Truy cập qua untyped cast — cùng convention với useCustomers.ts / useAdvertisements.ts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,7 +13,7 @@ const SERVICE_SELECT = "*, supplier:suppliers(id,name,code)";
 
 export function useServices() {
   return useQuery<Service[]>({
-    queryKey: ["services"],
+    queryKey: qk.services.all,
     queryFn: async () => {
       const { data, error } = await servicesTable()
         .select(SERVICE_SELECT)
@@ -54,9 +55,9 @@ export function useUpsertService() {
       return data as Service;
     },
     onSuccess: (data: Service) => {
-      qc.invalidateQueries({ queryKey: ["services"] });
+      qc.invalidateQueries({ queryKey: qk.services.all });
       qc.invalidateQueries({ queryKey: ["service", data.id] });
-      qc.invalidateQueries({ queryKey: ["service-catalog"] });
+      qc.invalidateQueries({ queryKey: qk.serviceCatalog });
       resetCatalogCache();
     },
   });
@@ -70,8 +71,8 @@ export function useDeleteService() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["services"] });
-      qc.invalidateQueries({ queryKey: ["service-catalog"] });
+      qc.invalidateQueries({ queryKey: qk.services.all });
+      qc.invalidateQueries({ queryKey: qk.serviceCatalog });
       resetCatalogCache();
     },
   });

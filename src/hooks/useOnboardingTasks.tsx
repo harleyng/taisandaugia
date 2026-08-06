@@ -14,6 +14,7 @@ import {
   REWARD_INTENT_TOKENS,
 } from "@/lib/onboardingTasks";
 import { addCredits } from "@/lib/credits";
+import { qk } from "@/lib/queryKeys";
 
 const EVT = "onboarding:profile-updated";
 
@@ -47,7 +48,7 @@ export const useOnboardingTasks = () => {
   const hasUnclaimed = hasUnclaimedRewards(tasks);
 
   const invalidateProfile = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["profile", userId] });
+    queryClient.invalidateQueries({ queryKey: qk.profile.byUser(userId) });
   }, [queryClient, userId]);
 
   const claimReward = useCallback(
@@ -89,7 +90,7 @@ export const useOnboardingTasks = () => {
 
       // Refresh cache profile + credits
       invalidateProfile();
-      queryClient.invalidateQueries({ queryKey: ["user-credits", userId] });
+      queryClient.invalidateQueries({ queryKey: qk.userCredits.byUser(userId) });
 
       return { ok: true, credits, tokens };
     },

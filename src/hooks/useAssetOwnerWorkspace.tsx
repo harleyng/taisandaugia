@@ -1,79 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { AssetOwnerWorkspace, AssetOwnerClaim } from "@/types/asset-owner";
 
-export interface Candidate {
-  id: string;
-  name: string;
-  listingCount: number;
-}
-
-function nameSimilarity(a: string, b: string): number {
-  const norm = (s: string) =>
-    s.toLowerCase().replace(/[^a-z0-9àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/g, " ").trim();
-  const na = norm(a);
-  const nb = norm(b);
-  if (na === nb) return 1;
-  if (na.includes(nb) || nb.includes(na)) return 0.85;
-  const wa = new Set(na.split(/\s+/));
-  const wb = nb.split(/\s+/);
-  const overlap = wb.filter((w) => wa.has(w)).length;
-  return overlap / Math.max(wa.size, wb.length);
-}
-
-function isAmc(name: string): boolean {
-  const n = name.toLowerCase();
-  return n.includes("amc") || n.includes("quản lý nợ") || n.includes("khai thác tài sản") || n.includes("quản lý tài sản");
-}
-
-/** Extract a short brand keyword from a full org name */
-function extractKeyword(fullName: string): string {
-  // Try to find the brand inside parentheses or after known prefixes
-  const match = fullName.match(/\b([A-Z][A-Za-z]+bank|[A-Z][A-Za-z]+Bank|BIDV|VCB|MBBank|TPBank|VPBank|Vietcombank|Agribank|Sacombank|Techcombank|ACB|SHB|SCB|HDBank|OCB|LPBank|VIB|MSB|SeABank|Eximbank|BacABank|KienlongBank|NamABank|VietABank|PGBank|BVBank|VietBank|VietCapital|BaoViet|VNPT|VNPAY|[A-Z]{2,6})\b/);
-  if (match) return match[1];
-  // Fallback: take meaningful words (skip common bank prefixes)
-  const skip = new Set(["ngân", "hàng", "tmcp", "thương", "mại", "cổ", "phần", "công", "ty", "tnhh", "mtv", "chi", "nhánh", "nn", "quốc", "doanh", "nhà", "nước", "việt", "nam"]);
-  const words = fullName.split(/\s+/).filter((w) => !skip.has(w.toLowerCase()) && w.length > 2);
-  return words.slice(0, 2).join(" ") || fullName;
-}
-
-/** Query asset_owners that likely belong to this org, with listing counts */
-export async function detectCandidates(primaryName: string): Promise<{ branches: Candidate[]; amcs: Candidate[] }> {
-  const keyword = extractKeyword(primaryName);
-  if (!keyword || keyword.length < 2) return { branches: [], amcs: [] };
-
-  const { data: owners } = await supabase
-    .from("asset_owners")
-    .select("id, name")
-    .ilike("name", `%${keyword}%`)
-    .limit(60);
-
-  if (!owners?.length) return { branches: [], amcs: [] };
-
-  // Get listing counts in one query
-  const ownerIds = owners.map((o) => o.id);
-  const { data: counts } = await supabase
-    .from("listings")
-    .select("asset_owner_id")
-    .in("asset_owner_id", ownerIds);
-
-  const countMap: Record<string, number> = {};
-  for (const r of counts ?? []) {
-    if (r.asset_owner_id) countMap[r.asset_owner_id] = (countMap[r.asset_owner_id] ?? 0) + 1;
-  }
-
-  const candidates: Candidate[] = owners
-    .map((o) => ({ id: o.id, name: o.name, listingCount: countMap[o.id] ?? 0 }))
-    .filter((c) => c.name !== primaryName) // exclude exact primary
-    .sort((a, b) => b.listingCount - a.listingCount);
-
-  return {
-    branches: candidates.filter((c) => !isAmc(c.name)),
-    amcs: candidates.filter((c) => isAmc(c.name)),
-  };
-}
+// Việc chấm điểm khớp tên nay nằm ở Postgres (org_name_similarity /
+// run_workspace_match). Bản client cũ giữ nguyên dấu tiếng Việt nên
+// "Vietinbank" không bao giờ khớp "VietinBank – CN Đống Đa", và nó kéo TOÀN BỘ
+// bảng asset_owners về trình duyệt mỗi lần khớp. Gợi ý ứng viên chi nhánh nay
+// dùng RPC suggest_org_aliases (xem useAliasSuggestion trong useProspects.ts).
 
 export function useAssetOwnerWorkspace(userId: string | null) {
   const queryClient = useQueryClient();
@@ -141,66 +75,31 @@ export function useAssetOwnerWorkspace(userId: string | null) {
     onError: () => toast.error("Cập nhật seed thất bại"),
   });
 
+  /** Khớp tài sản. Seed lấy từ chính workspace (primary_name + abbreviations +
+   *  branch_names) ở phía server, nên nhớ updateSeeds trước khi gọi. */
   const runMatch = useMutation({
-    mutationFn: async (selectedNames?: string[]) => {
+    mutationFn: async () => {
       if (!workspace) throw new Error("no_workspace");
-      const seeds = selectedNames ?? [workspace.primary_name, ...workspace.abbreviations, ...workspace.branch_names].filter(Boolean);
-
-      const { data: owners } = await supabase
-        .from("asset_owners")
-        .select("id, name, address");
-
-      const matches: Array<{ asset_owner_id: string; matched_name: string; confidence_score: number }> = [];
-
-      for (const owner of owners ?? []) {
-        const bestScore = seeds.reduce((max, seed) => Math.max(max, nameSimilarity(owner.name, seed)), 0);
-        if (bestScore >= 0.6) {
-          matches.push({ asset_owner_id: owner.id, matched_name: owner.name, confidence_score: bestScore });
-        }
-      }
-
-      if (matches.length === 0) return { inserted: 0, autoClaimed: 0, pending: 0 };
-
-      const ownerIds = matches.map((m) => m.asset_owner_id);
-      const { data: listings } = await supabase
-        .from("listings")
-        .select("id, asset_owner_id")
-        .in("asset_owner_id", ownerIds);
-
-      const toInsert = (listings ?? []).map((l) => {
-        const match = matches.find((m) => m.asset_owner_id === l.asset_owner_id)!;
-        const isAuto = match.confidence_score >= 0.9;
-        return {
-          workspace_id: workspace.id,
-          listing_id: l.id,
-          asset_owner_id: l.asset_owner_id,
-          confidence_score: match.confidence_score,
-          match_basis: "auto_name" as const,
-          matched_name: match.matched_name,
-          status: isAuto ? ("auto_claimed" as const) : ("pending_confirmation" as const),
-        };
+      const { data, error } = await supabase.rpc("run_workspace_match", {
+        p_workspace_id: workspace.id,
       });
-
-      if (toInsert.length > 0) {
-        await supabase
-          .from("asset_owner_claims")
-          .upsert(toInsert, { onConflict: "workspace_id,listing_id" });
-        await supabase
-          .from("asset_owner_workspaces")
-          .update({ last_matched_at: new Date().toISOString() })
-          .eq("id", workspace.id);
-      }
-
-      const autoClaimed = toInsert.filter((r) => r.status === "auto_claimed").length;
-      const pending = toInsert.filter((r) => r.status === "pending_confirmation").length;
-      return { inserted: toInsert.length, autoClaimed, pending };
+      if (error) throw error;
+      return (data ?? { inserted: 0, auto_claimed: 0, pending: 0 }) as unknown as {
+        inserted: number; auto_claimed: number; pending: number;
+      };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: claimsKey });
       queryClient.invalidateQueries({ queryKey: wsKey });
-      toast.success(`Đã khớp ${result.inserted} tài sản (${result.autoClaimed} tự động, ${result.pending} cần xác nhận)`);
+      if (result.inserted === 0) {
+        toast.info("Không tìm thấy tài sản mới nào khớp với các tên đã khai");
+      } else {
+        toast.success(
+          `Đã khớp thêm ${result.inserted} tài sản (${result.auto_claimed} tự động, ${result.pending} cần xác nhận)`,
+        );
+      }
     },
-    onError: () => toast.error("Matching thất bại"),
+    onError: () => toast.error("Khớp tài sản thất bại"),
   });
 
   const confirmClaim = useMutation({

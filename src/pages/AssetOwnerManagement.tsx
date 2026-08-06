@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { useAssetOwnerWorkspace } from "@/hooks/useAssetOwnerWorkspace";
 import { ClaimsTable } from "@/components/asset-owner-management/ClaimsTable";
-import { ManualClaimSearch } from "@/components/asset-owner-onboarding/organization/tier2/ManualClaimSearch";
+import { ManualClaimSearch } from "@/components/owner-branches/ManualClaimSearch";
 import { useQueryClient } from "@tanstack/react-query";
 
 // ─── Types ──────────────────────────────────────────────────────────────────

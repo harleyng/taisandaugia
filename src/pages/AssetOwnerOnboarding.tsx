@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Loader2, Home } from "lucide-react";
+import { Loader2, Home, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
@@ -26,10 +26,7 @@ import { RepInfoSection } from "@/components/asset-owner-onboarding/organization
 import { RepEKYCSection } from "@/components/asset-owner-onboarding/organization/tier1/RepEKYCSection";
 import { OrgDocsSection } from "@/components/asset-owner-onboarding/organization/tier1/OrgDocsSection";
 
-import { SeedSetupSection } from "@/components/asset-owner-onboarding/organization/tier2/SeedSetupSection";
-import { ClaimResultList } from "@/components/asset-owner-onboarding/organization/tier2/ClaimResultList";
-
-import type { AssetOwnerBranch, IdType, OrgType } from "@/types/asset-owner";
+import type { AssetOwnerBranch, IdType, OrgType, RegistryAssetOwner } from "@/types/asset-owner";
 import type { Json } from "@/integrations/supabase/types";
 
 interface Profile {
@@ -48,8 +45,9 @@ const AssetOwnerOnboarding = () => {
   const [branch, setBranch] = useState<AssetOwnerBranch | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [orgTermsAccepted, setOrgTermsAccepted] = useState(false);
-
-  const [hasRun, setHasRun] = useState(false);
+  // Entity danh bạ đang chọn ở ô tên tổ chức — giữ ở page để thẻ đã chọn còn
+  // nguyên khi quay lại bản nháp (orgKyc chỉ lưu id).
+  const [registryOwner, setRegistryOwner] = useState<RegistryAssetOwner | null>(null);
 
   useEffect(() => {
     trackFeature("start_owner_kyc");
@@ -69,6 +67,7 @@ const AssetOwnerOnboarding = () => {
     org_type: "" as OrgType | "",
     org_name: "", tax_code: "", official_email: "", email_domain: "",
     aliases: [] as string[],
+    linked_asset_owner_id: null as string | null,
     linked_auction_org_id: null as string | null,
     registry_match_score: null as number | null,
     rep_full_name: "", rep_title: "",
@@ -83,10 +82,9 @@ const AssetOwnerOnboarding = () => {
   const userId = profile?.id ?? null;
   const { kyc, isLoading: kycLoading, saveDraft, submit, uploadEKYCFile } = useAssetOwnerKYC(userId);
   const { orgKyc, isLoading: orgKycLoading, saveDraft: orgSaveDraft, submit: orgSubmit, uploadDoc } = useAssetOwnerOrgKYC(userId);
-  const {
-    workspace, wsLoading, claims,
-    updateSeeds, runMatch, confirmClaim, rejectClaim, confirmAllPending,
-  } = useAssetOwnerWorkspace(userId);
+  // Chỉ để hiển thị số tài sản đã được khớp tự động sau khi duyệt — mọi thao tác
+  // chỉnh alias / khớp lại nay nằm ở portal (/chu-tai-san/chi-nhanh-amc).
+  const { workspace, wsLoading } = useAssetOwnerWorkspace(userId);
 
   // Load session + profile
   useEffect(() => {
@@ -162,6 +160,8 @@ const AssetOwnerOnboarding = () => {
       tax_code: orgKyc.tax_code ?? prev.tax_code,
       official_email: orgKyc.official_email ?? prev.official_email,
       email_domain: orgKyc.email_domain ?? prev.email_domain,
+      aliases: orgKyc.aliases?.length ? orgKyc.aliases : prev.aliases,
+      linked_asset_owner_id: orgKyc.linked_asset_owner_id,
       linked_auction_org_id: orgKyc.linked_auction_org_id,
       registry_match_score: orgKyc.registry_match_score,
       rep_full_name: orgKyc.rep_full_name ?? prev.rep_full_name,
@@ -175,6 +175,22 @@ const AssetOwnerOnboarding = () => {
       authorization_doc_url: orgKyc.authorization_doc_url,
     }));
   }, [orgKyc]);
+
+  // Bản nháp chỉ giữ id chủ tài sản — nạp lại bản ghi danh bạ để hiện thẻ đã chọn
+  useEffect(() => {
+    const ownerId = orgKyc?.linked_asset_owner_id;
+    if (!ownerId || registryOwner?.id === ownerId) return;
+    let cancelled = false;
+    supabase
+      .from("asset_owners")
+      .select("id, name, address, owner_kind, aliases")
+      .eq("id", ownerId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setRegistryOwner(data as RegistryAssetOwner);
+      });
+    return () => { cancelled = true; };
+  }, [orgKyc?.linked_asset_owner_id, registryOwner?.id]);
 
   // Compute pre-fill labels
   const preFillFields = (() => {
@@ -290,8 +306,7 @@ const AssetOwnerOnboarding = () => {
       toast.error("Vui lòng tải lên giấy phép / quyết định thành lập");
       return;
     }
-    const { aliases: _aliases, ...orgFormData } = orgForm;
-    const recordId = await orgSaveDraft.mutateAsync({ ...orgFormData, org_type: orgForm.org_type || undefined });
+    const recordId = await orgSaveDraft.mutateAsync({ ...orgForm, org_type: orgForm.org_type || undefined });
     await orgSubmit.mutateAsync(recordId);
     navigate("/profile?tab=my-assets");
   };
@@ -411,50 +426,43 @@ const AssetOwnerOnboarding = () => {
           {/* ─── ORGANIZATION BRANCH ─── */}
           {branch === "organization" && (
             <>
-              {/* Tier 1 done → show Tier 2 workspace */}
+              {/* Đã duyệt → xong. Việc khớp tài sản đã chạy tự động phía server khi
+                  hồ sơ được duyệt (trigger create_workspace_on_org_approval), nên
+                  không còn bước claim chi nhánh thủ công ở đây nữa. */}
               {orgKyc?.status === "approved" && (
                 <>
                   {wsLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                  ) : workspace ? (
-                    <div className="space-y-5">
-                      <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-sm text-green-700">
-                        Tổ chức đã được xác thực. Hệ thống đã <strong>tự nhận diện</strong> đơn vị thành viên từ dữ liệu crawl — bạn chỉ cần xác nhận.
-                      </div>
-
-                      <SeedSetupSection
-                        workspace={workspace}
-                        onRunMatch={async (selectedNames, primaryName) => {
-                          // selectedNames = checked branches/AMCs; seed with primaryName + aliases too
-                          const seeds = [primaryName, ...selectedNames];
-                          await updateSeeds.mutateAsync({
-                            primary_name: primaryName,
-                            abbreviations: workspace.abbreviations,
-                            branch_names: selectedNames,
-                          });
-                          await runMatch.mutateAsync(seeds);
-                          setHasRun(true);
-                        }}
-                        isMatching={runMatch.isPending || updateSeeds.isPending}
-                      />
-
-                      <ClaimResultList
-                        claims={claims}
-                        workspaceId={workspace.id}
-                        hasRun={hasRun || claims.length > 0}
-                        onConfirm={(id) => confirmClaim.mutate(id)}
-                        onReject={(id) => rejectClaim.mutate({ claimId: id })}
-                        onConfirmAll={() => confirmAllPending.mutate()}
-                        isConfirming={confirmClaim.isPending || rejectClaim.isPending || confirmAllPending.isPending}
-                        onClaimAdded={() => {/* React Query tự refresh */}}
-                      />
-                    </div>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                      Đang tạo workspace...
+                    <div className="space-y-5">
+                      <div className="rounded-2xl bg-success/10 border border-success/25 p-5 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-success" />
+                          <h3 className="font-semibold text-foreground">Tổ chức đã được xác thực</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Hệ thống đã tự nhận diện và gán{" "}
+                          <strong className="text-foreground">
+                            {workspace?.total_claimed ?? 0} tài sản
+                          </strong>{" "}
+                          vào danh mục của bạn dựa trên tên và các alias đã khai. Bạn không cần làm
+                          thêm bước nào.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Muốn bổ sung alias hoặc đơn vị thành viên để tìm thêm tài sản? Vào mục{" "}
+                          <strong>Chi nhánh</strong> trong cổng Chủ tài sản.
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <Button onClick={() => navigate("/chu-tai-san/dashboard")}>
+                            Vào cổng Chủ tài sản
+                          </Button>
+                          <Button variant="outline" onClick={() => navigate("/chu-tai-san/chi-nhanh-amc")}>
+                            Quản lý alias &amp; chi nhánh
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>
@@ -478,10 +486,12 @@ const AssetOwnerOnboarding = () => {
                   <OrgInfoSection
                     orgType={orgForm.org_type}
                     orgName={orgForm.org_name}
+                    linkedAssetOwner={registryOwner}
                     taxCode={orgForm.tax_code}
                     officialEmail={orgForm.official_email}
                     aliases={orgForm.aliases}
                     onChange={(f) => setOrgForm((prev) => ({ ...prev, ...f }))}
+                    onSelectRegistryOwner={setRegistryOwner}
                   />
 
                   <RepInfoSection

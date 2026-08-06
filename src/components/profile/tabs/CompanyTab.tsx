@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   Building2, ArrowRight, CheckCircle2, Clock,
-  FileText, XCircle, AlertCircle,
+  FileText, XCircle, AlertCircle, LayoutDashboard,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useCapacityProfile } from "@/hooks/useCapacityProfile";
+import type { AgentInfoShape } from "@/lib/onboardingTasks";
 
 type AccountState = "none" | "in_progress" | "pending" | "approved_new" | "owner_active" | "rejected_new" | "rejected";
 
@@ -18,7 +19,7 @@ interface OrgRow {
   name: string;
   kyc_status: string;
   rejection_reason: string | null;
-  license_info: any;
+  license_info: Record<string, unknown> | null;
   updated_at: string;
 }
 
@@ -44,14 +45,16 @@ export const CompanyTab = () => {
 
       const userId = session.user.id;
 
-      // Query organizations table as source of truth
+      // Không lọc owner_id nữa: RLS "Members can view their organizations" đã
+      // giới hạn đúng các tổ chức user được thấy (sở hữu HOẶC thành viên ACTIVE),
+      // nên thành viên được mời cũng thấy tab này. Ưu tiên tổ chức mình sở hữu để
+      // giữ nguyên hành vi cũ của chủ sở hữu.
       const { data: orgRows } = await supabase
         .from("organizations")
-        .select("id, name, kyc_status, rejection_reason, license_info, updated_at")
-        .eq("owner_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      const orgRow = orgRows?.[0] ?? null;
+        .select("id, name, kyc_status, rejection_reason, license_info, updated_at, owner_id")
+        .order("created_at", { ascending: false });
+      const orgRow =
+        orgRows?.find((o) => o.owner_id === userId) ?? orgRows?.[0] ?? null;
 
       if (!orgRow) {
         setState("none");
@@ -59,7 +62,9 @@ export const CompanyTab = () => {
         return;
       }
 
-      setOrg(orgRow);
+      // license_info là cột JSONB (Supabase sinh kiểu `Json`); ép một lần ở đây
+      // để phần dưới đọc `license_info.auction_org_id` mà không phải cast lại.
+      setOrg({ ...orgRow, license_info: orgRow.license_info as Record<string, unknown> | null });
 
       if (orgRow.kyc_status === "NOT_APPLIED") {
         setState("in_progress");
@@ -81,7 +86,7 @@ export const CompanyTab = () => {
           .eq("id", userId)
           .single();
 
-        const agentInfo = (profile?.agent_info as any) || {};
+        const agentInfo = (profile?.agent_info as AgentInfoShape | null) ?? {};
         const basic = agentInfo.basic || {};
         const seen = basic.kyc_result_seen === true;
 
@@ -100,7 +105,8 @@ export const CompanyTab = () => {
           }
 
           // Fetch auction org data for the owner_active / approved_new UI
-          const auctionOrgId = orgRow.license_info?.auction_org_id as string | undefined;
+          const licenseInfo = orgRow.license_info as Record<string, unknown> | null;
+          const auctionOrgId = licenseInfo?.auction_org_id as string | undefined;
           if (auctionOrgId) {
             const [orgRes, listingsRes] = await Promise.all([
               supabase

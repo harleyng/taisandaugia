@@ -128,7 +128,10 @@
       "Bash(perl -pi -e 's/\"hsl\\\\\\(142 76% 36%\\\\\\)\"/\"hsl\\(330 70% 52%\\)\"/' src/components/admin/reports/FeatureUsageChart.tsx)",
       "Bash(perl -pi -e 's/\"hsl\\\\\\(142 76% 36%\\\\\\)\"/\"hsl\\(330 70% 52%\\)\"/' src/components/admin/reports/CreditConsumptionChart.tsx)",
       "Bash(perl -pi -e 's/\"hsl\\\\\\(142 76% 36%\\\\\\)\"/\"hsl\\(330 75% 55%\\)\"/' src/components/admin/crm/prospect/parts/AssetStructureCharts.tsx)",
-      "Bash(perl -0pi -e 's/import \\\\{ useNavigate, useParams, useSearchParams \\\\} from \"react-router-dom\";/import { useLocation, useNavigate, useParams, useSearchParams } from \"react-router-dom\";/; s/navigate\\\\\\(LIST_URL\\\\\\)/navigate\\(listUrl\\)/g' src/pages/admin/leads/AdminLeadDetail.tsx)"
+      "Bash(perl -0pi -e 's/import \\\\{ useNavigate, useParams, useSearchParams \\\\} from \"react-router-dom\";/import { useLocation, useNavigate, useParams, useSearchParams } from \"react-router-dom\";/; s/navigate\\\\\\(LIST_URL\\\\\\)/navigate\\(listUrl\\)/g' src/pages/admin/leads/AdminLeadDetail.tsx)",
+      "Bash(perl -0pi -e \"s/^import urllib.request\\\\nimport urllib.error\\\\$/import subprocess\\\\nimport tempfile/m\" seed_assets.py)",
+      "Bash(perl -0pi -e \"s{-- placeholder được nạp riêng bằng script \\\\\\(xem scripts/seed-admin-org-assets\\\\\\)\\\\.}{-- placeholder được nạp riêng bằng scripts/seed-admin-org-assets.py \\(chạy với\\\\n-- SUPABASE_SERVICE_ROLE_KEY trong .env.local\\).}\" supabase/migrations/20260809000001_seed_admin_org_demo.sql)",
+      "Bash(perl -0pi -e \"s{^# Memory Index\\\\n}{# Memory Index\\\\n\\\\n- [Admin Demo Org]\\(project_admin_demo_org.md\\) — admin\\\\@gmail.com có CTĐG Minh Đức full option \\(org ad000001…\\); bẫy: trigger KYC chặn UPDATE profiles trong migration, memberships phải xoá trước org_roles, cpd_kind là di sản, seed credit dùng admin_grant\\\\n}m\" MEMORY.md)"
     ],
     "additionalDirectories": [
       "/tmp",

@@ -107,34 +107,40 @@ export function CrmDetailHero({
           )}
         </div>
 
-        {/* Cụm thống kê — LUẬT 1 (shrink-0) + LUẬT 2 (ml-auto) */}
-        {stats.length > 0 && (
-          <div className="ml-auto flex shrink-0 flex-wrap gap-2">
-            {stats.map((s) => (
-              <StatCard key={s.label} {...s} />
-            ))}
+        {/* Cột phải — thống kê ở TRÊN, thao tác ở DƯỚI.
+            `mt-auto` trên cụm nút đẩy nó xuống đáy cột, nên nó tự nằm ngang hàng
+            với dòng cuối của cột trái (mã + hàng meta). Dùng `mt-auto` chứ KHÔNG
+            `justify-between`: khi tổ chức không có số liệu thì cột chỉ còn một
+            phần tử, và justify-between sẽ đẩy nút lên ĐẦU cột — cùng loại bẫy
+            với LUẬT 2, chỉ khác trục. */}
+        {(stats.length > 0 || actions || overflow) && (
+          <div className="ml-auto flex shrink-0 flex-col items-end gap-4 self-stretch">
+            {stats.length > 0 && (
+              <div className="flex flex-wrap justify-end gap-2">
+                {stats.map((s) => (
+                  <StatCard key={s.label} {...s} />
+                ))}
+              </div>
+            )}
+
+            {(actions || overflow) && (
+              <div className="mt-auto flex flex-wrap items-center justify-end gap-2">
+                {actions}
+                {overflow && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="secondary" size="icon" className="h-9 w-9">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">{overflow}</DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
-
-      {/* Hàng thao tác — LUẬT 2 (justify-end, không phải justify-between) */}
-      {(actions || overflow) && (
-        <div className="mt-4 flex justify-end">
-          <div className="flex items-center gap-2">
-            {actions}
-            {overflow && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="secondary" size="icon" className="h-9 w-9">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">{overflow}</DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -127,7 +127,8 @@
       "Bash(perl -pi -e 's/\"hsl\\\\\\(142 76% 36%\\\\\\)\"/\"hsl\\(262 60% 55%\\)\"/' src/components/admin/reports/DeviceBreakdownChart.tsx)",
       "Bash(perl -pi -e 's/\"hsl\\\\\\(142 76% 36%\\\\\\)\"/\"hsl\\(330 70% 52%\\)\"/' src/components/admin/reports/FeatureUsageChart.tsx)",
       "Bash(perl -pi -e 's/\"hsl\\\\\\(142 76% 36%\\\\\\)\"/\"hsl\\(330 70% 52%\\)\"/' src/components/admin/reports/CreditConsumptionChart.tsx)",
-      "Bash(perl -pi -e 's/\"hsl\\\\\\(142 76% 36%\\\\\\)\"/\"hsl\\(330 75% 55%\\)\"/' src/components/admin/crm/prospect/parts/AssetStructureCharts.tsx)"
+      "Bash(perl -pi -e 's/\"hsl\\\\\\(142 76% 36%\\\\\\)\"/\"hsl\\(330 75% 55%\\)\"/' src/components/admin/crm/prospect/parts/AssetStructureCharts.tsx)",
+      "Bash(perl -0pi -e 's/import \\\\{ useNavigate, useParams, useSearchParams \\\\} from \"react-router-dom\";/import { useLocation, useNavigate, useParams, useSearchParams } from \"react-router-dom\";/; s/navigate\\\\\\(LIST_URL\\\\\\)/navigate\\(listUrl\\)/g' src/pages/admin/leads/AdminLeadDetail.tsx)"
     ],
     "additionalDirectories": [
       "/tmp",

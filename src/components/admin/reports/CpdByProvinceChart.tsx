@@ -27,7 +27,7 @@ const tooltipStyle = {
 // MỘT chuỗi, MỘT màu. Không tô theo trạng thái: xanh cạnh hổ phách trong cùng
 // một cột không phân biệt được với người mù màu đỏ-lục (ΔE 7.5 protan).
 // Phân bố trạng thái đã nằm ở dải thẻ KPI phía trên, kèm icon và nhãn.
-const BAR = "hsl(210 90% 30%)";
+const BAR = "hsl(152 60% 26%)";
 
 export default function CpdByProvinceChart({ data, loading }: Props) {
   const empty = !loading && data.length === 0;

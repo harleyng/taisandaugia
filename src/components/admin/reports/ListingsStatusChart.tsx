@@ -10,19 +10,19 @@ interface Props {
 }
 
 // Màu bám theo vòng đời chứ không theo thứ hạng: nháp/chờ duyệt là trạng thái
-// nội bộ (xám/hổ phách), đang hiển thị là xanh navy, đã xong là xanh lá.
+// nội bộ (xám/hổ phách), đang hiển thị là xanh thương hiệu, đã xong là tím.
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "hsl(215 16% 75%)",
   PENDING_APPROVAL: "hsl(43 96% 56%)",
-  ACTIVE: "hsl(210 90% 30%)",
+  ACTIVE: "hsl(152 60% 26%)",
   INACTIVE: "hsl(215 16% 55%)",
-  SOLD_RENTED: "hsl(142 76% 36%)",
+  SOLD_RENTED: "hsl(262 60% 55%)",
 };
 
 const SESSION_COLORS: Record<string, string> = {
-  registration_open: "hsl(210 90% 30%)",
+  registration_open: "hsl(152 60% 26%)",
   upcoming: "hsl(43 96% 56%)",
-  ongoing: "hsl(142 76% 36%)",
+  ongoing: "hsl(199 89% 48%)",
   ended: "hsl(215 16% 65%)",
 };
 

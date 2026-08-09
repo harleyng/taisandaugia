@@ -84,8 +84,8 @@ export default function AdminDashboardCharts({ dateRange }: Props) {
             <AreaChart data={userSignups} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
               <defs>
                 <linearGradient id="fillUsers" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(210 90% 30%)" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="hsl(210 90% 30%)" stopOpacity={0} />
+                  <stop offset="5%" stopColor="hsl(152 60% 26%)" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="hsl(152 60% 26%)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -106,7 +106,7 @@ export default function AdminDashboardCharts({ dateRange }: Props) {
               <Area
                 type="monotone"
                 dataKey="count"
-                stroke="hsl(210 90% 30%)"
+                stroke="hsl(152 60% 26%)"
                 strokeWidth={2}
                 fill="url(#fillUsers)"
                 dot={false}
@@ -142,7 +142,7 @@ export default function AdminDashboardCharts({ dateRange }: Props) {
                 tickLine={false}
               />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, "Lượt"]} />
-              <Bar dataKey="value" fill="hsl(210 90% 30%)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="value" fill="hsl(152 60% 26%)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

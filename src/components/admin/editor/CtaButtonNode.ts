@@ -14,7 +14,7 @@ declare module "@tiptap/core" {
 }
 
 const BTN_STYLE =
-  "display:inline-block;background:hsl(210 90% 30%);color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;";
+  "display:inline-block;background:hsl(152 60% 26%);color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;";
 
 const queryAnchor = (el: HTMLElement) => el.querySelector("a");
 

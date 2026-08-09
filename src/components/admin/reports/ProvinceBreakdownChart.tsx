@@ -15,7 +15,7 @@ const tooltipStyle = {
   color: "hsl(var(--foreground))",
 };
 
-const BAR = "hsl(210 90% 30%)";
+const BAR = "hsl(152 60% 26%)";
 const UNKNOWN = "hsl(215 16% 75%)";
 
 export default function ProvinceBreakdownChart({ data, loading }: Props) {

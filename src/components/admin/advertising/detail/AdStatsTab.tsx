@@ -106,9 +106,9 @@ export function AdStatsTab({ ad }: { ad: Advertisement }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Tile label="Số lượt xem" value={compact(totalViews)} dot="#ef4444" />
-        <Tile label="Số lượt Click" value={compact(totalClicks)} dot="#16a34a" />
-        <Tile label="Click-Through Rate" value={`${ctr}%`} dot="hsl(210 90% 30%)" />
+        <Tile label="Số lượt xem" value={compact(totalViews)} dot="hsl(152 60% 26%)" />
+        <Tile label="Số lượt Click" value={compact(totalClicks)} dot="#8b5cf6" />
+        <Tile label="Click-Through Rate" value={`${ctr}%`} dot="#ef4444" />
       </div>
 
       {isLoading ? (
@@ -152,8 +152,8 @@ export function AdStatsTab({ ad }: { ad: Advertisement }) {
               }}
             />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar yAxisId="count" dataKey="views" name="Số lượt xem" fill="hsl(210 90% 30%)" radius={[3, 3, 0, 0]} barSize={14} />
-            <Line yAxisId="count" type="monotone" dataKey="clicks" name="Số lượt Click" stroke="#16a34a" strokeWidth={2} dot={false} />
+            <Bar yAxisId="count" dataKey="views" name="Số lượt xem" fill="hsl(152 60% 26%)" radius={[3, 3, 0, 0]} barSize={14} />
+            <Line yAxisId="count" type="monotone" dataKey="clicks" name="Số lượt Click" stroke="#8b5cf6" strokeWidth={2} dot={false} />
             <Line yAxisId="pct" type="monotone" dataKey="ctr" name="Click-Through Rate" stroke="#ef4444" strokeWidth={2} dot={false} />
           </ComposedChart>
         </ResponsiveContainer>

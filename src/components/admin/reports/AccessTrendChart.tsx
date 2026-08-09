@@ -25,7 +25,7 @@ const tooltipStyle = {
   color: "hsl(var(--foreground))",
 };
 
-const VISITS = "hsl(210 90% 30%)";
+const VISITS = "hsl(152 60% 26%)";
 const PAGEVIEWS = "hsl(43 96% 56%)";
 
 export default function AccessTrendChart({ data, loading }: Props) {

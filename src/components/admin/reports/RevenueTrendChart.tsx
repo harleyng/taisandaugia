@@ -26,7 +26,7 @@ const tooltipStyle = {
   color: "hsl(var(--foreground))",
 };
 
-const VND = "hsl(210 90% 30%)";
+const VND = "hsl(152 60% 26%)";
 const CREDIT = "hsl(43 96% 56%)";
 
 export default function RevenueTrendChart({ data, loading }: Props) {

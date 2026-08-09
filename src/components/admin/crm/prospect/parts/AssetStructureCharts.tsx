@@ -15,11 +15,11 @@ const tooltipStyle = {
   color: "hsl(var(--foreground))",
 };
 
-const BAR = "hsl(210 90% 30%)";
+const BAR = "hsl(152 60% 26%)";
 
 // Bảng màu phân loại — dùng chung cho các donut, đủ tương phản ở cả light/dark.
 const SLICE_COLORS = [
-  "hsl(210 90% 30%)", "hsl(43 96% 56%)", "hsl(142 76% 36%)", "hsl(25 95% 53%)",
+  "hsl(152 60% 26%)", "hsl(43 96% 56%)", "hsl(330 75% 55%)", "hsl(25 95% 53%)",
   "hsl(199 89% 48%)", "hsl(280 60% 50%)", "hsl(0 72% 51%)", "hsl(215 16% 60%)",
 ];
 

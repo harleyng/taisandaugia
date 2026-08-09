@@ -45,7 +45,7 @@ const tooltipStyle = {
   color: "hsl(var(--foreground))",
 };
 
-const BAR = "hsl(210 90% 30%)";
+const BAR = "hsl(152 60% 26%)";
 const LINE = "hsl(43 96% 56%)";
 
 export default function ListingsTrendChart({

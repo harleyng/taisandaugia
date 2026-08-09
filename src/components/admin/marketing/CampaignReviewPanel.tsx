@@ -21,7 +21,7 @@ const ProgressRing = ({ progress }: { progress: number }) => {
         cy="28"
         r={r}
         fill="none"
-        stroke={done ? "#16a34a" : "hsl(210 90% 30%)"}
+        stroke={done ? "#16a34a" : "hsl(152 60% 26%)"}
         strokeWidth="4.5"
         strokeLinecap="round"
         strokeDasharray={circ}

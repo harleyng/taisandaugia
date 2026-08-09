@@ -40,6 +40,8 @@ supabase/.temp/
 # PID của dev server chạy tay — không phải nguồn
 srv.pid
 
-# Khoá Supabase public (URL + anon key) nhưng vẫn không nên track:
-# lần sau ai thêm secret thật vào .env sẽ lọt lên remote.
-.env
+# .env CỐ Ý được track: build trên Vercel lấy biến VITE_ từ file này. Bỏ track
+# mà chưa khai biến ở dashboard nền tảng = production chết ngay
+# ("supabaseUrl is required"). Chỉ chứa khoá PUBLIC (URL + anon key).
+# Secret thật luôn nằm ở .env.local (đã ignore qua *.local) và KHÔNG dùng tiền
+# tố VITE_ — mọi biến VITE_ đều bị nhúng vào bundle trình duyệt đọc được.

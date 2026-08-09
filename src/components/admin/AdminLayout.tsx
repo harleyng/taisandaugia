@@ -135,8 +135,8 @@ const linkClass = (isActive: boolean) =>
   [
     "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
     isActive
-      ? "bg-primary text-primary-foreground"
-      : "text-muted-foreground hover:text-foreground hover:bg-muted",
+      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+      : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
   ].join(" ");
 
 export default function AdminLayout() {
@@ -175,17 +175,17 @@ export default function AdminLayout() {
   return (
     <div className="h-screen flex bg-muted/30">
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-card border-r border-border flex flex-col">
-        <div className="px-5 py-5 border-b border-border">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
-          <p className="text-sm font-bold text-foreground mt-0.5">Tài Sản Đấu Giá</p>
+      <aside className="w-56 shrink-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col">
+        <div className="px-5 py-5 border-b border-sidebar-border">
+          <p className="text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider">Admin</p>
+          <p className="text-sm font-bold text-sidebar-foreground mt-0.5">Tài Sản Đấu Giá</p>
         </div>
 
         <nav className="flex-1 p-3 overflow-y-auto">
           {visibleNav.map((section, i) => (
             <div key={section.title ?? "top"} className={i > 0 ? "mt-5" : ""}>
               {section.title && (
-                <p className="px-3 mb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <p className="px-3 mb-1 text-[11px] font-semibold text-sidebar-foreground/55 uppercase tracking-wider">
                   {section.title}
                 </p>
               )}
@@ -210,14 +210,14 @@ export default function AdminLayout() {
                   const active = parentActive(item);
                   const open = isOpen(item);
                   const textClass = active
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground group-hover:text-foreground";
+                    ? "text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground/70 group-hover:text-sidebar-foreground";
                   return (
                     <div key={to}>
                       <div
                         className={[
                           "group flex items-center rounded-lg transition-colors",
-                          active ? "bg-primary" : "hover:bg-muted",
+                          active ? "bg-sidebar-primary" : "hover:bg-sidebar-accent",
                         ].join(" ")}
                       >
                         <NavLink
@@ -263,10 +263,10 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-border">
+        <div className="p-3 border-t border-sidebar-border">
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
           >
             <LogOut className="h-4 w-4 shrink-0" />
             Đăng xuất

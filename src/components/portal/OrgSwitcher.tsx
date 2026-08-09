@@ -34,12 +34,12 @@ export function OrgSwitcher({ className }: Props) {
     <div className={className}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-sm transition-colors hover:bg-muted">
-            <Building2 className="h-3.5 w-3.5 shrink-0 text-primary" />
-            <span className="min-w-0 flex-1 truncate text-left font-medium text-foreground">
+          <button className="flex w-full items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/60 px-2.5 py-1.5 text-sm transition-colors hover:bg-sidebar-accent">
+            <Building2 className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/70" />
+            <span className="min-w-0 flex-1 truncate text-left font-medium text-sidebar-foreground">
               {currentOrg?.name ?? 'Chọn tổ chức'}
             </span>
-            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/50" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

@@ -67,14 +67,15 @@ function PortalShell() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Desktop sidebar — fixed 240px */}
-      <div className="hidden lg:flex lg:w-60 lg:shrink-0">
+      {/* Desktop sidebar — 272px: đủ chỗ cho "Hồ sơ năng lực" + badge điểm nằm
+          trên MỘT dòng, nhãn dài nhất ("Bồi dưỡng chuyên môn") vẫn không xuống dòng. */}
+      <div className="hidden lg:flex lg:w-[17rem] lg:shrink-0">
         <PortalSidebar />
       </div>
 
       {/* Mobile sidebar — sheet/drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="left" className="w-60 p-0">
+        <SheetContent side="left" className="w-[17rem] p-0 bg-sidebar text-sidebar-foreground border-sidebar-border">
           <PortalSidebar onNavigate={() => setDrawerOpen(false)} />
         </SheetContent>
       </Sheet>

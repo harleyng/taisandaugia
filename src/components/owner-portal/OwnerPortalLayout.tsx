@@ -17,7 +17,7 @@ export function OwnerPortalLayout() {
 
       {/* Mobile sidebar — sheet/drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="left" className="w-60 p-0">
+        <SheetContent side="left" className="w-60 p-0 bg-sidebar text-sidebar-foreground border-sidebar-border">
           <OwnerPortalSidebar onNavigate={() => setDrawerOpen(false)} />
         </SheetContent>
       </Sheet>

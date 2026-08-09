@@ -31,7 +31,10 @@ const AdminLogin = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // Đích điều hướng sau khi xác thực admin thành công (do AdminRoute truyền vào).
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/admin";
+  // Giữ cả search + hash: nhiều trang admin (vd. khách hàng tiềm năng) đặt bộ lọc
+  // trên URL, mất query string là người dùng quay lại một trang khác trang họ mở.
+  const target = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
+  const from = target?.pathname ? `${target.pathname}${target.search ?? ""}${target.hash ?? ""}` : "/admin";
 
   // Cùng queryKey với AdminRoute → tận dụng cache, không gọi thừa.
   const { data: isAdmin, isLoading: roleLoading } = useQuery({

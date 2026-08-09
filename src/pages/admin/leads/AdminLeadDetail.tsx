@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, Gavel, IdCard, Info, ListTodo, Loader2, Network, Package, RefreshCw,
+  ArrowLeft, Gavel, IdCard, Info, ListTodo, Loader2, Network, Package, RefreshCw, Tag,
   Pencil, Ticket as TicketIcon, Trash2, UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -130,21 +130,19 @@ export default function AdminLeadDetail() {
         badges={<Badge variant="outline">{SOURCE_LABELS[lead.source] ?? lead.source}</Badge>}
         name={lead.name}
         subtitle={
-          // Dấu phân cách phải NHẠT HƠN chữ. Nối bằng " - " không đọc ra được vì
-          // nhãn vai trò tự nó đã chứa dấu gạch ("Tổ chức - Chi nhánh") ⇒ ba cụm
-          // nằm cùng một cấp thị giác. Gạch đứng màu border tách hẳn khỏi chữ.
-          <span className="flex flex-wrap items-center gap-x-2">
-            <span>{LEAD_TYPE_LABELS[lead.lead_type as CustomerSegment] ?? "Khác"}</span>
+          <>
+            <span className="inline-flex items-center gap-1.5">
+              <Tag className="h-3.5 w-3.5 shrink-0" />
+              {LEAD_TYPE_LABELS[lead.lead_type as CustomerSegment] ?? "Khác"}
+            </span>
             {role && (
-              <>
-                <span aria-hidden className="text-border select-none">|</span>
-                <span>
-                  {ENTITY_ROLE_LABELS[role]}
-                  {stat?.subtype === "amc" && " · AMC"}
-                </span>
-              </>
+              <span className="inline-flex items-center gap-1.5">
+                <IdCard className="h-3.5 w-3.5 shrink-0" />
+                {ENTITY_ROLE_LABELS[role]}
+                {stat?.subtype === "amc" && " · AMC"}
+              </span>
             )}
-          </span>
+          </>
         }
         // stat chỉ có với bản ghi đến từ dữ liệu sàn; nhập tay thì ẩn cả cụm
         // thay vì hiện số 0 giả.
@@ -162,32 +160,32 @@ export default function AdminLeadDetail() {
               leadId={lead.id}
               status={lead.status}
               trigger={
-                <Button variant="outline" size="sm" disabled={converted}>
+                <Button variant="secondary" size="sm" disabled={converted}>
                   <RefreshCw className="h-4 w-4 mr-1.5" />
                   Đổi trạng thái
                 </Button>
               }
             />
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4 mr-1.5" />
               Sửa
+            </Button>
+            {/* Hành động CHÍNH của phễu CRM — để tô đặc và đứng ngoài cùng, không
+                giấu trong menu "…". */}
+            <Button size="sm" disabled={converted} onClick={() => setConvertOpen(true)}>
+              <UserCheck className="h-4 w-4 mr-1.5" />
+              {converted ? "Đã chuyển đổi" : "Chuyển thành khách hàng"}
             </Button>
           </>
         }
         overflow={
-          <>
-            <DropdownMenuItem disabled={converted} onClick={() => setConvertOpen(true)}>
-              <UserCheck className="h-4 w-4 mr-2" />
-              {converted ? "Đã chuyển đổi" : "Chuyển thành khách hàng"}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Xóa
-            </DropdownMenuItem>
-          </>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Xóa
+          </DropdownMenuItem>
         }
       />
 

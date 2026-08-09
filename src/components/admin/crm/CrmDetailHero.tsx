@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { MoreHorizontal } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuTrigger,
@@ -82,11 +81,6 @@ export function CrmDetailHero({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {status}
-            {code && (
-              <Badge variant="outline" className="font-mono">
-                #{code}
-              </Badge>
-            )}
             {badges}
           </div>
 
@@ -95,8 +89,21 @@ export function CrmDetailHero({
             {name}
           </h1>
 
+          {/* Mã bản ghi: chữ mono nhạt ngay dưới tên, KHÔNG phải badge. Badge
+              dành cho thứ có trạng thái/phân loại; mã chỉ là định danh để đối
+              chiếu, để badge sẽ tranh sự chú ý với trạng thái ở hàng trên. */}
+          {code && (
+            <p className="mt-0.5 font-mono text-sm text-muted-foreground">#{code}</p>
+          )}
+
+          {/* Hàng meta — mỗi trường bắt đầu bằng icon riêng. Icon vừa là dấu
+              phân tách vừa nói trường đó là gì, nên không cần dấu câu ngăn giữa
+              (bản trước phải dùng tới ba loại dấu │ - · trong cùng một dòng và
+              không đọc ra được đâu là ranh giới trường). */}
           {subtitle && (
-            <div className="mt-1 text-sm text-muted-foreground">{subtitle}</div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              {subtitle}
+            </div>
           )}
         </div>
 
@@ -118,7 +125,7 @@ export function CrmDetailHero({
             {overflow && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-9 w-9">
+                  <Button variant="secondary" size="icon" className="h-9 w-9">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>

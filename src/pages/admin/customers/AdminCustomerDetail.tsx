@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Gavel, IdCard, Info, ListTodo, Loader2, Megaphone,
-  Network, Package, Pencil, Receipt, RefreshCw, Target, Ticket as TicketIcon, Trash2,
+  Network, Package, Pencil, Receipt, RefreshCw, Tag, Target, Ticket as TicketIcon, Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -159,21 +159,19 @@ export default function AdminCustomerDetail() {
         }
         name={customer.name}
         subtitle={
-          // Cùng quy ước với trang khách hàng tiềm năng: gạch đứng màu border
-          // ngăn TRƯỜNG, còn dấu gạch bên trong "Tổ chức - Chi nhánh" là của
-          // chính nhãn đó.
-          <span className="flex flex-wrap items-center gap-x-2">
-            <span>{segmentLabel(customer.segment)}</span>
+          <>
+            <span className="inline-flex items-center gap-1.5">
+              <Tag className="h-3.5 w-3.5 shrink-0" />
+              {segmentLabel(customer.segment)}
+            </span>
             {role && (
-              <>
-                <span aria-hidden className="text-border select-none">|</span>
-                <span>
-                  {ENTITY_ROLE_LABELS[role]}
-                  {stat?.subtype === "amc" && " · AMC"}
-                </span>
-              </>
+              <span className="inline-flex items-center gap-1.5">
+                <IdCard className="h-3.5 w-3.5 shrink-0" />
+                {ENTITY_ROLE_LABELS[role]}
+                {stat?.subtype === "amc" && " · AMC"}
+              </span>
             )}
-          </span>
+          </>
         }
         stats={
           stat
@@ -190,13 +188,13 @@ export default function AdminCustomerDetail() {
                 customerId={customer.id}
                 status={customer.status}
                 trigger={
-                  <Button variant="outline" size="sm">
+                  <Button variant="secondary" size="sm">
                     <RefreshCw className="h-4 w-4 mr-1.5" />
                     Đổi trạng thái
                   </Button>
                 }
               />
-              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
                 <Pencil className="h-4 w-4 mr-1.5" />
                 Sửa
               </Button>

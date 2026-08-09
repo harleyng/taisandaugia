@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, Gavel, IdCard, Info, ListTodo, Loader2, MapPin, Megaphone, MoreHorizontal,
-  Network, Pencil, Receipt, Target, Ticket as TicketIcon, Trash2,
+  ArrowLeft, Gavel, IdCard, Info, ListTodo, Loader2, Megaphone,
+  Network, Package, Pencil, Receipt, RefreshCw, Target, Ticket as TicketIcon, Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+// Chỉ cần Item: khung DropdownMenu do CrmDetailHero dựng, trang chỉ đưa nội dung.
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -27,6 +26,7 @@ import { useHasAdminPermission } from "@/hooks/useAdminPermissions";
 import { CustomerFormDialog } from "@/components/admin/customers/CustomerFormDialog";
 import { CustomerStatusBadge } from "@/components/admin/customers/CustomerStatusBadge";
 import { CustomerStatusMenu } from "@/components/admin/customers/CustomerStatusMenu";
+import { CrmDetailHero } from "@/components/admin/crm/CrmDetailHero";
 import { CustomerInfoTab } from "@/components/admin/customers/detail/CustomerInfoTab";
 import { CustomerOrdersTab } from "@/components/admin/customers/detail/CustomerOrdersTab";
 import { CustomerCampaignsTab } from "@/components/admin/customers/detail/CustomerCampaignsTab";
@@ -134,87 +134,87 @@ export default function AdminCustomerDetail() {
         <ArrowLeft className="h-4 w-4 mr-1.5" /> Khách hàng
       </Button>
 
-      {/* Header — trạng thái neo GÓC TRÊN-PHẢI và đổi ngay tại chỗ; thao tác
-          nặng hơn dồn xuống đáy cột. Cùng khuôn với trang lead. */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex flex-wrap items-stretch justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <Badge variant="secondary">{segmentLabel(customer.segment)}</Badge>
-              <Badge variant="outline">{CUSTOMER_TYPE_LABELS[customer.customer_type]}</Badge>
-              {role && (
-                <Badge
-                  variant={role === "branch" ? "outline" : "secondary"}
-                  className={role === "branch" ? "border-warning/40 text-warning" : ""}
-                >
+      <CrmDetailHero
+        // Badge CHỈ ĐỂ ĐỌC ở cả hai trường hợp quyền; thao tác đổi nằm ở nút
+        // riêng và nút đó mới bị cổng quyền canEdit chặn.
+        status={<CustomerStatusBadge status={customer.status} />}
+        code={customer.code}
+        badges={
+          <>
+            <Badge variant="outline">{CUSTOMER_TYPE_LABELS[customer.customer_type]}</Badge>
+            {/* Mã lead nguồn — bấm để về đúng khách hàng tiềm năng đã sinh ra
+                khách hàng này (customers.source_lead_id). */}
+            {customer.source_lead && (
+              <button
+                onClick={() =>
+                  navigate(`/admin/khach-hang-tiem-nang/${customer.source_lead!.id}`)
+                }
+                className="inline-flex items-center rounded-full border border-green-600/40 px-2.5 py-0.5 font-mono text-xs font-medium text-green-700 transition-colors hover:bg-green-50"
+                title={`Chuyển đổi từ ${customer.source_lead.name}`}
+              >
+                ← {customer.source_lead.code ?? "lead"}
+              </button>
+            )}
+          </>
+        }
+        name={customer.name}
+        subtitle={
+          // Cùng quy ước với trang khách hàng tiềm năng: gạch đứng màu border
+          // ngăn TRƯỜNG, còn dấu gạch bên trong "Tổ chức - Chi nhánh" là của
+          // chính nhãn đó.
+          <span className="flex flex-wrap items-center gap-x-2">
+            <span>{segmentLabel(customer.segment)}</span>
+            {role && (
+              <>
+                <span aria-hidden className="text-border select-none">|</span>
+                <span>
                   {ENTITY_ROLE_LABELS[role]}
                   {stat?.subtype === "amc" && " · AMC"}
-                </Badge>
-              )}
-              {/* Mã lead nguồn — bấm để về đúng khách hàng tiềm năng đã sinh ra
-                  khách hàng này (customers.source_lead_id). */}
-              {customer.source_lead && (
-                <button
-                  onClick={() =>
-                    navigate(`/admin/khach-hang-tiem-nang/${customer.source_lead!.id}`)
-                  }
-                  className="inline-flex items-center rounded-full border border-green-600/40 px-2.5 py-0.5 font-mono text-xs font-medium text-green-700 transition-colors hover:bg-green-50"
-                  title={`Chuyển đổi từ ${customer.source_lead.name}`}
-                >
-                  ← {customer.source_lead.code ?? "lead"}
-                </button>
-              )}
-            </div>
-            <h1 className="text-2xl font-bold text-foreground break-words">{customer.name}</h1>
-            <p className="font-mono text-sm text-muted-foreground mt-0.5">{customer.code ?? "—"}</p>
-            {stat?.parent_name && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Trực thuộc <strong className="text-foreground">{stat.parent_name}</strong>
-              </p>
+                </span>
+              </>
             )}
-            {customer.address && (
-              <p className="text-sm text-muted-foreground mt-2 inline-flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {customer.address}
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-col justify-between items-end gap-4">
-            {canEdit ? (
-              <CustomerStatusMenu customerId={customer.id} status={customer.status} />
-            ) : (
-              <CustomerStatusBadge status={customer.status} />
-            )}
-            <div className="flex items-center gap-2">
-              {canEdit && (
-                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                  <Pencil className="h-4 w-4 mr-1.5" />
-                  Sửa
-                </Button>
-              )}
-              {canDelete && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-9 w-9">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => setDeleteOpen(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Xóa
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+          </span>
+        }
+        stats={
+          stat
+            ? [
+                { icon: Package, label: "Tài sản", value: stat.total_listings },
+                { icon: Network, label: "Chi nhánh", value: stat.branch_count },
+              ]
+            : []
+        }
+        actions={
+          canEdit ? (
+            <>
+              <CustomerStatusMenu
+                customerId={customer.id}
+                status={customer.status}
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-1.5" />
+                    Đổi trạng thái
+                  </Button>
+                }
+              />
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                <Pencil className="h-4 w-4 mr-1.5" />
+                Sửa
+              </Button>
+            </>
+          ) : null
+        }
+        overflow={
+          canDelete ? (
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Xóa
+            </DropdownMenuItem>
+          ) : null
+        }
+      />
 
       <Tabs
         value={tab}
@@ -263,7 +263,7 @@ export default function AdminCustomerDetail() {
           {hasHistory && (
             <TabsTrigger value="lich-su" className="gap-1.5">
               <Gavel className="h-4 w-4" />
-              Lịch sử đấu giá
+              Tài sản đấu giá
               <CountBadge n={stat?.total_listings} />
             </TabsTrigger>
           )}

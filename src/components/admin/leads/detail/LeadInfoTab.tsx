@@ -102,7 +102,7 @@ export function LeadInfoTab({
               <strong className="tabular-nums">{assetSummary.provinces}</strong> tỉnh/thành
             </span>
             <span className="text-xs text-muted-foreground">
-              Xem chi tiết ở tab <strong>Lịch sử đấu giá</strong>.
+              Xem chi tiết ở tab <strong>Tài sản đấu giá</strong>.
             </span>
           </div>
         </Card>

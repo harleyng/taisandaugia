@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Check, ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -19,9 +20,15 @@ const OPTIONS = (Object.keys(STATUS_LABELS) as LeadStatus[]).filter(
 interface Props {
   leadId: string;
   status: LeadStatus;
+  /**
+   * Trigger tuỳ biến. Mặc định là badge có mũi tên (badge vừa hiển thị vừa bấm
+   * được). Truyền vào để tách hai vai: badge chỉ để ĐỌC, còn thao tác đổi trạng
+   * thái nằm ở một nút riêng trong hàng thao tác.
+   */
+  trigger?: ReactNode;
 }
 
-export function LeadStatusMenu({ leadId, status }: Props) {
+export function LeadStatusMenu({ leadId, status, trigger }: Props) {
   const update = useUpsertLead();
   const converted = status === "converted";
 
@@ -52,19 +59,27 @@ export function LeadStatusMenu({ leadId, status }: Props) {
   );
 
   // Đã chuyển đổi thì khoá — hạ cấp về 'new' sẽ để lại khách hàng mồ côi.
-  if (converted) {
+  // Chỉ áp cho trigger mặc định; với trigger tuỳ biến thì bên gọi tự vô hiệu hoá
+  // nút (Radix truyền disabled xuống child qua asChild nên menu cũng không mở).
+  if (converted && !trigger) {
     return <span title="Đã chuyển đổi thành khách hàng — không đổi trạng thái được">{badge}</span>;
   }
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        disabled={update.isPending}
-        className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="Đổi trạng thái"
-      >
-        {badge}
-      </DropdownMenuTrigger>
+      {trigger ? (
+        <DropdownMenuTrigger asChild disabled={update.isPending || converted}>
+          {trigger}
+        </DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger
+          disabled={update.isPending}
+          className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Đổi trạng thái"
+        >
+          {badge}
+        </DropdownMenuTrigger>
+      )}
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Đổi trạng thái</DropdownMenuLabel>
         <DropdownMenuSeparator />

@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, Gavel, IdCard, Info, ListTodo, Loader2, MapPin, MoreHorizontal, Network,
+  ArrowLeft, Gavel, IdCard, Info, ListTodo, Loader2, Network, Package, RefreshCw,
   Pencil, Ticket as TicketIcon, Trash2, UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+// Chỉ cần Item: khung DropdownMenu do CrmDetailHero dựng, trang chỉ đưa nội dung.
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -21,6 +20,8 @@ import { useRelatedTickets } from "@/hooks/useTickets";
 import { useProspectStatsMap } from "@/hooks/useProspects";
 import { LeadFormDialog } from "@/components/admin/leads/LeadFormDialog";
 import { LeadStatusMenu } from "@/components/admin/leads/LeadStatusMenu";
+import { LeadStatusBadge } from "@/components/admin/leads/LeadStatusBadge";
+import { CrmDetailHero } from "@/components/admin/crm/CrmDetailHero";
 import { LeadInfoTab } from "@/components/admin/leads/detail/LeadInfoTab";
 import { ProspectAuctionHistoryTab } from "@/components/admin/crm/prospect/ProspectAuctionHistoryTab";
 import { ProspectBranchesTab } from "@/components/admin/crm/prospect/ProspectBranchesTab";
@@ -121,78 +122,74 @@ export default function AdminLeadDetail() {
         <ArrowLeft className="h-4 w-4 mr-1.5" /> Khách hàng tiềm năng
       </Button>
 
-      {/* Header — thao tác neo ở GÓC DƯỚI-PHẢI của card (items-stretch để cột
-          phải cao bằng cột trái, justify-end đẩy nút xuống đáy). */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex flex-wrap items-stretch justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <Badge variant="outline">
-                {SOURCE_LABELS[lead.source] ?? lead.source}
-              </Badge>
-              <Badge variant="secondary">
-                {LEAD_TYPE_LABELS[lead.lead_type as CustomerSegment] ?? "Khác"}
-              </Badge>
-              {/* Chi nhánh cũng là một khách hàng tiềm năng độc lập — badge này
-                  là thứ duy nhất phân biệt nó với trụ sở chính. */}
-              {role && (
-                <Badge
-                  variant={role === "branch" ? "outline" : "secondary"}
-                  className={role === "branch" ? "border-warning/40 text-warning" : ""}
-                >
+      <CrmDetailHero
+        // Badge CHỈ ĐỂ ĐỌC; thao tác đổi nằm ở nút riêng trong hàng thao tác —
+        // badge vừa hiển thị vừa bấm được thì không nhìn ra là bấm được.
+        status={<LeadStatusBadge status={lead.status} />}
+        code={lead.code}
+        badges={<Badge variant="outline">{SOURCE_LABELS[lead.source] ?? lead.source}</Badge>}
+        name={lead.name}
+        subtitle={
+          // Dấu phân cách phải NHẠT HƠN chữ. Nối bằng " - " không đọc ra được vì
+          // nhãn vai trò tự nó đã chứa dấu gạch ("Tổ chức - Chi nhánh") ⇒ ba cụm
+          // nằm cùng một cấp thị giác. Gạch đứng màu border tách hẳn khỏi chữ.
+          <span className="flex flex-wrap items-center gap-x-2">
+            <span>{LEAD_TYPE_LABELS[lead.lead_type as CustomerSegment] ?? "Khác"}</span>
+            {role && (
+              <>
+                <span aria-hidden className="text-border select-none">|</span>
+                <span>
                   {ENTITY_ROLE_LABELS[role]}
                   {stat?.subtype === "amc" && " · AMC"}
-                </Badge>
-              )}
-            </div>
-            <h1 className="text-2xl font-bold text-foreground break-words">{lead.name}</h1>
-            <p className="font-mono text-sm text-muted-foreground mt-0.5">{lead.code ?? "—"}</p>
-            {stat?.parent_name && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Trực thuộc <strong className="text-foreground">{stat.parent_name}</strong>
-              </p>
+                </span>
+              </>
             )}
-            {lead.province && (
-              <p className="text-sm text-muted-foreground mt-2 inline-flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {lead.province}
-              </p>
-            )}
-          </div>
-
-          {/* Trạng thái neo GÓC TRÊN-PHẢI và đổi ngay tại chỗ; các thao tác
-              nặng hơn (sửa / chuyển đổi / xóa) dồn xuống đáy cột. */}
-          <div className="flex flex-col justify-between items-end gap-4">
-            <LeadStatusMenu leadId={lead.id} status={lead.status} />
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                <Pencil className="h-4 w-4 mr-1.5" />
-                Sửa
-              </Button>
-              <Button size="sm" disabled={converted} onClick={() => setConvertOpen(true)}>
-                <UserCheck className="h-4 w-4 mr-1.5" />
-                {converted ? "Đã chuyển đổi" : "Chuyển thành khách hàng"}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-9 w-9">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => setDeleteOpen(true)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Xóa
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </div>
+          </span>
+        }
+        // stat chỉ có với bản ghi đến từ dữ liệu sàn; nhập tay thì ẩn cả cụm
+        // thay vì hiện số 0 giả.
+        stats={
+          stat
+            ? [
+                { icon: Package, label: "Tài sản", value: stat.total_listings },
+                { icon: Network, label: "Chi nhánh", value: stat.branch_count },
+              ]
+            : []
+        }
+        actions={
+          <>
+            <LeadStatusMenu
+              leadId={lead.id}
+              status={lead.status}
+              trigger={
+                <Button variant="outline" size="sm" disabled={converted}>
+                  <RefreshCw className="h-4 w-4 mr-1.5" />
+                  Đổi trạng thái
+                </Button>
+              }
+            />
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4 mr-1.5" />
+              Sửa
+            </Button>
+          </>
+        }
+        overflow={
+          <>
+            <DropdownMenuItem disabled={converted} onClick={() => setConvertOpen(true)}>
+              <UserCheck className="h-4 w-4 mr-2" />
+              {converted ? "Đã chuyển đổi" : "Chuyển thành khách hàng"}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Xóa
+            </DropdownMenuItem>
+          </>
+        }
+      />
 
       {/* Tabs */}
       <Tabs
@@ -233,7 +230,7 @@ export default function AdminLeadDetail() {
           {hasHistory && (
             <TabsTrigger value="lich-su" className="gap-1.5">
               <Gavel className="h-4 w-4" />
-              Lịch sử đấu giá
+              Tài sản đấu giá
               {stat && (
                 <span className="text-[10px] bg-primary/10 text-primary font-semibold px-1.5 py-0.5 rounded-full">
                   {stat.total_listings}

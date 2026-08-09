@@ -162,7 +162,7 @@ export function CustomerTable({
                           {c.prospect_id && (
                             <DropdownMenuItem onClick={() => onOpenHistory(c)}>
                               <BarChart3 className="h-4 w-4 mr-2" />
-                              Lịch sử đấu giá
+                              Tài sản đấu giá
                             </DropdownMenuItem>
                           )}
                           {canEdit && (

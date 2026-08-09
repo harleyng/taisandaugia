@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Check, ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -16,9 +17,11 @@ const OPTIONS = Object.keys(STATUS_LABELS) as CustomerStatus[];
 interface Props {
   customerId: string;
   status: CustomerStatus;
+  /** Trigger tuỳ biến — xem chú thích cùng prop ở LeadStatusMenu. */
+  trigger?: ReactNode;
 }
 
-export function CustomerStatusMenu({ customerId, status }: Props) {
+export function CustomerStatusMenu({ customerId, status, trigger }: Props) {
   const update = useUpsertCustomer();
 
   const pick = async (next: CustomerStatus) => {
@@ -33,25 +36,31 @@ export function CustomerStatusMenu({ customerId, status }: Props) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        disabled={update.isPending}
-        className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="Đổi trạng thái"
-      >
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
-            STATUS_BADGE_CLASS[status],
-          )}
+      {trigger ? (
+        <DropdownMenuTrigger asChild disabled={update.isPending}>
+          {trigger}
+        </DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger
+          disabled={update.isPending}
+          className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Đổi trạng thái"
         >
-          {STATUS_LABELS[status]}
-          {update.isPending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <ChevronDown className="h-3 w-3 opacity-70" />
-          )}
-        </span>
-      </DropdownMenuTrigger>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
+              STATUS_BADGE_CLASS[status],
+            )}
+          >
+            {STATUS_LABELS[status]}
+            {update.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <ChevronDown className="h-3 w-3 opacity-70" />
+            )}
+          </span>
+        </DropdownMenuTrigger>
+      )}
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Đổi trạng thái</DropdownMenuLabel>
         <DropdownMenuSeparator />

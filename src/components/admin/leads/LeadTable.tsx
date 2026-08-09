@@ -169,7 +169,7 @@ export function LeadTable({
                           {l.prospect_id && (
                             <DropdownMenuItem onClick={() => onOpenHistory(l)}>
                               <BarChart3 className="h-4 w-4 mr-2" />
-                              Lịch sử đấu giá
+                              Tài sản đấu giá
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => onEdit(l)}>

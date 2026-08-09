@@ -138,14 +138,20 @@ All color tokens are defined as HSL CSS variables in `src/index.css`. **Never ad
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--primary` | `210 90% 30%` | Navy — CTAs, stepper, focus rings |
+| `--primary` | `152 60% 26%` | Green — CTAs, stepper, focus rings |
 | `--accent` | `43 96% 56%` | Amber — highlights |
 | `--success` | `142 76% 36%` | Completed states |
 | `--warning` | `38 92% 50%` | Warnings (e.g., company already linked) |
 | `--muted-foreground` | `215 16% 47%` | Secondary text |
 | `--radius` | `0.5rem` | Input/button border-radius |
+| `--sidebar-*` | dark green | Admin/portal/owner-portal nav shells only |
 
 Cards use `rounded-2xl`. All Tailwind classes must map to these tokens (`bg-primary`, `text-muted-foreground`, etc.).
+
+`--primary` and `--success` are now both green, so a chart series can no longer use
+`hsl(142 76% 36%)` next to the primary colour — the two read as one. Chart palettes in
+`src/components/admin/reports/` pick distinct hues (violet / magenta / red) for the
+second series instead.
 
 ## Patterns
 

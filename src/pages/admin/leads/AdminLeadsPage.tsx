@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useLeads, useDeleteLead, useConvertLead, leadErrorMessage } from "@/hooks/useLeads";
+import { useUrlFilterState } from "@/hooks/useUrlFilterState";
 import { useProspectStatsMap, useSyncProspectLeads } from "@/hooks/useProspects";
 import { LeadTable } from "@/components/admin/leads/LeadTable";
 import { LeadFormDialog } from "@/components/admin/leads/LeadFormDialog";
@@ -25,6 +26,16 @@ type SourceFilter = LeadSource | "all";
 type TypeFilter = LeadType | "all";
 type EntityFilter = EntityRole | "all";
 
+/** Bộ lọc nằm trên URL (?q=&status=…) nên back/refresh/gửi link đều giữ nguyên. */
+const FILTER_DEFAULTS = { q: "", status: "all", source: "all", type: "all", entity: "all" };
+
+const FILTER_OPTIONS = {
+  status: STATUS_TABS.map((t) => t.key),
+  source: ["all", ...Object.keys(SOURCE_LABELS)],
+  type: ["all", ...Object.keys(LEAD_TYPE_LABELS)],
+  entity: ["all", "main", "branch", "individual"],
+} as const;
+
 const pill = (active: boolean) =>
   [
     "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
@@ -37,6 +48,7 @@ export default function AdminLeadsPage() {
   const convert = useConvertLead();
 
   const navigate = useNavigate();
+  const listSearch = useLocation().search;
 
   // Mỗi pháp nhân đang có tài sản trên sàn được ghi thành lead thật với nguồn
   // "Dữ liệu sàn" (RPC idempotent, chạy một lần khi mở trang) — không còn danh
@@ -44,11 +56,13 @@ export default function AdminLeadsPage() {
   useSyncProspectLeads();
   const { data: prospectStats } = useProspectStatsMap();
 
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
-  const [source, setSource] = useState<SourceFilter>("all");
-  const [type, setType] = useState<TypeFilter>("all");
-  const [entity, setEntity] = useState<EntityFilter>("all");
+  const [filters, setFilter] = useUrlFilterState(FILTER_DEFAULTS, FILTER_OPTIONS);
+  const search = filters.q;
+  const status = filters.status as StatusFilter;
+  const source = filters.source as SourceFilter;
+  const type = filters.type as TypeFilter;
+  const entity = filters.entity as EntityFilter;
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Lead | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
@@ -141,7 +155,7 @@ export default function AdminLeadsPage() {
 
       <div className="flex flex-wrap items-center gap-1 mb-4">
         {STATUS_TABS.map((t) => (
-          <button key={t.key} className={pill(status === t.key)} onClick={() => setStatus(t.key)}>
+          <button key={t.key} className={pill(status === t.key)} onClick={() => setFilter("status", t.key)}>
             {t.label} <span className="text-xs opacity-70">({counts[t.key] ?? 0})</span>
           </button>
         ))}
@@ -153,11 +167,11 @@ export default function AdminLeadsPage() {
           <Input
             placeholder="Tìm theo tên, mã, SĐT, email…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => setFilter("q", e.target.value)}
             className="pl-8"
           />
         </div>
-        <Select value={type} onValueChange={(v) => setType(v as TypeFilter)}>
+        <Select value={type} onValueChange={(v) => setFilter("type", v)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Tất cả loại" />
           </SelectTrigger>
@@ -170,7 +184,7 @@ export default function AdminLeadsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={entity} onValueChange={(v) => setEntity(v as EntityFilter)}>
+        <Select value={entity} onValueChange={(v) => setFilter("entity", v)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Tất cả loại hình" />
           </SelectTrigger>
@@ -181,7 +195,7 @@ export default function AdminLeadsPage() {
             <SelectItem value="individual">{ENTITY_ROLE_LABELS.individual}</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={source} onValueChange={(v) => setSource(v as SourceFilter)}>
+        <Select value={source} onValueChange={(v) => setFilter("source", v)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Tất cả nguồn" />
           </SelectTrigger>
@@ -198,8 +212,12 @@ export default function AdminLeadsPage() {
         leads={filtered}
         isLoading={isLoading}
         prospectStats={prospectStats}
-        onOpen={(l) => navigate(`/admin/khach-hang-tiem-nang/${l.id}`)}
-        onOpenHistory={(l) => navigate(`/admin/khach-hang-tiem-nang/${l.id}?tab=lich-su`)}
+        // Mang theo query lọc để nút quay lại ở trang chi tiết trả về đúng danh
+        // sách đang xem, không chỉ nút back của trình duyệt.
+        onOpen={(l) => navigate(`/admin/khach-hang-tiem-nang/${l.id}`, { state: { listSearch } })}
+        onOpenHistory={(l) =>
+          navigate(`/admin/khach-hang-tiem-nang/${l.id}?tab=lich-su`, { state: { listSearch } })
+        }
         onEdit={(l) => { setEditing(l); setDialogOpen(true); }}
         onConvert={setConvertTarget}
         onDelete={setDeleteTarget}

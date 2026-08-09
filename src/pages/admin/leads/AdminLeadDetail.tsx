@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Gavel, IdCard, Info, ListTodo, Loader2, Network, Package, RefreshCw, Tag,
   Pencil, Ticket as TicketIcon, Trash2, UserCheck,
@@ -40,6 +40,11 @@ const TAB_SLUGS = ["lich-su", "chi-nhanh", "cong-viec", "tickets", "dau-gia-vien
 export default function AdminLeadDetail() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  // Danh sách gửi kèm query lọc của nó khi mở trang này; quay lại phải về đúng
+  // danh sách đã lọc. Vào thẳng bằng link (không có state) thì về danh sách trần.
+  const listState = useLocation().state as { listSearch?: string } | null;
+  const listUrl = LIST_URL + (listState?.listSearch ?? "");
   const { data: lead, isLoading, isError } = useLead(id);
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -69,7 +74,7 @@ export default function AdminLeadDetail() {
     try {
       await del.mutateAsync(lead.id);
       toast.success("Đã xóa khách hàng tiềm năng");
-      navigate(LIST_URL);
+      navigate(listUrl);
     } catch {
       toast.error("Xóa thất bại — có thể còn cơ hội đang gắn");
     }
@@ -98,7 +103,7 @@ export default function AdminLeadDetail() {
   if (isError || !lead) {
     return (
       <div className="p-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate(LIST_URL)} className="-ml-2 mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate(listUrl)} className="-ml-2 mb-4">
           <ArrowLeft className="h-4 w-4 mr-1.5" /> Khách hàng tiềm năng
         </Button>
         <p className="text-sm text-muted-foreground">Không tìm thấy khách hàng tiềm năng này.</p>
@@ -118,7 +123,7 @@ export default function AdminLeadDetail() {
 
   return (
     <div className="p-6 space-y-4">
-      <Button variant="ghost" size="sm" onClick={() => navigate(LIST_URL)} className="-ml-2">
+      <Button variant="ghost" size="sm" onClick={() => navigate(listUrl)} className="-ml-2">
         <ArrowLeft className="h-4 w-4 mr-1.5" /> Khách hàng tiềm năng
       </Button>
 

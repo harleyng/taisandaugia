@@ -113,7 +113,10 @@
       "Bash(sed -i '' 's#export function LeadBranchesTab#export function ProspectBranchesTab#' src/components/admin/crm/prospect/ProspectBranchesTab.tsx)",
       "Bash(sed -i '' -e 's#import { LeadAuctionHistoryTab } from \"@/components/admin/leads/detail/LeadAuctionHistoryTab\";#import { ProspectAuctionHistoryTab } from \"@/components/admin/crm/prospect/ProspectAuctionHistoryTab\";#' -e 's#import { LeadBranchesTab } from \"@/components/admin/leads/detail/LeadBranchesTab\";#import { ProspectBranchesTab } from \"@/components/admin/crm/prospect/ProspectBranchesTab\";#' -e 's#<LeadAuctionHistoryTab #<ProspectAuctionHistoryTab #' -e 's#<LeadBranchesTab #<ProspectBranchesTab #' src/pages/admin/leads/AdminLeadDetail.tsx)",
       "Bash(can)",
-      "Bash(echo \"=== usage example of `can` ===\")"
+      "Bash(echo \"=== usage example of `can` ===\")",
+      "Bash(echo \"lint exit=$?\")",
+      "Bash(echo \"verify exit=$?\")",
+      "Bash(git fetch *)"
     ],
     "additionalDirectories": [
       "/tmp",

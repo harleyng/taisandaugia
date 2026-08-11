@@ -3,7 +3,9 @@
 
 import { supabase } from '@/integrations/supabase/client'
 import type { Database } from '@/integrations/supabase/types'
-import type { DossierTemplate } from './dossier-content'
+import {
+  normalizeSections, type DossierSectionId, type DossierTemplate,
+} from './dossier-templates'
 import type { DossierExportFormat } from './export-dossier'
 
 type Row = Database['public']['Tables']['personnel_dossier_exports']['Row']
@@ -17,6 +19,8 @@ export interface DossierExport {
   auctioneerName: string
   licenseNumber: string | null
   template: DossierTemplate
+  /** Mục đã chọn lúc xuất. NULL ở bản ghi cũ nghĩa là đủ mọi mục. */
+  sections: DossierSectionId[] | null
   format: DossierExportFormat
   filePath: string | null
   fileSizeBytes: number | null
@@ -32,6 +36,7 @@ function rowTo(r: Row): DossierExport {
     auctioneerName: r.auctioneer_name,
     licenseNumber: r.license_number,
     template: r.template as DossierTemplate,
+    sections: r.sections ? normalizeSections(r.sections) : null,
     format: r.format as DossierExportFormat,
     filePath: r.file_path,
     fileSizeBytes: r.file_size_bytes,
@@ -56,6 +61,7 @@ export interface RecordExportInput {
   auctioneerName: string
   licenseNumber?: string | null
   template: DossierTemplate
+  sections: DossierSectionId[]
   format: DossierExportFormat
   blob: Blob
   fileName: string
@@ -97,6 +103,7 @@ export async function recordExport(input: RecordExportInput): Promise<void> {
     auctioneer_name: input.auctioneerName,
     license_number: input.licenseNumber ?? null,
     template: input.template,
+    sections: input.sections,
     format: input.format,
     file_path: filePath,
     file_size_bytes: input.blob.size,

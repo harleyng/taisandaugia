@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuctioneers } from '@/hooks/useAuctioneers'
 import { useDossierExports } from '@/hooks/useDossierExports'
-import { TEMPLATE_LABELS } from '@/lib/personnel/dossier-content'
+import { SECTION_ORDER, TEMPLATE_LABELS } from '@/lib/personnel/dossier-templates'
 import { DossierExportWizard } from '@/components/personnel/DossierExportWizard'
 import { DossierPreviewDialog } from '@/components/personnel/DossierPreviewDialog'
 import type { DossierExport } from '@/lib/personnel/exports-repo'
@@ -125,6 +125,11 @@ export default function HoSoNhanSuPage() {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {[
                       e.licenseNumber ? `Thẻ ${e.licenseNumber}` : '',
+                      // Bản ghi cũ không lưu danh sách mục (sections = null) —
+                      // khi đó không nói gì, đừng bịa là đã chọn đủ.
+                      e.sections && e.sections.length < SECTION_ORDER.length
+                        ? `${e.sections.length}/${SECTION_ORDER.length} mục`
+                        : '',
                       fmtDateTime(e.generatedAt),
                       `${e.creditsCharged} credit`,
                       fmtSize(e.fileSizeBytes),

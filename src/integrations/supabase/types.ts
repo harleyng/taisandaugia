@@ -4417,6 +4417,7 @@ export type Database = {
           id: string
           license_number: string | null
           organization_id: string
+          sections: string[] | null
           template: string
         }
         Insert: {
@@ -4431,6 +4432,7 @@ export type Database = {
           id?: string
           license_number?: string | null
           organization_id: string
+          sections?: string[] | null
           template: string
         }
         Update: {
@@ -4445,6 +4447,7 @@ export type Database = {
           id?: string
           license_number?: string | null
           organization_id?: string
+          sections?: string[] | null
           template?: string
         }
         Relationships: [

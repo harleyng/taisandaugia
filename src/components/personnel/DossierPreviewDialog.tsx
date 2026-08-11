@@ -4,7 +4,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Download, FileText, Loader2 } from 'lucide-react'
-import { TEMPLATE_LABELS } from '@/lib/personnel/dossier-content'
+import { TEMPLATE_LABELS } from '@/lib/personnel/dossier-templates'
 import type { DossierExport } from '@/lib/personnel/exports-repo'
 
 interface Props {

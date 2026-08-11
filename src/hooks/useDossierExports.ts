@@ -16,10 +16,12 @@ import {
   dossierFileName,
   type DossierExportFormat,
 } from '@/lib/personnel/export-dossier'
-import type { DossierTemplate } from '@/lib/personnel/dossier-content'
+import {
+  DEFAULT_EXPORT_OPTIONS, type DossierExportOptions,
+} from '@/lib/personnel/dossier-templates'
 import type { Auctioneer } from '@/types/auctioneer'
 
-export interface GenerateInput {
+export interface GenerateInput extends Partial<DossierExportOptions> {
   people: Auctioneer[]
 }
 
@@ -43,8 +45,13 @@ export function useDossierExports() {
   }, [qc, organizationId])
 
   const generate = useMutation({
-    mutationFn: async ({ people }: GenerateInput) => {
+    mutationFn: async ({ people, template, sections }: GenerateInput) => {
       if (!organizationId || !userId) throw new Error('Thiếu ngữ cảnh tổ chức')
+
+      const opts: DossierExportOptions = {
+        template: template ?? DEFAULT_EXPORT_OPTIONS.template,
+        sections: sections?.length ? sections : DEFAULT_EXPORT_OPTIONS.sections,
+      }
 
       // DỰNG FILE TRƯỚC, TRỪ CREDIT SAU. Render có thể hỏng (font PDF, dữ liệu
       // lỗi) — trừ trước rồi hỏng là người dùng mất tiền mà không nhận được gì,
@@ -73,7 +80,7 @@ export function useDossierExports() {
         }
         rendered.push({
           person,
-          blob: await renderDossier(bundle, orgName ?? ''),
+          blob: await renderDossier(bundle, orgName ?? '', opts),
           fileName: dossierFileName(person.fullName),
         })
       }
@@ -91,7 +98,8 @@ export function useDossierExports() {
           auctioneerId: r.person.id,
           auctioneerName: r.person.fullName,
           licenseNumber: r.person.licenseNumber,
-          template: 'FULL',
+          template: opts.template,
+          sections: opts.sections,
           format: 'PDF',
           blob: r.blob,
           fileName: r.fileName,

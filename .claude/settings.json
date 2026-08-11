@@ -131,7 +131,10 @@
       "Bash(perl -0pi -e 's/import \\\\{ useNavigate, useParams, useSearchParams \\\\} from \"react-router-dom\";/import { useLocation, useNavigate, useParams, useSearchParams } from \"react-router-dom\";/; s/navigate\\\\\\(LIST_URL\\\\\\)/navigate\\(listUrl\\)/g' src/pages/admin/leads/AdminLeadDetail.tsx)",
       "Bash(perl -0pi -e \"s/^import urllib.request\\\\nimport urllib.error\\\\$/import subprocess\\\\nimport tempfile/m\" seed_assets.py)",
       "Bash(perl -0pi -e \"s{-- placeholder được nạp riêng bằng script \\\\\\(xem scripts/seed-admin-org-assets\\\\\\)\\\\.}{-- placeholder được nạp riêng bằng scripts/seed-admin-org-assets.py \\(chạy với\\\\n-- SUPABASE_SERVICE_ROLE_KEY trong .env.local\\).}\" supabase/migrations/20260809000001_seed_admin_org_demo.sql)",
-      "Bash(perl -0pi -e \"s{^# Memory Index\\\\n}{# Memory Index\\\\n\\\\n- [Admin Demo Org]\\(project_admin_demo_org.md\\) — admin\\\\@gmail.com có CTĐG Minh Đức full option \\(org ad000001…\\); bẫy: trigger KYC chặn UPDATE profiles trong migration, memberships phải xoá trước org_roles, cpd_kind là di sản, seed credit dùng admin_grant\\\\n}m\" MEMORY.md)"
+      "Bash(perl -0pi -e \"s{^# Memory Index\\\\n}{# Memory Index\\\\n\\\\n- [Admin Demo Org]\\(project_admin_demo_org.md\\) — admin\\\\@gmail.com có CTĐG Minh Đức full option \\(org ad000001…\\); bẫy: trigger KYC chặn UPDATE profiles trong migration, memberships phải xoá trước org_roles, cpd_kind là di sản, seed credit dùng admin_grant\\\\n}m\" MEMORY.md)",
+      "Bash(perl -0pi -e 's{/\\\\*\\\\* Gắn ngắt trang lên phần tử ĐẦU TIÊN của nhóm.*?\\\\n\\\\}\\\\n\\\\ntype FontMap}{type FontMap}s' src/lib/personnel/dossier-pdf/index.ts)",
+      "Bash(ls ~/Library/Caches/ms-playwright 2>/dev/null | head; ls /Applications | grep -i \"Google Chrome\" | head -2)",
+      "Read(//Users/m116gb/Library/Caches/ms-playwright/**)"
     ],
     "additionalDirectories": [
       "/tmp",

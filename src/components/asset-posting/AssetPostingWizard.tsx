@@ -35,7 +35,11 @@ interface AssetPostingWizardProps {
   onCancel?: () => void;
 }
 
-/** Wizard số hoá tài sản — full-page, requirements-driven (port thiết kế "So Hoa Tai San"). */
+/**
+ * Wizard số hoá tài sản — full-page, requirements-driven (port thiết kế "So Hoa Tai San").
+ * Lớp phủ `fixed inset-0` phải ĐỤC (bg-muted, không phải bg-muted/30) để che hẳn
+ * sidebar + topbar của Cổng chủ tài sản — luồng số hoá là màn tập trung, không menu.
+ */
 export function AssetPostingWizard({ onDone, onCancel }: AssetPostingWizardProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -133,7 +137,7 @@ export function AssetPostingWizard({ onDone, onCancel }: AssetPostingWizardProps
   // ─── Màn hoàn tất ─────────────────────────────────────────────────────────
   if (phase === "done") {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-muted/30 overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex flex-col bg-muted overflow-y-auto">
         <TopBar onExit={finishNav} onSaveDraft={saveDraft} savingDraft={false} />
         <div className="mx-auto my-8 w-full max-w-xl px-4">
           <div className="bg-card border border-border rounded-2xl px-8 py-11 text-center">
@@ -180,7 +184,7 @@ export function AssetPostingWizard({ onDone, onCancel }: AssetPostingWizardProps
   const s = STEPS[step - 1];
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-muted/30">
+    <div className="fixed inset-0 z-50 flex flex-col bg-muted">
       <TopBar onExit={exit} onSaveDraft={saveDraft} savingDraft={create.isPending} />
 
       <div className="flex-1 overflow-y-auto">

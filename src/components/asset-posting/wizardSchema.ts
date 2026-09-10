@@ -1,12 +1,19 @@
 import { z } from "zod";
 import { getDeltaFields } from "@/constants/asset-delta-fields";
+import { getProofMode, MIN_IMAGES } from "@/constants/asset-posting-rules";
+import { ASSET_DECLARATION_VERSION } from "@/constants/terms";
 import type { NewAssetPosting } from "@/hooks/useAssetPosting";
 import type { MatchCriteria } from "@/lib/orgMatching";
 import type { AssetPosting } from "@/types/asset-posting";
 import type { Json } from "@/integrations/supabase/types";
 
-// Form dùng một useForm xuyên suốt 5 bước. Field bắt buộc được gate theo từng bước
-// qua form.trigger(STEP_FIELDS[step]); delta fields (riêng theo loại) validate thủ công.
+// Form dùng một useForm xuyên suốt 5 bước.
+//
+// GATING: requirements() bên dưới là cổng DUY NHẤT. zodResolver có gắn ở wizard
+// nhưng next()/finish() không bao giờ gọi form.trigger() và formState.errors không
+// được render ở đâu cả — schema zod dưới đây chỉ để z.infer ra WizardValues.
+// Thêm luật mới ⇒ thêm một dòng vào requirements(), ĐỪNG thêm .min()/superRefine:
+// làm vậy tạo bản sao thứ hai của cùng một luật, không có đường chạy, không test.
 
 export const wizardSchema = z
   .object({
@@ -24,7 +31,10 @@ export const wizardSchema = z
     deltaFields: z.record(z.unknown()),
 
     // Bước 3 — pháp lý & hiện trạng
-    ownershipProofUrls: z.array(z.string()).min(1, "Bắt buộc tải lên giấy tờ chứng minh quyền sở hữu"),
+    // Bắt buộc hay không tuỳ nhóm cấp 1 — quyết định ở requirements().
+    ownershipProofUrls: z.array(z.string()),
+    declarationAccepted: z.boolean(),
+    declarationName: z.string(),
     rightToSell: z.boolean(),
     hasDispute: z.string().min(1, "Vui lòng khai báo"),
     hasMortgage: z.string().min(1, "Vui lòng khai báo"),
@@ -34,13 +44,18 @@ export const wizardSchema = z
     // Bước 4 — nhu cầu đấu giá
     // wantsAuction: "" chưa chọn · "yes" muốn đấu giá · "no" chỉ số hoá & lưu hồ sơ
     wantsAuction: z.enum(["", "yes", "no"]),
+    // orgMode: "" chưa quyết · "self" tự chọn tổ chức · "platform" nhờ sàn chọn giúp
+    orgMode: z.enum(["", "self", "platform"]),
     chosenOrg: z.string().nullable(),
+    /** Lời nhắn gửi kèm khi nhờ sàn chọn giúp. */
+    brokerNote: z.string().optional(),
     pricingMode: z.enum(["self", "appraisal"]),
     startingPrice: z.string().optional(),
     auctionFormat: z.enum(["truc_tiep", "truc_tuyen", "ca_hai"]),
     commissionPct: z.string().optional(),
     expectedTimeline: z.string().optional(),
     imageUrls: z.array(z.string()),
+    videoUrls: z.array(z.string()),
     docUrls: z.array(z.string()),
   })
   .superRefine((v, ctx) => {
@@ -66,21 +81,34 @@ export const wizardDefaults: WizardValues = {
   address: "",
   deltaFields: {},
   ownershipProofUrls: [],
+  declarationAccepted: false,
+  declarationName: "",
   rightToSell: true,
   hasDispute: "",
   hasMortgage: "",
   isSeized: "",
   legalNotes: "",
   wantsAuction: "",
+  orgMode: "",
   chosenOrg: null,
+  brokerNote: "",
   pricingMode: "self",
   startingPrice: "",
   auctionFormat: "truc_tiep",
   commissionPct: "",
   expectedTimeline: "",
   imageUrls: [],
+  videoUrls: [],
   docUrls: [],
 };
+
+/**
+ * Chữ ký điện tử đã nhập đủ chưa? Yêu cầu ≥ 2 từ chứ không phải ≥ 3 ký tự:
+ * "abc" qua được min-length nhưng không phải họ tên, mà đây là thứ đang được
+ * lưu lại làm bằng chứng thay cho giấy tờ sở hữu.
+ */
+export const signatureFilled = (name: string): boolean =>
+  name.trim().split(/\s+/).filter(Boolean).length >= 2;
 
 /** Đã nhập (khác rỗng)? */
 export const filled = (v: unknown): boolean =>
@@ -100,7 +128,9 @@ export const REQUIREMENT_MSG: Record<string, string> = {
   childSlug: "Chọn loại tài sản",
   title: "Tối thiểu 3 ký tự",
   province: "Chọn tỉnh / thành phố",
+  imageUrls: "Cần ít nhất 1 ảnh tài sản",
   ownershipProofUrls: "Cần ít nhất 1 giấy tờ sở hữu",
+  ownershipDeclaration: "Tích xác nhận và nhập họ tên đầy đủ",
   legal: "Trả lời cả 3 câu",
   wantsAuction: "Chọn một phương án",
   auctionFormat: "Chọn hình thức đấu giá",
@@ -114,12 +144,23 @@ export function requirements(v: WizardValues): Requirement[] {
     { step: 1, key: "childSlug", label: "Loại tài sản", ok: !!v.childSlug },
     { step: 2, key: "title", label: "Tên tài sản", ok: v.title.trim().length >= 3 },
     { step: 2, key: "province", label: "Khu vực", ok: !!v.province },
+    { step: 2, key: "imageUrls", label: "Ảnh tài sản", ok: v.imageUrls.length >= MIN_IMAGES },
   ];
   getDeltaFields(v.childSlug)
     .filter((d) => d.required)
     .forEach((d) => r.push({ step: 2, key: `delta.${d.key}`, label: d.label, ok: filled(v.deltaFields[d.key]) }));
+  // Chỉ bất động sản & xe cộ mới có giấy tờ đăng ký sở hữu; nhóm còn lại ký cam kết.
+  if (getProofMode(v.parentSlug) === "documents") {
+    r.push({ step: 3, key: "ownershipProofUrls", label: "Giấy tờ sở hữu", ok: v.ownershipProofUrls.length > 0 });
+  } else {
+    r.push({
+      step: 3,
+      key: "ownershipDeclaration",
+      label: "Bản cam kết sở hữu",
+      ok: v.declarationAccepted && signatureFilled(v.declarationName),
+    });
+  }
   r.push(
-    { step: 3, key: "ownershipProofUrls", label: "Giấy tờ sở hữu", ok: v.ownershipProofUrls.length > 0 },
     { step: 3, key: "legal", label: "Tình trạng pháp lý", ok: !!v.hasDispute && !!v.hasMortgage && !!v.isSeized },
     { step: 4, key: "wantsAuction", label: "Nhu cầu đấu giá", ok: !!v.wantsAuction },
   );
@@ -130,26 +171,6 @@ export function requirements(v: WizardValues): Requirement[] {
     }
   }
   return r;
-}
-
-/** Field RHF cần validate khi rời mỗi bước (giữ cho tương thích; gating chính qua requirements). */
-export const STEP_FIELDS: Record<number, (keyof WizardValues)[]> = {
-  1: ["parentSlug", "childSlug"],
-  2: ["title", "province"],
-  3: ["ownershipProofUrls", "hasDispute", "hasMortgage", "isSeized"],
-  4: ["auctionFormat", "startingPrice"],
-  5: [],
-};
-
-/** Trả về nhãn các trường delta BẮT BUỘC còn thiếu (rỗng = hợp lệ). */
-export function missingRequiredDelta(childSlug: string, deltaFields: Record<string, unknown>): string[] {
-  return getDeltaFields(childSlug)
-    .filter((d) => d.required)
-    .filter((d) => {
-      const val = deltaFields[d.key];
-      return val === undefined || val === null || String(val).trim() === "";
-    })
-    .map((d) => d.label);
 }
 
 /** Ép kiểu số cho các trường delta type 'number'. */
@@ -185,6 +206,64 @@ export function postingToMatchCriteria(p: AssetPosting): MatchCriteria {
   };
 }
 
+/**
+ * Bản cam kết để lưu, hoặc null nếu nhóm này chứng minh bằng giấy tờ.
+ *
+ * `accepted_at` sinh TẠI ĐÂY (lúc lưu) chứ không nằm trong form state: nếu đóng
+ * dấu lúc tích checkbox thì phải nhớ xoá khi bỏ tích, khi đổi nhóm và khi reset
+ * form — ba chỗ để quên.
+ */
+function buildDeclaration(v: WizardValues): Json | null {
+  if (getProofMode(v.parentSlug) !== "declaration") return null;
+  if (!v.declarationAccepted || !signatureFilled(v.declarationName)) return null;
+  return {
+    name: v.declarationName.trim(),
+    accepted_at: new Date().toISOString(),
+    version: ASSET_DECLARATION_VERSION,
+  } as unknown as Json;
+}
+
+/**
+ * Hồ sơ đã lưu → giá trị form, để mở lại bản nháp.
+ *
+ * Chiều ngược của buildPostingPayload. Ba chỗ mất mát dữ liệu là CỐ Ý:
+ *  · wantsAuction suy từ chosen_org_id/starting_price — DB không lưu ý định này.
+ *  · declarationAccepted/Name đọc lại từ bản cam kết đã ký (nếu có).
+ *  · has_dispute… là boolean|null ở DB nhưng ""|"yes"|"no" ở form.
+ */
+export function postingToWizardValues(p: AssetPosting): WizardValues {
+  const yn = (b: boolean | null): "" | "yes" | "no" => (b === null ? "" : b ? "yes" : "no");
+  return {
+    parentSlug: p.parent_slug,
+    childSlug: p.child_slug,
+    title: p.title,
+    description: p.description ?? "",
+    province: p.province ?? "",
+    district: p.district ?? "",
+    ward: p.ward ?? "",
+    address: p.address ?? "",
+    deltaFields: p.delta_fields ?? {},
+    ownershipProofUrls: p.ownership_proof_urls ?? [],
+    declarationAccepted: !!p.ownership_declaration,
+    declarationName: p.ownership_declaration?.name ?? "",
+    rightToSell: p.right_to_sell,
+    hasDispute: yn(p.has_dispute),
+    hasMortgage: yn(p.has_mortgage),
+    isSeized: yn(p.is_seized),
+    legalNotes: p.legal_notes ?? "",
+    wantsAuction: p.chosen_org_id || p.starting_price !== null ? "yes" : "",
+    chosenOrg: p.chosen_org_id,
+    pricingMode: p.pricing_mode,
+    startingPrice: p.starting_price !== null ? String(p.starting_price) : "",
+    auctionFormat: p.auction_format,
+    commissionPct: p.commission_pct !== null ? String(p.commission_pct) : "",
+    expectedTimeline: p.expected_timeline ?? "",
+    imageUrls: p.image_urls ?? [],
+    videoUrls: p.video_urls ?? [],
+    docUrls: p.doc_urls ?? [],
+  };
+}
+
 export function buildPostingPayload(v: WizardValues): NewAssetPosting {
   return {
     parent_slug: v.parentSlug,
@@ -201,6 +280,7 @@ export function buildPostingPayload(v: WizardValues): NewAssetPosting {
     commission_pct: v.commissionPct ? Number(v.commissionPct) : null,
     expected_timeline: v.expectedTimeline || null,
     ownership_proof_urls: v.ownershipProofUrls,
+    ownership_declaration: buildDeclaration(v),
     has_dispute: v.hasDispute === "yes",
     has_mortgage: v.hasMortgage === "yes",
     is_seized: v.isSeized === "yes",
@@ -209,6 +289,7 @@ export function buildPostingPayload(v: WizardValues): NewAssetPosting {
     // cột JSONB listings.delta_fields
     delta_fields: coerceDelta(v.childSlug, v.deltaFields) as unknown as Json,
     image_urls: v.imageUrls,
+    video_urls: v.videoUrls,
     doc_urls: v.docUrls,
   };
 }

@@ -76,6 +76,22 @@ export function useCustomerAllOrders(customerId?: string, userId?: string | null
 }
 
 // Đơn hàng gắn với 1 banner quảng cáo (truy vết ngược từ chi tiết quảng cáo).
+/** Đơn hoa hồng của một đối tác — dùng để đối soát trên trang chi tiết Đối tác. */
+export function useSupplierOrders(supplierId?: string) {
+  return useQuery<Order[]>({
+    queryKey: qk.orders.bySupplier(supplierId),
+    queryFn: async () => {
+      const { data, error } = await ordersTable()
+        .select(ORDER_SELECT)
+        .eq("supplier_id", supplierId)
+        .order("ordered_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Order[];
+    },
+    enabled: !!supplierId,
+  });
+}
+
 export function useAdvertisementOrders(advertisementId?: string) {
   return useQuery<Order[]>({
     queryKey: qk.orders.byAdvertisement(advertisementId),

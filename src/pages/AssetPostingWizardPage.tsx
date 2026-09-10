@@ -17,6 +17,7 @@ const AssetPostingWizardPage = () => {
   const [approved, setApproved] = useState(false);
   const [mode, setMode] = useState<"list" | "wizard" | "detail">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
 
   useEffect(() => {
     const check = async () => {
@@ -71,7 +72,19 @@ const AssetPostingWizardPage = () => {
   }
 
   if (mode === "wizard") {
-    return <AssetPostingWizard onDone={() => setMode("list")} onCancel={() => setMode("list")} />;
+    return (
+      <AssetPostingWizard
+        postingId={draftId}
+        onDone={() => {
+          setDraftId(null);
+          setMode("list");
+        }}
+        onCancel={() => {
+          setDraftId(null);
+          setMode("list");
+        }}
+      />
+    );
   }
 
   if (mode === "detail" && selectedId) {
@@ -80,7 +93,14 @@ const AssetPostingWizardPage = () => {
 
   return (
     <AssetPostingsLanding
-      onCreate={() => setMode("wizard")}
+      onCreate={() => {
+        setDraftId(null);
+        setMode("wizard");
+      }}
+      onResumeDraft={(id) => {
+        setDraftId(id);
+        setMode("wizard");
+      }}
       onSelect={(id) => {
         setSelectedId(id);
         setMode("detail");

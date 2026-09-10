@@ -91,8 +91,8 @@
       "Bash(grep -n \"^  const auctionRecords = \\\\[\" src/../scripts/seed-portal-localstorage.js; grep -n \"^  \\\\];\" scripts/seed-portal-localstorage.js | head -3; grep -n \"3. Tài chính\" scripts/seed-portal-localstorage.js)",
       "Read(//Users/m116gb/Downloads/Agency/taisandaugia/scripts/**)",
       "Bash(security find-generic-password *)",
-      "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://api.supabase.com/v1/projects/dvdpfjprncvkhfwcvqmp/config/auth)",
-      "Bash(curl -s -X PATCH -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"mailer_autoconfirm\": true}' https://api.supabase.com/v1/projects/dvdpfjprncvkhfwcvqmp/config/auth)",
+      "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://api.supabase.com/v1/projects/vewtnkewyawmkpeymdot/config/auth)",
+      "Bash(curl -s -X PATCH -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"mailer_autoconfirm\": true}' https://api.supabase.com/v1/projects/vewtnkewyawmkpeymdot/config/auth)",
       "Read(//Users/m116gb/Documents/taisandaugia/docs/**)",
       "Read(//Users/m116gb/Documents/taisandaugia/**)",
       "Read(//Users/m116gb/Documents/**)",
@@ -134,7 +134,8 @@
       "Bash(perl -0pi -e \"s{^# Memory Index\\\\n}{# Memory Index\\\\n\\\\n- [Admin Demo Org]\\(project_admin_demo_org.md\\) — admin\\\\@gmail.com có CTĐG Minh Đức full option \\(org ad000001…\\); bẫy: trigger KYC chặn UPDATE profiles trong migration, memberships phải xoá trước org_roles, cpd_kind là di sản, seed credit dùng admin_grant\\\\n}m\" MEMORY.md)",
       "Bash(perl -0pi -e 's{/\\\\*\\\\* Gắn ngắt trang lên phần tử ĐẦU TIÊN của nhóm.*?\\\\n\\\\}\\\\n\\\\ntype FontMap}{type FontMap}s' src/lib/personnel/dossier-pdf/index.ts)",
       "Bash(ls ~/Library/Caches/ms-playwright 2>/dev/null | head; ls /Applications | grep -i \"Google Chrome\" | head -2)",
-      "Read(//Users/m116gb/Library/Caches/ms-playwright/**)"
+      "Read(//Users/m116gb/Library/Caches/ms-playwright/**)",
+      "Bash(grep -oiE \"'[a-z0-9_-]{3,40}'\")"
     ],
     "additionalDirectories": [
       "/tmp",

@@ -37,6 +37,11 @@ export const qk = {
     all: ["admin-permissions"] as const,
     byUser: (userId?: string | null) => ["admin-permissions", userId] as const,
   },
+  /** Hàng chờ duyệt tài sản (admin). Tham số đứng SAU nên `all` phủ cả chi tiết. */
+  adminAssetPostings: {
+    all: ["admin-asset-postings"] as const,
+    byId: (id?: string | null) => ["admin-asset-postings", id] as const,
+  },
 
   // ─── Tổ chức (cổng /portal) ──────────────────────────────────────────────
   myOrgs: {
@@ -124,7 +129,22 @@ export const qk = {
       ["orders", "by-customer-user", customerId, userId ?? null] as const,
     byAdvertisement: (advertisementId?: string | null) =>
       ["orders", "by-advertisement", advertisementId] as const,
+    bySupplier: (supplierId?: string | null) => ["orders", "by-supplier", supplierId] as const,
   },
+
+  /** Hợp đồng hợp tác với đối tác. Tham số đứng SAU nên `all` phủ cả chi tiết. */
+  supplierContracts: {
+    all: ["supplier-contracts"] as const,
+    bySupplier: (supplierId?: string | null) =>
+      ["supplier-contracts", supplierId] as const,
+  },
+  /** Điều khoản hoa hồng đang hiệu lực, tra theo (đối tác, dịch vụ, biến thể, ngày). */
+  contractTerms: (
+    supplierId?: string | null,
+    serviceId?: string | null,
+    variantId?: string | null,
+    at?: string | null,
+  ) => ["contract-terms", supplierId, serviceId, variantId ?? null, at ?? null] as const,
 
   // ─── Dịch vụ & giá ───────────────────────────────────────────────────────
   services: {

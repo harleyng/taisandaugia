@@ -1,6 +1,8 @@
 import { AlertCircle, FileText, List, ShieldCheck } from "lucide-react";
 import { AssetDocUpload } from "../AssetDocUpload";
 import { Group, OptionalGroup, TextField, SegYesNo, Switch, Pill } from "../fields";
+import { OwnershipDeclaration } from "../OwnershipDeclaration";
+import { getProofMode } from "@/constants/asset-posting-rules";
 import type { WizardValues } from "../wizardSchema";
 
 interface StepProps {
@@ -18,25 +20,37 @@ const LEGAL_Q: { name: "hasDispute" | "hasMortgage" | "isSeized"; label: string 
 /** Bước 3: giấy tờ sở hữu + tình trạng pháp lý (3 câu) + ghi chú. */
 export function Step3LegalStatus({ f, up, errs }: StepProps) {
   const answered = LEGAL_Q.filter((q) => f[q.name]).length;
+  // Chỉ bất động sản & xe cộ có giấy tờ đăng ký sở hữu; nhóm còn lại ký cam kết.
+  const proofMode = getProofMode(f.parentSlug);
 
   return (
     <div className="flex flex-col gap-4">
-      <Group
-        icon={<FileText className="h-4 w-4" />}
-        title="Giấy tờ chứng minh quyền sở hữu"
-        desc="Sổ đỏ / sổ hồng, đăng ký xe, hợp đồng mua bán…"
-        right={f.ownershipProofUrls.length > 0 ? <Pill tone="ok">{f.ownershipProofUrls.length} tệp</Pill> : null}
-      >
-        <label className="block text-[13.5px] font-semibold text-foreground mb-2">
-          Tải lên tối thiểu 1 tệp<span className="ml-0.5 text-destructive">*</span>
-        </label>
-        <AssetDocUpload value={f.ownershipProofUrls} onChange={(v) => up({ ownershipProofUrls: v })} prefix="ownership" />
-        {errs.ownershipProofUrls && (
-          <div className="flex items-center gap-1.5 text-xs font-medium text-destructive mt-2.5">
-            <AlertCircle className="h-3.5 w-3.5" /> {errs.ownershipProofUrls}
-          </div>
-        )}
-      </Group>
+      {proofMode === "documents" ? (
+        <Group
+          icon={<FileText className="h-4 w-4" />}
+          title="Giấy tờ chứng minh quyền sở hữu"
+          desc="Sổ đỏ / sổ hồng, đăng ký xe, hợp đồng mua bán…"
+          right={f.ownershipProofUrls.length > 0 ? <Pill tone="ok">{f.ownershipProofUrls.length} tệp</Pill> : null}
+        >
+          <label className="block text-[13.5px] font-semibold text-foreground mb-2">
+            Tải lên tối thiểu 1 tệp<span className="ml-0.5 text-destructive">*</span>
+          </label>
+          <AssetDocUpload value={f.ownershipProofUrls} onChange={(v) => up({ ownershipProofUrls: v })} prefix="ownership" />
+          {errs.ownershipProofUrls && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-destructive mt-2.5">
+              <AlertCircle className="h-3.5 w-3.5" /> {errs.ownershipProofUrls}
+            </div>
+          )}
+        </Group>
+      ) : (
+        <OwnershipDeclaration
+          accepted={f.declarationAccepted}
+          name={f.declarationName}
+          onAcceptedChange={(v) => up({ declarationAccepted: v })}
+          onNameChange={(v) => up({ declarationName: v })}
+          err={errs.ownershipDeclaration}
+        />
+      )}
 
       <Group
         icon={<ShieldCheck className="h-4 w-4" />}
@@ -73,7 +87,12 @@ export function Step3LegalStatus({ f, up, errs }: StepProps) {
         )}
       </Group>
 
-      <OptionalGroup icon={<List className="h-4 w-4" />} title="Ghi chú pháp lý" desc="Giải chấp, tranh chấp đang xử lý…" count={1}>
+      <OptionalGroup
+        icon={<List className="h-4 w-4" />}
+        title="Ghi chú & tài liệu bổ sung"
+        desc="Giải chấp, tranh chấp đang xử lý, hoá đơn / hợp đồng mua bán…"
+        count={2}
+      >
         <TextField
           label="Ghi chú pháp lý"
           rows={3}
@@ -81,6 +100,12 @@ export function Step3LegalStatus({ f, up, errs }: StepProps) {
           value={f.legalNotes ?? ""}
           onChange={(v) => up({ legalNotes: v })}
         />
+        <div className="mt-3.5">
+          <label className="block text-[13.5px] font-semibold text-foreground mb-2">Tài liệu bổ sung</label>
+          {/* Nhóm ký cam kết vẫn có chỗ tự nguyện đính kèm hoá đơn / hợp đồng —
+              có giá trị thật với máy móc & hàng hoá — mà không thành cửa chặn. */}
+          <AssetDocUpload value={f.docUrls} onChange={(v) => up({ docUrls: v })} prefix="extra" />
+        </div>
       </OptionalGroup>
     </div>
   );

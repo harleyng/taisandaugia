@@ -1,24 +1,27 @@
 import { useState } from "react";
-import { ArrowLeft, Loader2, FileText, Building2, MapPin, Phone, Send } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Send, Clock, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
-import { getDeltaFields, type DeltaFieldDescriptor } from "@/constants/asset-delta-fields";
+import { getDeltaFields } from "@/constants/asset-delta-fields";
 import { formatPrice } from "@/utils/formatters";
 import { ChooseOrgAndRequest } from "./ChooseOrgAndRequest";
+import { ConsignmentPanel } from "./ConsignmentPanel";
+import { renderDeltaValue } from "./format";
 import { postingToMatchCriteria } from "./wizardSchema";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { REVIEW_STATUS_BADGE_CLASS, REVIEW_STATUS_LABELS } from "@/lib/asset-posting/reviewStatus";
 import {
   ASSET_POSTING_STATUS_LABELS,
   AUCTION_FORMAT_LABELS,
   EXPECTED_TIMELINE_LABELS,
-  SERVICE_REQUEST_STATUS_LABELS,
   type AssetPostingStatus,
   type AuctionFormat,
   type ExpectedTimeline,
 } from "@/types/asset-posting";
-import { usePostingDetail } from "@/hooks/useAssetPosting";
+import { useCancelBrokerRequest, usePostingDetail, useSelectQuote } from "@/hooks/useAssetPosting";
 
 const PARENT_NAME: Record<string, string> = Object.fromEntries(ASSET_CATEGORIES.map((p) => [p.slug, p.name]));
 const CHILD_LABEL: Record<string, string> = Object.fromEntries(
@@ -35,14 +38,6 @@ const STATUS_STYLE: Record<AssetPostingStatus, string> = {
 };
 
 const fileName = (path: string) => path.split("/").pop() ?? path;
-
-function renderDeltaValue(d: DeltaFieldDescriptor, raw: unknown): string {
-  if (raw === null || raw === undefined || String(raw).trim() === "") return "—";
-  if (d.type === "select") return d.options?.find((o) => o.value === raw)?.label ?? String(raw);
-  if (d.type === "boolean") return raw ? "Có" : "Không";
-  const base = d.type === "number" ? Number(raw).toLocaleString("vi-VN") : String(raw);
-  return d.unit ? `${base} ${d.unit}` : base;
-}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -71,6 +66,8 @@ interface AssetPostingDetailProps {
 export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProps) {
   const { data, isLoading } = usePostingDetail(postingId);
   const [choosingOrg, setChoosingOrg] = useState(false);
+  const selectQuote = useSelectQuote();
+  const cancelBroker = useCancelBrokerRequest();
 
   if (isLoading) {
     return (
@@ -95,7 +92,8 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
     );
   }
 
-  const { posting: p, org, request } = data;
+  const { posting: p, org, requests, brokerRequest } = data;
+  const openBroker = brokerRequest && brokerRequest.status !== "cancelled";
   const descriptors = getDeltaFields(p.child_slug);
   const location = [p.address, p.ward, p.district, p.province].filter(Boolean).join(", ");
   const legalFlag = (v: boolean | null) => (v === null ? "—" : v ? "Có" : "Không");
@@ -119,13 +117,54 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
             {PARENT_NAME[p.parent_slug] ?? p.parent_slug} · {CHILD_LABEL[p.child_slug] ?? p.child_slug}
           </p>
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_STYLE[p.status]}`}>
-          {ASSET_POSTING_STATUS_LABELS[p.status]}
-        </span>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_STYLE[p.status]}`}>
+            {ASSET_POSTING_STATUS_LABELS[p.status]}
+          </span>
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${REVIEW_STATUS_BADGE_CLASS[p.review_status]}`}
+          >
+            {REVIEW_STATUS_LABELS[p.review_status]}
+          </span>
+        </div>
       </div>
 
-      {/* Luồng riêng: gửi cho tổ chức đấu giá (hồ sơ đã số hoá, chưa gửi yêu cầu) */}
-      {p.status === "active" && !request && (
+      {/* Hồ sơ đã số hoá nhưng CHƯA được duyệt: chưa gửi cho tổ chức đấu giá được. */}
+      {p.status === "active" && requests.length === 0 && p.review_status === "pending" && (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="flex items-start gap-3 pt-5">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+            <div className="space-y-1">
+              <p className="font-semibold text-foreground">Hồ sơ đang chờ duyệt</p>
+              <p className="text-sm text-muted-foreground">
+                Quản trị viên đang xem xét hồ sơ tài sản của bạn. Sau khi được duyệt, bạn có thể gửi
+                hồ sơ cho tổ chức đấu giá.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bị từ chối: hiện lý do để chủ tài sản sửa rồi lưu lại (lưu lại sẽ được duyệt lại). */}
+      {p.review_status === "rejected" && (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="flex items-start gap-3 pt-5">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <div className="space-y-1">
+              <p className="font-semibold text-foreground">Hồ sơ chưa được duyệt</p>
+              {p.rejection_reason && (
+                <p className="text-sm text-foreground">{p.rejection_reason}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Vui lòng cập nhật hồ sơ theo góp ý trên. Hồ sơ sẽ được xem xét lại sau khi bạn lưu.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Luồng riêng: gửi cho tổ chức đấu giá (hồ sơ đã số hoá VÀ đã được duyệt, chưa gửi yêu cầu) */}
+      {p.status === "active" && p.review_status === "approved" && requests.length === 0 && !openBroker && (
         <Card className="border-primary/20">
           <CardContent className="pt-5 space-y-4">
             {choosingOrg ? (
@@ -154,54 +193,19 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
         </Card>
       )}
 
-      {/* Tổ chức đấu giá đã chọn */}
-      {org && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-5 space-y-3">
-            <div className="flex items-center gap-3">
-              {org.logo_url ? (
-                <img src={org.logo_url} alt={org.name} className="h-11 w-11 rounded-lg object-cover" />
-              ) : (
-                <div className="h-11 w-11 rounded-lg bg-background flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-primary" />
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="font-semibold text-foreground truncate">{org.name}</p>
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                  {org.province && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> {org.province}
-                    </span>
-                  )}
-                  {org.phone && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" /> {org.phone}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            {request && (
-              <>
-                <Separator />
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-muted-foreground">Trạng thái yêu cầu</span>
-                  <Badge variant="secondary" className="font-normal">
-                    {SERVICE_REQUEST_STATUS_LABELS[request.status]}
-                  </Badge>
-                </div>
-                {request.match_score != null && <Row label="Điểm khớp" value={`${Math.round(request.match_score)}/100`} />}
-                {request.message && (
-                  <p className="text-sm text-foreground bg-background rounded-lg p-3 border border-border">
-                    “{request.message}”
-                  </p>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Trạng thái ký gửi: tiến trình nhờ sàn · báo giá · tổ chức đã chọn */}
+      <ConsignmentPanel
+        posting={p}
+        requests={requests}
+        brokerRequest={brokerRequest}
+        org={org}
+        onSelectQuote={(requestId) => selectQuote.mutate({ requestId, postingId: p.id })}
+        isSelecting={selectQuote.isPending}
+        onCancelBroker={() =>
+          brokerRequest && cancelBroker.mutate({ brokerRequestId: brokerRequest.id, postingId: p.id })
+        }
+        isCancelling={cancelBroker.isPending}
+      />
 
       <Card>
         <CardContent className="pt-5 space-y-6">
@@ -247,6 +251,14 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
             <Row label="Đang thế chấp" value={legalFlag(p.has_mortgage)} />
             <Row label="Bị kê biên" value={legalFlag(p.is_seized)} />
             {p.legal_notes && <Row label="Ghi chú" value={p.legal_notes} />}
+            {p.ownership_declaration && (
+              <>
+                <Row label="Bản cam kết" value="Đã ký điện tử" />
+                <Row label="Người cam kết" value={p.ownership_declaration.name} />
+                <Row label="Thời điểm ký" value={format(new Date(p.ownership_declaration.accepted_at), "HH:mm dd/MM/yyyy", { locale: vi })} />
+                <Row label="Phiên bản cam kết" value={p.ownership_declaration.version} />
+              </>
+            )}
             {allDocs.length > 0 && (
               <div className="space-y-1.5 pt-1">
                 {allDocs.map((d) => (
@@ -269,6 +281,20 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
                     <div key={url} className="aspect-square rounded-lg overflow-hidden bg-muted">
                       <img src={url} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" />
                     </div>
+                  ))}
+                </div>
+              </Section>
+            </>
+          )}
+
+          {/* Video */}
+          {p.video_urls?.length > 0 && (
+            <>
+              <Separator />
+              <Section title="Video tài sản">
+                <div className="space-y-2.5">
+                  {p.video_urls.map((url) => (
+                    <video key={url} src={url} controls preload="metadata" className="w-full rounded-lg bg-black" />
                   ))}
                 </div>
               </Section>

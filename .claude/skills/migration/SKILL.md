@@ -1,6 +1,6 @@
 ---
 name: migration
-description: Change the taisandaugia data model against the REAL Supabase backend (live project dvdpfjprncvkhfwcvqmp) — write a timestamped SQL migration in supabase/migrations/, add RLS "own rows" for user-owned tables, apply it (`npx supabase db push`, or directly via psql over the pooler when the CLI is unauthenticated), then regenerate the typed client. Use PROACTIVELY for "add a column/field", "new table", "change the schema", "write a migration", "add an index/policy/bucket".
+description: Change the taisandaugia data model against the REAL Supabase backend (live project vewtnkewyawmkpeymdot) — write a timestamped SQL migration in supabase/migrations/, add RLS "own rows" for user-owned tables, apply it (`npx supabase db push`, or directly via psql over the pooler when the CLI is unauthenticated), then regenerate the typed client. Use PROACTIVELY for "add a column/field", "new table", "change the schema", "write a migration", "add an index/policy/bucket".
 ---
 
 # /migration — change the data model (real Supabase)
@@ -41,15 +41,15 @@ If `supabase projects list` returns `Access token not provided`, the CLI is unau
 ### 3b. Fallback — apply directly via `psql` using `SUPABASE_DB_URI` from `.env.local`
 `psql` is installed. `.env.local` holds a full-access `SUPABASE_DB_URI`. **These quirks cost real time — bake them in:**
 - The URI host `db.<ref>.supabase.co` is **IPv6-only** and unreachable from the sandbox (`No route to host`) → **do not use it**.
-- Route via the **IPv4 SESSION pooler**: `host=aws-1-ap-southeast-1.pooler.supabase.com port=5432 user=postgres.<ref>` (this project = `ap-southeast-1`, prefix `aws-1`). Different project? sweep regions & `aws-0`/`aws-1` until the error changes from `tenant/user … not found` (wrong region) to a password prompt (right host). Port **5432 = session mode** (supports DDL/transactions); 6543 = transaction mode, avoid for migrations.
+- Route via the **IPv4 SESSION pooler**: `host=aws-0-ap-southeast-1.pooler.supabase.com port=5432 user=postgres.<ref>` (this project = `ap-southeast-1`, prefix `aws-0`). Different project? sweep regions & `aws-0`/`aws-1` until the error changes from `tenant/user … not found` (wrong region) to a password prompt (right host). Port **5432 = session mode** (supports DDL/transactions); 6543 = transaction mode, avoid for migrations.
 - The password in the URI is **URL-encoded** → decode with `urllib.parse.unquote` before use.
 - **Never echo the password** — parse it in-shell into `PGPASSWORD` (below), don't print the connstring.
 
 ```bash
-REF=dvdpfjprncvkhfwcvqmp
+REF=vewtnkewyawmkpeymdot
 DBURI="$(grep -E '^SUPABASE_DB_URI=' .env.local | cut -d= -f2- | tr -d '\r' | sed -E 's/^["'"'"']//; s/["'"'"']$//')"
 eval "$(DBURI="$DBURI" python3 -c "import os,urllib.parse,shlex;u=urllib.parse.urlparse(os.environ['DBURI']);print('export PGPASSWORD=%s'%shlex.quote(urllib.parse.unquote(u.password or '')))")"
-CONN="host=aws-1-ap-southeast-1.pooler.supabase.com port=5432 user=postgres.$REF dbname=postgres sslmode=require connect_timeout=15"
+CONN="host=aws-0-ap-southeast-1.pooler.supabase.com port=5432 user=postgres.$REF dbname=postgres sslmode=require connect_timeout=15"
 psql "$CONN" -tAc "select 'AUTH_OK'"                                                   # verify connection first
 psql "$CONN" -v ON_ERROR_STOP=1 --single-transaction -f supabase/migrations/<schema>.sql
 psql "$CONN" -v ON_ERROR_STOP=1 --single-transaction -f supabase/migrations/<seed>.sql   # if a seed file exists
@@ -65,7 +65,7 @@ Security: after using `SUPABASE_DB_URI`, tell the user to **reset the DB passwor
 
 ### 3c. Regenerate types
 ```bash
-npx supabase gen types typescript --project-id dvdpfjprncvkhfwcvqmp > src/integrations/supabase/types.ts
+npx supabase gen types typescript --project-id vewtnkewyawmkpeymdot > src/integrations/supabase/types.ts
 ```
 `types.ts` is **generated — never hand-edit**. `gen types --db-url` over the **pooler fails** (CLI limitation) and the direct host is IPv6-blocked, so with only `SUPABASE_DB_URI` you **cannot regen** — that's fine: access the new tables with `(supabase as any).from(…)` + `.rpc(…)` casts (the `useArticles.ts` / `useCampaigns.ts` pattern) and note that regen needs a personal access token later. Do not fake or hand-edit `types.ts`.
 

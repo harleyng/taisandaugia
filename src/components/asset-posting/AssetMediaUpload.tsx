@@ -1,12 +1,7 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-
-const BUCKET = "asset-media";
-const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-const ACCEPT = "image/jpeg,image/png,image/webp";
+import { IMAGE_MIME, MAX_IMAGE_SIZE } from "@/constants/asset-posting-rules";
+import { useStorageUpload } from "./useStorageUpload";
 
 interface AssetMediaUploadProps {
   /** Mảng public URL ảnh đã tải lên. */
@@ -16,38 +11,20 @@ interface AssetMediaUploadProps {
 
 /** Upload nhiều ảnh vào bucket public `asset-media`, folder theo auth.uid(). */
 export function AssetMediaUpload({ value, onChange }: AssetMediaUploadProps) {
-  const { userId } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const { uploading, upload } = useStorageUpload({
+    bucket: "asset-media",
+    maxSize: MAX_IMAGE_SIZE,
+    returns: "url",
+    label: "ảnh",
+  });
 
-  const handleFiles = async (files: FileList) => {
-    if (!userId) {
-      toast.error("Bạn cần đăng nhập để tải ảnh.");
-      return;
-    }
-    setUploading(true);
-    const uploaded: string[] = [];
-    for (const file of Array.from(files)) {
-      if (file.size > MAX_SIZE) {
-        toast.error(`${file.name}: vượt quá 10MB`);
-        continue;
-      }
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
-      if (error) {
-        toast.error(`Lỗi tải ${file.name}: ${error.message}`);
-        continue;
-      }
-      uploaded.push(supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl);
-    }
-    if (uploaded.length) onChange([...value, ...uploaded]);
-    setUploading(false);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) handleFiles(e.target.files);
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
     e.target.value = "";
+    if (!files?.length) return;
+    const uploaded = await upload(files);
+    if (uploaded.length) onChange([...value, ...uploaded]);
   };
 
   const removeAt = (idx: number) => onChange(value.filter((_, i) => i !== idx));
@@ -105,9 +82,9 @@ export function AssetMediaUpload({ value, onChange }: AssetMediaUploadProps) {
         </button>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        JPG, PNG, WebP — tối đa 10MB mỗi ảnh. Kéo-thả để sắp xếp; ảnh đầu là ảnh bìa. Ảnh là tùy chọn.
+        JPG, PNG, WebP — tối đa 10MB mỗi ảnh. Kéo-thả để sắp xếp; ảnh đầu là ảnh bìa.
       </p>
-      <input ref={inputRef} type="file" accept={ACCEPT} multiple className="hidden" onChange={handleInputChange} />
+      <input ref={inputRef} type="file" accept={IMAGE_MIME} multiple className="hidden" onChange={handleInputChange} />
     </div>
   );
 }

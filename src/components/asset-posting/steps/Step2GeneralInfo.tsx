@@ -1,8 +1,10 @@
-import { Info, MapPin, Ruler } from "lucide-react";
+import { AlertCircle, Camera, Info, MapPin, Ruler } from "lucide-react";
 import { vietnamProvinces } from "@/constants/vietnam-locations";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { getDeltaFields } from "@/constants/asset-delta-fields";
-import { Group, OptionalGroup, TextField, SelectField, DeltaField } from "../fields";
+import { Group, OptionalGroup, Pill, TextField, SelectField, DeltaField } from "../fields";
+import { AssetMediaUpload } from "../AssetMediaUpload";
+import { AssetVideoUpload } from "../AssetVideoUpload";
 import type { WizardValues } from "../wizardSchema";
 
 interface StepProps {
@@ -57,6 +59,31 @@ export function Step2GeneralInfo({ f, up, errs }: StepProps) {
           </div>
         </Group>
       )}
+
+      {/* Ảnh mô tả bản thân tài sản nên thuộc thông tin chung. Trước đây khối này
+          nằm trong nhánh wantsAuction === "yes" ở bước 4 nên luồng "chỉ số hoá"
+          không bao giờ thấy nó — bắt buộc mà để nguyên đó là chặn cứng luồng ấy. */}
+      <Group
+        icon={<Camera className="h-4 w-4" />}
+        title="Hình ảnh & video tài sản"
+        desc="Tối thiểu 1 ảnh. Video giúp tổ chức đấu giá đánh giá nhanh hơn."
+        right={f.imageUrls.length > 0 ? <Pill tone="ok">{f.imageUrls.length} ảnh</Pill> : null}
+      >
+        <label className="block text-[13.5px] font-semibold text-foreground mb-2">
+          Ảnh thực tế tài sản<span className="ml-0.5 text-destructive">*</span>
+        </label>
+        <AssetMediaUpload value={f.imageUrls} onChange={(v) => up({ imageUrls: v })} />
+        {errs.imageUrls && (
+          <div className="flex items-center gap-1.5 text-xs font-medium text-destructive mt-2.5">
+            <AlertCircle className="h-3.5 w-3.5" /> {errs.imageUrls}
+          </div>
+        )}
+
+        <label className="block text-[13.5px] font-semibold text-foreground mb-2 mt-4">
+          Video tài sản <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
+        </label>
+        <AssetVideoUpload value={f.videoUrls} onChange={(v) => up({ videoUrls: v })} />
+      </Group>
 
       <OptionalGroup icon={<MapPin className="h-4 w-4" />} title="Thông số phụ" desc="Địa chỉ chi tiết, mô tả, thông số bổ sung" count={opt.length + 4}>
         <div className="flex flex-col gap-[18px]">

@@ -5,6 +5,85 @@
 
 ---
 
+## 2026-09-10 — Chuyển DB sang project + tài khoản Supabase mới (dump/restore, không replay migration)
+
+**Context:** Project cũ `dvdpfjprncvkhfwcvqmp` nằm trong org **Vercel-managed** (`vercel_icfg_…`, tài khoản `harley.ngx@gmail.com`) và đã tự pause (DNS bị gỡ → NXDOMAIN, pooler báo `tenant not found`). Cần sang tài khoản khác (`secsosoo@gmail.com`). 180 migration CHƯA BAO GIỜ replay from scratch (nhiều cái áp lệch thứ tự / áp tay bằng psql) nên replay là canh bạc.
+
+**Decision:**
+- **Clone vật lý bằng `pg_dump`, KHÔNG replay migration.** Dump = trạng thái thật; migration chain = giả thiết. Chỉ dump `public` (86 bảng) + data `auth.users`/`auth.identities` + `storage.buckets`/`objects`; `auth`/`storage` DDL là schema Supabase quản lý, project mới đã có sẵn.
+- **Nạp data BẮT BUỘC dưới `SET session_replication_role = replica`.** 85 trigger sẽ phá dữ liệu nếu bật: `credit_transactions_create_order` nhân đôi `orders`, `on_auth_user_created` tự đẻ `profiles` chọi với data dump, `asset_postings_review_guard` nuốt row. `pg_dump --disable-triggers` KHÔNG dùng được (cần superuser, role `postgres` của Supabase không có).
+- **35 policy trên `storage.objects` + trigger `on_auth_user_created` phải sinh riêng** — chúng nằm NGOÀI schema `public` nên dump `--schema=public` bỏ sót. Sinh DDL bằng `pg_policy`/`pg_get_triggerdef` với `PGOPTIONS="-c search_path="` để mọi tên được qualify đầy đủ.
+- **File Storage phải copy riêng** (`scripts/migrate-storage.py`) — `pg_dump` chỉ chuyển ROW, không chuyển byte. Upload bằng service_role làm `owner = NULL`, mà **23/35 policy dựa vào `owner`** → phải chạy `08_storage_objects_fixup.sql` khôi phục `owner`/timestamp ngay sau upload.
+- **Diễn tập trên cluster Postgres tạm trước khi đụng project thật.** Bắt được 2 lỗi chí mạng: (1) policy render `'ADMIN'::app_role` không qualify trong khi dump đặt `search_path=''`; (2) generator nuốt mất 31/35 policy vì policy `TO PUBLIC` có `polroles={0}` làm NULL cả câu — nếu lọt thì hồ sơ KYC/tài liệu tổ chức sẽ hở hoặc không ai đọc được.
+
+**Consequences:**
+- Project mới **`vewtnkewyawmkpeymdot`** (org `xdehonmlfyobmkxmwfmo`, `ap-southeast-1`, PG 17.6). **Pooler đổi prefix `aws-1` → `aws-0`** — đã sửa trong `.claude/skills/migration/SKILL.md`.
+- Đối chiếu xong: 86 bảng / 110 function / 186+35 policy / 312 index / 175 FK / 11 sequence / 180 dòng migration history khớp tuyệt đối; `types.ts` regen ra **y hệt** bản cũ. `orders` vẫn 633 (trigger không nhân đôi).
+- **KHÔNG chuyển:** `auth.sessions`/`refresh_tokens`/`mfa_amr_claims`/`one_time_tokens` (41 dòng) → **mọi người phải đăng nhập lại** (JWT secret khác); mật khẩu giữ nguyên (hash bcrypt portable).
+- **Nợ ops:** Vercel integration của project CŨ vẫn có thể tự inject `SUPABASE_*` đè `.env` khi deploy — phải gỡ/ghi đè trên Vercel. `site_url` vẫn là `http://localhost:3000` và `uri_allow_list` rỗng (bê nguyên từ project cũ). Chưa có SMTP. Backup dump nằm ở `~/taisandaugia-migration-2026-09-10/` (có email + hash mật khẩu — xoá sau khi yên tâm).
+
+---
+
+## 2026-09-07 — Hợp đồng hợp tác & hoa hồng theo hợp đồng với tổ chức đấu giá
+
+**Context:** Sàn chốt hoa hồng với CTĐG bằng hợp đồng ký NGOÀI nền tảng, nhưng không có thực thể hợp đồng nào trong 175 migration. Mức hoa hồng nằm ở `service_variants.commission_*` — **không có thời hạn**, nên tái ký = ghi đè, đơn cũ mất lời giải thích. `suppliers` cũng không có FK nào tới `auction_organizations` nên không tra ngược được từ "tổ chức nào thắng ký gửi" sang hợp đồng của họ.
+**Decision:**
+- **`supplier_contracts` (đầu) + `supplier_contract_lines` (mức theo từng dịch vụ)** — `20260907000001`. Một đối tác → nhiều hợp đồng (tái ký) → nhiều dòng dịch vụ. **"Hết hạn" là trạng thái DẪN XUẤT** (`status='active'` + `effective_to < today`), không lưu cờ — lưu cờ thì phải nuôi cron. Logic ở `src/lib/supplierContracts.ts`.
+- **Trigger chống trùng gắn ở CẢ HAI bảng**: hai HĐ `active` cùng supplier + cùng service + giao kỳ ⇒ RAISE. Chỉ gác ở bảng dòng là hở cửa sau — sửa `effective_from` của HĐ cũ tạo ra trùng y hệt.
+- **`services.supplier_scope` `fixed|per_order`** (`20260907000003`) nới `services_commission_requires_supplier`: "Môi giới ký gửi" là MỘT dịch vụ dùng cho MỌI tổ chức, đối tác nằm trên ĐƠN. Tạo dịch vụ **mới** `Hoa hồng môi giới ký gửi` chứ KHÔNG đổi `kind` dịch vụ ký gửi cũ — đổi tại chỗ sẽ ép mọi cơ hội thành commission kể cả khi chưa có hợp đồng, khoá cứng nghiệp vụ.
+- **Resolver hai tầng quyền**: `resolve_contract_terms` (SECURITY DEFINER, `REVOKE` khỏi anon/authenticated — chỉ RPC definer khác gọi) + `admin_resolve_contract_terms` (gác `admin_has_permission('nha-cung-cap','view')`). PostgREST phơi mọi hàm `authenticated` gọi được, mà biên hoa hồng là bí mật thương mại.
+- **Đơn vẫn CHỤP ẢNH điều khoản của nó**; `orders/opportunities.contract_id`/`contract_line_id` chỉ để truy vết, báo cáo KHÔNG đọc.
+**Consequences:**
+- **Bẫy đã dẫm & đã vá (`20260907000004`)**: guard "cơ hội commission phải có `supplier_id`" khoá oan 8 cơ hội đang mở của luồng **công cụ đấu giá** — `request_tool_service` không bao giờ set cột đó vì dịch vụ của chúng là `fixed` (đối tác nằm trên `services.supplier_id`, trigger tự điền). Đối tác hiệu lực phải là `COALESCE(opportunities.supplier_id, services.supplier_id)`; chỉ chặn khi CẢ HAI rỗng.
+- Bucket **`contract-documents` PRIVATE** (khác `partner-logos` public): lưu ĐƯỜNG DẪN, mở bằng `createSignedUrl`. `getPublicUrl` trả link trông hợp lệ nhưng luôn 400.
+- Trang chi tiết đối tác mới `/admin/doi-tac/:id` dùng lại module quyền `nha-cung-cap` — không đẻ mã module mới nên không phải đụng ma trận quyền đã lưu trong DB.
+- Gate tiền: tổng `amount`/`gross_amount`/số đơn bảo toàn tuyệt đối qua cả 5 migration (6,400,728,000₫ / 32,151,598,000₫ / 617).
+
+## 2026-09-06 — Ký gửi tài sản: tự chọn tổ chức HOẶC nhờ sàn chọn giúp
+
+**Context:** `asset_service_requests` là ngõ cụt ghi-một-chiều — chủ tài sản insert một dòng rồi thôi: không màn admin, không màn tổ chức, 4 trạng thái `seen/accepted/declined/withdrawn` không có ai ghi. Và gửi xong chủ tài sản **không thấy gì**: `usePostingDetail` chỉ nạp tổ chức khi `chosen_org_id` có giá trị, mà không đường ghi nào set cột đó.
+**Decision:**
+- **Hai lối, một bảng.** `asset_broker_requests` (yêu cầu nhờ sàn, 1 dòng mở/hồ sơ) + `asset_service_requests` mở rộng `origin owner|platform` · `broker_request_id` · 7 cột báo giá. `UNIQUE (asset_posting_id, auction_org_id)` SẴN CÓ chính là thứ cho phép fan-out nhiều tổ chức và làm dispatch idempotent.
+- **KHÔNG ghi gì vào `asset_postings`** (bỏ ý định set `chosen_org_id`/`status='matched'`): trigger `asset_postings_review_guard` đá hồ sơ đã duyệt về `pending` với mọi caller không có quyền `approve` — kể cả RPC SECURITY DEFINER, vì `auth.uid()` bên trong vẫn là uid người gọi. Tổ chức đã chốt suy ra từ yêu cầu `status='selected'`; đây cũng là cách sửa bug thẻ tổ chức không bao giờ hiện.
+- **4 RPC, tổ chức KHÔNG có UPDATE qua RLS**: `admin_dispatch_service_requests` (gate `tai-san-tu-nguyen.update`, chặn org chưa có tài khoản, đòi `review_status='approved'`) · `org_service_requests` (bản chiếu — RLS lọc dòng không giấu được cột, nên KHÔNG trả danh tính chủ / số nhà / giấy tờ sở hữu) · `org_respond_service_request` · `owner_select_service_quote` (đóng anh em thành `not_selected` + tạo lead `asset_brokerage` & cơ hội).
+- **Chỉ gửi tới tổ chức ĐÃ CÓ TÀI KHOẢN** — áp cho cả lối tự chọn (`useMatchedOrgs` mặc định `onlyAccounted`). Gửi cho tổ chức không có tài khoản là đẻ lại đúng cái ngõ cụt đang dẹp.
+- **`organizations.auction_org_id`** (cột + FK, backfill từ `license_info`) thay cho cast JSONB trong policy: chuỗi rác làm cả query lỗi chứ không trả `false`.
+**Consequences:**
+- Policy owner `FOR ALL` cũ bị tách thành read/insert/withdraw — chủ tài sản không còn tự đặt được `status='selected'`.
+- Hộp thư `/portal/yeu-cau-ky-gui` đi qua `OrgContext` (membership) chứ KHÔNG phải `usePortalOrg` (`owner_id`), khớp `user_in_auction_org()`; nếu không thì chỉ chủ sở hữu tổ chức dùng được.
+- Điểm khớp % trong dialog fan-out **vẫn là số bịa** từ băm `org.id` (`deriveOrgAttributes`). Cột `auction_org_id` mới chính là mảnh còn thiếu để nối `org_capacity_profile` — việc riêng, chưa làm.
+- Migrations `20260906100001`, `20260906100002` ĐÃ PUSH; types regenerate. `20260906200001` (phiên song song) đổi mã quyền `duyet-tai-san`→`tai-san-tu-nguyen` và đã viết lại RPC của luồng này qua `pg_get_functiondef` — replay từ đầu vẫn đúng vì nó chạy sau.
+
+## 2026-09-06 — Ảnh bắt buộc mọi nhóm; chứng minh sở hữu rẽ theo nhóm cấp 1 (giấy tờ vs cam kết ký điện tử)
+
+**Context:** Wizard số hoá cho tạo hồ sơ **không có ảnh nào** (`imageUrls` không hề nằm trong `requirements()`), trong khi bắt **mọi** nhóm phải tải giấy tờ chứng minh sở hữu. Chỉ bất động sản và xe cộ mới có sổ đỏ / cà-vẹt — máy móc, hàng hoá, đồ dùng thì không, nên cửa chặn đó chỉ tạo ra rác: người dùng tải bừa một tệp để đi tiếp.
+**Decision:**
+- **`requirements()` là cổng DUY NHẤT** — thêm `imageUrls` (bước 2, `MIN_IMAGES = 1`) và rẽ nhánh `ownershipProofUrls` / `ownershipDeclaration` ở bước 3. **KHÔNG** đụng zod: `zodResolver` có gắn nhưng `next()`/`finish()` không bao giờ gọi `form.trigger()` và `formState.errors` không được render, nên thêm `.min()`/`superRefine` sẽ tạo bản sao thứ hai của một luật pháp lý, không có đường chạy và không có test. Đã xoá `STEP_FIELDS` + `missingRequiredDelta` (0 importer) và sửa comment đầu file vốn mô tả sai cơ chế.
+- **`getProofMode(parentSlug)`** trong `constants/asset-posting-rules.ts`, `Record<AssetParentSlug, ProofMode>` khai đủ 6 nhóm ⇒ thêm nhóm cấp 1 mới là typecheck đỏ cho tới khi có người quyết định. Fallback runtime là **`"documents"`** (cố ý lệch với `getDeltaFields(slug) ?? []`): đoán sai theo hướng chặt thành lỗi người dùng báo ngay, đoán sai theo hướng lỏng thì âm thầm giảm tuân thủ.
+- **Chữ ký điện tử cấp HÀNG đầu tiên của repo.** `ownership_declaration JSONB {name, accepted_at, version}` + CHECK hình dạng. JSONB chứ không phải cột phẳng như `profiles.terms_accepted_at/terms_version` vì đây là consent theo **từng tài sản**, không phải một dấu trên hàng singleton. Nội dung cam kết (`ASSET_DECLARATION_CLAUSES`) để **cạnh** `ASSET_DECLARATION_VERSION` trong `constants/terms.ts` — tách ra thì version đã lưu chẳng trỏ tới văn bản nào. Chữ ký đòi **≥ 2 từ**, không phải ≥ 3 ký tự: "abc" qua min-length nhưng không phải họ tên.
+- **Video 10MB, chung bucket `asset-media`, GIỮ NGUYÊN `file_size_limit`.** `file_size_limit` áp theo bucket và là chốt chặn **cứng duy nhất** (`allowed_mime_types` chỉ soi Content-Type do client tự khai) ⇒ nâng trần cho video là mất trần 10MB của ảnh vĩnh viễn. Mảng `video_urls` tách riêng khỏi `image_urls` để giữ bất biến `image_urls[0] = ảnh bìa`. Không nhận `video/quicktime`: `.mov` iPhone thường là HEVC, trình duyệt không giải mã ⇒ upload "thành công" nhưng khung đen.
+**Consequences:**
+- **Ba khiếm khuyết sẵn có buộc phải sửa cùng lúc** vì thay đổi này biến chúng thành lỗi chặn đường: (1) khối ảnh nằm trong `{wantsAuction === "yes"}` ở bước 4 nên luồng "chỉ số hoá" không bao giờ thấy — đã chuyển sang bước 2; (2) `saveDraft` không truyền `postingId` nên mỗi lần lưu đẻ một hàng mới và **không có đường mở lại nháp** — đã nối `postingId` + `postingToWizardValues()`, hàng nháp ở landing bấm vào là mở lại wizard; (3) uploader "Tài liệu bổ sung" kẹt trong cùng nhánh chết — đã đưa về bước 3, cũng là chỗ cho nhóm ký cam kết tự nguyện đính kèm hoá đơn / hợp đồng.
+- Đổi nhóm cấp 1 ⇒ **phải reset `declarationAccepted`/`declarationName`** (`Step1AssetType`), nếu không mang chữ ký sang nhóm dùng giấy tờ. `accepted_at` sinh trong `buildPostingPayload` lúc lưu, KHÔNG nằm trong form state (nếu không phải nhớ xoá ở 3 chỗ).
+- Màn admin duyệt hiện bản cam kết **trên** khối giấy tờ: với nhóm không có sổ đỏ thì đây là căn cứ pháp lý duy nhất để duyệt.
+- `useStorageUpload` gom vòng lặp upload của cả 3 uploader (trước đó chép 3 lần).
+- **Rác storage sẽ tăng**: trước đây ảnh tuỳ chọn nên phiên bỏ dở thường không để lại gì; giờ mọi phiên qua bước 2 đều để lại ≥ 1 tệp vĩnh viễn trong bucket public. Chưa có job dọn.
+- `accepted_at` do client gửi nên vẫn lệch giờ / giả mạo được (`stampConsent` cũng vậy). Bản chặt chẽ là trigger `BEFORE INSERT/UPDATE` ghi đè `now()` — chưa làm.
+
+## 2026-09-06 — Duyệt tài sản: `review_status` tách khỏi `status`, enforce `approve` bằng trigger
+
+**Context:** Chủ tài sản số hoá tài sản vào `asset_postings`, nhưng bảng chỉ có đúng policy own-rows ⇒ **admin query ra 0 dòng**, không có màn nào đọc, không có trạng thái kiểm duyệt, và hồ sơ vừa số hoá xong là gửi ngay cho tổ chức đấu giá được.
+**Decision:**
+- **Cột `review_status` RIÊNG** (pending/approved/rejected) + `reviewed_at/by`, `rejection_reason`, `review_notes` — KHÔNG trộn vào `status` (vòng đời của chủ tài sản: draft→active→matched→contracted). Migration `20260906000001`.
+- **Trigger `asset_postings_review_guard` là chỗ enforce action `approve`** — đây là màn ĐẦU TIÊN thực sự dùng `approve` (action có trong `adminPermissions.ts` từ lâu nhưng 2 màn KYC cũ không enforce ở đâu cả). Không dùng RPC: RLS + trigger đã đủ.
+- RLS UPDATE phải là `update OR approve` — chỉ cấp `approve` mà thiếu `update` thì RLS chặn nguyên dòng, nút bấm không ăn và **không báo lỗi**.
+- Chủ tài sản sửa hồ sơ ĐÃ DUYỆT ⇒ tự rơi về `pending` (duyệt một lần rồi viết lại toàn bộ tài sản là lỗ hổng).
+- Cổng chặn ở `AssetPostingDetail.tsx`: chỉ `status==='active' && review_status==='approved'` mới hiện CTA gửi tổ chức đấu giá. **Chưa public** — không đụng `listings`.
+**Consequences:**
+- Guard nuốt thay đổi của **mọi** caller thiếu quyền `approve`, kể cả **migration và service_role**. Backfill trong chính `20260906000001` đã bị nuốt trong im lặng, phải sửa bằng `20260906000002` với `DISABLE TRIGGER`. Mọi migration sau đụng 5 cột duyệt phải làm vậy.
+- Tên trigger `asset_postings_review_guard` phải giữ: nó chạy trước `asset_postings_updated_at` nhờ thứ tự chữ cái, nếu không `NEW.* IS DISTINCT FROM OLD.*` luôn đúng vì `updated_at` đã đổi.
+- Client phải tự kiểm `review_status` trả về sau update — trigger nuốt chứ không RAISE, nên toast vẫn xanh trong khi DB không đổi (`useAdminAssetPostings.ts`).
+
 ## 2026-08-06 — Danh mục bồi dưỡng rời code thành master data; cách tính = HÌNH THỨC × VAI TRÒ
 
 **Context:** Bản đầu hard-code 5 `cpd_kind`, xếp cứng 4 loại là "hình thức thay thế Đ26.2" ⇒ đạt bất kể giờ. Nhưng `SPEAKER` gộp làm một hai việc khác hẳn: **làm báo cáo viên** hội thảo (Đ26.2, đạt cả năm) và **đi dự** hội thảo (chỉ quy đổi ít giờ) ⇒ ai đi nghe hội thảo cũng được chấm "Đạt". Sai kết luận tuân thủ, không phải sai nhãn.

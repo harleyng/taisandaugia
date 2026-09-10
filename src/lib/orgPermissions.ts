@@ -78,6 +78,9 @@ export const ORG_MODULE_DEFINITIONS: OrgModuleDef[] = [
   { module: "boi-duong", label: "Bồi dưỡng chuyên môn", category: "nhan-su", actions: ["view", "create", "update", "delete", "export"] },
 
   { module: "ho-so-du-tuyen", label: "Hồ sơ dự tuyển", category: "kinh-doanh", actions: ["view", "create", "update", "delete", "export"] },
+  // Hộp thư tài sản chủ sở hữu muốn ký gửi (asset_service_requests). "update" =
+  // được báo giá / từ chối; chỉ "view" thì xem chứ không trả lời được.
+  { module: "yeu-cau-ky-gui", label: "Yêu cầu ký gửi", category: "kinh-doanh", actions: ["view", "update"] },
   // Không có mục sidebar: module này tồn tại để đỡ RLS listings (org_listings_update
   // / org_listings_delete trong 20260805000020_org_rbac.sql).
   { module: "tin-dang", label: "Tin đăng tài sản", category: "kinh-doanh", actions: ["view", "create", "update", "delete"], hiddenFromNav: true },

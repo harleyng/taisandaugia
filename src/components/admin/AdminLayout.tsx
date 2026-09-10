@@ -20,6 +20,7 @@ import {
   KeyRound,
   ScrollText,
   Package,
+  PackageCheck,
   ClipboardList,
   Wallet,
   UserPlus,
@@ -80,6 +81,7 @@ const NAV: NavSection[] = [
   {
     title: "Vận hành & Hỗ trợ",
     items: [
+      { to: "/admin/tai-san", label: "Tài sản tự nguyện", icon: PackageCheck, module: "tai-san-tu-nguyen" },
       { to: "/admin/dich-vu", label: "Dịch vụ", icon: Package, module: "dich-vu" },
       { to: "/admin/cong-viec", label: "Công việc", icon: ListTodo, module: "cong-viec" },
       { to: "/admin/ticket", label: "Ticket", icon: Ticket, module: "lien-he" },

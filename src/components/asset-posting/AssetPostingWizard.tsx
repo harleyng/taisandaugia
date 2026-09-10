@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +9,13 @@ import { Step2GeneralInfo } from "./steps/Step2GeneralInfo";
 import { Step3LegalStatus } from "./steps/Step3LegalStatus";
 import { Step4AuctionNeeds } from "./steps/Step4AuctionNeeds";
 import { StepReview } from "./steps/StepReview";
-import { useCreatePosting, useMatchedOrgs, useSendServiceRequest } from "@/hooks/useAssetPosting";
+import {
+  useCreateBrokerRequest,
+  useCreatePosting,
+  useMatchedOrgs,
+  usePostingDetail,
+  useSendServiceRequest,
+} from "@/hooks/useAssetPosting";
 import {
   wizardSchema,
   wizardDefaults,
@@ -17,6 +23,7 @@ import {
   REQUIREMENT_MSG,
   buildMatchCriteria,
   buildPostingPayload,
+  postingToWizardValues,
   type WizardValues,
 } from "./wizardSchema";
 
@@ -29,6 +36,8 @@ const STEPS = [
 ];
 
 interface AssetPostingWizardProps {
+  /** Mở lại một bản nháp đã lưu. Bỏ trống = tạo hồ sơ mới. */
+  postingId?: string | null;
   /** Quay về danh sách hồ sơ (sau khi hoàn tất). */
   onDone?: () => void;
   /** Thoát giữa chừng, quay về danh sách. */
@@ -40,12 +49,14 @@ interface AssetPostingWizardProps {
  * Lớp phủ `fixed inset-0` phải ĐỤC (bg-muted, không phải bg-muted/30) để che hẳn
  * sidebar + topbar của Cổng chủ tài sản — luồng số hoá là màn tập trung, không menu.
  */
-export function AssetPostingWizard({ onDone, onCancel }: AssetPostingWizardProps) {
+export function AssetPostingWizard({ postingId = null, onDone, onCancel }: AssetPostingWizardProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [shown, setShown] = useState<Record<number, boolean>>({});
   const [phase, setPhase] = useState<"wizard" | "done">("wizard");
   const [sentOrgName, setSentOrgName] = useState<string | null>(null);
+  // Đã gửi yêu cầu "nhờ sàn chọn giúp" — màn hoàn tất nói khác đi.
+  const [sentToPlatform, setSentToPlatform] = useState(false);
 
   const form = useForm<WizardValues>({
     resolver: zodResolver(wizardSchema),
@@ -53,11 +64,22 @@ export function AssetPostingWizard({ onDone, onCancel }: AssetPostingWizardProps
     defaultValues: wizardDefaults,
   });
   const f = form.watch();
+
+  // Nạp bản nháp một lần khi mở lại. Không có bước này thì "Lưu nháp" là bẫy:
+  // ảnh bắt buộc chặn ở bước 2 mà nháp lưu xong không mở lại được.
+  const { data: draft } = usePostingDetail(postingId);
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (!draft?.posting || hydrated.current) return;
+    hydrated.current = true;
+    form.reset(postingToWizardValues(draft.posting));
+  }, [draft, form]);
   const up = (patch: Partial<WizardValues>) =>
     Object.entries(patch).forEach(([k, v]) => form.setValue(k as keyof WizardValues, v as never, { shouldValidate: false }));
 
   const create = useCreatePosting();
   const send = useSendServiceRequest();
+  const broker = useCreateBrokerRequest();
   const { results: orgResults, isLoading: orgLoading } = useMatchedOrgs(buildMatchCriteria(f));
 
   const reqs = useMemo(() => requirements(f), [f]);
@@ -90,35 +112,47 @@ export function AssetPostingWizard({ onDone, onCancel }: AssetPostingWizardProps
       toast.error("Nhập tối thiểu loại tài sản và tên tài sản để lưu nháp.");
       return;
     }
-    create.mutate({ posting: buildPostingPayload(f), status: "draft" }, { onSuccess: () => exit() });
+    create.mutate({ posting: buildPostingPayload(f), status: "draft", postingId: postingId ?? undefined }, { onSuccess: () => exit() });
   };
 
   // Hoàn tất số hoá (status active) → nếu chọn tổ chức thì gửi yêu cầu dịch vụ (luồng riêng).
+  // Ba lối kết thúc: chỉ số hoá · gửi thẳng một tổ chức · nhờ sàn chọn giúp.
   const finish = () => {
     if (missing.length) {
       setShown({ 1: true, 2: true, 3: true, 4: true });
       return;
     }
+
+    const done = (orgName: string | null, viaPlatform: boolean) => {
+      setSentOrgName(orgName);
+      setSentToPlatform(viaPlatform);
+      setPhase("done");
+      window.scrollTo({ top: 0 });
+    };
+
     create.mutate(
-      { posting: buildPostingPayload(f), status: "active" },
+      { posting: buildPostingPayload(f), status: "active", postingId: postingId ?? undefined },
       {
         onSuccess: ({ postingId }) => {
-          if (f.wantsAuction === "yes" && f.chosenOrg && chosenScore != null) {
+          const wants = f.wantsAuction === "yes";
+
+          if (wants && f.orgMode === "self" && f.chosenOrg && chosenScore != null) {
             send.mutate(
               { postingId, orgId: f.chosenOrg, matchScore: chosenScore },
-              {
-                onSuccess: () => {
-                  setSentOrgName(chosenOrgName);
-                  setPhase("done");
-                  window.scrollTo({ top: 0 });
-                },
-              },
+              { onSuccess: () => done(chosenOrgName, false) },
             );
-          } else {
-            setSentOrgName(null);
-            setPhase("done");
-            window.scrollTo({ top: 0 });
+            return;
           }
+
+          if (wants && f.orgMode === "platform") {
+            broker.mutate(
+              { postingId, note: f.brokerNote },
+              { onSuccess: () => done(null, true) },
+            );
+            return;
+          }
+
+          done(null, false);
         },
       },
     );
@@ -129,10 +163,11 @@ export function AssetPostingWizard({ onDone, onCancel }: AssetPostingWizardProps
     setShown({});
     setStep(1);
     setSentOrgName(null);
+    setSentToPlatform(false);
     setPhase("wizard");
   };
 
-  const busy = create.isPending || send.isPending;
+  const busy = create.isPending || send.isPending || broker.isPending;
 
   // ─── Màn hoàn tất ─────────────────────────────────────────────────────────
   if (phase === "done") {
@@ -145,12 +180,22 @@ export function AssetPostingWizard({ onDone, onCancel }: AssetPostingWizardProps
               <Check className="h-8 w-8" strokeWidth={2.4} />
             </div>
             <h1 className="text-2xl font-bold text-foreground mb-2">
-              {sentOrgName ? "Đã số hoá & gửi yêu cầu" : "Đã số hoá tài sản"}
+              {sentOrgName
+                ? "Đã số hoá & gửi yêu cầu"
+                : sentToPlatform
+                  ? "Đã gửi yêu cầu cho sàn"
+                  : "Đã số hoá tài sản"}
             </h1>
             <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
               {sentOrgName ? (
                 <>
                   Hồ sơ <b className="text-foreground">{f.title}</b> đã gửi tới <b className="text-foreground">{sentOrgName}</b>.
+                </>
+              ) : sentToPlatform ? (
+                <>
+                  Sàn đang tìm tổ chức đấu giá phù hợp cho{" "}
+                  <b className="text-foreground">{f.title}</b>. Báo giá của các tổ chức sẽ hiện trong trang hồ sơ để bạn
+                  so sánh và chọn.
                 </>
               ) : (
                 <>

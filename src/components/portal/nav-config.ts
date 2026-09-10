@@ -13,6 +13,7 @@ import {
   UserPlus,
   KeyRound,
   GraduationCap,
+  Inbox,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -69,6 +70,12 @@ export const NAV_SECTIONS: NavSection[] = [
     icon: Target,
     href: '/portal/ho-so-du-tuyen',
     module: 'ho-so-du-tuyen',
+  },
+  {
+    label: 'Yêu cầu ký gửi',
+    icon: Inbox,
+    href: '/portal/yeu-cau-ky-gui',
+    module: 'yeu-cau-ky-gui',
   },
   {
     label: 'Credit & Thanh toán',

@@ -16,14 +16,17 @@ import { toast } from "sonner";
 import { useSuppliers, useDeleteSupplier, isSupplierInUseError } from "@/hooks/useSuppliers";
 import { useServices } from "@/hooks/useServices";
 import { usePartners } from "@/hooks/usePartners";
+import { useAllSupplierContracts } from "@/hooks/useSupplierContracts";
 import { SupplierTable } from "@/components/admin/suppliers/SupplierTable";
 import { SupplierFormDialog } from "@/components/admin/suppliers/SupplierFormDialog";
 import type { Supplier } from "@/types/supplier";
+import type { SupplierContract } from "@/types/supplierContract";
 
 export default function AdminSuppliersPage() {
   const { data: suppliers, isLoading } = useSuppliers();
   const { data: services } = useServices();
   const { data: partners } = usePartners();
+  const { data: contracts } = useAllSupplierContracts();
   const del = useDeleteSupplier();
 
   const [search, setSearch] = useState("");
@@ -45,6 +48,15 @@ export default function AdminSuppliersPage() {
     () => new Set((partners ?? []).filter((p) => p.supplier_id).map((p) => p.supplier_id as string)),
     [partners],
   );
+
+  // Gom hợp đồng theo đối tác một lần thay vì mỗi dòng một query.
+  const contractsBySupplier = useMemo(() => {
+    const map: Record<string, SupplierContract[]> = {};
+    for (const c of contracts ?? []) {
+      (map[c.supplier_id] ??= []).push(c);
+    }
+    return map;
+  }, [contracts]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -113,6 +125,7 @@ export default function AdminSuppliersPage() {
         isLoading={isLoading}
         usageById={usageById}
         shownOnMarketplace={shownOnMarketplace}
+        contractsBySupplier={contractsBySupplier}
         onEdit={openEdit}
         onDelete={setDeleteTarget}
       />

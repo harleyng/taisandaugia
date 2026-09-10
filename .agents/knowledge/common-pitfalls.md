@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-09-06 — Trigger "nuốt thay đổi" chặn cả migration và service_role
+
+`asset_postings_review_guard` gán trả 5 cột duyệt về `OLD` khi caller không có quyền `tai-san-tu-nguyen`.`approve`. Nó **không RAISE** — đó là chủ ý (chủ tài sản sửa hồ sơ là việc hợp lệ, chỉ phần kết luận duyệt là không được đụng). Hệ quả gài bẫy:
+
+- **Migration chạy với `auth.uid()` NULL** ⇒ `admin_has_permission()` false ⇒ mọi `UPDATE ... SET review_status` trong migration **bị nuốt trong im lặng**. Đúng chuyện đã xảy ra ở `20260906000001` (câu backfill đặt sau `CREATE TRIGGER`), phải sửa bằng `20260906000002`:
+  ```sql
+  ALTER TABLE public.asset_postings DISABLE TRIGGER asset_postings_review_guard;
+  UPDATE ...;
+  ALTER TABLE public.asset_postings ENABLE  TRIGGER asset_postings_review_guard;
+  ```
+  Hoặc đơn giản hơn: **đặt backfill TRƯỚC `CREATE TRIGGER`**.
+- **Client cũng phải tự kiểm.** `.update()` trả về dòng đã đổi *nội dung* nhưng `review_status` giữ nguyên ⇒ không có `error`, toast vẫn xanh. `useReviewAssetPosting` so `review_status` trả về với giá trị mong đợi rồi mới báo thành công.
+- **Tên trigger là load-bearing:** phải sắp trước `asset_postings_updated_at` theo thứ tự chữ cái (Postgres chạy trigger cùng loại theo tên). Đổi tên ⇒ `updated_at` đã bị đổi khi so `NEW.* IS DISTINCT FROM OLD.*` ⇒ hồ sơ đã duyệt rơi về `pending` sau *mọi* UPDATE.
+
 ## 2026-08-06 — Đừng đổ đoạn văn hướng dẫn ra UI: dùng `HelpHint` (dấu "?" + tooltip)
 
 Tab "Chi nhánh / AMC" từng có một đoạn 4 dòng dưới bảng giải thích "Hệ thống suy ra" nghĩa là gì, cách kéo thả, xóa cụm có mất chi nhánh không. **Chữ giải thích chiếm chỗ vĩnh viễn nhưng chỉ hữu ích ở lần đầu** — đọc vài lần là thành nhiễu, và tệ hơn: người dùng học được thói quen bỏ qua khối chữ mờ đó, nên sau này có cảnh báo THẬT ở cùng vị trí cũng không ai đọc.
@@ -117,10 +131,11 @@ Báo cáo admin phải `GROUP BY` trên toàn bộ tin nên không thể suy sau
 Schema changes are two steps, both run by **you** (never ask the user):
 ```bash
 npx supabase db push            # or --include-all for out-of-order files
-npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integrations/supabase/types.ts
+npx supabase gen types typescript --project-id vewtnkewyawmkpeymdot > src/integrations/supabase/types.ts
 ```
-- `src/integrations/supabase/types.ts` is **auto-generated** — any hand-edit is overwritten on the next `gen types`. If creds are unavailable and you hand-patch types to unblock the build (as done for `asset_postings` in `20260621000001`), treat it as temporary debt: the migration file is the source of truth, and the hand-edit must be reconciled once the migration is actually pushed.
-- Migration `20260621000001_asset_postings.sql` is **NOT yet pushed** (no Supabase creds in the sandbox). Any code reading `asset_postings` / `asset_service_requests` will 404 against the live DB until it is. Check `npx supabase migration list` before assuming a table exists remotely.
+- `src/integrations/supabase/types.ts` is **auto-generated** — any hand-edit is overwritten on the next `gen types`. If creds are unavailable and you hand-patch types to unblock the build, treat it as temporary debt: the migration file is the source of truth, and the hand-edit must be reconciled once the migration is actually pushed.
+- ~~Migration `20260621000001_asset_postings.sql` is NOT yet pushed~~ — **stale, corrected 2026-09-06.** `npx supabase migration list` shows it local+remote; `asset_postings` exists in the live DB. Don't trust a "not pushed" note in this file over `migration list` — run the command.
+- Đọc số liệu ra `npx supabase db query --linked --file <f>` (KHÔNG có `db execute`; thiếu `--linked` là nó nối vào Postgres **local** rồi báo ECONNREFUSED).
 - Every new table needs the `"own rows"` RLS policy (`USING (auth.uid() = user_id)`) in the same migration — a table without RLS is either fully open or fully closed, both wrong.
 
 ### RLS "own rows" — reads must be user-scoped, writes must set `user_id`
@@ -178,3 +193,44 @@ Từ `20260806000040` còn một thứ BẮT BUỘC nạp kèm: **danh mục b�
 className={urgent ? 'border-destructive/40 bg-destructive/5' : 'border-warning/40 bg-warning/5'}
 ```
 
+
+## `asset_postings`: trigger duyệt NUỐT thay đổi của mọi caller không có quyền `approve`
+
+`guard_asset_posting_review()` (`20260906000001`) là `BEFORE UPDATE`. Với caller không có `admin_has_permission('tai-san-tu-nguyen','approve')` nó gán trả 5 cột duyệt về giá trị cũ, **và** nếu hồ sơ đang `approved` thì đá luôn về `pending`:
+
+```sql
+IF OLD.review_status = 'approved' AND NEW.* IS DISTINCT FROM OLD.* THEN
+  NEW.review_status := 'pending'; ...
+```
+
+Ba điều dễ mất máu:
+
+1. **`SECURITY DEFINER` KHÔNG cứu được.** `auth.uid()` bên trong hàm definer vẫn là uid của **người gọi**, nên RPC chạy dưới danh nghĩa chủ tài sản vẫn bị guard. Vì vậy luồng ký gửi **không ghi gì vào `asset_postings`** — quan hệ với tổ chức nằm hoàn toàn trong `asset_service_requests`, và "tổ chức đã chốt" suy ra từ yêu cầu `status='selected'`.
+2. **Migration và `service_role` cũng bị nuốt** (`auth.uid()` là NULL). Muốn ghi 5 cột duyệt từ phía server thì phải `ALTER TABLE ... DISABLE TRIGGER` tường minh rồi bật lại — `20260906000002` sinh ra chỉ vì bài học này.
+3. **Đổi tên trigger là đổi hành vi.** Postgres chạy trigger cùng loại theo THỨ TỰ TÊN; `asset_postings_review_guard` < `asset_postings_updated_at` nên guard chạy trước, lúc `updated_at` chưa bị đụng. Đổi tên cho nó chạy sau ⇒ `NEW.* IS DISTINCT FROM OLD.*` luôn đúng ⇒ mọi UPDATE đá hồ sơ đã duyệt về `pending`.
+
+Không có lỗi nào nổ ra trong cả ba trường hợp — UPDATE báo thành công, dữ liệu lặng lẽ không đổi.
+
+## RLS lọc theo DÒNG, không giấu được CỘT
+
+Lặp lại lần thứ ba trong repo (`public_org_auctioneers`, `list_tool_showcases`, và nay `org_service_requests`): khi một bên được xem *một phần* của hàng, đừng nới policy — chiếu qua RPC `SECURITY DEFINER` và liệt kê tay các cột trả về. Tổ chức đấu giá cần xem tài sản để định giá nhưng **không** được thấy danh tính chủ tài sản, địa chỉ số nhà (`address`/`ward`) hay `ownership_proof_urls`. Thêm cột vào màn tổ chức = phải mở tương ứng trong RPC, và đó chính là chỗ để dừng lại tự hỏi có nên mở không.
+
+## Cơ hội hoa hồng: đối tác có thể nằm ở DỊCH VỤ chứ không ở CƠ HỘI
+
+`opportunities.supplier_id` (thêm ở `20260907000003`) chỉ được set bởi luồng **ký gửi**. Luồng **công cụ đấu giá** (`request_tool_service`) không bao giờ set nó: dịch vụ của nó là `supplier_scope='fixed'`, đối tác nằm trên `services.supplier_id` và trigger `orders_sync_kind_and_commission` tự điền xuống đơn.
+
+Vì vậy trong bất kỳ chỗ nào cần "đối tác của cơ hội này", phải dùng:
+
+```sql
+COALESCE(opportunities.supplier_id, services.supplier_id)
+```
+
+`20260907000003` đã chặn cứng `supplier_id IS NULL` và **khoá oan 8 cơ hội đang mở** của luồng công cụ; `20260907000004` sửa lại. Chỉ chặn khi CẢ HAI đều rỗng — đó mới thật sự là dịch vụ `per_order` chưa chọn đối tác.
+
+## Bucket private: `getPublicUrl` trả link trông hợp lệ nhưng luôn 400
+
+`contract-documents` là bucket đầu tiên trong repo có `public = false` (mọi bucket trước — `partner-logos`, `asset-media` — đều public-read). Với bucket private:
+
+- Lưu **đường dẫn** trong DB (`supplier_contracts.doc_path`), không lưu URL.
+- Mở file bằng `createSignedUrl(path, ttl)`; `getPublicUrl` **không báo lỗi**, nó trả về một URL đúng cú pháp mà mọi request tới đó đều 400.
+- Policy `SELECT` cũng phải gác `has_role(...,'ADMIN')` — `public = false` chặn đường CDN ẩn danh, nhưng client đã đăng nhập vẫn đi qua RLS của `storage.objects`.

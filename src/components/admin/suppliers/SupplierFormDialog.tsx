@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { useUpsertSupplier } from "@/hooks/useSuppliers";
 import { groupNumber, parseNumber } from "@/lib/advertising/slug";
+import { AuctionOrgPicker } from "./AuctionOrgPicker";
 import type { Supplier, SupplierStatus, SupplierType } from "@/types/supplier";
 import type { CommissionType } from "@/types/orders";
 
@@ -43,6 +44,7 @@ const EMPTY = {
   bank_account: "",
   commission_type: NO_COMMISSION as CommissionType | typeof NO_COMMISSION,
   commission_rate: 0,
+  auction_org_id: null as string | null,
   note: "",
   status: "active" as SupplierStatus,
 };
@@ -66,6 +68,7 @@ export function SupplierFormDialog({ open, onOpenChange, editing }: Props) {
         bank_account: editing.bank_account ?? "",
         commission_type: editing.default_commission_type ?? NO_COMMISSION,
         commission_rate: Number(editing.default_commission_rate ?? 0),
+        auction_org_id: editing.auction_org_id,
         note: editing.note ?? "",
         status: editing.status,
       });
@@ -101,6 +104,7 @@ export function SupplierFormDialog({ open, onOpenChange, editing }: Props) {
         bank_account: form.bank_account.trim() || null,
         default_commission_type: hasCommission ? (form.commission_type as CommissionType) : null,
         default_commission_rate: hasCommission ? form.commission_rate : null,
+        auction_org_id: form.auction_org_id,
         note: form.note.trim() || null,
         status: form.status,
       });
@@ -154,6 +158,19 @@ export function SupplierFormDialog({ open, onOpenChange, editing }: Props) {
             <div className="col-span-2"><Label>Địa chỉ</Label><Input value={form.address} onChange={(e) => set("address", e.target.value)} /></div>
             <div><Label>Ngân hàng</Label><Input value={form.bank_name} onChange={(e) => set("bank_name", e.target.value)} /></div>
             <div><Label>Số tài khoản</Label><Input value={form.bank_account} onChange={(e) => set("bank_account", e.target.value)} /></div>
+          </div>
+
+          {/* Gắn tổ chức đấu giá — cây cầu để tự tra hợp đồng lúc chốt ký gửi */}
+          <div className="rounded-xl border border-border p-4">
+            <p className="text-sm font-medium text-foreground mb-1">Tổ chức đấu giá trên sàn</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Gắn hồ sơ này với một tổ chức trong danh bạ để hệ thống tự tra hợp đồng khi tổ
+              chức đó thắng một yêu cầu ký gửi. Không gắn thì hoa hồng phải nhập tay.
+            </p>
+            <AuctionOrgPicker
+              value={form.auction_org_id}
+              onChange={(v) => set("auction_org_id", v)}
+            />
           </div>
 
           {/* Hoa hồng mặc định — CHỈ để form đơn điền sẵn, không phải fallback lúc chạy */}

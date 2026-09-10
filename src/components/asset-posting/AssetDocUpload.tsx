@@ -1,11 +1,9 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { FileText, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useStorageUpload } from "./useStorageUpload";
 
-const BUCKET = "asset-docs";
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 const ACCEPT = "application/pdf,image/jpeg,image/png,image/webp";
 
@@ -21,41 +19,24 @@ const fileNameFromPath = (path: string) => path.split("/").pop() ?? path;
 
 /** Upload nhiều tài liệu vào bucket private `asset-docs`, folder theo auth.uid(). */
 export function AssetDocUpload({ value, onChange, prefix = "docs" }: AssetDocUploadProps) {
-  const { userId } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const { uploading, upload } = useStorageUpload({
+    bucket: "asset-docs",
+    maxSize: MAX_SIZE,
+    folder: prefix,
+    returns: "path",
+    label: "tài liệu",
+  });
 
-  const handleFiles = async (files: FileList) => {
-    if (!userId) {
-      toast.error("Bạn cần đăng nhập để tải tài liệu.");
-      return;
-    }
-    setUploading(true);
-    const uploaded: string[] = [];
-    for (const file of Array.from(files)) {
-      if (file.size > MAX_SIZE) {
-        toast.error(`${file.name}: vượt quá 10MB`);
-        continue;
-      }
-      const ext = file.name.split(".").pop() ?? "pdf";
-      const path = `${userId}/${prefix}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
-      if (error) {
-        toast.error(`Lỗi tải ${file.name}: ${error.message}`);
-        continue;
-      }
-      uploaded.push(path);
-    }
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    e.target.value = "";
+    if (!files?.length) return;
+    const uploaded = await upload(files);
     if (uploaded.length) {
       onChange([...value, ...uploaded]);
       toast.success(`Đã tải lên ${uploaded.length} tài liệu`);
     }
-    setUploading(false);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) handleFiles(e.target.files);
-    e.target.value = "";
   };
 
   const removeAt = (idx: number) => onChange(value.filter((_, i) => i !== idx));

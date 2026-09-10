@@ -39,6 +39,8 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminKYCPage = lazy(() => import("./pages/AdminKYCPage"));
 const AdminKYCDetail = lazy(() => import("./pages/admin/AdminKYCDetail"));
 const AdminAssetOwnerKYCPage = lazy(() => import("./pages/admin/AdminAssetOwnerKYCPage"));
+const AdminAssetPostingsPage = lazy(() => import("./pages/admin/asset-postings/AdminAssetPostingsPage"));
+const AdminAssetPostingDetail = lazy(() => import("./pages/admin/asset-postings/AdminAssetPostingDetail"));
 const AdminAssetOwnerKYCDetail = lazy(() => import("./pages/admin/AdminAssetOwnerKYCDetail"));
 const AdminArticlesPage = lazy(() => import("./pages/admin/AdminArticlesPage"));
 const AdminArticleEditor = lazy(() => import("./pages/admin/AdminArticleEditor"));
@@ -55,6 +57,7 @@ const AdminCustomersPage = lazy(() => import("./pages/admin/customers/AdminCusto
 const AdminCustomerDetail = lazy(() => import("./pages/admin/customers/AdminCustomerDetail"));
 const AdminServicesPage = lazy(() => import("./pages/admin/services/AdminServicesPage"));
 const AdminSuppliersPage = lazy(() => import("./pages/admin/suppliers/AdminSuppliersPage"));
+const AdminSupplierDetail = lazy(() => import("./pages/admin/suppliers/AdminSupplierDetail"));
 const AdminLeadsPage = lazy(() => import("./pages/admin/leads/AdminLeadsPage"));
 const AdminLeadDetail = lazy(() => import("./pages/admin/leads/AdminLeadDetail"));
 const AdminOpportunitiesPage = lazy(() => import("./pages/admin/opportunities/AdminOpportunitiesPage"));
@@ -94,6 +97,7 @@ const TuTaiLieuPage = lazy(() => import("./pages/portal/nang-luc/TuTaiLieuPage")
 const CoSoVatChatPage = lazy(() => import("./pages/portal/nang-luc/CoSoVatChatPage"));
 const LichSuDauGiaPage = lazy(() => import("./pages/portal/nang-luc/LichSuDauGiaPage"));
 const TaiChinhPage = lazy(() => import("./pages/portal/nang-luc/TaiChinhPage"));
+const YeuCauKyGuiPage = lazy(() => import("./pages/portal/YeuCauKyGuiPage"));
 const PortalCreditsPage = lazy(() => import("./pages/portal/PortalCreditsPage"));
 const ApplicationsPage = lazy(() => import("./pages/ApplicationsPage"));
 const ApplicationEditPage = lazy(() => import("./pages/ApplicationEditPage"));
@@ -299,6 +303,16 @@ const App = () => (
                   <Route path="ho-so-du-tuyen/new" element={<ApplicationEditPage />} />
                   <Route path="ho-so-du-tuyen/:id" element={<ApplicationEditPage />} />
 
+                  {/* Yêu cầu ký gửi tài sản từ chủ sở hữu */}
+                  <Route
+                    path="yeu-cau-ky-gui"
+                    element={
+                      <PortalPermissionRoute module="yeu-cau-ky-gui">
+                        <YeuCauKyGuiPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+
                   {/* Credit */}
                   <Route path="credits" element={<PortalCreditsPage />} />
 
@@ -352,6 +366,22 @@ const App = () => (
                   <Route path="kyc/:id" element={<AdminKYCDetail />} />
                   <Route path="chu-tai-san" element={<AdminAssetOwnerKYCPage />} />
                   <Route path="chu-tai-san/:type/:id" element={<AdminAssetOwnerKYCDetail />} />
+                  <Route
+                    path="tai-san"
+                    element={
+                      <AdminPermissionRoute module="tai-san-tu-nguyen">
+                        <AdminAssetPostingsPage />
+                      </AdminPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="tai-san/:id"
+                    element={
+                      <AdminPermissionRoute module="tai-san-tu-nguyen">
+                        <AdminAssetPostingDetail />
+                      </AdminPermissionRoute>
+                    }
+                  />
                   <Route path="tin-tuc" element={<AdminArticlesPage />} />
                   <Route path="tin-tuc/new" element={<AdminArticleEditor />} />
                   <Route path="tin-tuc/danh-muc" element={<AdminCategoriesPage />} />
@@ -374,6 +404,7 @@ const App = () => (
                   <Route path="khach-hang" element={<AdminPermissionRoute module="khach-hang"><AdminCustomersPage /></AdminPermissionRoute>} />
                   <Route path="khach-hang/:id" element={<AdminPermissionRoute module="khach-hang"><AdminCustomerDetail /></AdminPermissionRoute>} />
                   <Route path="doi-tac" element={<AdminPermissionRoute module="nha-cung-cap"><AdminSuppliersPage /></AdminPermissionRoute>} />
+                  <Route path="doi-tac/:id" element={<AdminPermissionRoute module="nha-cung-cap"><AdminSupplierDetail /></AdminPermissionRoute>} />
                   <Route path="dich-vu" element={<AdminPermissionRoute module="dich-vu"><AdminServicesPage /></AdminPermissionRoute>} />
                   <Route path="don-hang" element={<AdminPermissionRoute module="don-hang"><AdminOrdersPage /></AdminPermissionRoute>} />
                   <Route path="doi-tac-tren-san" element={<AdminPartnersPage />} />

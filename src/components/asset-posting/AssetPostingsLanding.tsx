@@ -2,6 +2,7 @@ import { Loader2, Plus, UploadCloud, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { ASSET_POSTING_STATUS_LABELS, type AssetPostingStatus } from "@/types/asset-posting";
+import { REVIEW_STATUS_BADGE_CLASS, REVIEW_STATUS_LABELS } from "@/lib/asset-posting/reviewStatus";
 import { formatPrice } from "@/utils/formatters";
 import { useMyPostings } from "@/hooks/useAssetPosting";
 
@@ -24,10 +25,12 @@ const STATUS_STYLE: Record<AssetPostingStatus, string> = {
 interface AssetPostingsLandingProps {
   onCreate: () => void;
   onSelect: (id: string) => void;
+  /** Bản nháp mở thẳng lại wizard — màn chi tiết không có gì để xem. */
+  onResumeDraft: (id: string) => void;
 }
 
 /** Trang "Số hoá tài sản": danh sách hồ sơ đấu giá của tôi + CTA tạo mới. */
-export function AssetPostingsLanding({ onCreate, onSelect }: AssetPostingsLandingProps) {
+export function AssetPostingsLanding({ onCreate, onSelect, onResumeDraft }: AssetPostingsLandingProps) {
   const { data: postings, isLoading } = useMyPostings();
 
   return (
@@ -72,11 +75,12 @@ export function AssetPostingsLanding({ onCreate, onSelect }: AssetPostingsLandin
           {postings.map((p) => {
             const Icon = PARENT_ICON[p.parent_slug] ?? UploadCloud;
             const location = [p.district, p.province].filter(Boolean).join(", ");
+            const isDraft = p.status === "draft";
             return (
               <button
                 key={p.id}
                 type="button"
-                onClick={() => onSelect(p.id)}
+                onClick={() => (isDraft ? onResumeDraft(p.id) : onSelect(p.id))}
                 className="w-full text-left flex items-center gap-3.5 rounded-2xl border border-border bg-card p-3.5 hover:border-primary/40 transition-colors"
               >
                 <div className="h-11 w-11 rounded-xl bg-primary/5 flex items-center justify-center shrink-0">
@@ -92,17 +96,30 @@ export function AssetPostingsLanding({ onCreate, onSelect }: AssetPostingsLandin
                 </div>
 
                 <div className="hidden sm:block text-right shrink-0">
-                  <p className="text-sm font-semibold text-foreground">
-                    {p.starting_price ? formatPrice(p.starting_price, "TOTAL") : "Nhờ định giá"}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">Giá khởi điểm</p>
+                  {isDraft ? (
+                    <p className="text-sm font-semibold text-primary">Tiếp tục số hoá</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-foreground">
+                        {p.starting_price ? formatPrice(p.starting_price, "TOTAL") : "Nhờ định giá"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">Giá khởi điểm</p>
+                    </>
+                  )}
                 </div>
 
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_STYLE[p.status]}`}
-                >
-                  {ASSET_POSTING_STATUS_LABELS[p.status]}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_STYLE[p.status]}`}
+                  >
+                    {ASSET_POSTING_STATUS_LABELS[p.status]}
+                  </span>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${REVIEW_STATUS_BADGE_CLASS[p.review_status]}`}
+                  >
+                    {REVIEW_STATUS_LABELS[p.review_status]}
+                  </span>
+                </div>
 
                 <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0 hidden sm:block" />
               </button>

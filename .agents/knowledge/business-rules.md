@@ -210,6 +210,25 @@ Never invent a status outside `{ PENDING_KYC, APPROVED, REJECTED }`. Transitions
 
 ---
 
+## Tài sản tự nguyện — `asset_postings.review_status` (fixed set)
+
+**HAI cột trạng thái, đừng trộn.** `status` là vòng đời của **chủ tài sản**; `review_status` là kết luận của **admin**.
+
+```
+status        : draft → active → matched → contracted (│ cancelled)   ← chủ tài sản
+review_status : pending ──(admin)──▶ approved                          ← admin
+                        └─────────▶ rejected ──(mở lại)──▶ pending
+```
+
+- Mặc định `pending` cho **mọi** hồ sơ mới, kể cả `draft`. Admin xem được cả hồ sơ nháp (`/admin/tai-san`).
+- **Cổng chặn:** chỉ `status='active' AND review_status='approved'` mới được gửi cho tổ chức đấu giá (`AssetPostingDetail.tsx`). Chưa duyệt ⇒ banner chờ; bị từ chối ⇒ hiện `rejection_reason`.
+- **Chủ tài sản sửa hồ sơ đã duyệt ⇒ tự về `pending`.** Duyệt một lần rồi viết lại toàn bộ tài sản là lỗ hổng, không phải tính năng.
+- `review_notes` là ghi chú **nội bộ** — không bao giờ render ở phía chủ tài sản. `rejection_reason` thì có.
+- Quyền: module `tai-san-tu-nguyen` (`view`/`update`/`approve`/`export`), nhóm **Vận hành & Hỗ trợ**, nhãn "Tài sản tự nguyện" (đổi từ `duyet-tai-san` ở `20260906200001`). Mã này nằm trong 2 policy RLS + `guard_asset_posting_review()` + `admin_dispatch_service_requests()` — đổi mã phải đổi cả 4 chỗ trong DB. `approve` được enforce ở **trigger DB**, không chỉ ở UI — đây là module đầu tiên thực sự dùng action `approve`.
+- **Chưa public:** hồ sơ đã duyệt KHÔNG lên `/listings`. `asset_postings` và `listings` vẫn là hai thế giới tách rời.
+
+---
+
 ## Organization roles & permissions
 
 Roles are **per-organization and user-creatable** (`org_roles`, since `20260805000020`). The old global `organization_roles` table — three fixed names + an `ALL_PERMISSIONS` JSONB that no code ever read — has been **dropped**; so has `has_org_role()`.
@@ -257,3 +276,19 @@ USING (auth.uid() = user_id)
 - Real Supabase is the backend — build features against the typed client + React Query, not mock data.
 - `src/lib/mock*.ts` (mockAuctionSessions, mockAuctionCompanies, mockBdsReport, mockOppReport, mockOutcomesReport, mockCredits) are **scaffolding only** — do not build new features on them.
 - Reports (`/report`, `/report/:slug`, `/report/deep/outcomes`) are **Recharts dashboards**, not exports. Deep-report periods are the paywalled unit (see unlock semantics). There is no Excel/report-file export surface.
+
+## Ký gửi tài sản (chủ tài sản → tổ chức đấu giá)
+
+Hồ sơ đã số hoá (`status='active'`) **và đã duyệt** (`review_status='approved'`) mới gửi được cho tổ chức. Hai lối, cùng đích:
+
+| Lối | Đường đi |
+|---|---|
+| **Tự chọn** (`orgMode='self'`) | Chủ tài sản chọn 1 tổ chức → `asset_service_requests` (`origin='owner'`, `sent`) |
+| **Nhờ sàn chọn giúp** (`orgMode='platform'`) | `asset_broker_requests` (`pending`) → admin fan-out N tổ chức (`origin='platform'`, broker→`sourcing`) → tổ chức báo giá (`quoted`, broker→`quoted`) → chủ tài sản chốt 1 (`selected`) |
+
+**Luật bất biến:**
+- **Chỉ gửi tới tổ chức ĐÃ CÓ TÀI KHOẢN** (`organizations.kyc_status='APPROVED'` + `auction_org_id` trỏ danh bạ). Áp cho cả hai lối — `useMatchedOrgs` mặc định `onlyAccounted: true`, và `admin_dispatch_service_requests` bỏ qua tổ chức không đạt. Gửi cho tổ chức không có tài khoản = yêu cầu không ai trả lời được.
+- **Chốt một báo giá là cam kết**: `owner_select_service_quote` đặt dòng đó `selected`, đóng anh em cùng hồ sơ (`sent/seen/quoted`) thành `not_selected`, và mở lead `source='asset_brokerage'` + cơ hội `stage='selling'` (dịch vụ "Môi giới ký gửi tài sản", `variant_key='broker_consignment'`).
+- **Miễn phí với chủ tài sản** — không trừ credit, không đụng `credit_transactions`. Doanh thu ghi nhận khi admin chốt thắng cơ hội (`admin_win_opportunity`), amount do admin nhập.
+- Máy trạng thái nằm ở RPC, không ở client: tổ chức không có UPDATE qua RLS, chủ tài sản chỉ tự `withdrawn` được.
+- Báo giá gồm thù lao % · phí dịch vụ · giá khởi điểm đề xuất · thời gian dự kiến · ghi chú · 1 tệp (bucket `quote-docs`, path `{organization_id}/{request_id}/{file}`). Tổ chức sửa lại báo giá được cho tới khi chủ tài sản chốt.

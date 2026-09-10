@@ -30,7 +30,11 @@ export function Step1AssetType({ f, up, errs }: StepProps) {
                 <button
                   key={c.slug}
                   type="button"
-                  onClick={() => up({ parentSlug: c.slug, childSlug: "", deltaFields: {} })}
+                  // Reset cả cam kết: ký ở máy móc rồi đổi sang bất động sản mà giữ chữ ký
+                  // là mang một bản cam kết đã ký sang nhóm không dùng nó.
+                  onClick={() =>
+                    up({ parentSlug: c.slug, childSlug: "", deltaFields: {}, declarationAccepted: false, declarationName: "" })
+                  }
                   className={`relative bg-card border-[1.5px] rounded-xl p-3.5 flex flex-col items-center gap-2 transition ${
                     on ? "border-primary bg-primary/5 ring-[3px] ring-primary/10" : "border-border hover:border-primary hover:bg-primary/5"
                   }`}

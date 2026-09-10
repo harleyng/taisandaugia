@@ -4,7 +4,8 @@ import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { getDeltaFields } from "@/constants/asset-delta-fields";
 import { AUCTION_FORMAT_LABELS, type AuctionFormat } from "@/types/asset-posting";
 import { groupNumber } from "../format";
-import { filled, type Requirement, type WizardValues } from "../wizardSchema";
+import { filled, signatureFilled, type Requirement, type WizardValues } from "../wizardSchema";
+import { getProofMode } from "@/constants/asset-posting-rules";
 
 interface StepReviewProps {
   f: WizardValues;
@@ -21,6 +22,7 @@ const CHILD_NAME: Record<string, string> = Object.fromEntries(
 /** Bước 5: xem lại toàn bộ hồ sơ, nhảy sửa từng khối, cảnh báo mục còn thiếu. */
 export function StepReview({ f, jump, missing, chosenOrgName }: StepReviewProps) {
   const deltas = getDeltaFields(f.childSlug);
+  const proofMode = getProofMode(f.parentSlug);
   const legal = (x: string) => (x === "yes" ? "Có" : x === "no" ? "Không" : "");
 
   const Blk = ({ step, title, children }: { step: number; title: string; children: ReactNode }) => {
@@ -69,6 +71,7 @@ export function StepReview({ f, jump, missing, chosenOrgName }: StepReviewProps)
 
       <Blk step={2} title="Thông tin & thông số">
         <V k="Tên tài sản" v={f.title} />
+        <V k="Hình ảnh" v={f.imageUrls.length ? `${f.imageUrls.length} ảnh${f.videoUrls.length ? ` · ${f.videoUrls.length} video` : ""}` : ""} />
         <V k="Khu vực" v={[f.address, f.ward, f.district, f.province].filter(Boolean).join(", ")} />
         {deltas.map((d) => {
           const raw = f.deltaFields[d.key];
@@ -79,7 +82,15 @@ export function StepReview({ f, jump, missing, chosenOrgName }: StepReviewProps)
       </Blk>
 
       <Blk step={3} title="Pháp lý">
-        <V k="Giấy tờ sở hữu" v={f.ownershipProofUrls.length ? `${f.ownershipProofUrls.length} tệp` : ""} />
+        {proofMode === "documents" ? (
+          <V k="Giấy tờ sở hữu" v={f.ownershipProofUrls.length ? `${f.ownershipProofUrls.length} tệp` : ""} />
+        ) : (
+          <V
+            k="Bản cam kết"
+            v={f.declarationAccepted && signatureFilled(f.declarationName) ? `Đã ký — ${f.declarationName.trim()}` : ""}
+          />
+        )}
+        <V k="Tài liệu bổ sung" v={f.docUrls.length ? `${f.docUrls.length} tài liệu` : ""} />
         <V k="Tranh chấp" v={legal(f.hasDispute)} />
         <V k="Thế chấp" v={legal(f.hasMortgage)} />
         <V k="Kê biên" v={legal(f.isSeized)} />
@@ -97,7 +108,6 @@ export function StepReview({ f, jump, missing, chosenOrgName }: StepReviewProps)
             <V k="Tổ chức ký gửi" v={chosenOrgName || "Chọn sau"} />
           </>
         )}
-        <V k="Ảnh / tài liệu" v={`${f.imageUrls.length} ảnh · ${f.docUrls.length} tài liệu`} />
       </Blk>
     </div>
   );

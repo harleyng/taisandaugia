@@ -83,6 +83,15 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   { module: "nha-cung-cap", label: "Đối tác", category: "ban-hang", actions: ["view", "create", "update", "delete"] },
 
   // Vận hành & Hỗ trợ
+  // Hồ sơ tài sản chủ tài sản tự nguyện số hoá (bảng asset_postings).
+  // Mã đổi "duyet-tai-san" → "tai-san-tu-nguyen" ở 20260906200001, làm được vì
+  // lúc đó admin_role_permissions còn rỗng. Từ giờ ĐỪNG đổi nữa: mã này nằm
+  // trong 2 policy RLS của asset_postings, trigger guard_asset_posting_review()
+  // và RPC admin_dispatch_service_requests() — đổi ở đây mà quên DB thì admin
+  // mất quyền trong im lặng (policy trả 0 dòng, trigger nuốt thay đổi).
+  // "update" tách khỏi "approve": admin bổ sung được thông tin mà không có
+  // quyền kết luận duyệt.
+  { module: "tai-san-tu-nguyen", label: "Tài sản tự nguyện", category: "van-hanh", actions: ["view", "update", "approve", "export"] },
   { module: "dich-vu", label: "Dịch vụ", category: "van-hanh", actions: ["view", "create", "update", "delete"] },
   { module: "cong-viec", label: "Công việc", category: "van-hanh", actions: ["view", "create", "update", "delete", "export"] },
   // Mã "lien-he" GIỮ NGUYÊN: Ticket thay thế hộp thư cũ nên kế thừa quyền đã cấp.

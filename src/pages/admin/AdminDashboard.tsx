@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Building2, Landmark, CreditCard,
-  ClipboardCheck, Handshake, MessageSquare, ArrowRight, CalendarIcon,
+  ClipboardCheck, Handshake, MessageSquare, ArrowRight, CalendarIcon, PackageCheck,
 } from "lucide-react";
 import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -21,6 +21,7 @@ interface PeriodStats {
 
 interface JobStats {
   pendingKYC: number;
+  pendingAssets: number;
   newPartnerships: number;
   unreadContacts: number;
 }
@@ -56,13 +57,18 @@ export default function AdminDashboard() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const t = () => (supabase as any).from("tickets");
       const OPEN = ["new", "open", "pending"];
-      const [pending, partnerTickets, contactTickets] = await Promise.all([
+      const [pending, pendingAssets, partnerTickets, contactTickets] = await Promise.all([
         supabase.from("organizations").select("id", { count: "exact", head: true }).eq("kyc_status", "PENDING_KYC"),
+        supabase
+          .from("asset_postings")
+          .select("id", { count: "exact", head: true })
+          .eq("review_status", "pending"),
         t().select("id", { count: "exact", head: true }).eq("source", "partnership").in("status", OPEN),
         t().select("id", { count: "exact", head: true }).eq("source", "contact_form").in("status", OPEN),
       ]);
       setJobStats({
         pendingKYC: pending.count ?? 0,
+        pendingAssets: pendingAssets.count ?? 0,
         newPartnerships: partnerTickets.count ?? 0,
         unreadContacts: contactTickets.count ?? 0,
       });
@@ -134,6 +140,17 @@ export default function AdminDashboard() {
       countLabel: "chờ duyệt",
       countColor: "text-amber-600",
       path: "/admin/kyc",
+    },
+    {
+      key: "asset",
+      label: "Tài sản chờ duyệt",
+      desc: "Hồ sơ tài sản chủ tài sản số hoá",
+      icon: PackageCheck,
+      iconBg: "bg-amber-50 text-amber-600",
+      count: jobStats?.pendingAssets,
+      countLabel: "chờ duyệt",
+      countColor: "text-amber-600",
+      path: "/admin/tai-san",
     },
     {
       key: "partner",

@@ -1,9 +1,12 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SupplierStatusBadge, MarketplaceBadge } from "./SupplierStatusBadge";
 import { groupNumber } from "@/lib/advertising/slug";
+import { EXPIRING_SOON_DAYS, daysUntilExpiry, isInForce } from "@/lib/supplierContracts";
 import type { Supplier } from "@/types/supplier";
+import type { SupplierContract } from "@/types/supplierContract";
 
 const TH = "px-4 py-2.5 text-left text-xs font-medium text-muted-foreground";
 
@@ -14,6 +17,8 @@ interface Props {
   usageById: Record<string, number>;
   /** id đối tác đang có thẻ hiển thị trên trang chủ (partners.supplier_id). */
   shownOnMarketplace: Set<string>;
+  /** id đối tác -> hợp đồng của họ; dùng cho cột "Hợp đồng". */
+  contractsBySupplier: Record<string, SupplierContract[]>;
   onEdit: (s: Supplier) => void;
   onDelete: (s: Supplier) => void;
 }
@@ -25,9 +30,38 @@ const commissionText = (s: Supplier): string => {
     : `${groupNumber(s.default_commission_rate)}₫`;
 };
 
+/** Ô "Hợp đồng": số HĐ đang hiệu lực + cảnh báo cái sắp hết hạn sớm nhất. */
+function ContractCell({ contracts }: { contracts: SupplierContract[] }) {
+  const inForce = contracts.filter((c) => isInForce(c));
+  if (inForce.length === 0) {
+    return <span className="text-xs text-muted-foreground">Chưa có</span>;
+  }
+
+  const soonest = inForce
+    .map((c) => daysUntilExpiry(c))
+    .filter((d): d is number => d !== null)
+    .sort((a, b) => a - b)[0];
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-foreground tabular-nums">{inForce.length}</span>
+      {soonest !== undefined && soonest <= EXPIRING_SOON_DAYS && (
+        <span
+          className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+          title={`Hợp đồng sắp hết hạn trong ${soonest} ngày`}
+        >
+          <AlertTriangle className="h-3 w-3" />
+          {soonest}d
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function SupplierTable({
-  suppliers, isLoading, usageById, shownOnMarketplace, onEdit, onDelete,
+  suppliers, isLoading, usageById, shownOnMarketplace, contractsBySupplier, onEdit, onDelete,
 }: Props) {
+  const navigate = useNavigate();
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
@@ -38,6 +72,7 @@ export function SupplierTable({
               <th className={TH}>Đối tác</th>
               <th className={TH}>Liên hệ</th>
               <th className={TH}>Hoa hồng mặc định</th>
+              <th className={TH}>Hợp đồng</th>
               <th className={TH}>Hiển thị</th>
               <th className={TH}>Trạng thái</th>
               <th className={TH}>Thao tác</th>
@@ -47,14 +82,14 @@ export function SupplierTable({
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-border">
-                  {Array.from({ length: 7 }).map((__, j) => (
+                  {Array.from({ length: 8 }).map((__, j) => (
                     <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-full" /></td>
                   ))}
                 </tr>
               ))
             ) : suppliers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground text-sm">
+                <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground text-sm">
                   Chưa có đối tác nào.
                 </td>
               </tr>
@@ -67,7 +102,13 @@ export function SupplierTable({
                       <span className="font-mono text-xs text-primary">{s.code ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-medium text-foreground">{s.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/doi-tac/${s.id}`)}
+                        className="text-left font-medium text-foreground hover:text-primary hover:underline"
+                      >
+                        {s.name}
+                      </button>
                       <span className="block text-xs text-muted-foreground">
                         {s.supplier_type === "company" ? "Công ty" : "Cá nhân"}
                         {s.tax_code && ` · MST ${s.tax_code}`}
@@ -78,6 +119,9 @@ export function SupplierTable({
                       {s.phone && <span className="block">{s.phone}</span>}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-foreground">{commissionText(s)}</td>
+                    <td className="px-4 py-3">
+                      <ContractCell contracts={contractsBySupplier[s.id] ?? []} />
+                    </td>
                     <td className="px-4 py-3"><MarketplaceBadge onMarketplace={shownOnMarketplace.has(s.id)} /></td>
                     <td className="px-4 py-3"><SupplierStatusBadge status={s.status} /></td>
                     <td className="px-4 py-3 whitespace-nowrap">

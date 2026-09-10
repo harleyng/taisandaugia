@@ -127,6 +127,7 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /portal/nang-luc/tu-tai-lieu       TuTaiLieuPage         (có route, KHÔNG có mục nav)
 /portal/nhan-su                    HoSoNhanSuPage        (mục cấp cao; gate module 'nhan-su')
 /portal/boi-duong                  BoiDuongPage          (mục cấp cao; gate module 'boi-duong')
+/portal/yeu-cau-ky-gui             YeuCauKyGuiPage  (hộp thư ký gửi; quyền `yeu-cau-ky-gui`)
 /portal/ho-so-du-tuyen             ApplicationsPage
 /portal/ho-so-du-tuyen/new         ApplicationEditPage
 /portal/ho-so-du-tuyen/:id         ApplicationEditPage
@@ -161,6 +162,7 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /admin/nguoi-dung/:id           AdminUserDetail      (hồ sơ + số dư + giao dịch + tặng/khóa/reset)
 /admin/khach-hang               AdminCustomersPage   (khách hàng dùng chung; chi tiết KH có card "Đơn hàng / Dịch vụ đã mua")
 /admin/khach-hang/:id           AdminCustomerDetail  (info + banner liên kết + đơn hàng)
+/admin/doi-tac/:id              AdminSupplierDetail  (Đối tác: Thông tin/Hợp đồng/Dịch vụ/Đơn hàng; RBAC nha-cung-cap)
 /admin/dich-vu                  AdminServicesPage    (Dịch vụ: danh mục kind credit|direct; RBAC module dich-vu)
 /admin/don-hang                 AdminOrdersPage      (Đơn hàng dịch vụ direct; RBAC module don-hang)
 /admin/bao-cao                  → redirect /admin/bao-cao/giao-dich
@@ -178,7 +180,7 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 
 > `AdminLayout` NAV = mảng `NavSection[]` (khối có `title` in hoa + `items: NavItem[]` link phẳng), KHÔNG còn submenu collapsible. Section marketing đổi tên hiển thị **"Sale & Marketing"** (category CODE vẫn `marketing`) — gồm Email, Quảng cáo, **Dịch vụ, Đơn hàng**, Khách hàng. Báo cáo gồm **Doanh thu tổng, Giao dịch credit**, Phân tích truy cập. RBAC module code mới `dich-vu`/`don-hang`/`doanh-thu` khai báo trong `MODULE_DEFINITIONS` (`adminPermissions.ts`) — code-only, không migration.
 
-> **Edge functions** (`supabase/functions/`): scraping proxies (`crawl-auctioneers`, `fetch-announcement`) + **`admin-user-actions`** — privileged GoTrue admin ops (create user via `inviteUserByEmail`, lock/unlock via `ban_duration`) that need `service_role` and can't run client-side or as a DB function. It builds a service-role client from `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` (auto-injected), **verifies the caller is ADMIN** (Bearer JWT → `user_roles`), then dispatches on `body.action`. Call from the client with `supabase.functions.invoke(...)`; deploy with `npx supabase functions deploy <name> --project-ref dvdpfjprncvkhfwcvqmp`. Email invite/reset needs SMTP configured in Supabase Auth. This is the pattern for any future privileged-auth admin action.
+> **Edge functions** (`supabase/functions/`): scraping proxies (`crawl-auctioneers`, `fetch-announcement`) + **`admin-user-actions`** — privileged GoTrue admin ops (create user via `inviteUserByEmail`, lock/unlock via `ban_duration`) that need `service_role` and can't run client-side or as a DB function. It builds a service-role client from `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` (auto-injected), **verifies the caller is ADMIN** (Bearer JWT → `user_roles`), then dispatches on `body.action`. Call from the client with `supabase.functions.invoke(...)`; deploy with `npx supabase functions deploy <name> --project-ref vewtnkewyawmkpeymdot`. Email invite/reset needs SMTP configured in Supabase Auth. This is the pattern for any future privileged-auth admin action.
 
 > Scaffold new routes with the **`/new-page`** skill so the lazy-import + `<Route>` + nav entry stay consistent.
 
@@ -247,14 +249,51 @@ npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integr
 | `user_owner_unlocks` | **Time-limited** owner access (tier + expires_at) |
 | `user_report_unlocks` | Permanent deep-report unlocks (key = `{slug}:{periodId}`) |
 | `listing_price_sessions` | Price-session history per listing |
-| `asset_postings` | Owner asset-posting wizard submissions (migration `20260621000001`). Status: `draft`→`active` ("đã số hoá") — số hoá KHÔNG cần tổ chức; +`active` via `20260726000005`. Chọn/gửi tổ chức = luồng RIÊNG qua `asset_service_requests` (hook `useSendServiceRequest`), không đổi status. Digitize via `useCreatePosting({status})`. |
+| `asset_postings` | Owner asset-posting wizard submissions (migration `20260621000001`). Status: `draft`→`active` ("đã số hoá") — số hoá KHÔNG cần tổ chức. **`review_status` (`20260906000001`) là cột duyệt RIÊNG, không trộn vào `status`.** Chọn/gửi tổ chức = luồng RIÊNG qua `asset_service_requests`, KHÔNG đổi status và KHÔNG ghi `chosen_org_id` (xem review-guard trong common-pitfalls). Digitize via `useCreatePosting({status})`. |
+| `asset_broker_requests` | Yêu cầu "nhờ sàn chọn giúp" (`20260906100001`). `pending→sourcing→quoted→selected` / `cancelled`; UNIQUE một yêu cầu đang mở mỗi hồ sơ. RLS: owner `FOR ALL` nhưng `WITH CHECK status IN (pending,cancelled)` + admin all. |
+| `asset_service_requests` | Yêu cầu gửi MỘT tổ chức. `origin owner\|platform` phân biệt chủ tài sản tự chọn vs sàn gửi hộ; `UNIQUE (asset_posting_id, auction_org_id)` cho phép fan-out nhiều tổ chức + làm dispatch idempotent. 7 cột `quote_*` là báo giá tổ chức trả về. RLS: owner read/insert/withdraw tách riêng · `asr_org_read` theo `user_in_auction_org()` · admin all. Tổ chức **không có UPDATE** — trả lời qua RPC. |
 | `ad_pages` / `ad_positions` | Master data quảng cáo 2 cấp: trang → vị trí (`placement_type` slide/unique, `price NUMERIC`) |
 | `advertisements` | Banner (admin-only); `code` "B0000009" qua trigger; lifecycle draft/scheduled/active/paused/ended |
 | `ad_daily_stats` | Số liệu view/click theo (ngày, device) — hiện là seed demo |
 | `customers` | Khách hàng dùng chung nhiều dịch vụ (`code` "KH…"); banner FK `customer_id` |
 | `services` | NHÓM dịch vụ (`code` "DV…"); `kind` credit\|direct + `audience` buyer\|owner\|company\|all + `category`; **public-read (is_active) + admin-all** RLS |
 | `service_variants` | BIẾN THỂ (con của services, `code` "BV…"); `variant_key` UNIQUE + `price`(gói)/`credit_cost`(tier-feature) + `base_credits`/`credits` + popular/best. **NGUỒN GIÁ runtime** (đọc qua `useServiceCatalog`/`serviceCatalog.getVariantCost`); public-read + admin-all RLS |
+| `supplier_contracts` | Hợp đồng hợp tác ký NGOÀI nền tảng (`code` "HD…", admin-only); `contract_no`/`signed_date`/`effective_from`/`effective_to`/`doc_path`; `status` draft\|active\|terminated — **"hết hạn" là DẪN XUẤT** (`effective_to < today`), không lưu cờ |
+| `supplier_contract_lines` | Mức hoa hồng theo TỪNG dịch vụ của một hợp đồng; `service_variant_id` NULL = áp mọi biến thể. **NGUỒN ĐIỀU KHOẢN CÓ THẨM QUYỀN** (đọc qua `resolve_contract_terms`) |
 | `orders` | Đơn hàng dịch vụ direct (admin-only; `code` "DH…"); FK `customer_id`/`service_id` (RESTRICT) + `advertisement_id` (SET NULL); `fulfillment_status` pending\|fulfilled\|cancelled; tự fulfilled qua trigger khi banner active |
+
+### Hợp đồng hợp tác & hoa hồng theo hợp đồng (`20260907000001-5`)
+
+Sàn ký hợp đồng với tổ chức đấu giá ngoài nền tảng rồi ghi lại **số HĐ + thời hạn + bản scan +
+mức hoa hồng theo từng dịch vụ**. Một đối tác → nhiều hợp đồng (tái ký) → nhiều dòng dịch vụ.
+
+- **`suppliers.auction_org_id`** (UNIQUE partial) là cây cầu `auction_organizations` ↔ hồ sơ đối
+  tác. Đường tra lúc chốt ký gửi: `asset_service_requests.auction_org_id` → `suppliers` → hợp đồng
+  đang hiệu lực → dòng dịch vụ. Chưa gắn ⇒ hoa hồng phải nhập tay.
+- **Đang hiệu lực tại ngày D** ⇔ `status='active' AND effective_from <= D AND (effective_to IS NULL OR effective_to >= D)`.
+  Vị từ này nhân bản ở `src/lib/supplierContracts.ts` (`isInForce`) — sửa một bên phải sửa bên kia.
+- **Trigger chống trùng gắn ở CẢ HAI bảng** (`supplier_contract_lines` INSERT/UPDATE **và**
+  `supplier_contracts` UPDATE OF effective_*/status/supplier_id): hai HĐ `active` cùng supplier +
+  cùng service + giao kỳ ⇒ RAISE. Gác một bên là hở cửa sau (kéo ngày HĐ cũ tạo trùng y hệt).
+- **`services.supplier_scope` `fixed|per_order`**: `fixed` = dịch vụ thuộc đúng một đối tác (công
+  cụ đấu giá, đối tác nằm trên `services.supplier_id`); `per_order` = một dịch vụ dùng chung nhiều
+  đối tác, đối tác nằm trên **ĐƠN** (`Hoa hồng môi giới ký gửi`). Ràng buộc
+  `services_commission_requires_supplier` đã nới theo cột này.
+- **Resolver hai tầng quyền** — `resolve_contract_terms(_supplier,_service,_variant,_at)`
+  SECURITY DEFINER nhưng **REVOKE khỏi anon/authenticated** (chỉ RPC definer khác gọi được), và
+  `admin_resolve_contract_terms(...)` gác `admin_has_permission('nha-cung-cap','view')` cho form
+  admin. PostgREST phơi mọi hàm vai `authenticated` gọi được ⇒ grant thẳng hàm nội bộ là rò biên
+  hoa hồng. Ưu tiên dòng khớp biến thể, rồi `signed_date DESC` (ký sau đè ký trước).
+- **Nối vào tiền**: `admin_win_opportunity` tra lại điều khoản tại `_ordered_at` và ghi
+  `orders.contract_id/contract_line_id`; `owner_select_service_quote` gắn `supplier_id` + điều
+  khoản vào cơ hội khi tổ chức có hợp đồng, **không có thì rơi về dịch vụ 'direct' như cũ** (chủ
+  tài sản không bao giờ bị chặn vì back-office thiếu hợp đồng).
+- **Đơn vẫn CHỤP ẢNH điều khoản của nó** (`orders.commission_type/value`) — quy tắc gốc
+  `20260719000002` giữ nguyên; `contract_id` chỉ để truy vết, báo cáo KHÔNG đọc.
+- Bucket **`contract-documents` PRIVATE** (10MB, pdf/jpg/png), 4 policy đều gác ADMIN kể cả SELECT.
+  Lưu ĐƯỜNG DẪN, mở bằng `createSignedUrl` — khác hẳn `partner-logos` (public + `getPublicUrl`).
+- UI: `/admin/doi-tac/:id` (`AdminSupplierDetail`) + `components/admin/suppliers/contracts/*` +
+  `hooks/useSupplierContracts.ts`. Dùng lại module quyền `nha-cung-cap`, **không** đẻ mã mới.
 
 ### RLS convention
 
@@ -275,7 +314,7 @@ Per-organization RBAC, mirroring admin RBAC but with one deliberate divergence: 
 **Scope caveat:** `nl-*` and `ho-so-du-tuyen` permissions are **UI-only** — that data still lives in localStorage, so there is nothing to enforce against. Only `thanh-vien`, `vai-tro`, `tin-dang` are RLS-backed.
 
 ### Email Marketing (admin)
-`/admin/marketing/email/*` — greenfield campaign feature. `useCampaigns.ts` mirrors `useArticles.ts` (array queryKeys `["marketing_campaigns"]`/`["marketing_campaign",id]`/`["campaign_recipients",id]`, mutations invalidate + toast; uses `(supabase as any)` because `types.ts` isn't regenerated yet — **all 4 marketing migrations ARE pushed** to live project `dvdpfjprncvkhfwcvqmp`, regen just needs a personal access token). Audience = a mode-gated jsonb `audience_spec` (criteria ∪ import ∪ specific), resolved server-side by the RPCs above; account rows are **filtered by `notifications_enabled` opt-in**, but import emails that match **no** profile are emitted as **external recipients (`user_id=NULL`) and ALWAYS sent** (opt-in can't apply — no account), so `count_campaign_audience` and the send snapshot include them (`20260712000007_campaign_audience_external_emails.sql`). **Send is stubbed** (`useSendCampaign`: resolve → snapshot `campaign_recipients` → transition status); a future `supabase/functions/send-campaign` edge function consumes the snapshot. Lifecycle `draft→scheduled→sending→sent`, `ended` = manual archive; only `draft` is editable.
+`/admin/marketing/email/*` — greenfield campaign feature. `useCampaigns.ts` mirrors `useArticles.ts` (array queryKeys `["marketing_campaigns"]`/`["marketing_campaign",id]`/`["campaign_recipients",id]`, mutations invalidate + toast; uses `(supabase as any)` because `types.ts` isn't regenerated yet — **all 4 marketing migrations ARE pushed** to live project `vewtnkewyawmkpeymdot`, regen just needs a personal access token). Audience = a mode-gated jsonb `audience_spec` (criteria ∪ import ∪ specific), resolved server-side by the RPCs above; account rows are **filtered by `notifications_enabled` opt-in**, but import emails that match **no** profile are emitted as **external recipients (`user_id=NULL`) and ALWAYS sent** (opt-in can't apply — no account), so `count_campaign_audience` and the send snapshot include them (`20260712000007_campaign_audience_external_emails.sql`). **Send is stubbed** (`useSendCampaign`: resolve → snapshot `campaign_recipients` → transition status); a future `supabase/functions/send-campaign` edge function consumes the snapshot. Lifecycle `draft→scheduled→sending→sent`, `ended` = manual archive; only `draft` is editable.
 
 **"Danh sách cụ thể" surfaces opt-in early, client-side (mirror of the RPC filter):** don't let admins add recipients who'd be silently dropped at send. opt-out = `profiles.notifications_enabled !== true` (NOT NULL, default `false` → many users legitimately show "Không thể thêm"). Search tab (`AddRecipientsDialog`) selects `notifications_enabled` and disables opt-out rows; import tab classifies rows via pure `src/lib/marketing/importClassify.ts` (parse keeps row numbers → sai định dạng / trùng / chưa cho phép / hợp lệ), looks up opt-out by batching `profiles` `.in("email", chunk)` (200/chunk), shows one merged per-row issue list + `.xlsx` download (`audience/ImportReport.tsx`), and only commits `valid`. `AudienceSection` owns the single count header (no duplicate title) + import toast; `SelectedRecipientsTable` is title-less (search/clear-all only when >10 rows). Any NEW add path must apply the same opt-out gate. **External emails (no account) are allowed & deliverable** — `useEmailAccountStatus(spec.emails)` (mirror of `useUserLabels`; batched `profiles.in("email",chunk)`, lowercase) tags which imported emails lack a profile, and `SelectedRecipientsTable` shows a **"Chưa có tài khoản"** badge (`RecipientItem.noAccount`) on those rows; badge only renders once the lookup resolves (undefined = still checking).
 

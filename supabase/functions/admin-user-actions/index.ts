@@ -1,4 +1,4 @@
-// Deploy: npx supabase functions deploy admin-user-actions --project-ref dvdpfjprncvkhfwcvqmp
+// Deploy: npx supabase functions deploy admin-user-actions --project-ref vewtnkewyawmkpeymdot
 //
 // Privileged admin user-management actions that require the GoTrue admin API
 // (service_role) — these cannot run client-side (would leak the key) or as a

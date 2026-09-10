@@ -26,8 +26,14 @@ export interface Service {
   description: string | null;
   is_active: boolean;
   sort_order: number;
-  /** Bắt buộc khi kind='commission' — bên cung cấp dịch vụ sàn môi giới. */
+  /** Bắt buộc khi kind='commission' — trừ khi supplier_scope='per_order'. */
   supplier_id: string | null;
+  /**
+   * 'fixed'     — dịch vụ thuộc về ĐÚNG MỘT đối tác (công cụ đấu giá).
+   * 'per_order' — một dịch vụ dùng chung nhiều đối tác, đối tác nằm trên ĐƠN
+   *               (môi giới ký gửi: một dịch vụ, mọi tổ chức đấu giá).
+   */
+  supplier_scope: "fixed" | "per_order";
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -111,6 +117,9 @@ export interface Order {
   supplier_id: string | null;
   commission_type: CommissionType | null;
   commission_value: number | null;
+  /** Hợp đồng đã cấp mức hoa hồng này — CHỈ để truy vết, báo cáo không đọc. */
+  contract_id: string | null;
+  contract_line_id: string | null;
   /** Đơn nạp credit luôn trỏ về giao dịch nạp đã sinh ra nó. */
   credit_transaction_id: string | null;
   fulfillment_status: FulfillmentStatus;
@@ -146,4 +155,6 @@ export interface OrderUpsert {
   supplier_id?: string | null;
   commission_type?: CommissionType | null;
   commission_value?: number | null;
+  contract_id?: string | null;
+  contract_line_id?: string | null;
 }

@@ -7,7 +7,7 @@
 > dùng lại nếu sau này bật SMTP và muốn gửi email branded.
 
 Template HTML branded cho email xác thực của Supabase Auth. Đây là project **hosted**
-(`dvdpfjprncvkhfwcvqmp`) nên template phải được dán qua Dashboard — không push bằng CLI.
+(`vewtnkewyawmkpeymdot`) nên template phải được dán qua Dashboard — không push bằng CLI.
 
 ## Cách áp dụng
 

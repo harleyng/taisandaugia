@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -519,6 +519,74 @@ export type Database = {
           },
         ]
       }
+      asset_broker_requests: {
+        Row: {
+          admin_note: string | null
+          asset_posting_id: string
+          assigned_admin_id: string | null
+          created_at: string
+          id: string
+          note: string | null
+          selected_request_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          asset_posting_id: string
+          assigned_admin_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          selected_request_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          asset_posting_id?: string
+          assigned_admin_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          selected_request_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_broker_requests_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_broker_requests_assigned_admin_id_fkey"
+            columns: ["assigned_admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_broker_requests_selected_fkey"
+            columns: ["selected_request_id"]
+            isOneToOne: false
+            referencedRelation: "asset_service_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_broker_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_owner_claims: {
         Row: {
           asset_owner_id: string | null
@@ -967,10 +1035,16 @@ export type Database = {
           image_urls: string[]
           is_seized: boolean | null
           legal_notes: string | null
+          ownership_declaration: Json | null
           ownership_proof_urls: string[]
           parent_slug: string
           pricing_mode: string
           province: string | null
+          rejection_reason: string | null
+          review_notes: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           right_to_sell: boolean
           starting_price: number | null
           status: string
@@ -978,6 +1052,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          video_urls: string[]
           ward: string | null
         }
         Insert: {
@@ -998,10 +1073,16 @@ export type Database = {
           image_urls?: string[]
           is_seized?: boolean | null
           legal_notes?: string | null
+          ownership_declaration?: Json | null
           ownership_proof_urls?: string[]
           parent_slug: string
           pricing_mode?: string
           province?: string | null
+          rejection_reason?: string | null
+          review_notes?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           right_to_sell?: boolean
           starting_price?: number | null
           status?: string
@@ -1009,6 +1090,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          video_urls?: string[]
           ward?: string | null
         }
         Update: {
@@ -1029,10 +1111,16 @@ export type Database = {
           image_urls?: string[]
           is_seized?: boolean | null
           legal_notes?: string | null
+          ownership_declaration?: Json | null
           ownership_proof_urls?: string[]
           parent_slug?: string
           pricing_mode?: string
           province?: string | null
+          rejection_reason?: string | null
+          review_notes?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           right_to_sell?: boolean
           starting_price?: number | null
           status?: string
@@ -1040,6 +1128,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          video_urls?: string[]
           ward?: string | null
         }
         Relationships: [
@@ -1048,6 +1137,13 @@ export type Database = {
             columns: ["chosen_org_id"]
             isOneToOne: false
             referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_postings_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1063,10 +1159,23 @@ export type Database = {
         Row: {
           asset_posting_id: string
           auction_org_id: string
+          broker_request_id: string | null
           created_at: string
+          decline_reason: string | null
           id: string
           match_score: number | null
           message: string | null
+          organization_id: string | null
+          origin: string
+          quote_commission_pct: number | null
+          quote_doc_path: string | null
+          quote_lead_time_days: number | null
+          quote_note: string | null
+          quote_service_fee: number | null
+          quote_starting_price: number | null
+          quoted_at: string | null
+          responded_by: string | null
+          seen_at: string | null
           status: string
           updated_at: string
           user_id: string
@@ -1074,10 +1183,23 @@ export type Database = {
         Insert: {
           asset_posting_id: string
           auction_org_id: string
+          broker_request_id?: string | null
           created_at?: string
+          decline_reason?: string | null
           id?: string
           match_score?: number | null
           message?: string | null
+          organization_id?: string | null
+          origin?: string
+          quote_commission_pct?: number | null
+          quote_doc_path?: string | null
+          quote_lead_time_days?: number | null
+          quote_note?: string | null
+          quote_service_fee?: number | null
+          quote_starting_price?: number | null
+          quoted_at?: string | null
+          responded_by?: string | null
+          seen_at?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -1085,10 +1207,23 @@ export type Database = {
         Update: {
           asset_posting_id?: string
           auction_org_id?: string
+          broker_request_id?: string | null
           created_at?: string
+          decline_reason?: string | null
           id?: string
           match_score?: number | null
           message?: string | null
+          organization_id?: string | null
+          origin?: string
+          quote_commission_pct?: number | null
+          quote_doc_path?: string | null
+          quote_lead_time_days?: number | null
+          quote_note?: string | null
+          quote_service_fee?: number | null
+          quote_starting_price?: number | null
+          quoted_at?: string | null
+          responded_by?: string | null
+          seen_at?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -1106,6 +1241,27 @@ export type Database = {
             columns: ["auction_org_id"]
             isOneToOne: false
             referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_service_requests_broker_request_id_fkey"
+            columns: ["broker_request_id"]
+            isOneToOne: false
+            referencedRelation: "asset_broker_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_service_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_service_requests_responded_by_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1733,6 +1889,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          asset_posting_id: string | null
           assigned_to: string | null
           code: string | null
           company_name: string | null
@@ -1756,6 +1913,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asset_posting_id?: string | null
           assigned_to?: string | null
           code?: string | null
           company_name?: string | null
@@ -1779,6 +1937,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asset_posting_id?: string | null
           assigned_to?: string | null
           code?: string | null
           company_name?: string | null
@@ -1802,6 +1961,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "leads_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "leads_assigned_to_fkey"
             columns: ["assigned_to"]
@@ -2194,11 +2360,14 @@ export type Database = {
       opportunities: {
         Row: {
           amount: number
+          asset_posting_id: string | null
           assigned_to: string | null
           closed_at: string | null
           code: string | null
           commission_type: string | null
           commission_value: number | null
+          contract_id: string | null
+          contract_line_id: string | null
           created_at: string
           created_by: string | null
           customer_id: string | null
@@ -2216,17 +2385,21 @@ export type Database = {
           service_variant_id: string | null
           sort_order: number
           stage: string
+          supplier_id: string | null
           tool_provider_id: string | null
           updated_at: string
           won_order_id: string | null
         }
         Insert: {
           amount?: number
+          asset_posting_id?: string | null
           assigned_to?: string | null
           closed_at?: string | null
           code?: string | null
           commission_type?: string | null
           commission_value?: number | null
+          contract_id?: string | null
+          contract_line_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
@@ -2244,17 +2417,21 @@ export type Database = {
           service_variant_id?: string | null
           sort_order?: number
           stage?: string
+          supplier_id?: string | null
           tool_provider_id?: string | null
           updated_at?: string
           won_order_id?: string | null
         }
         Update: {
           amount?: number
+          asset_posting_id?: string | null
           assigned_to?: string | null
           closed_at?: string | null
           code?: string | null
           commission_type?: string | null
           commission_value?: number | null
+          contract_id?: string | null
+          contract_line_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
@@ -2272,16 +2449,38 @@ export type Database = {
           service_variant_id?: string | null
           sort_order?: number
           stage?: string
+          supplier_id?: string | null
           tool_provider_id?: string | null
           updated_at?: string
           won_order_id?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "opportunities_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "opportunities_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_contract_line_id_fkey"
+            columns: ["contract_line_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contract_lines"
             referencedColumns: ["id"]
           },
           {
@@ -2313,6 +2512,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "opportunities_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "opportunities_tool_provider_id_fkey"
             columns: ["tool_provider_id"]
             isOneToOne: false
@@ -2335,6 +2541,8 @@ export type Database = {
           code: string | null
           commission_type: string | null
           commission_value: number | null
+          contract_id: string | null
+          contract_line_id: string | null
           created_at: string
           created_by: string | null
           credit_transaction_id: string | null
@@ -2360,6 +2568,8 @@ export type Database = {
           code?: string | null
           commission_type?: string | null
           commission_value?: number | null
+          contract_id?: string | null
+          contract_line_id?: string | null
           created_at?: string
           created_by?: string | null
           credit_transaction_id?: string | null
@@ -2385,6 +2595,8 @@ export type Database = {
           code?: string | null
           commission_type?: string | null
           commission_value?: number | null
+          contract_id?: string | null
+          contract_line_id?: string | null
           created_at?: string
           created_by?: string | null
           credit_transaction_id?: string | null
@@ -2410,6 +2622,20 @@ export type Database = {
             columns: ["advertisement_id"]
             isOneToOne: false
             referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_contract_line_id_fkey"
+            columns: ["contract_line_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contract_lines"
             referencedColumns: ["id"]
           },
           {
@@ -4196,6 +4422,7 @@ export type Database = {
       }
       organizations: {
         Row: {
+          auction_org_id: string | null
           created_at: string
           id: string
           kyc_status: Database["public"]["Enums"]["kyc_status"]
@@ -4206,6 +4433,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auction_org_id?: string | null
           created_at?: string
           id?: string
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
@@ -4216,6 +4444,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auction_org_id?: string | null
           created_at?: string
           id?: string
           kyc_status?: Database["public"]["Enums"]["kyc_status"]
@@ -4226,6 +4455,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "organizations_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "organizations_owner_id_fkey"
             columns: ["owner_id"]
@@ -4675,6 +4911,7 @@ export type Database = {
           price: number
           sort_order: number
           supplier_id: string | null
+          supplier_scope: string
           updated_at: string
         }
         Insert: {
@@ -4693,6 +4930,7 @@ export type Database = {
           price?: number
           sort_order?: number
           supplier_id?: string | null
+          supplier_scope?: string
           updated_at?: string
         }
         Update: {
@@ -4711,6 +4949,7 @@ export type Database = {
           price?: number
           sort_order?: number
           supplier_id?: string | null
+          supplier_scope?: string
           updated_at?: string
         }
         Relationships: [
@@ -4723,9 +4962,142 @@ export type Database = {
           },
         ]
       }
+      supplier_contract_lines: {
+        Row: {
+          commission_type: string
+          commission_value: number
+          contract_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          note: string | null
+          service_id: string
+          service_variant_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          commission_type: string
+          commission_value: number
+          contract_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          service_id: string
+          service_variant_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          commission_type?: string
+          commission_value?: number
+          contract_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          service_id?: string
+          service_variant_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_contract_lines_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_contract_lines_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_contract_lines_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_contracts: {
+        Row: {
+          code: string | null
+          contract_no: string
+          created_at: string
+          created_by: string | null
+          doc_path: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          note: string | null
+          our_signer_name: string | null
+          signed_date: string
+          signer_name: string | null
+          signer_title: string | null
+          status: string
+          supplier_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          contract_no: string
+          created_at?: string
+          created_by?: string | null
+          doc_path?: string | null
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          note?: string | null
+          our_signer_name?: string | null
+          signed_date: string
+          signer_name?: string | null
+          signer_title?: string | null
+          status?: string
+          supplier_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          contract_no?: string
+          created_at?: string
+          created_by?: string | null
+          doc_path?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          note?: string | null
+          our_signer_name?: string | null
+          signed_date?: string
+          signer_name?: string | null
+          signer_title?: string | null
+          status?: string
+          supplier_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_contracts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           address: string | null
+          auction_org_id: string | null
           bank_account: string | null
           bank_name: string | null
           code: string | null
@@ -4746,6 +5118,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          auction_org_id?: string | null
           bank_account?: string | null
           bank_name?: string | null
           code?: string | null
@@ -4766,6 +5139,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          auction_org_id?: string | null
           bank_account?: string | null
           bank_name?: string | null
           code?: string | null
@@ -4784,7 +5158,15 @@ export type Database = {
           tax_code?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
@@ -5319,6 +5701,7 @@ export type Database = {
         Args: { _confirm_email_mismatch?: boolean; _token: string }
         Returns: Json
       }
+      accounted_auction_org_ids: { Args: never; Returns: string[] }
       admin_access_report: {
         Args: { _from: string; _granularity?: string; _to: string }
         Returns: Json
@@ -5339,6 +5722,10 @@ export type Database = {
       admin_cpd_report_filters: { Args: never; Returns: Json }
       admin_delete_prospect_group: {
         Args: { p_group_id: string }
+        Returns: Json
+      }
+      admin_dispatch_service_requests: {
+        Args: { _message?: string; _orgs: Json; _posting_id: string }
         Returns: Json
       }
       admin_grant_credits: {
@@ -5428,6 +5815,23 @@ export type Database = {
           total_listings: number
           total_starting_price: number
           workspace_id: string
+        }[]
+      }
+      admin_resolve_contract_terms: {
+        Args: {
+          _at?: string
+          _service_id: string
+          _supplier_id: string
+          _variant_id?: string
+        }
+        Returns: {
+          code: string
+          commission_type: string
+          commission_value: number
+          contract_id: string
+          contract_no: string
+          effective_to: string
+          line_id: string
         }[]
       }
       admin_set_prospect_group: {
@@ -5577,12 +5981,58 @@ export type Database = {
         Returns: number
       }
       org_new_invite_token: { Args: never; Returns: string }
+      org_respond_service_request: {
+        Args: { _action: string; _quote?: Json; _request_id: string }
+        Returns: Json
+      }
       org_seed_default_roles: { Args: { _org_id: string }; Returns: string }
+      org_service_requests: {
+        Args: { _auction_org_id: string }
+        Returns: {
+          auction_format: string
+          child_slug: string
+          commission_pct: number
+          created_at: string
+          decline_reason: string
+          delta_fields: Json
+          description: string
+          district: string
+          expected_timeline: string
+          has_dispute: boolean
+          has_mortgage: boolean
+          id: string
+          image_urls: string[]
+          is_seized: boolean
+          match_score: number
+          message: string
+          origin: string
+          parent_slug: string
+          posting_id: string
+          pricing_mode: string
+          province: string
+          quote_commission_pct: number
+          quote_doc_path: string
+          quote_lead_time_days: number
+          quote_note: string
+          quote_service_fee: number
+          quote_starting_price: number
+          quoted_at: string
+          right_to_sell: boolean
+          seen_at: string
+          starting_price: number
+          status: string
+          title: string
+        }[]
+      }
       org_set_role_permissions: {
         Args: { _perms: Json; _role_id: string }
         Returns: undefined
       }
       org_significant_tokens: { Args: { p_name: string }; Returns: string[] }
+      owner_select_service_quote: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
       personnel_folder_org: { Args: { _name: string }; Returns: string }
       public_org_auctioneers: {
         Args: { _auction_org_id: string }
@@ -5618,6 +6068,23 @@ export type Database = {
           user_id: string
         }[]
       }
+      resolve_contract_terms: {
+        Args: {
+          _at?: string
+          _service_id: string
+          _supplier_id: string
+          _variant_id?: string
+        }
+        Returns: {
+          code: string
+          commission_type: string
+          commission_value: number
+          contract_id: string
+          contract_no: string
+          effective_to: string
+          line_id: string
+        }[]
+      }
       revoke_org_invite: {
         Args: { _membership_id: string }
         Returns: undefined
@@ -5628,10 +6095,18 @@ export type Database = {
       }
       run_workspace_match: { Args: { p_workspace_id: string }; Returns: Json }
       suggest_org_aliases: { Args: { p_name: string }; Returns: Json }
+      supplier_contracts_assert_no_overlap: {
+        Args: { _contract_id: string }
+        Returns: undefined
+      }
       try_timestamptz: { Args: { _t: string }; Returns: string }
       unlock_tool_showcase: {
         Args: { _id: string; _password: string }
         Returns: string
+      }
+      user_in_auction_org: {
+        Args: { _auction_org_id: string }
+        Returns: boolean
       }
       user_province: { Args: { uid: string }; Returns: string }
       users_share_org: {
@@ -5664,12 +6139,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5693,11 +6168,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5718,11 +6193,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5743,11 +6218,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5760,11 +6235,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

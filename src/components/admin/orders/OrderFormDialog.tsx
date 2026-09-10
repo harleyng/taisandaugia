@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -26,6 +26,8 @@ import { useServiceVariants } from "@/hooks/useServiceVariants";
 import { useAdvertisements } from "@/hooks/useAdvertisements";
 import { useUpsertOrder, orderErrorMessage } from "@/hooks/useOrders";
 import { OrderCommissionFields, } from "./OrderCommissionFields";
+import { useSuppliers } from "@/hooks/useSuppliers";
+import { useResolvedContractTerms } from "@/hooks/useSupplierContracts";
 import { previewCommission } from "./commission";
 import type { Order, FulfillmentStatus, CommissionType } from "@/types/orders";
 
@@ -41,6 +43,7 @@ const emptyForm = () => ({
   customer_id: "",
   service_id: "",
   service_variant_id: NONE,
+  supplier_id: NONE,
   quantity: 1,
   amount: 0,
   gross_amount: 0,
@@ -77,6 +80,45 @@ export function OrderFormDialog({ open, onOpenChange, editing }: Props) {
     [allVariants, form.service_id],
   );
 
+  // Dịch vụ per_order dùng chung nhiều đối tác ⇒ đối tác phải chọn trên ĐƠN.
+  // Dịch vụ fixed thì đối tác đã gắn sẵn trên dịch vụ.
+  const isPerOrderSupplier = selectedService?.supplier_scope === "per_order";
+  const effectiveSupplierId = isPerOrderSupplier
+    ? (form.supplier_id === NONE ? null : form.supplier_id)
+    : (selectedService?.supplier_id ?? null);
+
+  const { data: suppliers } = useSuppliers();
+  const effectiveSupplierName = isPerOrderSupplier
+    ? (suppliers ?? []).find((x) => x.id === effectiveSupplierId)?.name ?? null
+    : selectedService?.supplier?.name ?? null;
+
+  // Điều khoản đang hiệu lực tại NGÀY ĐẶT ĐƠN. Nguồn duy nhất quyết định "hợp
+  // đồng nào thắng" là hàm SQL — không nhân bản luật đó ra client.
+  const { data: contractTerms } = useResolvedContractTerms({
+    supplierId: effectiveSupplierId,
+    serviceId: form.service_id || null,
+    variantId: form.service_variant_id === NONE ? null : form.service_variant_id,
+    at: form.ordered_at || null,
+    enabled: isCommission,
+  });
+
+  // Áp mức của hợp đồng mỗi khi "toạ độ" tra cứu đổi (đối tác/dịch vụ/biến
+  // thể/ngày). Sau đó admin vẫn sửa tay được — chỉ khi đổi toạ độ mới ghi đè.
+  const termsKey = contractTerms
+    ? `${contractTerms.line_id}|${effectiveSupplierId}|${form.service_id}|${form.service_variant_id}|${form.ordered_at}`
+    : null;
+  const appliedKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isCommission || !contractTerms || !termsKey) return;
+    if (appliedKey.current === termsKey) return;
+    appliedKey.current = termsKey;
+    setForm((f) => ({
+      ...f,
+      commission_type: contractTerms.commission_type,
+      commission_value: Number(contractTerms.commission_value),
+    }));
+  }, [isCommission, contractTerms, termsKey]);
+
   useEffect(() => {
     if (!open) return;
     if (editing) {
@@ -84,6 +126,7 @@ export function OrderFormDialog({ open, onOpenChange, editing }: Props) {
         customer_id: editing.customer_id ?? "",
         service_id: editing.service_id,
         service_variant_id: editing.service_variant_id ?? NONE,
+        supplier_id: editing.supplier_id ?? NONE,
         quantity: editing.quantity,
         amount: editing.amount,
         gross_amount: Number(editing.gross_amount ?? 0),
@@ -129,6 +172,8 @@ export function OrderFormDialog({ open, onOpenChange, editing }: Props) {
     if (!form.customer_id) return toast.error("Vui lòng chọn khách hàng");
     if (!form.service_id) return toast.error("Vui lòng chọn dịch vụ");
     if (isCommission) {
+      if (!effectiveSupplierId)
+        return toast.error("Vui lòng chọn đối tác nhận hoa hồng");
       if (form.gross_amount <= 0) return toast.error("Vui lòng nhập giá trị hợp đồng");
       if (form.commission_value <= 0) return toast.error("Vui lòng nhập giá trị hoa hồng");
       if (form.commission_type === "percent" && form.commission_value > 100)
@@ -154,6 +199,11 @@ export function OrderFormDialog({ open, onOpenChange, editing }: Props) {
         gross_amount: isCommission ? form.gross_amount : form.amount,
         commission_type: isCommission ? form.commission_type : null,
         commission_value: isCommission ? form.commission_value : null,
+        // Trigger chỉ tự suy supplier từ services.supplier_id — dịch vụ per_order
+        // không có cột đó nên đơn PHẢI tự mang.
+        supplier_id: isCommission ? effectiveSupplierId : null,
+        contract_id: isCommission ? contractTerms?.contract_id ?? null : null,
+        contract_line_id: isCommission ? contractTerms?.line_id ?? null : null,
         fulfillment_status: form.fulfillment_status,
         advertisement_id: form.advertisement_id === NONE ? null : form.advertisement_id,
         note: form.note.trim() || null,
@@ -228,9 +278,30 @@ export function OrderFormDialog({ open, onOpenChange, editing }: Props) {
             </div>
           </div>
 
+          {isCommission && isPerOrderSupplier && (
+            <div className="space-y-1.5">
+              <Label>Đối tác nhận hoa hồng <span className="text-destructive">*</span></Label>
+              <Select value={form.supplier_id} onValueChange={(v) => set("supplier_id", v)}>
+                <SelectTrigger><SelectValue placeholder="Chọn đối tác" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Chưa chọn</SelectItem>
+                  {(suppliers ?? [])
+                    .filter((x) => x.status === "active")
+                    .map((x) => (
+                      <SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Dịch vụ này dùng chung cho nhiều đối tác nên phải chỉ rõ bên trả hoa hồng.
+              </p>
+            </div>
+          )}
+
           {isCommission ? (
             <OrderCommissionFields
-              supplierName={selectedService?.supplier?.name ?? null}
+              supplierName={effectiveSupplierName}
+              contractTerms={contractTerms ?? null}
               grossAmount={form.gross_amount}
               commissionType={form.commission_type}
               commissionValue={form.commission_value}

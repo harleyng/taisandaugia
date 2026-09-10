@@ -1,8 +1,6 @@
 import { AlertCircle, Camera, Check, Clock, Landmark, Loader2, Tag } from "lucide-react";
 import { AUCTION_FORMAT_LABELS, EXPECTED_TIMELINE_LABELS, type AuctionFormat, type ExpectedTimeline } from "@/types/asset-posting";
 import type { OrgMatchResult } from "@/lib/orgMatching";
-import { AssetMediaUpload } from "../AssetMediaUpload";
-import { AssetDocUpload } from "../AssetDocUpload";
 import { Group, OptionalGroup, TextField, SelectField, WideRadio, Pill } from "../fields";
 import { groupNumber, parseNumber, vnWords } from "../format";
 import type { WizardValues } from "../wizardSchema";
@@ -111,43 +109,98 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
           <Group
             icon={<Landmark className="h-4 w-4" />}
             title="Tổ chức đấu giá ký gửi"
-            desc="Có thể chọn sau khi số hoá"
-            right={f.chosenOrg ? <Pill tone="ok">Đã chọn</Pill> : null}
+            desc="Có thể quyết định sau khi số hoá"
+            right={
+              f.orgMode === "platform" ? (
+                <Pill tone="ok">Nhờ sàn</Pill>
+              ) : f.chosenOrg ? (
+                <Pill tone="ok">Đã chọn</Pill>
+              ) : null
+            }
           >
-            {orgLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div className="flex flex-col gap-2.5">
+              {[
+                {
+                  v: "self",
+                  t: "Tôi tự chọn tổ chức",
+                  d: "Xem danh sách tổ chức phù hợp và chọn nơi ký gửi.",
+                },
+                {
+                  v: "platform",
+                  t: "Nhờ sàn chọn giúp",
+                  d: "Sàn gửi hồ sơ tới nhiều tổ chức, bạn so sánh báo giá rồi chọn. Miễn phí.",
+                },
+                {
+                  v: "",
+                  t: "Để quyết định sau",
+                  d: "Số hoá trước, gửi cho tổ chức bất cứ lúc nào từ trang hồ sơ.",
+                },
+              ].map((o) => (
+                <WideRadio
+                  key={o.v || "later"}
+                  on={f.orgMode === o.v}
+                  onClick={() => up({ orgMode: o.v as "" | "self" | "platform", chosenOrg: null })}
+                >
+                  <span className="text-sm font-semibold text-foreground block">{o.t}</span>
+                  <span className="text-xs text-muted-foreground block mt-0.5">{o.d}</span>
+                </WideRadio>
+              ))}
+            </div>
+
+            {f.orgMode === "self" && (
+              <div className="mt-4">
+                {orgLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : orgResults.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    Chưa có tổ chức nào trên sàn khớp tiêu chí này. Hãy chọn “Nhờ sàn chọn giúp” — sàn sẽ tìm hộ bạn.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2.5">
+                    {orgResults.slice(0, 5).map((r) => {
+                      const on = f.chosenOrg === r.org.id;
+                      const meta = [r.org.province, `${r.attrs.successful_sessions} phiên`, `thù lao ~${r.attrs.commission_rate}%`]
+                        .filter(Boolean)
+                        .join(" · ");
+                      return (
+                        <WideRadio key={r.org.id} on={on} onClick={() => up({ chosenOrg: on ? null : r.org.id })}>
+                          <span className="text-sm font-semibold text-foreground flex items-center gap-2.5">
+                            {r.org.name}
+                            <Pill tone="ok">{Math.round(r.score)}%</Pill>
+                          </span>
+                          <span className="text-xs text-muted-foreground block mt-0.5">{meta}</span>
+                        </WideRadio>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            ) : orgResults.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2">
-                Chưa tìm thấy tổ chức phù hợp. Bạn vẫn có thể hoàn tất số hoá và gửi cho tổ chức sau.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-2.5">
-                {orgResults.slice(0, 5).map((r) => {
-                  const on = f.chosenOrg === r.org.id;
-                  const meta = [r.org.province, `${r.attrs.successful_sessions} phiên`, `thù lao ~${r.attrs.commission_rate}%`]
-                    .filter(Boolean)
-                    .join(" · ");
-                  return (
-                    <WideRadio key={r.org.id} on={on} onClick={() => up({ chosenOrg: on ? null : r.org.id })}>
-                      <span className="text-sm font-semibold text-foreground flex items-center gap-2.5">
-                        {r.org.name}
-                        <Pill tone="ok">{Math.round(r.score)}%</Pill>
-                      </span>
-                      <span className="text-xs text-muted-foreground block mt-0.5">{meta}</span>
-                    </WideRadio>
-                  );
-                })}
+            )}
+
+            {f.orgMode === "platform" && (
+              <div className="mt-4 flex flex-col gap-3">
+                <ol className="flex flex-col gap-1.5 rounded-xl bg-primary/5 border border-primary/20 p-3 text-[13px] text-foreground">
+                  <li>1. Sàn thẩm định hồ sơ rồi gửi tới các tổ chức đấu giá phù hợp.</li>
+                  <li>2. Tổ chức quan tâm sẽ gửi báo giá (thù lao, phí, thời gian).</li>
+                  <li>3. Bạn so sánh và chọn tổ chức mình muốn ký gửi.</li>
+                </ol>
+                <TextField
+                  label="Lời nhắn cho sàn"
+                  placeholder="Mong muốn cụ thể của bạn về phiên đấu giá..."
+                  value={f.brokerNote ?? ""}
+                  onChange={(v) => up({ brokerNote: v })}
+                />
               </div>
             )}
           </Group>
 
           <OptionalGroup
-            icon={<Camera className="h-4 w-4" />}
-            title="Thù lao, thời gian & ảnh tài sản"
+            icon={<Clock className="h-4 w-4" />}
+            title="Thù lao & thời gian"
             desc="Giúp gợi ý tổ chức chính xác hơn"
-            count={4}
+            count={2}
           >
             <div className="flex flex-col gap-[18px]">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -166,18 +219,6 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
                   onChange={(v) => up({ expectedTimeline: v })}
                   placeholder="Chọn mốc thời gian"
                 />
-              </div>
-              <div>
-                <label className="flex items-center gap-1.5 text-[13.5px] font-semibold text-foreground mb-2">
-                  <Camera className="h-3.5 w-3.5 text-muted-foreground" /> Ảnh thực tế tài sản
-                </label>
-                <AssetMediaUpload value={f.imageUrls} onChange={(v) => up({ imageUrls: v })} />
-              </div>
-              <div>
-                <label className="flex items-center gap-1.5 text-[13.5px] font-semibold text-foreground mb-2">
-                  <Clock className="h-3.5 w-3.5 text-muted-foreground" /> Tài liệu bổ sung
-                </label>
-                <AssetDocUpload value={f.docUrls} onChange={(v) => up({ docUrls: v })} prefix="extra" />
               </div>
             </div>
           </OptionalGroup>

@@ -30,6 +30,12 @@ export interface Supplier {
   /** Chỉ để form đơn điền sẵn — KHÔNG phải fallback lúc chạy. */
   default_commission_type: CommissionType | null;
   default_commission_rate: number | null;
+  /**
+   * Tổ chức đấu giá tương ứng trong danh bạ (`auction_organizations`).
+   * Đây là cây cầu để tra từ "tổ chức nào thắng ký gửi" sang "hợp đồng nào đang
+   * hiệu lực với họ" — thiếu nó thì hoa hồng phải nhập tay mỗi lần.
+   */
+  auction_org_id: string | null;
   note: string | null;
   status: SupplierStatus;
   created_by: string | null;
@@ -50,6 +56,7 @@ export interface SupplierUpsert {
   bank_account?: string | null;
   default_commission_type?: CommissionType | null;
   default_commission_rate?: number | null;
+  auction_org_id?: string | null;
   note?: string | null;
   status: SupplierStatus;
 }

@@ -5,6 +5,8 @@ import { ASSET_POSTING_STATUS_LABELS, type AssetPostingStatus } from "@/types/as
 import { REVIEW_STATUS_BADGE_CLASS, REVIEW_STATUS_LABELS } from "@/lib/asset-posting/reviewStatus";
 import { formatPrice } from "@/utils/formatters";
 import { useMyPostings } from "@/hooks/useAssetPosting";
+import { useOwnerConsignmentSummary } from "@/hooks/useConsignmentContract";
+import { postingBadge } from "@/lib/consignment/postingBadge";
 
 // parent slug → icon component
 const PARENT_ICON = Object.fromEntries(ASSET_CATEGORIES.map((p) => [p.slug, p.icon]));
@@ -32,6 +34,7 @@ interface AssetPostingsLandingProps {
 /** Trang "Số hoá tài sản": danh sách hồ sơ đấu giá của tôi + CTA tạo mới. */
 export function AssetPostingsLanding({ onCreate, onSelect, onResumeDraft }: AssetPostingsLandingProps) {
   const { data: postings, isLoading } = useMyPostings();
+  const { data: summary } = useOwnerConsignmentSummary();
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-6">
@@ -109,6 +112,16 @@ export function AssetPostingsLanding({ onCreate, onSelect, onResumeDraft }: Asse
                 </div>
 
                 <div className="flex shrink-0 flex-col items-end gap-1">
+                  {/* Việc đang chờ / trạng thái hợp đồng — suy ra ở RPC owner_consignment_summary,
+                      asset_postings.status không được ghi bởi luồng ký gửi. */}
+                  {(() => {
+                    const badge = postingBadge(summary?.byPosting[p.id]);
+                    return badge ? (
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                    ) : null;
+                  })()}
                   <span
                     className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_STYLE[p.status]}`}
                   >

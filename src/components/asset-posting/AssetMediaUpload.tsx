@@ -20,9 +20,12 @@ export function AssetMediaUpload({ value, onChange }: AssetMediaUploadProps) {
   });
 
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+    // Sao mảng File RA TRƯỚC rồi mới reset input. `e.target.files` là FileList
+    // SỐNG của chính input đó — `value = ""` xoá rỗng ngay chính object này, nên
+    // đọc `files.length` sau khi reset luôn ra 0 và cả lượt tải im lặng biến mất.
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!files?.length) return;
+    if (!files.length) return;
     const uploaded = await upload(files);
     if (uploaded.length) onChange([...value, ...uploaded]);
   };

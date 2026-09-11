@@ -11,7 +11,8 @@ interface StepReviewProps {
   f: WizardValues;
   jump: (step: number) => void;
   missing: Requirement[];
-  chosenOrgName?: string | null;
+  /** Tên các tổ chức sẽ nhận yêu cầu báo giá (đã lọc theo kết quả gợi ý). */
+  chosenOrgNames?: string[];
 }
 
 const PARENT_NAME: Record<string, string> = Object.fromEntries(ASSET_CATEGORIES.map((c) => [c.slug, c.name]));
@@ -20,7 +21,7 @@ const CHILD_NAME: Record<string, string> = Object.fromEntries(
 );
 
 /** Bước 5: xem lại toàn bộ hồ sơ, nhảy sửa từng khối, cảnh báo mục còn thiếu. */
-export function StepReview({ f, jump, missing, chosenOrgName }: StepReviewProps) {
+export function StepReview({ f, jump, missing, chosenOrgNames = [] }: StepReviewProps) {
   const deltas = getDeltaFields(f.childSlug);
   const proofMode = getProofMode(f.parentSlug);
   const legal = (x: string) => (x === "yes" ? "Có" : x === "no" ? "Không" : "");
@@ -105,7 +106,18 @@ export function StepReview({ f, jump, missing, chosenOrgName }: StepReviewProps)
               v={f.pricingMode === "self" ? (f.startingPrice ? `${groupNumber(f.startingPrice)} VNĐ` : "") : "Nhờ tổ chức định giá"}
             />
             <V k="Hình thức" v={AUCTION_FORMAT_LABELS[f.auctionFormat as AuctionFormat]} />
-            <V k="Tổ chức ký gửi" v={chosenOrgName || "Chọn sau"} />
+            {/* Trước đây lối "nhờ sàn chọn giúp" cũng hiện "Chọn sau": người dùng
+                đọc ra là KHÔNG gửi đi đâu cả, trong khi hoàn tất là sàn nhận yêu cầu. */}
+            <V
+              k="Tổ chức ký gửi"
+              v={
+                f.orgMode === "platform"
+                  ? "Nhờ sàn chọn giúp — sàn sẽ gửi hồ sơ tới các tổ chức phù hợp"
+                  : chosenOrgNames.length > 0
+                    ? `${chosenOrgNames.join(" · ")} — hồ sơ sẽ được gửi tới ${chosenOrgNames.length} tổ chức này`
+                    : "Chọn sau"
+              }
+            />
           </>
         )}
       </Blk>

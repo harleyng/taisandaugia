@@ -3,18 +3,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { AlertCircle, ArrowLeft, Check, ChevronLeft, ChevronRight, Eye, Loader2, Plus, Save } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, ChevronLeft, ChevronRight, Eye, Loader2, Plus, Save, TrendingUp } from "lucide-react";
 import { Step1AssetType } from "./steps/Step1AssetType";
 import { Step2GeneralInfo } from "./steps/Step2GeneralInfo";
 import { Step3LegalStatus } from "./steps/Step3LegalStatus";
 import { Step4AuctionNeeds } from "./steps/Step4AuctionNeeds";
 import { StepReview } from "./steps/StepReview";
+import { useAiMediaExtraction } from "@/hooks/useAiMediaExtraction";
 import {
   useCreateBrokerRequest,
   useCreatePosting,
   useMatchedOrgs,
   usePostingDetail,
-  useSendServiceRequest,
+  useSendServiceRequests,
 } from "@/hooks/useAssetPosting";
 import {
   wizardSchema,
@@ -54,7 +55,8 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   const [step, setStep] = useState(1);
   const [shown, setShown] = useState<Record<number, boolean>>({});
   const [phase, setPhase] = useState<"wizard" | "done">("wizard");
-  const [sentOrgName, setSentOrgName] = useState<string | null>(null);
+  // Tên các tổ chức đã nhận yêu cầu báo giá (rỗng = chưa gửi tổ chức nào).
+  const [sentOrgNames, setSentOrgNames] = useState<string[]>([]);
   // Đã gửi yêu cầu "nhờ sàn chọn giúp" — màn hoàn tất nói khác đi.
   const [sentToPlatform, setSentToPlatform] = useState(false);
 
@@ -77,8 +79,12 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   const up = (patch: Partial<WizardValues>) =>
     Object.entries(patch).forEach(([k, v]) => form.setValue(k as keyof WizardValues, v as never, { shouldValidate: false }));
 
+  // Giữ ở cấp wizard chứ không trong Step2: Step2 unmount mỗi lần đổi bước, để
+  // trong đó thì qua bước 3 rồi quay lại là mất kết quả đã phân tích.
+  const ai = useAiMediaExtraction();
+
   const create = useCreatePosting();
-  const send = useSendServiceRequest();
+  const send = useSendServiceRequests();
   const broker = useCreateBrokerRequest();
   const { results: orgResults, isLoading: orgLoading } = useMatchedOrgs(buildMatchCriteria(f));
 
@@ -88,8 +94,10 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   const errs: Record<string, string> = {};
   if (shown[step]) stepMissing.forEach((m) => (errs[m.key] = REQUIREMENT_MSG[m.key] || "Bắt buộc"));
 
-  const chosenOrgName = orgResults.find((r) => r.org.id === f.chosenOrg)?.org.name ?? null;
-  const chosenScore = orgResults.find((r) => r.org.id === f.chosenOrg)?.score ?? null;
+  // Chỉ giữ tổ chức CÓ TRONG kết quả gợi ý: id lạ (nháp cũ, tổ chức rời sàn) thì
+  // không có điểm khớp và cũng không nên hứa gửi tới đó.
+  const chosenResults = orgResults.filter((r) => f.chosenOrgs.includes(r.org.id));
+  const chosenOrgNames = chosenResults.map((r) => r.org.name);
 
   const exit = () => (onCancel ? onCancel() : navigate("/chu-tai-san/tai-san"));
   const finishNav = () => (onDone ? onDone() : navigate("/chu-tai-san/tai-san"));
@@ -115,16 +123,17 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
     create.mutate({ posting: buildPostingPayload(f), status: "draft", postingId: postingId ?? undefined }, { onSuccess: () => exit() });
   };
 
-  // Hoàn tất số hoá (status active) → nếu chọn tổ chức thì gửi yêu cầu dịch vụ (luồng riêng).
-  // Ba lối kết thúc: chỉ số hoá · gửi thẳng một tổ chức · nhờ sàn chọn giúp.
+  // Hoàn tất số hoá (status active) → nếu có chọn tổ chức thì gửi yêu cầu báo giá
+  // (luồng riêng). Ba lối kết thúc: chỉ số hoá · gửi thẳng tới các tổ chức đã
+  // chọn (1 dòng asset_service_requests mỗi tổ chức) · nhờ sàn chọn giúp.
   const finish = () => {
     if (missing.length) {
       setShown({ 1: true, 2: true, 3: true, 4: true });
       return;
     }
 
-    const done = (orgName: string | null, viaPlatform: boolean) => {
-      setSentOrgName(orgName);
+    const done = (orgNames: string[], viaPlatform: boolean) => {
+      setSentOrgNames(orgNames);
       setSentToPlatform(viaPlatform);
       setPhase("done");
       window.scrollTo({ top: 0 });
@@ -136,10 +145,17 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
         onSuccess: ({ postingId }) => {
           const wants = f.wantsAuction === "yes";
 
-          if (wants && f.orgMode === "self" && f.chosenOrg && chosenScore != null) {
+          if (wants && f.orgMode === "self" && chosenResults.length > 0) {
             send.mutate(
-              { postingId, orgId: f.chosenOrg, matchScore: chosenScore },
-              { onSuccess: () => done(chosenOrgName, false) },
+              {
+                postingId,
+                orgs: chosenResults.map((r) => ({ orgId: r.org.id, matchScore: r.score })),
+                // Bản mô tả gửi tổ chức. Trước đây KHÔNG truyền: ô lời nhắn không
+                // tồn tại trong wizard, nên hộp thư tổ chức nhận hồ sơ không kèm
+                // một chữ nào từ chủ tài sản.
+                message: f.orgMessage?.trim() || undefined,
+              },
+              { onSuccess: () => done(chosenOrgNames, false) },
             );
             return;
           }
@@ -147,12 +163,12 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
           if (wants && f.orgMode === "platform") {
             broker.mutate(
               { postingId, note: f.brokerNote },
-              { onSuccess: () => done(null, true) },
+              { onSuccess: () => done([], true) },
             );
             return;
           }
 
-          done(null, false);
+          done([], false);
         },
       },
     );
@@ -162,12 +178,26 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
     form.reset(wizardDefaults);
     setShown({});
     setStep(1);
-    setSentOrgName(null);
+    setSentOrgNames([]);
     setSentToPlatform(false);
     setPhase("wizard");
   };
 
   const busy = create.isPending || send.isPending || broker.isPending;
+
+  // Nút hoàn tất phải nói đúng việc nó làm: finish() có thể gửi luôn yêu cầu báo
+  // giá tới các tổ chức đã chọn / tới sàn, chứ không chỉ lưu hồ sơ.
+  // Điều kiện PHẢI trùng với nhánh trong finish(), kể cả việc đếm chosenResults
+  // (không phải f.chosenOrgs) — nhãn nút hứa gửi mà finish() không gửi thì còn
+  // tệ hơn nhãn chung chung.
+  const willSendCount =
+    f.wantsAuction === "yes" && f.orgMode === "self" ? chosenResults.length : 0;
+  const finishLabel =
+    f.wantsAuction === "yes" && f.orgMode === "platform"
+      ? "Hoàn tất & nhờ sàn chọn giúp"
+      : willSendCount > 0
+        ? `Hoàn tất & gửi ${willSendCount} tổ chức`
+        : "Hoàn tất số hoá";
 
   // ─── Màn hoàn tất ─────────────────────────────────────────────────────────
   if (phase === "done") {
@@ -180,16 +210,18 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
               <Check className="h-8 w-8" strokeWidth={2.4} />
             </div>
             <h1 className="text-2xl font-bold text-foreground mb-2">
-              {sentOrgName
-                ? "Đã số hoá & gửi yêu cầu"
+              {sentOrgNames.length > 0
+                ? "Đã số hoá & gửi yêu cầu báo giá"
                 : sentToPlatform
                   ? "Đã gửi yêu cầu cho sàn"
                   : "Đã số hoá tài sản"}
             </h1>
             <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
-              {sentOrgName ? (
+              {sentOrgNames.length > 0 ? (
                 <>
-                  Hồ sơ <b className="text-foreground">{f.title}</b> đã gửi tới <b className="text-foreground">{sentOrgName}</b>.
+                  Hồ sơ <b className="text-foreground">{f.title}</b> đã gửi tới{" "}
+                  <b className="text-foreground">{sentOrgNames.length} tổ chức</b>: {sentOrgNames.join(" · ")}. Báo giá
+                  của từng tổ chức sẽ hiện trong trang hồ sơ để bạn so sánh và chọn.
                 </>
               ) : sentToPlatform ? (
                 <>
@@ -236,15 +268,23 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-40">
           <Rail step={step} go={go} reqs={reqs} />
 
-          <div className="pt-1 pb-4">
+          {/* Nhắc xuyên suốt các bước: hồ sơ đầy đủ = xử lý nhanh, bán nhanh, giá tốt hơn. */}
+          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-3">
+            <TrendingUp className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <p className="text-sm text-foreground">
+              Thông tin càng đầy đủ, hồ sơ càng nhanh được xử lý — tài sản dễ bán hơn và có cơ hội đạt mức giá cao hơn.
+            </p>
+          </div>
+
+          <div className="pt-4 pb-4">
             <h1 className="text-[23px] font-bold tracking-tight text-foreground">{s.title}</h1>
           </div>
 
           {step === 1 && <Step1AssetType f={f} up={up} errs={errs} />}
-          {step === 2 && <Step2GeneralInfo f={f} up={up} errs={errs} />}
+          {step === 2 && <Step2GeneralInfo f={f} up={up} errs={errs} ai={ai} />}
           {step === 3 && <Step3LegalStatus f={f} up={up} errs={errs} />}
           {step === 4 && <Step4AuctionNeeds f={f} up={up} errs={errs} orgResults={orgResults} orgLoading={orgLoading} />}
-          {step === 5 && <StepReview f={f} jump={go} missing={missing} chosenOrgName={chosenOrgName} />}
+          {step === 5 && <StepReview f={f} jump={go} missing={missing} chosenOrgNames={chosenOrgNames} />}
         </div>
       </div>
 
@@ -294,7 +334,7 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
               disabled={!!missing.length || busy}
               className="inline-flex items-center gap-1.5 rounded-[10px] bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold hover:bg-primary/90 transition disabled:bg-muted-foreground/40 disabled:cursor-not-allowed"
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Hoàn tất số hoá
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {finishLabel}
             </button>
           )}
         </div>

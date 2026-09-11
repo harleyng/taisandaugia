@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-09-12 — `asset_parent_slug(NULL)` = 'khac'; ba cặp nhân bản SQL↔TS mới của tiếp thị phiên
+
+- **`asset_parent_slug(NULL)` trả `'khac'`** (CASE … ELSE 'khac'). Truy vấn nào so slug cha phải kiểm `category_slug IS NOT NULL` trước, nếu không lô chưa phân loại sẽ khớp mọi khách quan tâm "Khác". Xem `org_session_audience`.
+- **Cặp nhân bản — sửa một bên phải sửa bên kia:**
+  - `outreach_send_window_open` (SQL) ↔ `canMarkSent` (`src/lib/outreach/sendWindow.ts`) — `sendWindow.test.ts` ghim mốc biên.
+  - Cột generated `org_contacts.phone_digits` ↔ `phoneDigits()` (`src/lib/orgContacts/phone.ts`).
+  - CHECK `session_outreach_fields.field_key` ↔ `FIELD_KEY_PATTERN` — `fieldKeys.test.ts` đọc thẳng file migration.
+- **Mẫu thông báo đã phát hành không sửa câu chữ.** Thêm phiên bản mới vào `NOTICE_TEMPLATES` + hash mới; sửa bản cũ ⇒ `noticeTemplate.test.ts` đỏ (có chủ đích — gói đã tạo trỏ tới version cũ).
+- **`normalize_province` nằm trong generated column `province_keys`.** Sửa hàm không tự tính lại giá trị đã lưu — phải `UPDATE org_contact_interests SET provinces = provinces`.
+- **Kiểm kết quả RPC bằng câu SELECT riêng.** Subquery trong CÙNG câu với lời gọi RPC đọc snapshot trước khi RPC ghi ⇒ trông như RPC không có tác dụng.
+
 ## 2026-09-06 — Trigger "nuốt thay đổi" chặn cả migration và service_role
 
 `asset_postings_review_guard` gán trả 5 cột duyệt về `OLD` khi caller không có quyền `tai-san-tu-nguyen`.`approve`. Nó **không RAISE** — đó là chủ ý (chủ tài sản sửa hồ sơ là việc hợp lệ, chỉ phần kết luận duyệt là không được đụng). Hệ quả gài bẫy:
@@ -114,12 +125,16 @@ React Query caches by key; a write is invisible until the read key is invalidate
 | profile writes | `["profile", userId]` |
 Two live traps:
 - **`unlock*` returns `{ ok, reason }`** — invalidation only fires when `ok`. If you branch on the result yourself, don't also assume the cache refreshed on a failed/insufficient unlock.
+- **RPC ký gửi trả `{ ok:false, reason }` với `error = null`** (`owner_select_service_quote`, `org_respond_service_request`, từ `20260912000001`). Chỉ `if (error) throw` là toast xanh cho một lần chốt/báo giá THẤT BẠI. Luôn `assertRpcOk(data)` (`src/lib/consignment/errors.ts`) và invalidate ở `onSettled` — thất bại vì "hồ sơ đã chốt" thì màn hình càng phải refetch để hiện tổ chức thật sự đã được chốt.
 - **`usePostingDetail` (`["posting-detail", id]`) is NOT invalidated by `useSubmitPostingWithOrg`** — only `["my-postings", userId]` is. After creating/updating a posting, invalidate `["posting-detail", id]` too or the detail view shows pre-submit data. Same class of bug for any detail-by-id key a list mutation doesn't touch.
 
-### Logic nhân bản SQL ↔ TS — hai cặp, sửa một bên phải sửa bên kia
+### Logic nhân bản SQL ↔ TS — ba cặp, sửa một bên phải sửa bên kia
 Báo cáo admin phải `GROUP BY` trên toàn bộ tin nên không thể suy sau khi đã tổng hợp ⇒ hai đoạn logic buộc phải tồn tại ở cả hai nơi. Không có test nào bắt được lệch — chỉ có comment chéo ở đầu mỗi bên.
 - **Trạng thái phiên**: nhà chính thức TS là `sessionStatusOf()` trong `src/lib/listings/sessionStatus.ts`; bản sao SQL là `public.listing_session_status()` (migration `20260805000003`). `getSessionStatus()` trong `useAuctionListings.tsx` giờ chỉ là delegate — **đừng viết lại logic tại chỗ gọi**.
 - **Rollup slug → nhóm cha**: `PARENT_OF` / `parentOf()` trong `src/lib/reports/listingsReport.ts` ↔ `public.asset_parent_slug()`. `listings.property_type_slug` chứa **hai thế hệ taxonomy** (bộ mới `ASSET_CATEGORIES` + bộ cũ chỉ-BĐS từ `property_types`), và `property_types` **không có** cột parent nên phải hardcode cả hai bộ. Slug lạ rơi vào `khac` — section `byCategoryChild` của RPC tồn tại chính là để lộ slug nào đang rơi vào đó (đã bắt được `kho-xuong`, `dat-nen`). Thêm slug mới ⇒ sửa **cả hai**.
+- **Hợp đồng ký gửi**: `MissingParty` (`src/types/consignment-contract.ts`) ↔ `consignment_missing_parties()`; nút hiện/ẩn trong `src/lib/consignment/contractState.ts` ↔ guard trạng thái trong các RPC `consignment_contract_*` (migration `20260912000004`). Server quyết định — lệch thì nút hiện mà RPC trả `invalid_status`. Tổ chức **không có policy SELECT** trên `consignment_contracts`: `.from("consignment_contracts")` phía portal trả MẢNG RỖNG chứ không báo lỗi — phải đi qua RPC `org_consignment_contract`. Đổi cột trả về của `org_service_requests` lần nữa ⇒ DROP FUNCTION trước.
+- **Ai đang phải làm (badge ký gửi)**: `awaitingSides()` trong `contractState.ts` ↔ `contracts_action` của `org_service_request_counts`; nhãn `postingBadge.ts` ↔ `owner_action` của `owner_consignment_summary` (migration `20260912000007`). Thêm trạng thái / loại việc ⇒ sửa cả SQL lẫn TS. Dự thảo PDF KHÔNG được tự cộng phí — in `terms.service_fee` (xem cặp "Tổng phí báo giá ký gửi" bên dưới).
+- **Tổng phí báo giá ký gửi**: `feeTotalRequired()` trong `src/lib/quotePlan.ts` ↔ `SUM((i->>'amount')::numeric) WHERE NOT optional` trong nhánh `quote` của `org_respond_service_request` (migration `20260911000002`). **Server là bên quyết định** — hàm TS chỉ để hiện tổng ngay khi đang gõ. Lệch nhau thì chủ tài sản chọn theo một con số rồi ký hợp đồng theo con số khác, mà con số server còn đi thẳng vào `opportunities.gross_amount`.
 - Đừng import `ASSET_CATEGORIES` vào `listingsReport.ts` — nó kéo theo `lucide-react`, phá tính thuần của module formatter (test sẽ phải mock thêm).
 
 ### Client-side org matching is a STOPGAP
@@ -234,3 +249,12 @@ COALESCE(opportunities.supplier_id, services.supplier_id)
 - Lưu **đường dẫn** trong DB (`supplier_contracts.doc_path`), không lưu URL.
 - Mở file bằng `createSignedUrl(path, ttl)`; `getPublicUrl` **không báo lỗi**, nó trả về một URL đúng cú pháp mà mọi request tới đó đều 400.
 - Policy `SELECT` cũng phải gác `has_role(...,'ADMIN')` — `public = false` chặn đường CDN ẩn danh, nhưng client đã đăng nhập vẫn đi qua RLS của `storage.objects`.
+
+## Engine AI chạy trên trình duyệt KHÔNG phải ranh giới tin cậy
+
+Hỏi đáp tài liệu phiên (`20260912000101`): engine mock chạy trên máy người mua. Nếu client gửi *văn bản câu trả lời*, người mua sửa thành gì cũng được mà vẫn kèm "trích dẫn" hợp lệ. Luật: client chỉ gửi đề xuất `{clause_id, quote}`; server kiểm quote là chuỗi con nguyên văn của điều khoản citable **cùng phiên** rồi tự dựng câu trả lời (`case_qa_compose_answer`, song sinh `src/lib/caseQa/compose.ts` — sửa định dạng thì sửa cả hai). Khi có Edge Function AI thật: bỏ tham số `_proposal`, đừng mở rộng nó.
+
+Bẫy đi kèm:
+- Supabase **tự GRANT EXECUTE hàm mới cho `anon` + `authenticated`** ⇒ hàm nội bộ (`case_qa_apply_proposal`, `case_qa_validate_citations`…) phải `REVOKE … FROM PUBLIC, anon, authenticated` tường minh; khối kiểm chứng cuối migration nên assert điều đó.
+- plpgsql `RETURNS TABLE (status …)` + truy vấn có cột `status` ⇒ lỗi "ambiguous column" — thêm `#variable_conflict use_column` hoặc qualify mọi cột.
+- Trên UI "hồ sơ" đã là hồ sơ tham gia đấu giá của người mua ⇒ tài liệu của phiên gọi là **"Tài liệu phiên"**.

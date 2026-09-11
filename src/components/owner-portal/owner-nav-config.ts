@@ -14,10 +14,14 @@ export interface NavItem {
   icon: LucideIcon
 }
 
+/** Loại số đếm động hiện cạnh mục nav — số trả về ở OwnerPortalSidebar. */
+export type OwnerCountBadgeKind = 'owner-consignment'
+
 export interface NavSection {
   label: string
   icon: LucideIcon
   href: string
+  countBadge?: OwnerCountBadgeKind
 }
 
 export const OWNER_NAV_SECTIONS: NavSection[] = [
@@ -35,6 +39,7 @@ export const OWNER_NAV_SECTIONS: NavSection[] = [
     label: 'Số hoá tài sản',
     icon: UploadCloud,
     href: '/chu-tai-san/dang-tai-san',
+    countBadge: 'owner-consignment',
   },
   {
     label: 'Chi nhánh',

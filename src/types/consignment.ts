@@ -6,9 +6,12 @@
 
 import type {
   BrokerRequestStatus,
+  QuoteFeeItem,
+  QuotePlan,
   ServiceRequestOrigin,
   ServiceRequestStatus,
 } from "./asset-posting";
+import type { ConsignmentContractStatus } from "./consignment-contract";
 
 // Nguồn sự thật của các union này là types/asset-posting.ts (mirror bảng) —
 // re-export để hai file không trôi khỏi nhau.
@@ -16,6 +19,8 @@ export type {
   ServiceRequestStatus,
   ServiceRequestOrigin,
   BrokerRequestStatus,
+  QuotePlan,
+  QuoteFeeItem,
 } from "./asset-posting";
 
 /** Một dòng trong hộp thư của tổ chức — trả về từ RPC `org_service_requests`. */
@@ -36,6 +41,16 @@ export interface OrgServiceRequest {
   quote_lead_time_days: number | null;
   quote_note: string | null;
   quote_doc_path: string | null;
+  quote_plan: QuotePlan | null;
+  quote_fee_items: QuoteFeeItem[] | null;
+
+  /** Mở lại vì hợp đồng của tổ chức được chốt trước đó đã bị huỷ. */
+  reopened_at: string | null;
+  // Hợp đồng dịch vụ (chỉ có sau khi chủ tài sản chốt). Chi tiết — kể cả danh
+  // tính chủ tài sản — đọc qua RPC org_consignment_contract.
+  contract_id: string | null;
+  contract_code: string | null;
+  contract_status: ConsignmentContractStatus | null;
 
   // Bản chiếu hồ sơ tài sản. KHÔNG có danh tính chủ tài sản, số nhà, giấy tờ
   // sở hữu — RPC cố tình không trả về.
@@ -59,12 +74,21 @@ export interface OrgServiceRequest {
   right_to_sell: boolean;
 }
 
-/** Báo giá tổ chức gửi lại cho chủ tài sản. */
+/**
+ * Báo giá tổ chức gửi lại cho chủ tài sản (payload của RPC
+ * `org_respond_service_request` action 'quote').
+ *
+ * `service_fee` và `lead_time_days` là giá trị DẪN XUẤT do server tính lại từ
+ * `fee_items` / `plan.milestones.mo_phien` — client không nhập tay nữa, hai
+ * trường này chỉ còn để tương thích dòng cũ chưa có phương án.
+ */
 export interface ServiceQuoteInput {
   commission_pct: number | null;
   service_fee: number | null;
   starting_price: number | null;
   lead_time_days: number | null;
+  plan?: QuotePlan;
+  fee_items?: QuoteFeeItem[];
   note?: string;
   doc_path?: string;
 }
@@ -81,6 +105,7 @@ export const ORG_REQUEST_STATUS_LABELS: Record<ServiceRequestStatus, string> = {
   selected: "Đã trúng",
   not_selected: "Không được chọn",
   withdrawn: "Chủ tài sản đã thu hồi",
+  contract_cancelled: "Đã huỷ hợp đồng",
 };
 
 /** Nhãn theo góc nhìn CHỦ TÀI SẢN (trang hồ sơ tài sản). */
@@ -93,6 +118,7 @@ export const OWNER_REQUEST_STATUS_LABELS: Record<ServiceRequestStatus, string> =
   selected: "Đã chọn tổ chức này",
   not_selected: "Đã chọn tổ chức khác",
   withdrawn: "Đã thu hồi",
+  contract_cancelled: "Đã huỷ hợp đồng",
 };
 
 export const REQUEST_STATUS_BADGE_CLASS: Record<ServiceRequestStatus, string> = {
@@ -104,6 +130,7 @@ export const REQUEST_STATUS_BADGE_CLASS: Record<ServiceRequestStatus, string> = 
   selected: "bg-success/10 text-success",
   not_selected: "bg-muted text-muted-foreground",
   withdrawn: "bg-muted text-muted-foreground",
+  contract_cancelled: "bg-muted text-muted-foreground",
 };
 
 export const BROKER_STATUS_LABELS: Record<BrokerRequestStatus, string> = {
@@ -117,9 +144,10 @@ export const BROKER_STATUS_LABELS: Record<BrokerRequestStatus, string> = {
 /** Tổ chức còn phải trả lời (hiện ở tab "Cần trả lời"). */
 export const OPEN_REQUEST_STATUSES: ServiceRequestStatus[] = ["sent", "seen"];
 
-/** Yêu cầu đã khép — tổ chức không thao tác được nữa. */
+/** Yêu cầu đã khép — tổ chức không báo giá / từ chối được nữa. */
 export const CLOSED_REQUEST_STATUSES: ServiceRequestStatus[] = [
   "selected",
   "not_selected",
   "withdrawn",
+  "contract_cancelled",
 ];

@@ -1,6 +1,8 @@
 // Types cho hành trình "Đăng tài sản số hóa → gợi ý & chọn tổ chức đấu giá".
 // Mirror bảng asset_postings + asset_service_requests (migration 20260621000001).
 
+import type { QuoteMilestoneKey } from "@/constants/quote-plan";
+
 export type AssetPostingStatus =
   | "draft"
   | "active"
@@ -16,6 +18,38 @@ export type PricingMode = "self" | "appraisal";
 export type AuctionFormat = "truc_tiep" | "truc_tuyen" | "ca_hai";
 export type ExpectedTimeline = "urgent" | "normal" | "flexible";
 
+/**
+ * Phương án tổ chức đấu giá tổ chức đề xuất — lưu nguyên khối ở
+ * `asset_service_requests.quote_plan` (JSONB, migration 20260911000002).
+ * Danh mục key: constants/quote-plan.ts.
+ */
+export interface QuotePlan {
+  auction_format: AuctionFormat | null;
+  /** Bước giá (VNĐ). */
+  price_step: number | null;
+  deposit_mode: "percent" | "amount";
+  /** % giá khởi điểm khi mode = 'percent', VNĐ khi mode = 'amount'. */
+  deposit_value: number | null;
+  venue: string | null;
+  /** Key trong PROMOTION_CHANNELS. */
+  channels: string[];
+  channels_other: string | null;
+  /** Số ngày kể từ khi ký hợp đồng, luỹ tiến. `mo_phien` = quote_lead_time_days. */
+  milestones: Partial<Record<QuoteMilestoneKey, number>>;
+  /** Key trong SERVICE_SCOPE_ITEMS. */
+  scope_included: string[];
+  scope_excluded: string[];
+}
+
+/** Một dòng chi phí trong báo giá. Khoản `optional` KHÔNG cộng vào tổng. */
+export interface QuoteFeeItem {
+  /** Key trong FEE_ITEM_PRESETS, hoặc 'khac'. */
+  key: string;
+  label: string;
+  amount: number;
+  optional: boolean;
+}
+
 export type ServiceRequestStatus =
   | "sent"
   | "seen"
@@ -24,7 +58,9 @@ export type ServiceRequestStatus =
   | "declined"
   | "selected"
   | "not_selected"
-  | "withdrawn";
+  | "withdrawn"
+  /** Đã chốt nhưng hợp đồng dịch vụ bị huỷ — kết thúc, báo giá khác được mở lại. */
+  | "contract_cancelled";
 
 /** Ai khởi tạo yêu cầu: chủ tài sản tự chọn tổ chức, hay sàn gửi hộ. */
 export type ServiceRequestOrigin = "owner" | "platform";
@@ -111,7 +147,16 @@ export interface AssetServiceRequest {
   quote_lead_time_days: number | null;
   quote_note: string | null;
   quote_doc_path: string | null;
+  /** Phương án tổ chức đấu giá — xem QuotePlan ở types/consignment.ts. */
+  quote_plan: QuotePlan | null;
+  /** Chi phí theo khoản mục; tổng khoản bắt buộc = quote_service_fee. */
+  quote_fee_items: QuoteFeeItem[] | null;
   quoted_at: string | null;
+  /** Yêu cầu được chốt đã đóng dòng này thành not_selected (để mở lại khi huỷ hợp đồng). */
+  closed_by_request_id: string | null;
+  status_before_close: "sent" | "seen" | "quoted" | null;
+  /** Mở lại vì hợp đồng của tổ chức được chốt trước đó bị huỷ. */
+  reopened_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -168,7 +213,28 @@ export const SERVICE_REQUEST_STATUS_LABELS: Record<ServiceRequestStatus, string>
   selected: "Đã chọn tổ chức này",
   not_selected: "Đã chọn tổ chức khác",
   withdrawn: "Đã thu hồi",
+  contract_cancelled: "Đã huỷ hợp đồng",
 };
+
+/**
+ * Yêu cầu còn "sống" — tức còn có thể thành một báo giá.
+ *
+ * Dùng để đếm số tổ chức đang giữ hồ sơ so với trần MAX_RFQ_ORGS. Cố ý KHÁC với
+ * tập tổ chức không gửi lại được: UNIQUE(asset_posting_id, auction_org_id) chặn
+ * gửi lại VĨNH VIỄN kể cả khi tổ chức đã từ chối, nên nếu đếm cả dòng đã chết
+ * thì một hồ sơ bị 5 tổ chức từ chối sẽ hết đường gửi tiếp — đúng cái ngõ cụt
+ * cần tránh.
+ */
+const LIVE_SERVICE_REQUEST_STATUSES: ServiceRequestStatus[] = [
+  "sent",
+  "seen",
+  "quoted",
+  "accepted",
+  "selected",
+];
+
+export const isLiveServiceRequest = (status: ServiceRequestStatus): boolean =>
+  LIVE_SERVICE_REQUEST_STATUSES.includes(status);
 
 export const BROKER_REQUEST_STATUS_LABELS: Record<BrokerRequestStatus, string> = {
   pending: "Chờ sàn tiếp nhận",

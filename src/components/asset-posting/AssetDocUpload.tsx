@@ -29,9 +29,10 @@ export function AssetDocUpload({ value, onChange, prefix = "docs" }: AssetDocUpl
   });
 
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+    // Xem chú thích ở AssetMediaUpload: phải sao File ra trước khi reset input.
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!files?.length) return;
+    if (!files.length) return;
     const uploaded = await upload(files);
     if (uploaded.length) {
       onChange([...value, ...uploaded]);

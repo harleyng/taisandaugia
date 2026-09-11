@@ -3,9 +3,11 @@ import {
   requirements,
   buildPostingPayload,
   signatureFilled,
+  toggleOrg,
   wizardDefaults,
   type WizardValues,
 } from "./wizardSchema";
+import { MAX_RFQ_ORGS } from "@/constants/asset-posting-rules";
 
 /** Hồ sơ hợp lệ tối thiểu; mỗi test chỉ đổi phần nó quan tâm. */
 const mk = (over: Partial<WizardValues> = {}): WizardValues => ({
@@ -34,7 +36,7 @@ describe("signatureFilled", () => {
 });
 
 describe("requirements — ảnh bắt buộc mọi nhóm", () => {
-  it.each(["bat-dong-san", "xe-co", "may-moc", "hang-hoa", "do-dung"])(
+  it.each(["bat-dong-san", "xe-co", "may-moc", "hang-hoa", "do-dung", "thu-cong-my-nghe", "co-vat-suu-tam"])(
     "nhóm %s thiếu ảnh ⇒ chặn ở bước 2",
     (parentSlug) => {
       const v = mk({ parentSlug, childSlug: "x", imageUrls: [] });
@@ -143,5 +145,33 @@ describe("buildPostingPayload — bản cam kết", () => {
   it("mang cả video sang payload", () => {
     const v = mk({ videoUrls: ["https://example.test/a.mp4"] });
     expect(buildPostingPayload(v).video_urls).toEqual(["https://example.test/a.mp4"]);
+  });
+});
+
+describe("toggleOrg", () => {
+  it("thêm tổ chức theo ĐÚNG thứ tự bấm — hàng chip đọc theo thứ tự này", () => {
+    expect(toggleOrg(toggleOrg(["a"], "b"), "c")).toEqual(["a", "b", "c"]);
+  });
+
+  it("bấm lại tổ chức đã chọn là bỏ chọn, không phải thêm lần hai", () => {
+    expect(toggleOrg(["a", "b", "c"], "b")).toEqual(["a", "c"]);
+  });
+
+  it("đủ trần thì trả về ĐÚNG mảng cũ, không âm thầm đẩy tổ chức nào ra", () => {
+    const full = ["a", "b", "c"];
+    expect(toggleOrg(full, "d", 3)).toBe(full);
+  });
+
+  it("đủ trần vẫn BỎ CHỌN được — nếu không thì người dùng bị khoá cứng", () => {
+    expect(toggleOrg(["a", "b", "c"], "a", 3)).toEqual(["b", "c"]);
+  });
+
+  it("trần mặc định là MAX_RFQ_ORGS", () => {
+    const ids = Array.from({ length: MAX_RFQ_ORGS }, (_, i) => `org-${i}`);
+    expect(toggleOrg(ids, "one-more")).toHaveLength(MAX_RFQ_ORGS);
+  });
+
+  it("trần 0 (đã đủ tổ chức từ những lần gửi trước) chặn mọi lựa chọn mới", () => {
+    expect(toggleOrg([], "a", 0)).toEqual([]);
   });
 });

@@ -3,7 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { MAX_RFQ_ORGS } from "@/constants/asset-posting-rules";
 import { rankOrgs, type AuctionOrgRow, type MatchCriteria, type OrgMatchResult } from "@/lib/orgMatching";
+import { assertRpcOk } from "@/lib/consignment/errors";
+import { qk } from "@/lib/queryKeys";
 import type { Database } from "@/integrations/supabase/types";
 import type {
   AssetBrokerRequest,
@@ -127,7 +130,7 @@ export function useCreatePosting() {
       return { postingId: created.id };
     },
     onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["my-postings", userId] });
+      queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
       toast.success(vars.status === "draft" ? "Đã lưu nháp hồ sơ tài sản." : "Đã số hoá tài sản thành công.");
     },
     onError: (err) => {
@@ -136,39 +139,80 @@ export function useCreatePosting() {
   });
 }
 
-// ─── Gửi yêu cầu dịch vụ tới tổ chức đấu giá (luồng riêng, sau khi đã số hoá) ──
+// ─── Gửi yêu cầu báo giá tới tổ chức đấu giá (luồng riêng, sau khi đã số hoá) ─
 
-export interface SendServiceRequestArgs {
-  postingId: string;
+/** Một tổ chức nhận yêu cầu, kèm điểm khớp lúc gửi (null khi không chấm được). */
+export interface RfqTarget {
   orgId: string;
-  matchScore: number;
+  matchScore: number | null;
+}
+
+export interface SendServiceRequestsArgs {
+  postingId: string;
+  orgs: RfqTarget[];
+  /** Bản mô tả tài sản — gửi GIỐNG NHAU cho mọi tổ chức, đúng nghĩa một RFQ. */
   message?: string;
 }
 
-export function useSendServiceRequest() {
+/**
+ * Gửi một yêu cầu báo giá tới NHIỀU tổ chức cùng lúc (fan-out của chủ tài sản).
+ *
+ * Đối xứng với admin_dispatch_service_requests() ở luồng "nhờ sàn chọn giúp",
+ * nhưng chạy thẳng qua RLS `asr_owner_insert` (status='sent', origin='owner')
+ * nên không cần RPC.
+ *
+ * ⚠️ Phải tự lọc tổ chức đã nhận yêu cầu trước khi insert: UNIQUE(asset_posting_id,
+ * auction_org_id) làm ĐỔ CẢ LỆNH nếu chỉ một dòng trùng — người dùng bấm "gửi
+ * thêm tổ chức" mà lỡ tick lại một tổ chức cũ thì không tổ chức mới nào nhận
+ * được. UI có làm mờ tổ chức đã gửi, nhưng đó là ảnh chụp lúc mở danh sách.
+ */
+export function useSendServiceRequests() {
   const { userId } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ postingId, orgId, matchScore, message }: SendServiceRequestArgs) => {
+    mutationFn: async ({ postingId, orgs, message }: SendServiceRequestsArgs) => {
       if (!userId) throw new Error("Bạn cần đăng nhập để gửi yêu cầu.");
+      if (orgs.length === 0) throw new Error("Chọn ít nhất một tổ chức đấu giá.");
+      if (orgs.length > MAX_RFQ_ORGS) {
+        throw new Error(`Mỗi lần chỉ gửi được tối đa ${MAX_RFQ_ORGS} tổ chức.`);
+      }
 
-      const { error } = await supabase.from("asset_service_requests").insert({
-        asset_posting_id: postingId,
-        auction_org_id: orgId,
-        user_id: userId,
-        status: "sent",
-        message: message ?? null,
-        match_score: matchScore,
-      });
+      const { data: existing, error: existingError } = await supabase
+        .from("asset_service_requests")
+        .select("auction_org_id")
+        .eq("asset_posting_id", postingId);
+      if (existingError) throw existingError;
+
+      const already = new Set((existing ?? []).map((r) => r.auction_org_id));
+      const rows = orgs
+        .filter((o) => !already.has(o.orgId))
+        .map((o) => ({
+          asset_posting_id: postingId,
+          auction_org_id: o.orgId,
+          user_id: userId,
+          status: "sent",
+          origin: "owner",
+          message: message?.trim() || null,
+          match_score: o.matchScore,
+        }));
+
+      if (rows.length === 0) {
+        throw new Error("Các tổ chức bạn chọn đều đã nhận yêu cầu cho hồ sơ này.");
+      }
+
+      const { error } = await supabase.from("asset_service_requests").insert(rows);
       if (error) throw error;
 
-      return { postingId, orgId };
+      return { postingId, sent: rows.length, skipped: orgs.length - rows.length };
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["my-postings", userId] });
-      queryClient.invalidateQueries({ queryKey: ["posting-detail", data.postingId] });
-      toast.success("Đã gửi yêu cầu dịch vụ tới tổ chức đấu giá.");
+    onSuccess: ({ postingId, sent, skipped }) => {
+      queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
+      queryClient.invalidateQueries({ queryKey: qk.postingDetail(postingId) });
+      toast.success(
+        `Đã gửi yêu cầu báo giá tới ${sent} tổ chức đấu giá.` +
+          (skipped > 0 ? ` ${skipped} tổ chức đã nhận yêu cầu từ trước.` : ""),
+      );
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Không thể gửi yêu cầu. Vui lòng thử lại.");
@@ -182,7 +226,7 @@ export function useMyPostings() {
   const { userId } = useAuth();
 
   return useQuery({
-    queryKey: ["my-postings", userId],
+    queryKey: qk.myPostings(userId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("asset_postings")
@@ -227,7 +271,7 @@ export function usePostingDetail(id: string | null) {
   const { userId } = useAuth();
 
   return useQuery({
-    queryKey: ["posting-detail", id],
+    queryKey: qk.postingDetail(id),
     queryFn: async (): Promise<PostingDetail | null> => {
       if (!id) return null;
 
@@ -302,8 +346,8 @@ export function useCreateBrokerRequest() {
       return { postingId };
     },
     onSuccess: ({ postingId }) => {
-      queryClient.invalidateQueries({ queryKey: ["my-postings", userId] });
-      queryClient.invalidateQueries({ queryKey: ["posting-detail", postingId] });
+      queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
+      queryClient.invalidateQueries({ queryKey: qk.postingDetail(postingId) });
       toast.success("Đã gửi yêu cầu. Sàn sẽ tìm tổ chức đấu giá phù hợp cho bạn.");
     },
     onError: (err) => {
@@ -326,7 +370,7 @@ export function useCancelBrokerRequest() {
       return { postingId };
     },
     onSuccess: ({ postingId }) => {
-      queryClient.invalidateQueries({ queryKey: ["posting-detail", postingId] });
+      queryClient.invalidateQueries({ queryKey: qk.postingDetail(postingId) });
       toast.success("Đã huỷ yêu cầu nhờ sàn chọn giúp.");
     },
     onError: (err) => {
@@ -336,8 +380,12 @@ export function useCancelBrokerRequest() {
 }
 
 /**
- * Chốt một báo giá. RPC lo hết: đặt 'selected', đóng các tổ chức còn lại thành
- * 'not_selected', và tạo lead + cơ hội trong CRM.
+ * Chốt một báo giá. RPC lo hết: khoá hồ sơ, đặt 'selected', đóng các tổ chức
+ * còn lại thành 'not_selected', và tạo lead + cơ hội trong CRM.
+ *
+ * Lỗi nghiệp vụ (hồ sơ đã chốt, chưa có báo giá…) về dạng `{ok:false, reason}`
+ * nên phải qua assertRpcOk. Làm mới dữ liệu ở onSettled — kể cả khi thất bại —
+ * để màn hình hiện đúng tổ chức thật sự đã được chốt.
  */
 export function useSelectQuote() {
   const { userId } = useAuth();
@@ -345,13 +393,19 @@ export function useSelectQuote() {
 
   return useMutation({
     mutationFn: async ({ requestId }: { requestId: string; postingId: string }) => {
-      const { error } = await supabase.rpc("owner_select_service_quote", { _request_id: requestId });
+      const { data, error } = await supabase.rpc("owner_select_service_quote", { _request_id: requestId });
       if (error) throw error;
+      assertRpcOk(data);
     },
-    onSuccess: (_data, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["my-postings", userId] });
-      queryClient.invalidateQueries({ queryKey: ["posting-detail", vars.postingId] });
-      toast.success("Đã chọn tổ chức đấu giá. Sàn sẽ liên hệ để hoàn tất hợp đồng.");
+    onSuccess: () => {
+      toast.success("Đã chọn tổ chức đấu giá. Tổ chức sẽ soạn hợp đồng dịch vụ để hai bên ký.");
+    },
+    onSettled: (_data, _err, vars) => {
+      queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
+      queryClient.invalidateQueries({ queryKey: qk.postingDetail(vars.postingId) });
+      // Chốt thành công tạo hợp đồng trong cùng giao dịch.
+      queryClient.invalidateQueries({ queryKey: qk.consignment.postingContracts(vars.postingId) });
+      queryClient.invalidateQueries({ queryKey: qk.consignment.ownerSummary(userId) });
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Không chọn được tổ chức. Vui lòng thử lại.");

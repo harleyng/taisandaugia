@@ -15,6 +15,7 @@ import { AdminPermissionRoute } from "@/components/admin/AdminPermissionRoute";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { PortalPermissionRoute } from "@/components/portal/PortalPermissionRoute";
 import { OwnerPortalLayout } from "@/components/owner-portal/OwnerPortalLayout";
+import { OwnerKycGate } from "@/components/owner-portal/OwnerKycGate";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 
@@ -98,6 +99,14 @@ const CoSoVatChatPage = lazy(() => import("./pages/portal/nang-luc/CoSoVatChatPa
 const LichSuDauGiaPage = lazy(() => import("./pages/portal/nang-luc/LichSuDauGiaPage"));
 const TaiChinhPage = lazy(() => import("./pages/portal/nang-luc/TaiChinhPage"));
 const YeuCauKyGuiPage = lazy(() => import("./pages/portal/YeuCauKyGuiPage"));
+const PhienDauGiaPage = lazy(() => import("./pages/portal/PhienDauGiaPage"));
+const PhienDauGiaDetailPage = lazy(() => import("./pages/portal/PhienDauGiaDetailPage"));
+const PhienDauGiaQaPreviewPage = lazy(() => import("./pages/portal/PhienDauGiaQaPreviewPage"));
+const HoiDapPage = lazy(() => import("./pages/portal/HoiDapPage"));
+const KhachHangPage = lazy(() => import("./pages/portal/KhachHangPage"));
+const TiepThiPhienPage = lazy(() => import("./pages/portal/TiepThiPhienPage"));
+const KhachHangDetailPage = lazy(() => import("./pages/portal/KhachHangDetailPage"));
+const HoSoThamGiaPage = lazy(() => import("./pages/portal/HoSoThamGiaPage"));
 const PortalCreditsPage = lazy(() => import("./pages/portal/PortalCreditsPage"));
 const ApplicationsPage = lazy(() => import("./pages/ApplicationsPage"));
 const ApplicationEditPage = lazy(() => import("./pages/ApplicationEditPage"));
@@ -119,6 +128,7 @@ const OwnerBranchesPage = lazy(() => import("./pages/OwnerBranchesPage"));
 const OwnerReportPage = lazy(() => import("./pages/OwnerReportPage"));
 const OwnerCreditsPage = lazy(() => import("./pages/chu-tai-san/OwnerCreditsPage"));
 const AssetPostingWizardPage = lazy(() => import("./pages/AssetPostingWizardPage"));
+const AssetPostingDetailPage = lazy(() => import("./pages/AssetPostingDetailPage"));
 const BuyCredits = lazy(() => import("./pages/BuyCredits"));
 const VnpayCheckout = lazy(() => import("./pages/VnpayCheckout"));
 const PaymentResult = lazy(() => import("./pages/PaymentResult"));
@@ -127,10 +137,14 @@ const Contact = lazy(() => import("./pages/Contact"));
 const About = lazy(() => import("./pages/About"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfUse = lazy(() => import("./pages/TermsOfUse"));
+const OrgMatchingSpec = lazy(() => import("./pages/OrgMatchingSpec"));
 const TinTucPage = lazy(() => import("./pages/TinTucPage"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const AuctionToolsPage = lazy(() => import("./pages/AuctionToolsPage"));
 const AuctionToolDetail = lazy(() => import("./pages/AuctionToolDetail"));
+const AuctionSessions = lazy(() => import("./pages/AuctionSessions"));
+const AuctionSessionDetail = lazy(() => import("./pages/AuctionSessionDetail"));
+const AuctionSessionQaPage = lazy(() => import("./pages/AuctionSessionQaPage"));
 
 function RedirectApplicationId() {
   const { id } = useParams<{ id: string }>()
@@ -208,12 +222,17 @@ const App = () => (
               <Route path="/gioi-thieu" element={<About />} />
               <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicy />} />
               <Route path="/dieu-khoan-su-dung" element={<TermsOfUse />} />
+
+              <Route path="/cach-cham-diem-to-chuc" element={<OrgMatchingSpec />} />
               <Route path="/dang-ky-to-chuc" element={<CompanyOnboarding />} />
               <Route path="/tro-thanh-chu-tai-san" element={<AssetOwnerOnboarding />} />
               <Route path="/tin-tuc" element={<TinTucPage />} />
               <Route path="/tin-tuc/:slug" element={<ArticleDetail />} />
               <Route path="/cong-cu-dau-gia" element={<AuctionToolsPage />} />
               <Route path="/cong-cu-dau-gia/:slug" element={<AuctionToolDetail />} />
+              <Route path="/sessions" element={<AuctionSessions />} />
+              <Route path="/sessions/:id" element={<AuctionSessionDetail />} />
+              <Route path="/sessions/:id/hoi-dap" element={<AuctionSessionQaPage />} />
 
               {/* Credits */}
               <Route path="/buy-credits" element={<BuyCredits />} />
@@ -244,7 +263,12 @@ const App = () => (
                   <Route index element={<Navigate to="/chu-tai-san/dashboard" replace />} />
                   <Route path="dashboard" element={<OwnerDashboard />} />
                   <Route path="tai-san" element={<OwnerAssetsPage />} />
-                  <Route path="dang-tai-san" element={<AssetPostingWizardPage />} />
+                  {/* Cổng KYC chủ tài sản ở layout: danh sách + chi tiết hồ sơ dùng chung,
+                      chuyển qua lại không kiểm lại / nháy loader. */}
+                  <Route path="dang-tai-san" element={<OwnerKycGate />}>
+                    <Route index element={<AssetPostingWizardPage />} />
+                    <Route path=":id" element={<AssetPostingDetailPage />} />
+                  </Route>
                   <Route path="chi-nhanh-amc" element={<OwnerBranchesPage />} />
                   <Route path="bao-cao" element={<OwnerReportPage />} />
                   <Route path="credits" element={<OwnerCreditsPage />} />
@@ -314,6 +338,81 @@ const App = () => (
                   />
 
                   {/* Credit */}
+                  <Route
+                    path="phien-dau-gia"
+                    element={
+                      <PortalPermissionRoute module="phien-dau-gia">
+                        <PhienDauGiaPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="phien-dau-gia/moi"
+                    element={
+                      <PortalPermissionRoute module="phien-dau-gia">
+                        <PhienDauGiaDetailPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="phien-dau-gia/:id"
+                    element={
+                      <PortalPermissionRoute module="phien-dau-gia">
+                        <PhienDauGiaDetailPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="phien-dau-gia/:id/hoi-dap"
+                    element={
+                      <PortalPermissionRoute module="phien-dau-gia">
+                        <PhienDauGiaQaPreviewPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  {/* Hỏi đáp & omnichat: câu hỏi người mua từ sàn + Zalo */}
+                  <Route
+                    path="hoi-dap"
+                    element={
+                      <PortalPermissionRoute module="hoi-dap">
+                        <HoiDapPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  {/* Hồ sơ tham gia đấu giá người mua đã thanh toán */}
+                  <Route
+                    path="ho-so-tham-gia"
+                    element={
+                      <PortalPermissionRoute module="ho-so-tham-gia">
+                        <HoSoThamGiaPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="phien-dau-gia/:id/tiep-thi"
+                    element={
+                      <PortalPermissionRoute module="phien-dau-gia">
+                        <TiepThiPhienPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  {/* Danh bạ khách hàng riêng của tổ chức */}
+                  <Route
+                    path="khach-hang"
+                    element={
+                      <PortalPermissionRoute module="khach-hang">
+                        <KhachHangPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="khach-hang/:id"
+                    element={
+                      <PortalPermissionRoute module="khach-hang">
+                        <KhachHangDetailPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
                   <Route path="credits" element={<PortalCreditsPage />} />
 
                   {/* Tổ chức — thành viên & vai trò */}

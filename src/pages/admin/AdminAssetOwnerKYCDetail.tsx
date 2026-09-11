@@ -334,6 +334,11 @@ export default function AdminAssetOwnerKYCDetail() {
                     </span>
                   } />
                   <InfoRow icon={Mail} label="Email liên hệ" value={record.contact_email} />
+                  <InfoRow
+                    icon={Building2}
+                    label="Địa chỉ"
+                    value={[record.address, record.ward, record.province].filter(Boolean).join(", ") || "—"}
+                  />
                 </SectionCard>
 
                 {/* Section B: eKYC */}
@@ -377,6 +382,11 @@ export default function AdminAssetOwnerKYCDetail() {
                   } />
                   <InfoRow icon={CreditCard} label="Mã số thuế / Mã cơ quan" value={record.tax_code} />
                   <InfoRow icon={Mail} label="Email công vụ" value={record.official_email} />
+                  <InfoRow
+                    icon={Building2}
+                    label="Địa chỉ trụ sở"
+                    value={[record.head_office_address, record.head_office_province].filter(Boolean).join(", ") || "—"}
+                  />
                   <InfoRow icon={Shield} label="Domain email" value={record.email_domain} />
                   {record.registry_match_score !== null && (
                     <InfoRow icon={Shield} label="Khớp cổng quốc gia" value={

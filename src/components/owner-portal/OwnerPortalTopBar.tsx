@@ -14,11 +14,23 @@ import { useCredits } from '@/hooks/useCredits'
 import { supabase } from '@/integrations/supabase/client'
 import { CreditCard, LogOut, Menu, Plus, ChevronRight, ArrowLeft } from 'lucide-react'
 
-const PAGE_META: Record<string, { title: string; parent?: string }> = {
+type PageMeta = { title: string; parent?: string }
+
+const PAGE_META: Record<string, PageMeta> = {
   '/chu-tai-san/dashboard': { title: 'Tổng quan' },
   '/chu-tai-san/tai-san': { title: 'Danh sách tài sản' },
+  '/chu-tai-san/dang-tai-san': { title: 'Số hoá tài sản' },
   '/chu-tai-san/bao-cao': { title: 'Báo cáo' },
   '/chu-tai-san/credits': { title: 'Credit & Thanh toán' },
+}
+
+/** Khớp đường dẫn tĩnh trước, rồi tới các route có tham số (chi tiết hồ sơ). */
+function pageMetaFor(pathname: string): PageMeta | undefined {
+  if (PAGE_META[pathname]) return PAGE_META[pathname]
+  if (pathname.startsWith('/chu-tai-san/dang-tai-san/')) {
+    return { title: 'Chi tiết hồ sơ', parent: 'Số hoá tài sản' }
+  }
+  return undefined
 }
 
 interface Props {
@@ -29,7 +41,7 @@ export function OwnerPortalTopBar({ onMenuClick }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
   const { balance } = useCredits()
-  const page = PAGE_META[location.pathname]
+  const page = pageMetaFor(location.pathname)
   const [displayName, setDisplayName] = useState('')
 
   useEffect(() => {

@@ -22,6 +22,16 @@ interface UseStorageUploadOptions {
 }
 
 /**
+ * `crypto.randomUUID` chỉ tồn tại trong secure context (https / localhost). Mở
+ * dev server qua IP LAN để thử trên điện thoại là nó undefined — không có nhánh
+ * dự phòng này thì cả vòng upload ném TypeError.
+ */
+const newId = () =>
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+/**
  * Vòng lặp upload dùng chung cho cả ba uploader của wizard số hoá tài sản.
  *
  * Trước đây mỗi component tự chép lại: guard auth → check size → tách đuôi →
@@ -42,23 +52,29 @@ export function useStorageUpload({ bucket, maxSize, folder, returns, label }: Us
     }
     setUploading(true);
     const uploaded: string[] = [];
-    for (const file of Array.from(files)) {
-      if (file.size > maxSize) {
-        toast.error(`${file.name}: vượt quá ${maxMb}MB`);
-        continue;
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > maxSize) {
+          toast.error(`${file.name}: vượt quá ${maxMb}MB`);
+          continue;
+        }
+        const ext = file.name.split(".").pop() ?? "bin";
+        const path = folder ? `${userId}/${folder}/${newId()}.${ext}` : `${userId}/${newId()}.${ext}`;
+        const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
+        if (error) {
+          toast.error(`Lỗi tải ${file.name}: ${error.message}`);
+          continue;
+        }
+        uploaded.push(returns === "url" ? supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl : path);
       }
-      const ext = file.name.split(".").pop() ?? "bin";
-      const path = folder
-        ? `${userId}/${folder}/${crypto.randomUUID()}.${ext}`
-        : `${userId}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
-      if (error) {
-        toast.error(`Lỗi tải ${file.name}: ${error.message}`);
-        continue;
-      }
-      uploaded.push(returns === "url" ? supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl : path);
+    } catch (err) {
+      // finally là phần quan trọng: không có nó, một lần throw sẽ treo `uploading`
+      // ở true VĨNH VIỄN và nút "Thêm ảnh" disabled luôn — nhìn y hệt lỗi "không
+      // tải được ảnh" nhưng console sạch trơn.
+      toast.error(err instanceof Error ? `Lỗi tải ${label}: ${err.message}` : `Lỗi tải ${label}`);
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
     return uploaded;
   };
 

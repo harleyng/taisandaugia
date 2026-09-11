@@ -25,6 +25,7 @@ import { OrgInfoSection } from "@/components/asset-owner-onboarding/organization
 import { RepInfoSection } from "@/components/asset-owner-onboarding/organization/tier1/RepInfoSection";
 import { RepEKYCSection } from "@/components/asset-owner-onboarding/organization/tier1/RepEKYCSection";
 import { OrgDocsSection } from "@/components/asset-owner-onboarding/organization/tier1/OrgDocsSection";
+import { AddressSection } from "@/components/asset-owner-onboarding/AddressSection";
 
 import type { AssetOwnerBranch, IdType, OrgType, RegistryAssetOwner } from "@/types/asset-owner";
 import type { Json } from "@/integrations/supabase/types";
@@ -57,6 +58,8 @@ const AssetOwnerOnboarding = () => {
   const [indForm, setIndForm] = useState({
     full_name: "", phone: "", phone_verified: false,
     contact_email: "", id_type: "cccd" as IdType, id_number: "",
+    // Địa chỉ — Bên A trong hợp đồng dịch vụ đấu giá.
+    address: "", ward: "", province: "",
     id_front_url: null as string | null,
     id_back_url: null as string | null,
     selfie_url: null as string | null,
@@ -71,6 +74,7 @@ const AssetOwnerOnboarding = () => {
     linked_auction_org_id: null as string | null,
     registry_match_score: null as number | null,
     rep_full_name: "", rep_title: "",
+    head_office_address: "", head_office_province: "",
     rep_id_type: "cccd" as IdType, rep_id_number: "",
     rep_id_front_url: null as string | null,
     rep_id_back_url: null as string | null,
@@ -125,6 +129,9 @@ const AssetOwnerOnboarding = () => {
         contact_email: kyc.contact_email ?? profile.email ?? prev.contact_email,
         id_type: kyc.id_type ?? prev.id_type,
         id_number: kyc.id_number ?? prev.id_number,
+        address: kyc.address ?? prev.address,
+        ward: kyc.ward ?? prev.ward,
+        province: kyc.province ?? prev.province,
         id_front_url: kyc.id_front_url ?? null,
         id_back_url: kyc.id_back_url ?? null,
         selfie_url: kyc.selfie_url ?? null,
@@ -144,6 +151,9 @@ const AssetOwnerOnboarding = () => {
       contact_email: kyc?.contact_email ?? profile.email ?? prev.contact_email,
       id_type: kyc?.id_type ?? prev.id_type,
       id_number: kyc?.id_number ?? prev.id_number,
+      address: kyc?.address ?? prev.address,
+      ward: kyc?.ward ?? prev.ward,
+      province: kyc?.province ?? prev.province,
       id_front_url: kyc?.id_front_url ?? null,
       id_back_url: kyc?.id_back_url ?? null,
       selfie_url: kyc?.selfie_url ?? null,
@@ -166,6 +176,8 @@ const AssetOwnerOnboarding = () => {
       registry_match_score: orgKyc.registry_match_score,
       rep_full_name: orgKyc.rep_full_name ?? prev.rep_full_name,
       rep_title: orgKyc.rep_title ?? prev.rep_title,
+      head_office_address: orgKyc.head_office_address ?? prev.head_office_address,
+      head_office_province: orgKyc.head_office_province ?? prev.head_office_province,
       rep_id_type: orgKyc.rep_id_type ?? prev.rep_id_type,
       rep_id_number: orgKyc.rep_id_number ?? prev.rep_id_number,
       rep_id_front_url: orgKyc.rep_id_front_url,
@@ -237,6 +249,10 @@ const AssetOwnerOnboarding = () => {
       toast.error("Email liên hệ chưa hợp lệ");
       return;
     }
+    if (indForm.address.trim().length < 5) {
+      toast.error("Vui lòng nhập địa chỉ (dùng trong hợp đồng dịch vụ đấu giá)");
+      return;
+    }
     if (!indForm.id_front_url || !indForm.id_back_url) {
       toast.error("Vui lòng tải lên ảnh CCCD 2 mặt");
       return;
@@ -280,6 +296,10 @@ const AssetOwnerOnboarding = () => {
     }
     if (!orgForm.official_email.includes("@")) {
       toast.error("Email công vụ chưa hợp lệ");
+      return;
+    }
+    if (orgForm.head_office_address.trim().length < 5) {
+      toast.error("Vui lòng nhập địa chỉ trụ sở (dùng trong hợp đồng dịch vụ đấu giá)");
       return;
     }
     if (orgForm.rep_full_name.trim().length < 3) {
@@ -404,6 +424,13 @@ const AssetOwnerOnboarding = () => {
                     onChange={(f) => setIndForm((prev) => ({ ...prev, ...f }))}
                   />
 
+                  <AddressSection
+                    title="Địa chỉ"
+                    addressLabel="Số nhà, đường"
+                    value={{ address: indForm.address, ward: indForm.ward, province: indForm.province }}
+                    onChange={(f) => setIndForm((prev) => ({ ...prev, ...f }))}
+                  />
+
                   <EKYCSection
                     idFrontUploaded={!!indForm.id_front_url}
                     idBackUploaded={!!indForm.id_back_url}
@@ -492,6 +519,24 @@ const AssetOwnerOnboarding = () => {
                     aliases={orgForm.aliases}
                     onChange={(f) => setOrgForm((prev) => ({ ...prev, ...f }))}
                     onSelectRegistryOwner={setRegistryOwner}
+                  />
+
+                  <AddressSection
+                    title="Địa chỉ trụ sở"
+                    addressLabel="Địa chỉ trụ sở"
+                    showWard={false}
+                    value={{
+                      address: orgForm.head_office_address,
+                      ward: "",
+                      province: orgForm.head_office_province,
+                    }}
+                    onChange={(f) =>
+                      setOrgForm((prev) => ({
+                        ...prev,
+                        ...(f.address !== undefined ? { head_office_address: f.address } : {}),
+                        ...(f.province !== undefined ? { head_office_province: f.province } : {}),
+                      }))
+                    }
                   />
 
                   <RepInfoSection

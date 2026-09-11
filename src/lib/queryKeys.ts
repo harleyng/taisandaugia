@@ -43,6 +43,19 @@ export const qk = {
     byId: (id?: string | null) => ["admin-asset-postings", id] as const,
   },
 
+  // ─── Ký gửi tài sản (chủ tài sản ↔ tổ chức đấu giá) ──────────────────────
+  // Giữ NGUYÊN chuỗi đang dùng trước khi gom về đây để cache không tách đôi.
+  myPostings: (userId?: string | null) => ["my-postings", userId] as const,
+  postingDetail: (id?: string | null) => ["posting-detail", id] as const,
+  consignment: {
+    orgRequests: (auctionOrgId?: string | null) => ["org-service-requests", auctionOrgId] as const,
+    orgCounts: (auctionOrgId?: string | null) => ["org-service-request-counts", auctionOrgId] as const,
+    orgContract: (requestId?: string | null) => ["org-consignment-contract", requestId] as const,
+    postingContracts: (postingId?: string | null) => ["posting-contracts", postingId] as const,
+    ownerKycAddress: (userId?: string | null) => ["owner-kyc-address", userId] as const,
+    ownerSummary: (userId?: string | null) => ["owner-consignment-summary", userId] as const,
+  },
+
   // ─── Tổ chức (cổng /portal) ──────────────────────────────────────────────
   myOrgs: {
     all: ["my-orgs"] as const,
@@ -54,6 +67,84 @@ export const qk = {
     all: ["org-permissions"] as const,
     byTarget: (targetId?: string | null, userId?: string | null) =>
       ["org-permissions", targetId, userId] as const,
+  },
+
+  // ─── Phiên đấu giá ───────────────────────────────────────────────────────
+  /** Portal (theo tổ chức) và công khai là HAI prefix khác nhau; mutation ở
+   *  portal phải invalidate cả `public` vì công bố/huỷ đổi thứ trang sàn thấy. */
+  auctionSessions: {
+    byOrg: (orgId?: string | null) => ["auction-sessions", orgId] as const,
+    byId: (id?: string | null) => ["auction-session", id] as const,
+    public: ["public-auction-sessions"] as const,
+    publicList: (includeEnded: boolean) =>
+      ["public-auction-sessions", "list", includeEnded] as const,
+    publicById: (id?: string | null) => ["public-auction-sessions", "detail", id] as const,
+    publicByAuctionOrg: (auctionOrgId?: string | null) =>
+      ["public-auction-sessions", "org", auctionOrgId] as const,
+  },
+
+  // ─── Hỏi đáp tài liệu phiên + hộp thư tổ chức ────────────────────────────
+  /** Mọi thay đổi tài liệu / điều khoản invalidate `bySession` — phủ cả danh sách
+   *  tài liệu ở portal lẫn điều khoản citable mà engine + trang công khai đọc. */
+  caseQa: {
+    bySession: (sessionId?: string | null) => ["case-qa", sessionId] as const,
+    documents: (sessionId?: string | null) => ["case-qa", sessionId, "documents"] as const,
+    citable: (sessionId?: string | null) => ["case-qa", sessionId, "citable"] as const,
+    mine: (sessionId?: string | null, userId?: string | null) => ["case-qa", sessionId, "mine", userId] as const,
+  },
+
+  /** Hộp thư theo tổ chức: mọi mutation chỉ cần invalidate `all(org)`. */
+  orgChat: {
+    all: (orgId?: string | null) => ["org-chat", orgId] as const,
+    inbox: (orgId: string | null | undefined, filter: string, channel: string | null, sessionId: string | null) =>
+      ["org-chat", orgId, "inbox", filter, channel, sessionId] as const,
+    thread: (orgId?: string | null, conversationId?: string | null) =>
+      ["org-chat", orgId, "thread", conversationId] as const,
+    counts: (orgId?: string | null) => ["org-chat", orgId, "counts"] as const,
+    escalations: (orgId: string | null | undefined, scope: string) =>
+      ["org-chat", orgId, "escalations", scope] as const,
+    settings: (orgId?: string | null) => ["org-chat", orgId, "settings"] as const,
+  },
+
+  /** Hồ sơ tham gia đấu giá. Mọi key chung prefix nên mua / thanh toán / tổ chức
+   *  cập nhật chỉ cần invalidate `all` là trang sàn, hồ sơ cá nhân và portal cùng
+   *  làm mới. `mine` là prefix của `mineBySession`. */
+  biddingContracts: {
+    all: ["bidding-contracts"] as const,
+    mine: (userId?: string | null) => ["bidding-contracts", "mine", userId] as const,
+    mineBySession: (userId?: string | null, sessionId?: string | null) =>
+      ["bidding-contracts", "mine", userId, sessionId] as const,
+    summary: (sessionId?: string | null) => ["bidding-contracts", "summary", sessionId] as const,
+    byOrg: (orgId?: string | null) => ["bidding-contracts", "org", orgId] as const,
+    byId: (id?: string | null) => ["bidding-contracts", "id", id] as const,
+  },
+  /** Danh tính đã xác thực qua VNeID — dữ liệu CÁ NHÂN, key theo userId. */
+  verifiedIdentity: (userId?: string | null) => ["verified-identity", userId] as const,
+
+  // ─── Khách hàng của tổ chức & tiếp thị phiên ─────────────────────────────
+  /** Danh bạ riêng của tổ chức. byOrg là PREFIX của byId nên sửa khách rồi
+   *  invalidate byOrg làm mới cả trang chi tiết. */
+  orgContacts: {
+    byOrg: (orgId?: string | null) => ["org-contacts", orgId] as const,
+    byId: (orgId?: string | null, id?: string | null) => ["org-contacts", orgId, id] as const,
+    /** Lịch sử tiếp thị của một khách — nằm SAU id nên byOrg / byId phủ được. */
+    outreach: (orgId?: string | null, id?: string | null) => ["org-contacts", orgId, id, "outreach"] as const,
+  },
+  /** Gói tiếp thị của phiên: bySession là prefix của edits / sends. */
+  sessionOutreach: {
+    bySession: (sessionId?: string | null) => ["session-outreach", sessionId] as const,
+    edits: (sessionId?: string | null) => ["session-outreach", sessionId, "edits"] as const,
+    sends: (sessionId?: string | null) => ["session-outreach", sessionId, "sends"] as const,
+  },
+  outreachOrgInfo: (auctionOrgId?: string | null) => ["outreach-org-info", auctionOrgId] as const,
+  orgContactGroups: (orgId?: string | null) => ["org-contact-groups", orgId] as const,
+  /** Người nhận của một phiên — đổi khách, nhu cầu, nhóm HAY lô đều làm lệch,
+   *  nên các mutation đó invalidate `all`. */
+  sessionAudience: {
+    all: ["session-audience"] as const,
+    bySession: (sessionId?: string | null) => ["session-audience", sessionId] as const,
+    /** groupKey = id nhóm đã sort + nối "," ("" = không lọc nhóm). */
+    list: (sessionId?: string | null, groupKey = "") => ["session-audience", sessionId, groupKey] as const,
   },
 
   // ─── Hồ sơ năng lực ──────────────────────────────────────────────────────

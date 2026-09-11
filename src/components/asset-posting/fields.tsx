@@ -13,10 +13,12 @@ interface FieldProps {
   err?: string;
   unit?: string;
   ok?: boolean;
+  /** Gợi ý AI hiện NGAY DƯỚI ô nhập của chính trường này. */
+  suggestion?: ReactNode;
   children: ReactNode;
 }
 
-export function Field({ label, req, help, err, unit, ok, children }: FieldProps) {
+export function Field({ label, req, help, err, unit, ok, suggestion, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5 min-w-0">
       <label className="text-[13.5px] font-semibold text-foreground">
@@ -36,6 +38,7 @@ export function Field({ label, req, help, err, unit, ok, children }: FieldProps)
           <AlertCircle className="h-3.5 w-3.5" /> {err}
         </div>
       )}
+      {suggestion}
     </div>
   );
 }
@@ -57,12 +60,13 @@ interface TextFieldProps {
   unit?: string;
   type?: "text" | "number";
   rows?: number;
+  suggestion?: ReactNode;
 }
 
-export function TextField({ label, req, help, placeholder, value, onChange, err, unit, type = "text", rows }: TextFieldProps) {
+export function TextField({ label, req, help, placeholder, value, onChange, err, unit, type = "text", rows, suggestion }: TextFieldProps) {
   const ok = filled(value) && !err;
   return (
-    <Field label={label} req={req} help={help} err={err} unit={unit} ok={ok}>
+    <Field label={label} req={req} help={help} err={err} unit={unit} ok={ok} suggestion={suggestion}>
       {rows ? (
         <textarea
           className={`${INPUT_BASE} ${borderClass(err, ok)} min-h-[86px] resize-y leading-relaxed`}
@@ -95,12 +99,13 @@ interface SelectFieldProps {
   err?: string;
   placeholder?: string;
   disabled?: boolean;
+  suggestion?: ReactNode;
 }
 
-export function SelectField({ label, req, help, options, value, onChange, err, placeholder = "Chọn", disabled }: SelectFieldProps) {
+export function SelectField({ label, req, help, options, value, onChange, err, placeholder = "Chọn", disabled, suggestion }: SelectFieldProps) {
   const ok = filled(value) && !err;
   return (
-    <Field label={label} req={req} help={help} err={err} ok={ok}>
+    <Field label={label} req={req} help={help} err={err} ok={ok} suggestion={suggestion}>
       <div className="relative w-full">
         <select
           className={`${INPUT_BASE} ${borderClass(err, ok)} appearance-none pr-9`}
@@ -130,17 +135,40 @@ export function DeltaField({
   value,
   onChange,
   err,
+  suggestion,
 }: {
   d: DeltaFieldDescriptor;
   value: unknown;
   onChange: (v: string) => void;
   err?: string;
+  suggestion?: ReactNode;
 }) {
   const val = value == null ? "" : String(value);
   if (d.type === "select")
-    return <SelectField label={d.label} req={d.required} options={d.options ?? []} value={val} onChange={onChange} err={err} />;
+    return (
+      <SelectField
+        label={d.label}
+        req={d.required}
+        options={d.options ?? []}
+        value={val}
+        onChange={onChange}
+        err={err}
+        suggestion={suggestion}
+      />
+    );
   if (d.type === "textarea")
-    return <TextField label={d.label} req={d.required} rows={3} value={val} onChange={onChange} err={err} placeholder={d.placeholder} />;
+    return (
+      <TextField
+        label={d.label}
+        req={d.required}
+        rows={3}
+        value={val}
+        onChange={onChange}
+        err={err}
+        placeholder={d.placeholder}
+        suggestion={suggestion}
+      />
+    );
   return (
     <TextField
       label={d.label}
@@ -151,6 +179,7 @@ export function DeltaField({
       onChange={onChange}
       err={err}
       placeholder={d.placeholder || (d.type === "number" ? "0" : "")}
+      suggestion={suggestion}
     />
   );
 }
@@ -190,15 +219,18 @@ export function OptionalGroup({
   title,
   desc,
   count,
+  defaultOpen,
   children,
 }: {
   icon: ReactNode;
   title: string;
   desc?: ReactNode;
   count: number;
+  /** Mở sẵn khi vào bước — dùng khi trong khối có thứ người dùng cần thấy ngay. */
+  defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen ?? false);
   return (
     <section className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-muted/10">
@@ -266,10 +298,13 @@ export function Switch({ on, onChange }: { on: boolean; onChange: (v: boolean) =
 export function WideRadio({
   on,
   onClick,
+  className = "",
   children,
 }: {
   on: boolean;
   onClick: () => void;
+  /** Thêm lớp cho thẻ — dùng "h-full" khi xếp các lựa chọn thành hàng ngang trong grid. */
+  className?: string;
   children: ReactNode;
 }) {
   return (
@@ -278,7 +313,7 @@ export function WideRadio({
       onClick={onClick}
       className={`w-full flex gap-3 items-start text-left border-[1.5px] rounded-xl p-3.5 transition ${
         on ? "border-primary bg-primary/5" : "border-border hover:border-primary"
-      }`}
+      } ${className}`}
     >
       <span
         className={`w-[18px] h-[18px] rounded-full border-[1.5px] mt-0.5 grid place-items-center shrink-0 bg-background ${

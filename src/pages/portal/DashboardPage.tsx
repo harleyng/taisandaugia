@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button'
 import { useCapacityProfile } from '@/hooks/useCapacityProfile'
 import { useOrgCpd } from '@/hooks/useOrgCpd'
 import { useApplicationsList } from '@/hooks/useApplicationsList'
+import { useOrgServiceRequestCounts } from '@/hooks/useOrgServiceRequests'
 import { cn } from '@/lib/utils'
 import {
   ArrowRight,
   FileText,
   GraduationCap,
+  Inbox,
   Plus,
   TrendingUp,
   XCircle,
@@ -34,6 +36,7 @@ export default function DashboardPage() {
   const cpdPending = cpdSummary.short + cpdSummary.overdue
   const { applications } = useApplicationsList()
   const draftApps = applications.filter((a) => a.status === 'DRAFT')
+  const { newCount: newConsignmentRequests } = useOrgServiceRequestCounts()
 
   const scorePercent = Math.round((profile.totalCapacityScore / 76) * 100)
 
@@ -101,6 +104,29 @@ export default function DashboardPage() {
             onClick={() => navigate('/portal/boi-duong')}
           >
             Mở sổ bồi dưỡng <ArrowRight className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+
+      {/* Yêu cầu ký gửi chờ trả lời: cơ hội doanh thu, để trước phần điểm số */}
+      {newConsignmentRequests > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/5 p-4">
+          <Inbox className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-primary">
+              {newConsignmentRequests} yêu cầu ký gửi chờ bạn trả lời
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Chủ tài sản đang chờ báo giá. Gửi phương án sớm để tăng cơ hội được chọn.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs shrink-0 gap-1"
+            onClick={() => navigate('/portal/yeu-cau-ky-gui')}
+          >
+            Mở hộp thư <ArrowRight className="h-3 w-3" />
           </Button>
         </div>
       )}

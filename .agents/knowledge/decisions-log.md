@@ -5,6 +5,104 @@
 
 ---
 
+## 2026-09-12 — Hỏi đáp theo tài liệu phiên + hộp thư đa kênh (sàn + Zalo giả lập)
+
+**Context:** Người mua hỏi đi hỏi lại ~20 câu (tiền đặt trước, hạn, xem tài sản, bước giá) qua điện thoại/Zalo, câu hỏi 9 giờ tối thì mất khách. Sai một con số = mất khách + khiếu nại doanh nghiệp có giấy phép ⇒ từ chối được, đoán thì không.
+**Decision:**
+- Nguồn DUY NHẤT = điều khoản ĐÃ XÁC NHẬN của chính phiên (`case_documents` + `case_document_clauses`, mig `20260912000100`); loại thứ 5 `clarification` = giải đáp bổ sung sinh từ câu hỏi chuyển tiếp. Trích xuất PDF là GIẢ LẬP, thiếu dữ liệu ⇒ `[[CẦN NHẬP]]`, CHECK chặn xác nhận.
+- Cổng trích dẫn ở SQL (`case_qa_apply_proposal`, mig `20260912000101`): engine chạy trên trình duyệt nên client chỉ gửi đề xuất `{clause_id, quote}`; server kiểm nguyên văn rồi TỰ dựng câu trả lời; CHECK `chat_messages_ai_must_cite` là lưới cuối.
+- Tự gửi vs soạn nháp = cấu hình tổ chức theo từng kênh (`org_chat_settings`, mặc định nháp); module `hoi-dap` (trả lời) tách `hoi-dap-cai-dat` (bật tự gửi).
+- Bảng chat chỉ có policy SELECT cho tổ chức; người mua đọc qua `my_case_questions` (không bao giờ thấy nháp).
+**Consequences:** Edge Function `answer-case-question` / `extract-case-document` / `zalo-oa-webhook` thay mock ⇒ bỏ `_proposal`. `useDeleteAuctionSession` chưa dọn prefix storage `case-documents`. Chưa báo người mua khi chuyên viên trả lời muộn (trang tự hỏi lại mỗi 15s). Chồng lấn khái niệm với mẫu thông báo của "Tiếp thị phiên" — chưa hợp nhất.
+
+## 2026-09-12 — Tiếp thị phiên: danh bạ khách của tổ chức + truy vấn chọn người nhận + gói tiếp thị có mẫu thông báo khoá
+
+**Context:** Dựng xong phiên thì tổ chức phải chủ động bán — chủ tài sản chấm tổ chức theo số người trả giá thật và giá chốt. Cần biến hồ sơ vụ việc thành bản đăng từng kênh + danh sách gửi, trong khi thông báo đấu giá có phần câu chữ không được viết lại.
+**Decision:**
+- Sàn KHÔNG cấp dữ liệu người mua (người dùng chọn). Tổ chức tự nhập/import khách: `org_contacts` + `org_contact_interests` (nhiều dòng/khách) + `org_contact_groups` (mig `20260912000010`), module `khach-hang`, KHÔNG policy admin sàn, composite FK `(id, organization_id)` chặn gắn chéo tổ chức. Đồng ý nhận tin `notifications_enabled` mặc định FALSE (cùng ngữ nghĩa profiles).
+- Chọn người nhận = RPC `org_session_audience` (mig `…12`) — nguồn DUY NHẤT của luật khớp, không bản TS, không chấm điểm. Phân khúc `lot:<item_uuid>` | `multi` (không theo `lot_no` vì trigger đánh lại số).
+- Mẫu thông báo đấu giá sống trong CODE (`src/lib/outreach/noticeTemplate.ts`, khoá hash theo phiên bản); DB chỉ lưu version + ô `draft`. Ô chia fact (đọc từ phiên) / case (tổ chức nhập) / draft (trình soạn điền).
+- Gói tiếp thị (mig `…13`): mọi ghi qua RPC `outreach_*`; `session_outreach_fields/edits/sends` chỉ có policy SELECT ⇒ không lách được nhật ký. Sinh lại không đè trường sửa tay (ghi `suggest`). "Gửi" = sao chép/xuất + đánh dấu; liên hệ từng khách phải nằm trong audience đủ điều kiện, chỉ trong hạn nhận hồ sơ.
+- Trình soạn = engine mock tất định; seam đổi sang LLM ở `useOutreachGeneration` (người dùng chọn chưa gọi mô hình).
+**Consequences:** Fixture SQL của matcher 0 dòng lệch; 23 kịch bản RPC/RLS (rollback, user không-admin) pass. Việc sau: pháp chế rà soát mẫu `2026-09-12`; Edge Function LLM; hợp nhất với `case_documents` doc_type `notice` (Hỏi đáp tài liệu phiên, làm song song) để không có hai bản thông báo; ánh xạ tỉnh sau sáp nhập 2025; gửi SMS/Zalo thật phải theo NĐ 91/2020.
+
+## 2026-09-11 — Hồ sơ tham gia đấu giá bán qua sàn (VNPay mô phỏng) + VNeID mô phỏng
+
+**Context:** Phiên đã công bố không có lối đăng ký; `max_registrants` chỉ là trần suông. Tiền hồ sơ về lý là của tổ chức đấu giá — ghi `direct` sẽ thổi phồng doanh thu sàn.
+**Decision:**
+- Mig `20260911000005`: `auction_bidding_contracts` (1 hồ sơ / phiên × người mua, private, KHÔNG policy ghi — mọi ghi qua RPC), `auction_sessions.dossier_fee`, `user_verified_identities`, module quyền `ho-so-tham-gia`.
+- Mỗi lần bán = đơn **`commission`** (gross = tiền hồ sơ, amount = phần sàn theo hợp đồng). Chỉ bán khi tổ chức có supplier + hợp đồng phủ variant `auction_dossier_fee`; KHÔNG fallback direct (người dùng chọn).
+- Giữ chỗ 15', trần = paid + hold còn hạn, khoá advisory `'bidding:'||session_id`. Số báo danh chỉ sau khi `deposit_status='received'`.
+- `pay_bidding_contract` / `save_vneid_identity` MÔ PHỎNG (tin client) — hàm thật `_settle_bidding_contract` đã REVOKE; seam VNeID FE ở `useVneidLink`.
+**Consequences:** 33 kịch bản SQL (rollback) pass. Việc sau: Edge Function IPN VNPay + OAuth VNeID rồi thu hồi 2 wrapper; sổ khoản phải trả cho tổ chức (gross − amount); hoàn tiền hồ sơ khi huỷ phiên. Tổ chức demo chưa có hợp đồng ⇒ nút mua ẩn cho tới khi admin tạo.
+
+## 2026-09-11 — Ký gửi: dự thảo hợp đồng tự sinh + badge việc chờ hai bên (bước 3)
+
+**Context:** Tổ chức soạn hợp đồng từ trang trắng trong khi điều khoản đã có cấu trúc sẵn trong báo giá đã chốt; và không bên nào biết mình đang bị chờ (không notification).
+**Decision:**
+- PDF dự thảo `src/lib/consignment/contract-pdf/` dựng CHỈ từ bản chiếu `org_consignment_contract` (không đọc bảng sống), palette FORMAL của hồ sơ ĐGV. Tiền theo `formatVnd` như màn so sánh báo giá; tổng phí in `terms.service_fee` — không nhân bản công thức phí lần thứ ba. Điều khoản mẫu tách `clauses.ts` + `CONTRACT_TEMPLATE_VERSION`, luôn in dấu "DỰ THẢO".
+- Runtime pdfmake (dò vfs, addVirtualFileSystem, Lora) chuyển về `src/lib/pdf/pdfmakeRuntime.ts`, hồ sơ ĐGV dùng lại.
+- Mig `20260912000007`: `org_service_request_counts.contracts_action`; RPC `owner_consignment_summary()` SECURITY INVOKER (RLS own-rows đủ) trả `owner_action` confirm_contract > add_address > choose_quote.
+**Consequences:** Điều khoản mẫu CHƯA được rà soát pháp lý — cần người có chuyên môn duyệt trước khi quảng bá tính năng. Badge làm mới theo staleTime 60s + invalidate khi chính người dùng thao tác; bên kia thao tác thì chỉ thấy khi refetch (chưa realtime/email).
+
+## 2026-09-11 — Ký gửi: hợp đồng dịch vụ đấu giá giữa chủ tài sản ↔ tổ chức trên sàn (bước 2)
+
+**Context:** Sau khi chốt báo giá, hợp đồng nằm hoàn toàn ngoài sàn ("Sàn sẽ liên hệ"): không bên nào thấy tiến độ, tổ chức đã trúng không có danh tính / giấy tờ của chủ tài sản để soạn hợp đồng, và đưa được tài sản vào phiên khi chưa có hợp đồng.
+**Decision:**
+- Bảng `consignment_contracts` + `consignment_contract_events` (mig `20260912000003`), tạo trong `owner_select_service_quote`. Ký ngoài sàn: tổ chức chia sẻ dự thảo → một bên tải scan → CẢ HAI xác nhận. Không chữ ký số.
+- 6 RPC (`20260912000004`, `{ok:false}`): share_draft · attach_signed · confirm (gửi kèm path) · cancel · `org_consignment_contract` · `org_service_requests` thêm cột hợp đồng. Tổ chức KHÔNG có policy đọc bảng (chứa CCCD).
+- Huỷ trước khi ký ⇒ request `contract_cancelled`, mở lại đúng các báo giá bị đóng, cơ hội CRM `lost`.
+- Thông tin Bên A/B lưu VĨNH VIỄN: địa chỉ trên KYC chủ tài sản (`20260912000002`, sửa sau duyệt qua RPC) + người đại diện từ `org_general_info`. Thiếu ⇒ `party_incomplete`.
+- Phiên đấu giá (`20260912000005`): thêm lô ký gửi và công bố phiên đòi hợp đồng `signed`. Seed demo `…06` đánh dấu signed.
+**Consequences:** ~45 kịch bản SQL rollback pass. Dữ liệu hiện tại KHÔNG tổ chức nào có `legal_rep_name` ⇒ tổ chức phải cập nhật Thông tin chung trước khi chia sẻ dự thảo. Còn P3: tự sinh PDF dự thảo (điều khoản cần pháp lý duyệt) + badge việc chờ.
+
+## 2026-09-11 — Ký gửi: "chốt 1 báo giá / hồ sơ" enforce ở DB (bước 1 của luồng hợp đồng)
+
+**Context:** Luật chỉ nằm trong `owner_select_service_quote` (kiểm status của chính dòng được chọn) ⇒ vẫn ra 2 dòng `selected`: tổ chức `declined` báo giá lại sau khi chủ chốt tổ chức khác; insert/dispatch sau khi chốt; race. Phiên đấu giá tra `selected LIMIT 1` nên hai tổ chức cùng đưa được một tài sản vào phiên. Là tiền đề cho hợp đồng dịch vụ owner↔tổ chức (plan `~/.claude/plans/on-asset-owner-site-atomic-neumann.md`).
+**Decision:**
+- Mig `20260912000001`: partial UNIQUE `(asset_posting_id) WHERE status IN ('selected','accepted')` + advisory lock `lock_asset_posting_consignment` (không `FOR UPDATE` asset_postings — review guard) + trigger `asr_guard_insert_after_selection`. Chặn báo giá theo HỒ SƠ (`asset_posting_selection_locked`), không theo dòng.
+- Anh em bị đóng ghi `closed_by_request_id` + `status_before_close` ⇒ huỷ hợp đồng sau này mở lại chính xác, không đoán.
+- `owner_select_service_quote` / `org_respond_service_request` trả `{ok:false, reason}` cho lỗi nghiệp vụ; FE `assertRpcOk` (`src/lib/consignment/errors.ts`), invalidate ở `onSettled`.
+- FE: `AcceptQuoteDialog` trước khi chốt; chi tiết hồ sơ thành route `/chu-tai-san/dang-tai-san/:id`, cổng KYC chuyển lên layout `OwnerKycGate`; tách `SendToOrgsCard`.
+**Consequences:** 10 kịch bản SQL (rollback) pass. Mọi RPC ký gửi mới phải theo cùng thứ tự khoá (advisory → FOR UPDATE dòng). Bước 2 (bảng hợp đồng, huỷ & chọn lại, gate phiên) còn chờ.
+
+## 2026-09-11 — Báo giá ký gửi có phương án + khoản mục; phí & lead time là giá trị DẪN XUẤT ở server
+
+**Context:** Báo giá chỉ có 4 con số rời + một ô ghi chú tự do, nên "phương án tổ chức đấu giá" (hình thức, bước giá, tiền đặt trước, kênh niêm yết, mốc thời gian, phạm vi dịch vụ) nằm trong văn xuôi hoặc trong PDF — chủ tài sản không đặt hai báo giá cạnh nhau mà so từng dòng được. Chi phí cũng chỉ là một số `quote_service_fee`, không tách được khoản bắt buộc với khoản tuỳ chọn.
+
+**Decision:**
+- Hai cột JSONB `quote_plan` + `quote_fee_items` trên `asset_service_requests` (migration `20260911000002`), **không bảng con**: báo giá vốn đã denormalize lên chính dòng yêu cầu, ghi đè nguyên khối, và các dòng phí không bao giờ truy vấn độc lập.
+- **`quote_service_fee` và `quote_lead_time_days` thành giá trị DẪN XUẤT, tính trong `org_respond_service_request`** — tổng khoản **bắt buộc** (`optional=false`) và mốc `mo_phien`. Client không còn ô nhập cho hai số này.
+- Danh mục kênh/mốc/phạm vi/preset phí là **hằng số trong code** (`src/constants/quote-plan.ts`), không master data — nhãn tự do thì mất luôn khả năng so sánh; có ô "khác" cho ngoại lệ.
+- RPC `org_service_requests` phải **DROP rồi tạo lại** (đổi `RETURNS TABLE`). Thêm RPC đếm `org_service_request_counts` cho badge sidebar.
+- `QuoteDetails` (`src/components/consignment/`) dùng chung cho cả hộp thư tổ chức lẫn màn so sánh của chủ tài sản.
+
+**Consequences:**
+- `owner_select_service_quote` lấy `quote_service_fee` làm `opportunities.gross_amount` ⇒ tính ở server là bắt buộc, không phải tuỳ chọn: con số CRM phải đúng bằng con số chủ tài sản nhìn thấy. `QuoteComparison`, báo cáo doanh thu, hoa hồng **không phải sửa**.
+- Cặp nhân bản SQL ↔ TS thứ **ba**: `feeTotalRequired()` ↔ `SUM(...) WHERE NOT optional` — xem `common-pitfalls.md`.
+- Báo giá cũ (`quote_plan IS NULL`) vẫn hiện đúng như trước; mọi khối mới bọc kiểm null.
+- Badge chỉ gọi RPC khi user có quyền `yeu-cau-ky-gui.view` — không thì dính `insufficient_privilege`.
+
+---
+
+## 2026-09-11 — Chủ tài sản gửi yêu cầu báo giá tới NHIỀU tổ chức (RFQ fan-out)
+
+**Context:** Lối "tự chọn" bắt chủ tài sản chọn **đúng một** tổ chức (`chosenOrg: string | null`) rồi gửi một dòng `asset_service_requests` — trong khi sàn ở luồng môi giới đã fan-out N tổ chức từ `DispatchOrgsDialog`. Chủ tài sản muốn so sánh báo giá thì buộc phải "nhờ sàn chọn giúp", và card gửi ở trang chi tiết **đóng vĩnh viễn** sau lần gửi đầu (`requests.length === 0`) nên một lời từ chối là hết đường.
+
+**Decision:**
+- `WizardValues.chosenOrg` → **`chosenOrgs: string[]`**; `OrgPicker` thành multi-select (`role="checkbox"`, `selectedIds`/`onToggle`), trần `MAX_RFQ_ORGS = 5` (`constants/asset-posting-rules.ts`). Hook `useSendServiceRequest` → **`useSendServiceRequests`** (một insert nhiều dòng).
+- **KHÔNG migration.** `UNIQUE(asset_posting_id, auction_org_id)` + RLS `asr_owner_insert` (`status='sent'`, `origin='owner'`) đã hỗ trợ fan-out sẵn; `ConsignmentPanel`/`QuoteComparison` vốn đã render N báo giá.
+- **Trần đếm theo yêu cầu còn sống** (`isLiveServiceRequest`, `types/asset-posting.ts`), tách khỏi tập tổ chức không gửi lại được (`alreadySentIds` = mọi dòng) — xem `business-rules.md`.
+- Bỏ luật nhảy-trang-theo-tổ-chức-đang-chọn trong `OrgPicker`: 5 tổ chức có thể nằm 5 trang, không còn "một trang" để nhảy tới. Thay bằng **hàng chip cố định** (bỏ chọn ngay tại đó).
+- Một bản brief dùng chung (`AssetBriefEditor.orgName` → `recipientLabel`).
+
+**Consequences:**
+- `postingToWizardValues` chỉ dựng lại được 1 tổ chức từ `chosen_org_id` (quan hệ nhiều-tổ-chức nằm ở `asset_service_requests`, cố ý không đọc vào nháp).
+- Client phải **tự lọc tổ chức đã gửi trước khi insert** — một dòng trùng làm đổ CẢ lệnh, nên `useSendServiceRequests` query `auction_org_id` hiện có rồi mới insert (UI làm mờ thẻ chỉ là ảnh chụp lúc mở danh sách).
+- Trần 5 là **quyết định sản phẩm**, không phải giới hạn kỹ thuật — đổi một hằng số. Chưa enforce phía server: RLS không đếm được số dòng, muốn chặn cứng thì phải bọc RPC.
+
+---
+
 ## 2026-09-10 — Chuyển DB sang project + tài khoản Supabase mới (dump/restore, không replay migration)
 
 **Context:** Project cũ `dvdpfjprncvkhfwcvqmp` nằm trong org **Vercel-managed** (`vercel_icfg_…`, tài khoản `harley.ngx@gmail.com`) và đã tự pause (DNS bị gỡ → NXDOMAIN, pooler báo `tenant not found`). Cần sang tài khoản khác (`secsosoo@gmail.com`). 180 migration CHƯA BAO GIỜ replay from scratch (nhiều cái áp lệch thứ tự / áp tay bằng psql) nên replay là canh bạc.

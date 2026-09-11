@@ -1,3 +1,5 @@
+import { ASSET_CATEGORIES } from "@/constants/category.constants";
+
 // Registry trường riêng theo nhóm con (delta fields), keyed theo child slug từ
 // ASSET_CATEGORIES (src/constants/category.constants.ts). Bước 2 của wizard render
 // các trường này generic qua <DeltaFieldInput>, lưu vào asset_postings.delta_fields (JSONB).
@@ -57,6 +59,57 @@ const QUANTITY_UNIT_OPTIONS = [
   { value: "cai", label: "Cái" },
   { value: "bo", label: "Bộ" },
 ];
+
+const HERITAGE_CONDITION_OPTIONS = [
+  { value: "moi-che-tac", label: "Mới chế tác" },
+  { value: "nguyen-ban", label: "Nguyên bản" },
+  { value: "da-phuc-che", label: "Đã phục chế" },
+  { value: "co-khuyet", label: "Có khuyết / sứt" },
+];
+
+// ─── Thủ công mỹ nghệ & cổ vật: bộ trường dùng chung ─────────────────────────
+//
+// Hai nhóm này khác hẳn các nhóm trên: không có giấy tờ đăng ký sở hữu, giá trị
+// nằm ở chất liệu / niên đại / nguồn gốc chứ không ở diện tích hay công suất.
+// 26 loại con dùng CÙNG một bộ trường, nên sinh registry từ children của
+// ASSET_CATEGORIES thay vì khai 26 entry gần như giống nhau — thêm loại con mới
+// vào category.constants.ts là tự có trường, không phải sửa lại file này.
+
+const HERITAGE_BASE_FIELDS: DeltaFieldDescriptor[] = [
+  {
+    key: "material",
+    label: "Chất liệu",
+    type: "text",
+    required: true,
+    placeholder: "VD: Gốm, đồng, gỗ hương, lụa tơ tằm",
+  },
+  { key: "era", label: "Niên đại", type: "text", placeholder: "VD: Thế kỷ 19, thời Nguyễn, 2024" },
+  { key: "dimensions", label: "Kích thước", type: "text", placeholder: "VD: 30 × 20 × 45 cm" },
+  { key: "quantity", label: "Số lượng", type: "number", unit: "món" },
+  { key: "heritage_condition", label: "Tình trạng", type: "select", options: HERITAGE_CONDITION_OPTIONS },
+];
+
+const CRAFT_FIELDS: DeltaFieldDescriptor[] = [
+  ...HERITAGE_BASE_FIELDS,
+  { key: "origin", label: "Làng nghề / nghệ nhân", type: "text", placeholder: "VD: Gốm Chu Đậu, nghệ nhân Nguyễn Văn A" },
+];
+
+// Cổ vật: nguồn gốc là trường quan trọng nhất — bản khai này là căn cứ để khâu
+// duyệt hồ sơ ở /admin/tai-san loại sớm bảo vật quốc gia / hàng không rõ lai lịch.
+const ANTIQUE_FIELDS: DeltaFieldDescriptor[] = [
+  ...HERITAGE_BASE_FIELDS,
+  { key: "provenance", label: "Nguồn gốc & lai lịch", type: "textarea", required: true },
+  { key: "appraisal", label: "Đã có giấy thẩm định / giám định", type: "boolean" },
+];
+
+/** Gán cùng một bộ trường cho mọi loại con của một nhóm cha. */
+const fieldsForChildrenOf = (
+  parentSlug: string,
+  fields: DeltaFieldDescriptor[],
+): Record<string, DeltaFieldDescriptor[]> =>
+  Object.fromEntries(
+    (ASSET_CATEGORIES.find((c) => c.slug === parentSlug)?.children ?? []).map((ch) => [ch.slug, fields]),
+  );
 
 // ─── Registry ────────────────────────────────────────────────────────────────
 
@@ -234,6 +287,10 @@ export const ASSET_DELTA_FIELDS: Record<string, DeltaFieldDescriptor[]> = {
     { key: "quantity", label: "Số lượng", type: "number", unit: "cái" },
     { key: "condition", label: "Tình trạng", type: "select", options: CONDITION_OPTIONS },
   ],
+
+  // ── Thủ công mỹ nghệ & Cổ vật (sinh từ ASSET_CATEGORIES) ──
+  ...fieldsForChildrenOf("thu-cong-my-nghe", CRAFT_FIELDS),
+  ...fieldsForChildrenOf("co-vat-suu-tam", ANTIQUE_FIELDS),
 };
 
 export const getDeltaFields = (childSlug: string): DeltaFieldDescriptor[] =>

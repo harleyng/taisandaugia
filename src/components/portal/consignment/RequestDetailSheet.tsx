@@ -7,6 +7,8 @@ import { ASSET_CATEGORIES } from '@/constants/category.constants'
 import { getDeltaFields } from '@/constants/asset-delta-fields'
 import { renderDeltaValue } from '@/components/asset-posting/format'
 import { signQuoteDoc } from '@/hooks/useOrgServiceRequests'
+import { QuoteDetails } from '@/components/consignment/QuoteDetails'
+import { OrgContractSection } from './OrgContractSection'
 import {
   AUCTION_FORMAT_LABELS, EXPECTED_TIMELINE_LABELS,
   type AuctionFormat, type ExpectedTimeline,
@@ -33,6 +35,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 interface RequestDetailSheetProps {
   request: OrgServiceRequest | null
+  auctionOrgId: string | null
   onOpenChange: (open: boolean) => void
   onQuote: () => void
   onDecline: () => void
@@ -43,8 +46,9 @@ interface RequestDetailSheetProps {
  *
  * Dữ liệu đến từ RPC `org_service_requests` — đã lược danh tính chủ tài sản, số
  * nhà và giấy tờ sở hữu. Đừng thêm cột ở đây mà không mở tương ứng trong RPC.
+ * Sau khi được chốt, những thứ đó hiện trong OrgContractSection (RPC riêng).
  */
-export function RequestDetailSheet({ request, onOpenChange, onQuote, onDecline }: RequestDetailSheetProps) {
+export function RequestDetailSheet({ request, auctionOrgId, onOpenChange, onQuote, onDecline }: RequestDetailSheetProps) {
   const [docUrl, setDocUrl] = useState<string | null>(null)
 
   useEffect(() => {
@@ -85,10 +89,23 @@ export function RequestDetailSheet({ request, onOpenChange, onQuote, onDecline }
         </SheetHeader>
 
         <div className="space-y-5 py-5">
+          {r.reopened_at && !closed && (
+            <p className="rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm text-foreground">
+              Yêu cầu đã mở lại: hợp đồng giữa chủ tài sản và tổ chức được chọn trước đó đã bị huỷ. Bạn có thể cập
+              nhật báo giá.
+            </p>
+          )}
+
           {r.message && (
             <p className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm text-foreground">
               “{r.message}”
             </p>
+          )}
+
+          {r.contract_id && (
+            <div className="rounded-xl border border-border p-4">
+              <OrgContractSection request={r} auctionOrgId={auctionOrgId} />
+            </div>
           )}
 
           {r.image_urls && r.image_urls.length > 0 && (
@@ -157,10 +174,13 @@ export function RequestDetailSheet({ request, onOpenChange, onQuote, onDecline }
             <Row label="Đang tranh chấp" value={legal(r.has_dispute)} />
             <Row label="Đang thế chấp" value={legal(r.has_mortgage)} />
             <Row label="Bị kê biên" value={legal(r.is_seized)} />
-            {/* Giấy tờ sở hữu KHÔNG hiển thị ở đây — chỉ chủ tài sản và admin xem được. */}
-            <p className="pt-1 text-xs text-muted-foreground">
-              Giấy tờ sở hữu do chủ tài sản nộp được sàn thẩm định; bản gốc trao đổi sau khi hai bên chốt.
-            </p>
+            {/* Giấy tờ sở hữu chỉ hiện trong phần hợp đồng, sau khi được chốt. */}
+            {!r.contract_id && (
+              <p className="pt-1 text-xs text-muted-foreground">
+                Giấy tờ sở hữu do chủ tài sản nộp được sàn thẩm định; bạn xem được sau khi chủ tài sản chọn tổ chức
+                của bạn.
+              </p>
+            )}
           </div>
 
           {r.quoted_at && (
@@ -174,6 +194,12 @@ export function RequestDetailSheet({ request, onOpenChange, onQuote, onDecline }
                   <Row label="Giá khởi điểm đề xuất" value={formatVnd(r.quote_starting_price)} />
                 )}
                 {r.quote_lead_time_days != null && <Row label="Thời gian dự kiến" value={`${r.quote_lead_time_days} ngày`} />}
+                <QuoteDetails
+                  plan={r.quote_plan}
+                  feeItems={r.quote_fee_items}
+                  startingPrice={r.starting_price}
+                  className="pt-1"
+                />
                 {r.quote_note && (
                   <p className="rounded-lg border border-border bg-muted/30 p-3 text-sm">{r.quote_note}</p>
                 )}

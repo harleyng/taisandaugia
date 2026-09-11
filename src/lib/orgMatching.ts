@@ -5,6 +5,7 @@
 // render, rồi chấm điểm theo 5 tín hiệu: chuyên môn · địa bàn · hình thức · kinh nghiệm · thù lao.
 // Khi schema thật bổ sung các cột này, chỉ cần thay deriveOrgAttributes().
 
+import { seededRand } from "./seededRand";
 import type { Database } from "@/integrations/supabase/types";
 
 export type AuctionOrgRow =
@@ -17,6 +18,7 @@ export interface OrgMockAttributes {
   has_online_platform: boolean; // có sàn trực tuyến?
   experience_tier: ExperienceTier; // tầng kinh nghiệm
   successful_sessions: number; // uy tín — số phiên thành công
+  total_sessions: number; // tổng số phiên đã tổ chức (mẫu số của tỉ lệ thành công)
   commission_rate: number; // % thù lao chào
   facilities: string[]; // cơ sở vật chất
 }
@@ -61,20 +63,17 @@ const FACILITY_POOL = [
   "Đội ngũ pháp chế",
 ];
 
-const PARENT_SLUGS = ["bat-dong-san", "xe-co", "may-moc", "hang-hoa", "do-dung"];
-
-// ─── RNG tất định (FNV-1a 32-bit over id+salt → [0,1)) ───────────────────────
-
-function seededRand(seed: string, salt: string): number {
-  let h = 0x811c9dc5;
-  const str = `${seed}::${salt}`;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  // >>> 0 để thành unsigned 32-bit, chia 2^32 → [0,1)
-  return (h >>> 0) / 0xffffffff;
-}
+// Chỉ APPEND vào cuối: seededRand salt theo index (`spec-${i}`), chèn giữa sẽ
+// xáo lại chuyên môn mock của mọi tổ chức đang hiển thị.
+const PARENT_SLUGS = [
+  "bat-dong-san",
+  "xe-co",
+  "may-moc",
+  "hang-hoa",
+  "do-dung",
+  "thu-cong-my-nghe",
+  "co-vat-suu-tam",
+];
 
 // ─── Derive thuộc tính mock ──────────────────────────────────────────────────
 
@@ -89,11 +88,17 @@ export function deriveOrgAttributes(org: AuctionOrgRow): OrgMockAttributes {
   const typeBoost = org.org_type === 0 || org.org_type === 2 ? 1 : 0;
   const experience_tier = Math.min(4, 1 + Math.floor(r("tier") * 4) + typeBoost) as ExperienceTier;
 
+  // Tổng phiên suy từ phiên thành công + tỉ lệ thành công 60–95%: hai số phải
+  // nhất quán (tổng ≥ thành công) vì thẻ gợi ý in ra dạng "219/240 phiên".
+  const successful_sessions = Math.round(20 + r("sessions") * 480); // 20–500
+  const success_rate = 0.6 + r("success-rate") * 0.35;
+
   return {
     specialties,
     has_online_platform: r("online") > 0.4,
     experience_tier,
-    successful_sessions: Math.round(20 + r("sessions") * 480), // 20–500
+    successful_sessions,
+    total_sessions: Math.round(successful_sessions / success_rate),
     commission_rate: Number((0.5 + r("commission") * 4.5).toFixed(2)), // 0.5%–5%
     facilities: FACILITY_POOL.filter((_, i) => r(`fac-${i}`) > 0.5),
   };
@@ -101,8 +106,8 @@ export function deriveOrgAttributes(org: AuctionOrgRow): OrgMockAttributes {
 
 // ─── Chấm điểm ───────────────────────────────────────────────────────────────
 
-// Trọng số cộng = 100
-const W: MatchBreakdown = {
+// Trọng số cộng = 100 — export để UI giải thích được điểm khớp (đạt / tối đa).
+export const MATCH_WEIGHTS: MatchBreakdown = {
   specialty: 30,
   locality: 20,
   format: 15,
@@ -111,6 +116,15 @@ const W: MatchBreakdown = {
 };
 
 /** Quy giá khởi điểm → tầng giá trị 1–4 để đối chiếu tầng kinh nghiệm. */
+/** Nhãn hiển thị cho từng tín hiệu chấm điểm — dùng ở popover "vì sao điểm này". */
+export const MATCH_SIGNAL_LABELS: Record<keyof MatchBreakdown, string> = {
+  specialty: "Chuyên môn nhóm tài sản",
+  locality: "Địa bàn",
+  format: "Hình thức đấu giá",
+  experience: "Kinh nghiệm so với giá trị tài sản",
+  commission: "Mức thù lao",
+};
+
 export function valueTierFromPrice(price?: number | null): ExperienceTier {
   if (!price) return 2; // nhờ định giá / chưa biết → tầng giữa
   if (price > 5_000_000_000) return 4;
@@ -124,42 +138,42 @@ export function scoreOrg(org: AuctionOrgRow, c: MatchCriteria): OrgMatchResult {
 
   // Chuyên môn: khớp nhóm cha → full; có chuyên môn khác → 30%; không có → 0
   const specialty = attrs.specialties.includes(c.parentSlug)
-    ? W.specialty
+    ? MATCH_WEIGHTS.specialty
     : attrs.specialties.length
-    ? W.specialty * 0.3
+    ? MATCH_WEIGHTS.specialty * 0.3
     : 0;
 
   // Địa bàn: cùng tỉnh → full; khác tỉnh → 40%; thiếu dữ liệu → 50%
   const locality =
     c.province && org.province
       ? org.province === c.province
-        ? W.locality
-        : W.locality * 0.4
-      : W.locality * 0.5;
+        ? MATCH_WEIGHTS.locality
+        : MATCH_WEIGHTS.locality * 0.4
+      : MATCH_WEIGHTS.locality * 0.5;
 
   // Hình thức: trực tuyến cần có sàn; cả hai ưu tiên có sàn; trực tiếp ai cũng đáp ứng
   const format =
     c.format === "truc_tuyen"
       ? attrs.has_online_platform
-        ? W.format
+        ? MATCH_WEIGHTS.format
         : 0
       : c.format === "ca_hai"
       ? attrs.has_online_platform
-        ? W.format
-        : W.format * 0.6
-      : W.format;
+        ? MATCH_WEIGHTS.format
+        : MATCH_WEIGHTS.format * 0.6
+      : MATCH_WEIGHTS.format;
 
   // Kinh nghiệm: khớp tầng kinh nghiệm với tầng giá trị tài sản (lệch càng ít điểm càng cao)
   const valueTier = valueTierFromPrice(c.startingPrice);
-  const experience = W.experience * (1 - Math.abs(attrs.experience_tier - valueTier) / 3);
+  const experience = MATCH_WEIGHTS.experience * (1 - Math.abs(attrs.experience_tier - valueTier) / 3);
 
   // Thù lao: org chào ≤ mức chấp nhận → full; vượt → giảm dần
   const commission =
     c.acceptableCommissionPct == null
-      ? W.commission * 0.7
+      ? MATCH_WEIGHTS.commission * 0.7
       : attrs.commission_rate <= c.acceptableCommissionPct
-      ? W.commission
-      : W.commission * Math.max(0, 1 - (attrs.commission_rate - c.acceptableCommissionPct) / 3);
+      ? MATCH_WEIGHTS.commission
+      : MATCH_WEIGHTS.commission * Math.max(0, 1 - (attrs.commission_rate - c.acceptableCommissionPct) / 3);
 
   const breakdown: MatchBreakdown = {
     specialty: Number(specialty.toFixed(1)),

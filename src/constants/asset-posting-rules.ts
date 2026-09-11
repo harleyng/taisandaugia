@@ -12,7 +12,7 @@ export type ProofMode = "documents" | "declaration";
 
 type AssetParentSlug = (typeof ASSET_CATEGORIES)[number]["slug"];
 
-// Khai đủ CẢ 6 nhóm cấp 1. Thêm nhóm mới vào category.constants.ts sẽ làm
+// Khai đủ CẢ 8 nhóm cấp 1. Thêm nhóm mới vào category.constants.ts sẽ làm
 // typecheck đỏ ngay tại đây cho tới khi có người quyết định proof mode của nó —
 // cố ý, vì đây là quyết định pháp lý chứ không phải mặc định hợp lý nào cả.
 const PROOF_MODE: Record<AssetParentSlug, ProofMode> = {
@@ -21,6 +21,12 @@ const PROOF_MODE: Record<AssetParentSlug, ProofMode> = {
   "may-moc": "declaration",
   "hang-hoa": "declaration",
   "do-dung": "declaration",
+  // Thủ công mỹ nghệ & cổ vật không có giấy tờ đăng ký sở hữu tương đương sổ đỏ /
+  // cà-vẹt, nên dùng bản cam kết. Riêng cổ vật: Luật Di sản văn hóa cấm mua bán
+  // bảo vật quốc gia và siết giao dịch cổ vật — nguồn gốc khai trong delta field
+  // `provenance`, thẩm định thật vẫn thuộc khâu duyệt hồ sơ ở /admin/tai-san.
+  "thu-cong-my-nghe": "declaration",
+  "co-vat-suu-tam": "declaration",
   // Bị Step1AssetType lọc khỏi wizard (children rỗng); khai cho đủ kiểu.
   khac: "documents",
 };
@@ -50,3 +56,10 @@ export const IMAGE_MIME = "image/jpeg,image/png,image/webp";
 // Không nhận video/quicktime: .mov từ iPhone thường là HEVC, Chrome/Firefox
 // không giải mã được ⇒ upload "thành công" nhưng khung hình đen.
 export const VIDEO_MIME = "video/mp4,video/webm";
+
+// ─── Yêu cầu báo giá (RFQ) ───────────────────────────────────────────────────
+// Chủ tài sản gửi hồ sơ tới NHIỀU tổ chức một lần rồi so sánh báo giá. Trần 5
+// tổ chức là quyết định sản phẩm, không phải giới hạn kỹ thuật: bảng so sánh
+// báo giá còn đọc được, và một tài sản rải khắp sàn thì tổ chức bắt đầu bỏ qua
+// mọi yêu cầu. Trần áp cho MỖI LẦN gửi cũng như tổng số tổ chức đang chờ.
+export const MAX_RFQ_ORGS = 5;

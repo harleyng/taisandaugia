@@ -66,7 +66,7 @@ const AuctionDetail = () => {
   const saveCounts = useListingSaveCounts(listing ? [listing.id] : []);
   const guardedNavigate = useAuthGuardedNavigate();
   const { assetUnlocked, unlockAsset, lockAsset, addCredits, balance, ASSET_COST } = useCredits();
-  const { openAssetPaywall, openCompanyPaywall } = usePaywall();
+  const { openAssetPaywall } = usePaywall();
   const { openAuthDialog } = useAuthDialog();
   const { shouldNudge, dismiss } = useCompanyViewTracker(listing?.auction_org_id, listing?.id);
   const isLoggedIn = !!session;

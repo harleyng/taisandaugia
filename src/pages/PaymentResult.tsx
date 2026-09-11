@@ -9,8 +9,9 @@ import { useCredits, CompanyTierKey, OwnerTierKey } from "@/hooks/useCredits";
 import { useAuth } from "@/contexts/AuthContext";
 import { getVariantPackage } from "@/lib/serviceCatalog";
 import { claimPaymentTxn } from "@/lib/credits";
+import { ContractPaymentResult } from "@/components/payment/ContractPaymentResult";
 
-const PaymentResult = () => {
+const CreditPaymentResult = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { userId, loading: authLoading } = useAuth();
@@ -195,6 +196,15 @@ const PaymentResult = () => {
       <Footer />
     </div>
   );
+};
+
+/**
+ * Một trang kết quả cho hai loại giao dịch: gói credit (mặc định) và hồ sơ tham
+ * gia (?contract=). Tách component để luồng credit giữ nguyên từng dòng.
+ */
+const PaymentResult = () => {
+  const [params] = useSearchParams();
+  return params.get("contract") ? <ContractPaymentResult /> : <CreditPaymentResult />;
 };
 
 export default PaymentResult;

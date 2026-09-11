@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { NAV_SECTIONS, NavItem } from './nav-config'
+import { NAV_SECTIONS, NavItem, type CountBadgeKind } from './nav-config'
 import { OrgSwitcher } from './OrgSwitcher'
 import { useCapacityProfile } from '@/hooks/useCapacityProfile'
+import { useOrgServiceRequestCounts } from '@/hooks/useOrgServiceRequests'
+import { useChatAttentionCounts } from '@/hooks/useOrgChat'
 import { useOrgPermissions } from '@/hooks/useOrgPermissions'
 import { orgMatrixHas } from '@/lib/orgPermissions'
 import { ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react'
@@ -38,6 +40,14 @@ export function PortalSidebar({ onNavigate }: Props) {
   const navigate = useNavigate()
   const { profile } = useCapacityProfile()
   const { isOwner, matrix, ready } = useOrgPermissions()
+  const { newCount, contractsActionCount } = useOrgServiceRequestCounts()
+  const { awaitingReply } = useChatAttentionCounts()
+
+  // Số đếm động cho badge nav; thêm loại mới thì nối vào CountBadgeKind rồi trả
+  // số ở đây. Hỏi đáp chỉ đếm câu CHỜ TRẢ LỜI — cộng thêm sổ chuyển tiếp sẽ đếm
+  // trùng cùng một câu hỏi. Ký gửi = yêu cầu mới + hợp đồng tổ chức phải xử lý.
+  const badgeCount = (kind?: CountBadgeKind) =>
+    kind === 'yeu-cau-ky-gui' ? newCount + contractsActionCount : kind === 'hoi-dap' ? awaitingReply : 0
 
   // Lọc nav theo quyền 'view'. Khi CHƯA nạp xong chỉ hiện mục không gắn module —
   // tránh nháy link mà người dùng không có quyền vào.
@@ -96,6 +106,7 @@ export function PortalSidebar({ onNavigate }: Props) {
         {visibleSections.map((section) => {
           // Section is a direct link
           if (section.href && !section.children) {
+            const count = badgeCount(section.countBadge)
             return (
               <NavLink
                 key={section.label}
@@ -111,7 +122,15 @@ export function PortalSidebar({ onNavigate }: Props) {
                 }
               >
                 <section.icon className="h-4 w-4 shrink-0" />
-                {section.label}
+                <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                {count > 0 && (
+                  <span
+                    className="shrink-0 rounded-full bg-accent px-1.5 py-0.5 text-xs font-semibold text-accent-foreground"
+                    aria-label={`${count} việc cần xử lý`}
+                  >
+                    {count}
+                  </span>
+                )}
               </NavLink>
             )
           }

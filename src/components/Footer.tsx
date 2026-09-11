@@ -31,6 +31,7 @@ export const Footer = () => {
             <ul className="space-y-2 text-sm text-background/60">
               <li><Link to="/gioi-thieu" className="hover:text-background transition-colors">Giới thiệu</Link></li>
               <li><Link to="/lien-he" className="hover:text-background transition-colors">Liên hệ</Link></li>
+              <li><Link to="/cach-cham-diem-to-chuc" className="hover:text-background transition-colors">Cách sàn chấm điểm tổ chức</Link></li>
               <li><Link to="#" className="hover:text-background transition-colors">Tuyển dụng</Link></li>
             </ul>
           </div>

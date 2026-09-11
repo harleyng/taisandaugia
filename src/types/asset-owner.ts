@@ -20,6 +20,10 @@ export interface AssetOwnerKYC {
   contact_email: string | null;
   id_type: IdType | null;
   id_number: string | null;
+  /** Địa chỉ — Bên A trong hợp đồng dịch vụ đấu giá. Sửa được sau duyệt (owner_update_kyc_address). */
+  address: string | null;
+  ward: string | null;
+  province: string | null;
   id_front_url: string | null;
   id_back_url: string | null;
   selfie_url: string | null;
@@ -57,6 +61,9 @@ export interface AssetOwnerOrgKYC {
   rep_selfie_url: string | null;
   establishment_doc_url: string | null;
   authorization_doc_url: string | null;
+  /** Địa chỉ trụ sở — Bên A trong hợp đồng dịch vụ đấu giá. Sửa được sau duyệt. */
+  head_office_address: string | null;
+  head_office_province: string | null;
   rejection_reason: string | null;
   review_notes: string | null;
   reviewed_at: string | null;

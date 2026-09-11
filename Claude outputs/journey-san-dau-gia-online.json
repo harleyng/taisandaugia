@@ -1,0 +1,1070 @@
+{
+ "id": "san-dau-gia-online",
+ "title": "Sàn đấu giá trực tuyến — tự xây & vận hành",
+ "updatedAt": 1788870000000,
+ "labels": {
+  "type": "Kịch bản pháp lý",
+  "svc": "Sàn giải quyết bằng gì",
+  "money": "Luồng tiền"
+ },
+ "st": {
+  "have": "thông lệ hiện có",
+  "gap": "điểm đau thực tế",
+  "opp": "cơ hội cho sàn",
+  "ext": "ngoài sàn / theo luật"
+ },
+ "desc": "THỰC TRẠNG (research 9/2026): hàng thủ công mỹ nghệ, cổ vật, đồ sưu tầm ở VN đang được 'đấu giá' chủ yếu trong group Facebook/Zalo và livestream: người bán đăng ảnh, người mua comment giá, chốt bằng inbox, không cọc, không giám định, người thắng 'bom hàng' hoặc người bán bán cho người khác giá cao hơn [otofun, vietnamnet]. Các vụ đấu giá từ thiện 6,5–47,9 tỷ bị xù vì không bắt buộc đặt cọc [Vietnamnet]. Lừa đảo livestream 'cắt đá tìm ngọc' hơn 32.000 nạn nhân [Vietstock 5/2026] cho thấy niềm tin vào 'đấu giá online' rất thấp. Sàn đấu giá chuyên nghiệp trong nước (Lạc Việt, VPA, Cổng ĐGTS) chỉ phục vụ tài sản theo Luật ĐGTS: phí hồ sơ 200k, cọc 10%, phiên 30 phút, không có proxy bid, không có giao nhận/bảo vệ người mua [luatvietnam.vn]. Chuyên gia cảnh báo rủi ro thao túng dữ liệu, tài khoản giả, phần mềm tự động, hoàn cọc chậm [Thanh Niên 4/2026].\nBENCHMARK: Catawiki (curation bởi chuyên gia, phí người mua 9% + phí người bán 12,5%, giữ tiền đến khi người mua nhận hàng), eBay (proxy bid, 13,6% FVF, chống sniping bằng 'bid in last seconds' → nhiều sàn khác dùng gia hạn 2–5 phút), Copart (phí người mua bậc thang), Lạc Việt/VPA (đấu giá theo Luật ĐGTS trực tuyến).\nKHUNG PHÁP LÝ: kịch bản B = nền tảng TMĐT trung gian có chức năng đấu giá (Luật TMĐT 122/2025 + NĐ 248/2026 hiệu lực 1/7/2026: đăng ký Bộ Công Thương, định danh người bán qua VNeID/CCCD, công khai phí & chính sách, chuyển thông tin vi phạm cho cơ quan trong 24h, lưu dữ liệu sản phẩm ≥1 năm & hợp đồng ≥3 năm; NĐ 117/2025 khấu trừ thuế 1,5% hộ/cá nhân kinh doanh; NĐ 52/2024 trung gian thanh toán; Luật BVQLNTD 2023; Luật Di sản văn hoá cho cổ vật). Kịch bản A = Luật ĐGTS 2016/37/2024 + NĐ 172/2024: trang đấu giá trực tuyến thuộc CTĐG được Sở Tư pháp phê duyệt (ATTT cấp 3, phiên ≥15 phút, gia hạn 3 phút, mã bidder ẩn danh, lưu 20 năm), cọc 5–20% vào tài khoản riêng CTĐG (Điều 39), thông báo trên Cổng ĐGTS (Điều 57).\nMÔ HÌNH TIỀN (chốt 08/09/2026): B — buyer premium (phí người mua) + hoa hồng người bán; cọc và tiền hàng qua VNPay/ký quỹ đối tác cấp phép, sàn không tự giữ tiền; giải ngân cho người bán sau khi người mua xác nhận nhận hàng. A — cọc vào tài khoản riêng của CTĐG, thù lao đấu giá thuộc CTĐG; sàn thu phí nền tảng từ CTĐG theo phiên/lô.",
+ "types": [
+  {
+   "id": "b",
+   "name": "B · Hàng hoá & sưu tầm (sàn TMĐT có đấu giá) — MVP",
+   "desc": "Thủ công mỹ nghệ, cổ vật & sưu tầm, xe phổ thông, máy móc. Người bán tự tổ chức đấu giá trên nền tảng; sàn là trung gian TMĐT theo Luật TMĐT 2025/NĐ 248/2026: định danh người bán, kiểm duyệt lô, engine trả giá, cọc & thanh toán qua đối tác cấp phép, giao nhận & bảo vệ người mua. Không cần đấu giá viên; tự do về phí, bước giá, thời gian."
+  },
+  {
+   "id": "a",
+   "name": "A · BĐS & tài sản lớn qua CTĐG đối tác (Luật ĐGTS) — giai đoạn sau",
+   "desc": "BĐS, xe giá trị cao, tài sản ngân hàng. Cuộc đấu giá thuộc CTĐG đối tác; sàn cung cấp trang đấu giá trực tuyến white-label được Sở Tư pháp phê duyệt cho CTĐG (NĐ 172/2024). Đấu giá viên điều hành, cọc vào tài khoản CTĐG, biên bản/kết quả theo luật; sàn thu phí nền tảng từ CTĐG và bán media/quảng bá cho chủ tài sản."
+  }
+ ],
+ "actors": [
+  {
+   "id": "seller",
+   "name": "Người bán",
+   "sub": "nghệ nhân, nhà sưu tầm, DN thanh lý, chủ tài sản (A)",
+   "color": "#4b47b6"
+  },
+  {
+   "id": "bidder",
+   "name": "Người mua / bidder",
+   "sub": "người quan tâm → đã cọc → đang trả giá → người trúng",
+   "color": "#1c5a8a"
+  },
+  {
+   "id": "admin",
+   "name": "Admin & kiểm duyệt",
+   "sub": "duyệt lô, giám sát phiên, xử lý tranh chấp, đối soát",
+   "color": "#0f6e56"
+  },
+  {
+   "id": "system",
+   "name": "Engine đấu giá",
+   "sub": "trạng thái, đồng hồ, proxy bid, gia hạn, thông báo, tính phí",
+   "color": "#b06f1a"
+  },
+  {
+   "id": "host",
+   "name": "Host / đấu giá viên",
+   "sub": "host phiên live (B); đấu giá viên có thẻ (A)",
+   "color": "#a32d2d"
+  },
+  {
+   "id": "org",
+   "name": "CTĐG đối tác",
+   "sub": "chủ cuộc đấu giá theo Luật ĐGTS (A)",
+   "color": "#7a3e9d"
+  },
+  {
+   "id": "expert",
+   "name": "Đối tác giám định · vận chuyển",
+   "sub": "giám định cổ vật/mỹ nghệ, thẩm định giá, 3D/VR, giao nhận",
+   "color": "#8a6d3b"
+  },
+  {
+   "id": "pay",
+   "name": "Đối tác thanh toán · ký quỹ",
+   "sub": "VNPay, ví/ngân hàng ký quỹ, tài khoản riêng CTĐG",
+   "color": "#854f0b"
+  },
+  {
+   "id": "gov",
+   "name": "Cơ quan quản lý",
+   "sub": "Bộ Công Thương, Sở Tư pháp/Cổng ĐGTS, thuế, Bộ VHTTDL",
+   "color": "#5b5b63"
+  }
+ ],
+ "stages": [
+  {
+   "id": "s1",
+   "name": "1 · Gia nhập & niềm tin",
+   "sub": "hiểu luật chơi, KYC người bán/người mua, hồ sơ uy tín"
+  },
+  {
+   "id": "s2",
+   "name": "2 · Tạo lô & kiểm duyệt",
+   "sub": "khai lô, media/3D, giám định, duyệt hoặc trả lại"
+  },
+  {
+   "id": "s3",
+   "name": "3 · Lập phiên & luật chơi",
+   "sub": "giá khởi điểm, reserve, mua ngay, bước giá, lịch, phiên live"
+  },
+  {
+   "id": "s4",
+   "name": "4 · Công bố & thu hút",
+   "sub": "catalogue, theo dõi, hỏi đáp, xem trước, quảng bá"
+  },
+  {
+   "id": "s5",
+   "name": "5 · Đăng ký & đặt cọc",
+   "sub": "điều kiện tham gia, cọc qua đối tác, mã bidder"
+  },
+  {
+   "id": "s6",
+   "name": "6 · Trả giá",
+   "sub": "timed, proxy, gia hạn chống sniping, live, giám sát gian lận"
+  },
+  {
+   "id": "s7",
+   "name": "7 · Chốt & thanh toán",
+   "sub": "kết quả, hoá đơn, phí, thuế, ký quỹ, xử lý không trả tiền"
+  },
+  {
+   "id": "s8",
+   "name": "8 · Giao nhận & tranh chấp",
+   "sub": "vận chuyển, kiểm hàng, khiếu nại, hoàn tiền, giải ngân"
+  },
+  {
+   "id": "s9",
+   "name": "9 · Đối soát, báo cáo & tuân thủ",
+   "sub": "payout, báo cáo phiên, đánh giá, lưu trữ, cơ quan quản lý"
+  }
+ ],
+ "steps": [
+  {
+   "id": "o1_1_bidder_b-a",
+   "a": "bidder",
+   "s": "s1",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "gap",
+   "n": "1.1",
+   "t": "Không tin 'đấu giá online' là thật",
+   "d": "Niềm tin nền rất thấp: lừa đảo livestream 'cắt đá tìm ngọc' >32.000 nạn nhân [Vietstock 5/2026]; đấu giá trong group Facebook bị 'chim mồi' đẩy giá, chốt xong không giao; các vụ đấu giá từ thiện 6,5–47,9 tỷ bị xù [Vietnamnet]. Chuyên gia cảnh báo rủi ro thao túng dữ liệu, tài khoản giả, phần mềm tự động [Thanh Niên 4/2026].",
+   "svc": "Trang 'Cách sàn bảo vệ bạn': người bán định danh VNeID, lô được kiểm duyệt/giám định, tiền giữ ở đối tác ký quỹ đến khi nhận hàng, nhật ký trả giá công khai sau phiên. Số liệu thật (tỷ lệ giao thành công, hoàn tiền) hiển thị công khai",
+   "money": ""
+  },
+  {
+   "id": "o1_2_seller_b-a",
+   "a": "seller",
+   "s": "s1",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "gap",
+   "n": "1.2",
+   "t": "Người bán ngại lộ hàng, sợ bị ép giá, sợ phí",
+   "d": "Nghệ nhân/nhà sưu tầm quen bán qua quan hệ hoặc group kín; sợ đăng công khai bị sao chép mẫu, sợ lô 'ế' công khai làm mất giá; không rõ phí sàn. Catawiki giải quyết bằng chuyên gia duyệt lô và ước giá trước khi lên sàn.",
+   "svc": "Trang 'Bán trên sàn': ví dụ số phí (hoa hồng người bán + buyer premium người mua trả), ước giá tham chiếu, cam kết reserve ẩn — người bán không phải bán dưới giá sàn; câu chuyện thật của người bán đã bán",
+   "money": ""
+  },
+  {
+   "id": "o1_3_seller_b",
+   "a": "seller",
+   "s": "s1",
+   "ty": [
+    "b"
+   ],
+   "st": "ext",
+   "n": "1.3",
+   "t": "Định danh người bán theo NĐ 248/2026",
+   "d": "Nền tảng TMĐT trung gian bắt buộc định danh người bán trong nước qua VNeID/CCCD, người bán nước ngoài qua hộ chiếu [NĐ 248/2026, hiệu lực 1/7/2026]. Hộ/cá nhân kinh doanh trên sàn bị khấu trừ thuế 1,5% [NĐ 117/2025].",
+   "svc": "eKYC CCCD + selfie (tận dụng KYC đã có) và tuỳ chọn VNeID; thu MST/loại hình (cá nhân/hộ/DN) để tính thuế khấu trừ đúng; hiển thị huy hiệu 'Người bán đã định danh'",
+   "money": ""
+  },
+  {
+   "id": "o1_4_bidder_b",
+   "a": "bidder",
+   "s": "s1",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "1.4",
+   "t": "Đăng ký người mua theo cấp độ",
+   "d": "Người mua muốn xem thoải mái nhưng ngại KYC ngay. Sàn quốc tế cho xem tự do, KYC khi trả giá lần đầu; giới hạn giá trị trả theo cấp xác thực.",
+   "svc": "Cấp 0: xem & theo dõi (email/SĐT); cấp 1: eKYC CCCD để trả giá; cấp 2: xác thực VNeID/tài khoản ngân hàng để trả giá lô >100 triệu. Cấp hiển thị cho người bán khi xem danh sách bidder",
+   "money": ""
+  },
+  {
+   "id": "o1_5_bidder_a",
+   "a": "bidder",
+   "s": "s1",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "1.5",
+   "t": "Điều kiện tham gia theo Luật ĐGTS",
+   "d": "Kịch bản A: người tham gia phải đủ điều kiện theo Điều 38 Luật ĐGTS, nộp hồ sơ và tiền đặt trước cho CTĐG; trang ĐGTT phải cấp mã bidder ẩn danh, lưu 20 năm [NĐ 172/2024].",
+   "svc": "Hồ sơ đăng ký điện tử theo mẫu CTĐG, ký số/OTP; cùng một tài khoản dùng cho cả B và A, nhưng bước A yêu cầu thêm hồ sơ pháp lý theo lô",
+   "money": ""
+  },
+  {
+   "id": "o1_6_system_b-a",
+   "a": "system",
+   "s": "s1",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "1.6",
+   "t": "Hồ sơ uy tín người bán & người mua",
+   "d": "Group Facebook không có lịch sử: không ai biết người thắng đã 'bom' bao nhiêu lần. eBay/Catawiki dùng điểm phản hồi và giới hạn theo lịch sử.",
+   "svc": "Điểm uy tín từ dữ liệu thật: tỷ lệ thanh toán đúng hạn, tỷ lệ giao thành công, khiếu nại thua; hạn chế tự động (không được trả giá 30 ngày sau 2 lần không trả tiền)",
+   "money": ""
+  },
+  {
+   "id": "o1_7_admin_b",
+   "a": "admin",
+   "s": "s1",
+   "ty": [
+    "b"
+   ],
+   "st": "ext",
+   "n": "1.7",
+   "t": "Đăng ký sàn với Bộ Công Thương & công bố chính sách",
+   "d": "Nền tảng TMĐT trung gian có tiếng Việt phải đăng ký với Bộ Công Thương; công khai điều kiện hoạt động, giá dịch vụ, chính sách đổi trả, giao hàng, quyền/nghĩa vụ các bên [NĐ 248/2026].",
+   "svc": "Bộ trang chính sách có phiên bản & ngày hiệu lực (điều khoản đấu giá, phí, đổi trả, hàng cấm/hạn chế gồm cổ vật theo Luật Di sản văn hoá); người dùng chấp thuận theo phiên bản; hồ sơ đăng ký Bộ Công Thương",
+   "money": ""
+  },
+  {
+   "id": "o1_8_org_a",
+   "a": "org",
+   "s": "s1",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "1.8",
+   "t": "CTĐG đối tác xin phê duyệt trang ĐGTT white-label",
+   "d": "Trang đấu giá trực tuyến phải thuộc CTĐG và được Sở Tư pháp phê duyệt (90 ngày), đạt ATTT cấp 3, có nhật ký, mã bidder ẩn danh, lưu trữ 20 năm [NĐ 172/2024]. Chỉ ~10/500 CTĐG có trang riêng.",
+   "svc": "Sàn cung cấp subdomain/white-label + bộ hồ sơ kỹ thuật mẫu (ATTT, quy trình) để CTĐG nộp Sở Tư pháp; hợp đồng thuê nền tảng",
+   "money": "CTĐG trả phí nền tảng theo phiên/lô hoặc gói tháng"
+  },
+  {
+   "id": "o2_1_seller_b-a",
+   "a": "seller",
+   "s": "s2",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "2.1",
+   "t": "Tạo lô trong 5 phút: loại, ảnh, video, tình trạng",
+   "d": "Người bán chỉ có ảnh điện thoại và mô tả miệng. Catawiki yêu cầu ≥3 ảnh + mô tả tình trạng; lô thiếu bị từ chối ngay.",
+   "svc": "Wizard: danh mục (Thủ công mỹ nghệ / Cổ vật & sưu tầm / Xe / Máy móc với danh mục con), ảnh ≥3 theo hướng dẫn góc chụp, video 30–60s, tình trạng theo thang chuẩn, nguồn gốc/giấy tờ; lưu nháp; tải nhiều lô bằng bảng",
+   "money": ""
+  },
+  {
+   "id": "o2_2_seller_b-a",
+   "a": "seller",
+   "s": "s2",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "2.2",
+   "t": "3D bằng điện thoại hoặc thuê VR tour",
+   "d": "Người mua ở xa cần xem chi tiết bề mặt gốm, vết nứt, chữ ký tranh; ảnh phẳng không đủ. Đã chốt: quét 3D bằng app đối tác ngay trên sàn hoặc thuê dịch vụ VR tour cho tài sản lớn.",
+   "svc": "Nút 'Quét 3D bằng điện thoại' (SDK đối tác) gắn model vào lô; 'Thuê VR tour/chụp chuyên nghiệp' → báo giá → lịch → link gắn lô",
+   "money": "Người bán trả phí dịch vụ; sàn hưởng hoa hồng đối tác"
+  },
+  {
+   "id": "o2_3_seller_b",
+   "a": "seller",
+   "s": "s2",
+   "ty": [
+    "b"
+   ],
+   "st": "gap",
+   "n": "2.3",
+   "t": "Khai nguồn gốc & giấy tờ cổ vật",
+   "d": "Cổ vật là hàng kinh doanh có điều kiện: cần đăng ký, không được bán cổ vật thuộc sở hữu toàn dân, xuất khẩu phải có giấy phép [Luật Di sản văn hoá]. Group Facebook bỏ qua hoàn toàn → rủi ro pháp lý cho cả sàn.",
+   "svc": "Form nguồn gốc: cách sở hữu, giấy đăng ký cổ vật (nếu có), ảnh chứng nhận; cảnh báo hàng cấm; lô cổ vật không có giấy tờ chỉ được đăng ở nhóm 'sưu tầm' với tuyên bố rõ",
+   "money": ""
+  },
+  {
+   "id": "o2_4_admin_b-a",
+   "a": "admin",
+   "s": "s2",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "2.4",
+   "t": "Hàng đợi kiểm duyệt lô với SLA 24h",
+   "d": "Catawiki: chuyên gia duyệt mọi lô, từ chối ~40% (thiếu ảnh, hàng giả, mô tả sai). Không kiểm duyệt = sàn thành group Facebook có giao diện.",
+   "svc": "Queue theo danh mục, phân công theo chuyên môn, checklist theo loại (ảnh đủ góc, tình trạng, nguồn gốc, giá khởi điểm hợp lý), duyệt / yêu cầu bổ sung / từ chối có lý do; SLA 24h",
+   "money": ""
+  },
+  {
+   "id": "o2_5_seller_b-a",
+   "a": "seller",
+   "s": "s2",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "2.5",
+   "t": "Bổ sung theo yêu cầu & nộp lại",
+   "d": "Lô bị trả lại vì thiếu ảnh mặt đáy, không ghi kích thước… người bán cần biết chính xác thiếu gì.",
+   "svc": "Danh sách mục thiếu có ví dụ, nộp lại trong vài phút; quá 7 ngày không bổ sung → nháp",
+   "money": ""
+  },
+  {
+   "id": "o2_6_expert_b",
+   "a": "expert",
+   "s": "s2",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "2.6",
+   "t": "Giám định / thẩm định trước khi lên sàn",
+   "d": "Sàn cổ vật chuyên nghiệp giám định bằng phân tích vật liệu, carbon-14, quang phổ trước khi lên catalogue [covatviet.vn]. Người mua sẵn sàng trả cao hơn cho lô có chứng thư.",
+   "svc": "Gói giám định qua sàn: gửi ảnh/chi tiết hoặc gửi hiện vật đến đối tác → chứng thư gắn lô + huy hiệu 'Đã giám định'; thẩm định giá cho xe/máy móc",
+   "money": "Người bán trả phí giám định; sàn hưởng hoa hồng đối tác; có thể admin yêu cầu bắt buộc với lô >50 triệu"
+  },
+  {
+   "id": "o2_7_admin_b-a",
+   "a": "admin",
+   "s": "s2",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "2.7",
+   "t": "Biên tập catalogue & mức xác minh",
+   "d": "Người mua tin sàn hơn tin người bán. Catawiki viết lại tiêu đề/mô tả theo chuẩn; sàn gán mức xác minh để người mua tự đánh giá.",
+   "svc": "Admin chỉnh tiêu đề chuẩn, ảnh bìa, ước giá tham chiếu; gán mức xác minh 0–4 (0 tự khai → 4 giám định + giữ hiện vật tại kho đối tác); mã lô ngắn + QR",
+   "money": ""
+  },
+  {
+   "id": "o2_8_org_a",
+   "a": "org",
+   "s": "s2",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "2.8",
+   "t": "Hồ sơ pháp lý & phương án đấu giá theo Luật ĐGTS",
+   "d": "Kịch bản A: CTĐG thẩm định giấy tờ, ký hợp đồng dịch vụ đấu giá với chủ tài sản, lập phương án (giá khởi điểm, tiền đặt trước 5–20%, bước giá, thời gian), thông báo trên Cổng ĐGTS [Luật ĐGTS Đ.33, 39, 57].",
+   "svc": "CTĐG nhập phương án trên portal; hệ thống tạo lô A với trường bắt buộc theo luật và link thông báo Cổng; chủ tài sản xem được nhưng không sửa",
+   "money": ""
+  },
+  {
+   "id": "o3_1_seller_b",
+   "a": "seller",
+   "s": "s3",
+   "ty": [
+    "b"
+   ],
+   "st": "gap",
+   "n": "3.1",
+   "t": "Đặt giá khởi điểm, reserve ẩn & mua ngay",
+   "d": "Người bán sợ bán hớ nên đặt khởi điểm cao → không ai trả. Catawiki: khởi điểm thấp (1€) + reserve ẩn; eBay: 'Buy It Now' biến mất sau bid đầu.",
+   "svc": "Gợi ý khởi điểm từ dữ liệu giá trúng lô tương tự; reserve ẩn (người mua chỉ thấy 'chưa đạt/đã đạt giá sàn'); mua ngay tuỳ chọn, tự ẩn khi đã có bid ≥ X% mua ngay; cảnh báo reserve > 3× khởi điểm",
+   "money": ""
+  },
+  {
+   "id": "o3_2_seller_b",
+   "a": "seller",
+   "s": "s3",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "3.2",
+   "t": "Chọn cách bán: timed, live hay gộp vào phiên chủ đề",
+   "d": "Đồ sưu tầm bán tốt hơn trong phiên chủ đề có giờ kết thúc chung (Catawiki 'auctions' theo tuần); xe/máy móc hợp timed 3–7 ngày; hàng hot hợp live.",
+   "svc": "Người bán chọn: timed riêng lẻ (3/5/7 ngày), gửi vào phiên chủ đề do sàn lập, hoặc đề nghị đưa vào phiên live; xem lịch phiên sắp mở",
+   "money": ""
+  },
+  {
+   "id": "o3_3_system_b",
+   "a": "system",
+   "s": "s3",
+   "ty": [
+    "b"
+   ],
+   "st": "have",
+   "n": "3.3",
+   "t": "Bước giá & thời gian theo bảng chuẩn",
+   "d": "Group Facebook bước giá tuỳ tiện ('lên 50k cũng được'), sàn ĐGTS dùng bước giá cố định 5 triệu [Lạc Việt] không hợp đồ nhỏ. eBay/Catawiki dùng bước giá bậc thang theo mức giá hiện tại.",
+   "svc": "Bảng bước giá bậc thang theo dải giá (vd <1tr: 20k; 1–5tr: 50k; …) người bán không sửa; kết thúc so le giữa các lô cùng phiên (cách 1–2 phút) để bidder theo nhiều lô",
+   "money": ""
+  },
+  {
+   "id": "o3_4_system_b-a",
+   "a": "system",
+   "s": "s3",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "3.4",
+   "t": "Luật gia hạn chống sniping",
+   "d": "Sniping (đặt giá giây cuối) làm người trả giá thật mất cơ hội và làm giá trúng thấp hơn [Bose, Leicester]. NĐ 172/2024 quy định gia hạn 3 phút cho kịch bản A.",
+   "svc": "B: bid trong 2 phút cuối → gia hạn thêm 2 phút, không giới hạn số lần (hiển thị rõ 'đang gia hạn'); A: đúng 3 phút theo NĐ 172; đồng hồ server-time hiển thị trên mọi client",
+   "money": ""
+  },
+  {
+   "id": "o3_5_admin_b",
+   "a": "admin",
+   "s": "s3",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "3.5",
+   "t": "Lập phiên chủ đề nhiều lô & phân công host",
+   "d": "CTĐG thực tế quản lý một buổi nhiều lô bằng Excel; sàn cần phiên = đơn vị vận hành, có host, có giờ mở/đóng, có báo cáo.",
+   "svc": "Admin tạo phiên (tên, chủ đề, giờ mở/đóng, kiểu timed/live, host), kéo lô vào, sắp thứ tự, đặt giờ kết thúc so le; phiên live có phòng livestream",
+   "money": ""
+  },
+  {
+   "id": "o3_6_org_a",
+   "a": "org",
+   "s": "s3",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "3.6",
+   "t": "Thiết lập cuộc đấu giá theo NĐ 172",
+   "d": "Cuộc ĐGTT phải: thời gian trả giá ≥15 phút, gia hạn 3 phút, mã bidder ẩn danh, đấu giá viên điều hành, biên bản điện tử, lưu 20 năm.",
+   "svc": "Template cuộc đấu giá A khoá sẵn tham số luật; đấu giá viên được gán; sàn xuất biên bản theo mẫu TT 20/2024/TT-BTP",
+   "money": ""
+  },
+  {
+   "id": "o3_7_seller_b-a",
+   "a": "seller",
+   "s": "s3",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "3.7",
+   "t": "Xem trước & xác nhận lô lên phiên",
+   "d": "Người bán muốn thấy lô hiển thị ra sao, giờ kết thúc, phí dự kiến trước khi 'khoá'. Sau khi có bid, lô không được rút (eBay phạt rút lô).",
+   "svc": "Màn preview + bảng phí dự kiến theo giá kỳ vọng; xác nhận điều khoản 'không rút lô sau bid đầu'; rút lô trước phiên miễn phí, sau khi có bid → phí huỷ",
+   "money": "Phí huỷ lô sau khi có bid (vd 5% giá cao nhất, tối thiểu 200k)"
+  },
+  {
+   "id": "o4_1_system_b-a",
+   "a": "system",
+   "s": "s4",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "4.1",
+   "t": "Catalogue & trang lô đầy đủ media, pháp lý, lịch",
+   "d": "Người mua muốn xem video, 3D, chứng thư, tình trạng, mức xác minh, giờ kết thúc, số người theo dõi; sàn ĐGTS chỉ có PDF thông báo.",
+   "svc": "Trang lô: gallery + 3D, chứng thư/giám định, mức xác minh, giá hiện tại/số bid, reserve đạt hay chưa, đồng hồ, phí người mua ước tính, nút theo dõi; trang phiên gộp lô theo thứ tự",
+   "money": ""
+  },
+  {
+   "id": "o4_2_bidder_b-a",
+   "a": "bidder",
+   "s": "s4",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "4.2",
+   "t": "Theo dõi lô & nhắc trước giờ kết thúc",
+   "d": "Bidder theo nhiều lô ở nhiều group, lỡ giờ chốt; sàn quốc tế nhắc 1h/10 phút trước khi kết thúc và khi bị vượt giá.",
+   "svc": "Watchlist; thông báo push/Zalo/email: sắp mở, 1h trước, 10 phút trước, bị vượt giá, gia hạn; tuỳ chỉnh kênh",
+   "money": ""
+  },
+  {
+   "id": "o4_3_bidder_b",
+   "a": "bidder",
+   "s": "s4",
+   "ty": [
+    "b"
+   ],
+   "st": "gap",
+   "n": "4.3",
+   "t": "Hỏi người bán & xem trực tiếp",
+   "d": "Với đồ cổ, người mua cần hỏi 'có vết dán không', 'chữ ký thật không', muốn xem trực tiếp trước khi trả giá; Facebook làm qua inbox không lưu vết.",
+   "svc": "Hỏi đáp công khai trên lô (mọi bidder cùng thấy), lịch xem trực tiếp tại kho đối tác/nhà người bán, chặn trao đổi liên hệ cá nhân (chống giao dịch ngoài sàn)",
+   "money": ""
+  },
+  {
+   "id": "o4_4_admin_b-a",
+   "a": "admin",
+   "s": "s4",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "4.4",
+   "t": "Quảng bá phiên: email, nổi bật, mạng xã hội, đối tác cộng đồng",
+   "d": "Sàn chỉ có giá trị khi đủ bidder; Catawiki chi mạnh cho email cá nhân hoá theo sở thích; group Facebook có sẵn cộng đồng hàng chục nghìn người.",
+   "svc": "Email/push theo sở thích danh mục; gói 'lô nổi bật' & 'phiên tài trợ'; bài đăng tự động lên fanpage/group hợp tác; landing phiên chia sẻ được",
+   "money": "Người bán mua gói nổi bật; đối tác cộng đồng hưởng chia sẻ doanh thu giới thiệu"
+  },
+  {
+   "id": "o4_5_org_a",
+   "a": "org",
+   "s": "s4",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "4.5",
+   "t": "Thông báo công khai trên Cổng ĐGTS & báo",
+   "d": "Kịch bản A bắt buộc thông báo trên Cổng ĐGTS quốc gia 2 lần, mỗi lần cách 2 ngày, ít nhất 7 ngày (động sản) / 15 ngày (BĐS) trước phiên [Điều 57].",
+   "svc": "Trang lô A hiển thị link thông báo Cổng, khớp giá khởi điểm/ngày; nhắc CTĐG hạn đăng; nội dung sàn không được khác thông báo",
+   "money": ""
+  },
+  {
+   "id": "o4_6_bidder_b-a",
+   "a": "bidder",
+   "s": "s4",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "4.6",
+   "t": "Tìm & lọc theo danh mục, giá, sắp kết thúc",
+   "d": "Người mua sưu tầm tìm theo dòng gốm, niên đại, nghệ nhân; xe tìm theo hãng/năm; cần lọc 'sắp kết thúc', 'chưa có bid', 'đã đạt reserve'.",
+   "svc": "Bộ lọc theo thuộc tính danh mục con, dải giá, trạng thái reserve, giờ kết thúc; lưu tìm kiếm & nhận thông báo lô mới khớp",
+   "money": ""
+  },
+  {
+   "id": "o5_1_bidder_b",
+   "a": "bidder",
+   "s": "s5",
+   "ty": [
+    "b"
+   ],
+   "st": "gap",
+   "n": "5.1",
+   "t": "Vì sao phải cọc để trả giá?",
+   "d": "Không cọc là nguyên nhân số 1 của 'bom hàng' và xù đấu giá [Vietnamnet]; nhưng cọc cứng 10% như Luật ĐGTS làm mất bidder với đồ nhỏ.",
+   "svc": "Chính sách cọc theo bậc: lô <5 triệu không cọc (giới hạn cấp uy tín), 5–50 triệu cọc cố định 500k, >50 triệu cọc 5–10% hoặc hạn mức thẻ; giải thích rõ hoàn cọc tự động khi thua trong 24h",
+   "money": ""
+  },
+  {
+   "id": "o5_2_pay_b",
+   "a": "pay",
+   "s": "s5",
+   "ty": [
+    "b"
+   ],
+   "st": "ext",
+   "n": "5.2",
+   "t": "Cọc qua VNPay / giữ hạn mức thẻ / ví ký quỹ đối tác",
+   "d": "Sàn không phải trung gian thanh toán cấp phép nên không tự giữ tiền [NĐ 52/2024]; cần đối tác VNPay/ngân hàng giữ cọc và hoàn tự động.",
+   "svc": "Tích hợp VNPay (thanh toán cọc, hoàn cọc API), ưu tiên 'giữ hạn mức' (authorization hold) với thẻ để không cần hoàn; ví ký quỹ đối tác cho bidder thường xuyên (nạp 1 lần, cọc nhiều lô)",
+   "money": "Cọc nằm ở đối tác thanh toán; hoàn tự động ≤24h sau khi thua; phí cổng do sàn chịu hoặc tính vào buyer premium"
+  },
+  {
+   "id": "o5_3_system_b-a",
+   "a": "system",
+   "s": "s5",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "5.3",
+   "t": "Cấp mã bidder ẩn danh cho lô/phiên",
+   "d": "Bidder không muốn lộ danh tính (đối thủ sưu tầm, người quen); NĐ 172 bắt buộc mã ẩn danh cho A; đồng thời cần chống một người nhiều tài khoản.",
+   "svc": "Mã bidder ngẫu nhiên theo phiên (vd B-1042), lịch sử trả giá hiển thị mã; kiểm tra trùng thiết bị/CCCD/tài khoản ngân hàng để chặn đa tài khoản",
+   "money": ""
+  },
+  {
+   "id": "o5_4_bidder_a",
+   "a": "bidder",
+   "s": "s5",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "5.4",
+   "t": "Nộp hồ sơ & tiền đặt trước vào tài khoản CTĐG",
+   "d": "Kịch bản A: tiền đặt trước 5–20% chuyển vào tài khoản riêng của CTĐG chậm nhất 3 ngày làm việc trước phiên; hồ sơ đăng ký theo mẫu [Điều 38, 39].",
+   "svc": "Hồ sơ đăng ký điện tử + QR chuyển khoản vào tài khoản CTĐG; CTĐG xác nhận đã nhận trên portal → hệ thống mở quyền trả giá; danh sách người đủ điều kiện xuất theo mẫu",
+   "money": "Tiền đặt trước thuộc CTĐG; sàn không chạm"
+  },
+  {
+   "id": "o5_5_seller_b-a",
+   "a": "seller",
+   "s": "s5",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "5.5",
+   "t": "Người bán thấy số người đăng ký / theo dõi",
+   "d": "Người bán muốn biết lô có 'độ nóng' không để quyết định giữ hay hạ reserve trước phiên.",
+   "svc": "Bảng: lượt xem, theo dõi, số bidder đã cọc (ẩn danh), câu hỏi chưa trả lời; gợi ý hạ reserve nếu ít quan tâm; cho phép sửa reserve giảm (không tăng) trước khi có bid",
+   "money": ""
+  },
+  {
+   "id": "o5_6_system_b",
+   "a": "system",
+   "s": "s5",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "5.6",
+   "t": "Chặn người bán tự trả giá & tài khoản liên quan (shill bidding)",
+   "d": "Shill bidding là gian lận phổ biến nhất trong đấu giá online [Leicester; eBay fraud prevention]; group Facebook đầy 'chim mồi'.",
+   "svc": "Người bán và tài khoản cùng CCCD/thiết bị/ngân hàng/địa chỉ không được trả giá lô của mình; điểm bất thường: tài khoản mới chỉ trả giá lô của 1 người bán, bid rồi rút",
+   "money": ""
+  },
+  {
+   "id": "o6_1_bidder_b-a",
+   "a": "bidder",
+   "s": "s6",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "6.1",
+   "t": "Trả giá thủ công theo bước giá, thấy giá hiện tại tức thời",
+   "d": "Bidder cần thấy giá hiện tại, ai đang dẫn (mã), lịch sử bid cập nhật <1s; group Facebook comment chậm, không rõ ai dẫn.",
+   "svc": "Nút trả giá nhanh (giá hiện tại + 1/2/3 bước) và nhập giá; realtime qua websocket; xác nhận 1 chạm; hiển thị 'bạn đang dẫn / bị vượt' và tổng phải trả gồm phí",
+   "money": ""
+  },
+  {
+   "id": "o6_2_bidder_b",
+   "a": "bidder",
+   "s": "s6",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "6.2",
+   "t": "Đặt giá tối đa — hệ thống tự đấu (proxy bid)",
+   "d": "Bidder không thể canh 24/7; eBay proxy bid tăng thay bidder đến mức tối đa. Đã chốt áp dụng cho B (A dùng trả giá trực tiếp theo luật).",
+   "svc": "Nhập giá tối đa bí mật; engine tự trả 1 bước trên bid đối thủ; ưu tiên theo thời gian khi bằng nhau; thông báo khi giá tối đa bị vượt; sửa tăng giá tối đa được, không giảm",
+   "money": ""
+  },
+  {
+   "id": "o6_3_system_b-a",
+   "a": "system",
+   "s": "s6",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "6.3",
+   "t": "Xử lý giây cuối: gia hạn, khoá, kết thúc so le",
+   "d": "Đúng giờ kết thúc là lúc dễ lỗi nhất: tải cao, đồng hồ lệch, bid trùng mili-giây. Sàn ĐGTS lo 'gián đoạn mạng' [Thanh Niên].",
+   "svc": "Engine đơn luồng theo lô (thứ tự bid theo server-time), gia hạn tự động, chốt bid cuối và ghi hash nhật ký; nếu sự cố hạ tầng >X phút → tạm dừng & gia hạn tất cả lô đang mở, thông báo mọi bidder",
+   "money": ""
+  },
+  {
+   "id": "o6_4_host_b",
+   "a": "host",
+   "s": "s6",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "6.4",
+   "t": "Phiên live: host giới thiệu lô, livestream, gõ búa",
+   "d": "Livestream bán hàng là kênh lớn nhất VN; đấu giá live có host tạo 'hưng phấn' và giá cao hơn timed (Christie's, Sotheby's live online). Rủi ro: host tự 'đẩy giá'.",
+   "svc": "Phòng live: video host + lô đang đấu + bảng giá realtime + chat; host bấm 'mở lô/đóng lô', đồng hồ 30–60s reset sau mỗi bid; gõ búa điện tử; ghi hình lưu; host không thể đặt bid thay bidder",
+   "money": ""
+  },
+  {
+   "id": "o6_5_bidder_b",
+   "a": "bidder",
+   "s": "s6",
+   "ty": [
+    "b"
+   ],
+   "st": "have",
+   "n": "6.5",
+   "t": "Tham gia live: xem, trả giá, 'bid trước' khi vắng",
+   "d": "Bidder không thể xem live liên tục; sàn live cho 'absentee bid' (đặt trước) và tự động đấu khi lô mở.",
+   "svc": "Bid trước = proxy bid cho lô live; nhắc khi lô sắp tới lượt (còn 3 lô); trả giá 1 chạm trong live; độ trễ video–giá <2s hoặc hiển thị 'giá là chuẩn, video có thể trễ'",
+   "money": ""
+  },
+  {
+   "id": "o6_6_host_a",
+   "a": "host",
+   "s": "s6",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "6.6",
+   "t": "Đấu giá viên điều hành cuộc đấu giá A",
+   "d": "Kịch bản A: đấu giá viên có thẻ điều hành, công bố người trả giá cao nhất, lập biên bản; vòng đấu ≥15 phút, gia hạn 3 phút [NĐ 172].",
+   "svc": "Màn điều hành: mở/tạm dừng/kết thúc theo luật, danh sách bidder đủ điều kiện (mã ẩn danh), nhật ký; sinh biên bản điện tử ký số đấu giá viên & người trúng",
+   "money": ""
+  },
+  {
+   "id": "o6_7_admin_b-a",
+   "a": "admin",
+   "s": "s6",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "6.7",
+   "t": "Giám sát gian lận & can thiệp theo quy trình",
+   "d": "Tài khoản giả, phần mềm tự động, dàn xếp là rủi ro được chuyên gia nêu [Thanh Niên 4/2026]; admin cần thấy bất thường ngay trong phiên.",
+   "svc": "Dashboard phiên: bid/phút, tài khoản mới, bid từ cùng IP/thiết bị, bid rút; hành động có nhật ký: huỷ bid gian lận, khoá tài khoản, tạm dừng lô; mọi can thiệp hiện trong nhật ký công khai sau phiên",
+   "money": ""
+  },
+  {
+   "id": "o6_8_bidder_b",
+   "a": "bidder",
+   "s": "s6",
+   "ty": [
+    "b"
+   ],
+   "st": "gap",
+   "n": "6.8",
+   "t": "Rút bid / trả giá nhầm",
+   "d": "Nhập nhầm 15.000.000 thành 150.000.000 xảy ra thường xuyên; eBay cho rút bid có điều kiện; group Facebook 'lỡ tay' rồi bùng.",
+   "svc": "Xác nhận khi bid > 2× giá hiện tại; cho rút trong 5 phút sau khi đặt nếu còn >1h; sau đó không rút, chỉ liên hệ admin; rút nhiều → giảm uy tín",
+   "money": ""
+  },
+  {
+   "id": "o6_9_seller_b-a",
+   "a": "seller",
+   "s": "s6",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "6.9",
+   "t": "Người bán theo dõi phiên realtime",
+   "d": "Người bán muốn thấy diễn biến, reserve đạt chưa, nhưng không được biết danh tính bidder (chống liên hệ ngoài sàn).",
+   "svc": "Màn theo dõi: giá hiện tại, số bidder, reserve đạt/chưa, dự kiến tiền nhận sau phí; không hiển thị danh tính",
+   "money": ""
+  },
+  {
+   "id": "o7_1_system_b-a",
+   "a": "system",
+   "s": "s7",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "7.1",
+   "t": "Xác định người trúng, xử lý reserve chưa đạt",
+   "d": "Lô đạt reserve → người trúng ngay; chưa đạt → Catawiki gửi 'đề nghị cuối' cho người bán và bidder cao nhất trong 48h.",
+   "svc": "Kết thúc: đạt reserve → trúng; chưa đạt → người bán có 48h chấp nhận giá cao nhất hoặc gửi giá đề nghị; hết hạn → lô không thành, tự gợi ý đấu lại với reserve thấp hơn",
+   "money": ""
+  },
+  {
+   "id": "o7_2_bidder_b",
+   "a": "bidder",
+   "s": "s7",
+   "ty": [
+    "b"
+   ],
+   "st": "have",
+   "n": "7.2",
+   "t": "Nhận thông báo trúng & hoá đơn: giá + buyer premium + vận chuyển",
+   "d": "Bidder ghét phí ẩn; Catawiki hiển thị phí 9% ngay ở mọi bước; hoá đơn rõ ràng giảm tranh cãi.",
+   "svc": "Hoá đơn: giá trúng, buyer premium (vd 8–10% bậc thang, tối thiểu 50k), phí vận chuyển đã chọn, VAT nếu có; hạn thanh toán 3 ngày; cọc được trừ vào hoặc hoàn sau khi trả đủ",
+   "money": "Buyer premium là doanh thu chính từ người mua"
+  },
+  {
+   "id": "o7_3_pay_b",
+   "a": "pay",
+   "s": "s7",
+   "ty": [
+    "b"
+   ],
+   "st": "ext",
+   "n": "7.3",
+   "t": "Thanh toán vào tài khoản ký quỹ đối tác (không về sàn)",
+   "d": "Người mua sợ trả tiền rồi không nhận hàng; người bán sợ giao rồi không nhận tiền. Catawiki giữ tiền và trả người bán 3 ngày sau khi giao thành công.",
+   "svc": "Thanh toán VNPay/chuyển khoản vào tài khoản ký quỹ của đối tác cấp phép, tham chiếu mã lô; webhook cập nhật 'đã thanh toán'; tiền được giữ đến khi người mua xác nhận nhận hàng hoặc hết hạn khiếu nại",
+   "money": "Tiền hàng ở đối tác ký quỹ; sàn chỉ nhận phần phí khi giải ngân"
+  },
+  {
+   "id": "o7_4_system_b",
+   "a": "system",
+   "s": "s7",
+   "ty": [
+    "b"
+   ],
+   "st": "gap",
+   "n": "7.4",
+   "t": "Người trúng không trả tiền: mất cọc, chào người kế tiếp",
+   "d": "'Bom hàng' là điểm đau lớn nhất của đấu giá group; cần hậu quả rõ và phương án cứu lô.",
+   "svc": "Quá hạn 3 ngày + nhắc 2 lần → huỷ, cọc chuyển bồi thường cho người bán (trừ phí sàn), khoá tài khoản 30–90 ngày; second-chance offer cho bidder kế tiếp trong 24h",
+   "money": "Cọc bị mất chia người bán/sàn theo tỷ lệ công bố (vd 70/30)"
+  },
+  {
+   "id": "o7_5_seller_b",
+   "a": "seller",
+   "s": "s7",
+   "ty": [
+    "b"
+   ],
+   "st": "have",
+   "n": "7.5",
+   "t": "Phí người bán & khấu trừ thuế minh bạch",
+   "d": "Người bán cần biết chính xác nhận bao nhiêu; NĐ 117/2025 buộc sàn khấu trừ thuế 1,5% (0,5% GTGT + 1% TNCN) của hộ/cá nhân kinh doanh.",
+   "svc": "Bảng kê: giá trúng − hoa hồng người bán (vd 10–12% bậc thang) − thuế khấu trừ (nếu thuộc diện) − phí dịch vụ đã dùng = số nhận; chứng từ khấu trừ thuế xuất tự động",
+   "money": "Hoa hồng người bán là doanh thu chính từ người bán"
+  },
+  {
+   "id": "o7_6_org_a",
+   "a": "org",
+   "s": "s7",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "7.6",
+   "t": "Kết quả cuộc đấu giá A: biên bản, hợp đồng mua bán, tiền đặt trước",
+   "d": "Kịch bản A: biên bản đấu giá, hợp đồng mua bán công chứng (BĐS) trong thời hạn; tiền đặt trước chuyển thành tiền cọc; người không trúng được hoàn trong 3 ngày làm việc [Điều 39, 46].",
+   "svc": "Portal CTĐG: xuất biên bản ký số, checklist hợp đồng, theo dõi hoàn tiền đặt trước; sàn ghi nhận kết quả để tính phí nền tảng",
+   "money": "Thù lao đấu giá thuộc CTĐG; sàn thu phí nền tảng theo lô thành/không thành"
+  },
+  {
+   "id": "o7_7_bidder_b",
+   "a": "bidder",
+   "s": "s7",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "7.7",
+   "t": "Mua ngay & đề nghị giá khi lô không thành",
+   "d": "Người mua muốn kết thúc sớm với giá chắc chắn; lô không đạt reserve thường được bán qua thương lượng sau phiên.",
+   "svc": "Mua ngay trước bid đầu → chốt tức thời & tạo hoá đơn; sau phiên không thành → gửi đề nghị giá trong 7 ngày, người bán chấp nhận → giao dịch chuẩn qua sàn (không ngoài sàn)",
+   "money": ""
+  },
+  {
+   "id": "o8_1_seller_b",
+   "a": "seller",
+   "s": "s8",
+   "ty": [
+    "b"
+   ],
+   "st": "have",
+   "n": "8.1",
+   "t": "Giao hàng: đối tác vận chuyển có bảo hiểm hoặc giao tay",
+   "d": "Đồ gốm, tranh dễ vỡ; xe/máy móc cần vận chuyển đặc thù; group Facebook giao qua xe khách không bảo hiểm.",
+   "svc": "Chọn: đối tác vận chuyển tích hợp (đóng gói chuẩn, bảo hiểm theo giá trúng), giao tay tại kho đối tác có xác nhận, hoặc người mua tự nhận; mã vận đơn gắn lô; hạn gửi 5 ngày sau khi thanh toán",
+   "money": "Phí vận chuyển người mua trả; bảo hiểm tính vào phí"
+  },
+  {
+   "id": "o8_2_bidder_b",
+   "a": "bidder",
+   "s": "s8",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "8.2",
+   "t": "Kiểm hàng & xác nhận trong 3 ngày",
+   "d": "Người mua cần thời gian kiểm: hàng khớp mô tả? vỡ khi vận chuyển? Catawiki cho 3 ngày sau nhận để mở khiếu nại trước khi giải ngân.",
+   "svc": "Xác nhận 'đã nhận, đúng mô tả' hoặc mở khiếu nại có ảnh/video trong 3 ngày; im lặng 3 ngày → tự động xác nhận",
+   "money": ""
+  },
+  {
+   "id": "o8_3_admin_b",
+   "a": "admin",
+   "s": "s8",
+   "ty": [
+    "b"
+   ],
+   "st": "gap",
+   "n": "8.3",
+   "t": "Tranh chấp: không đúng mô tả, hàng giả, hỏng vận chuyển",
+   "d": "Luật BVQLNTD 2023 và NĐ 248 buộc nền tảng có quy trình khiếu nại công bố; hàng cổ 'giả cổ' là tranh chấp phổ biến nhất.",
+   "svc": "Quy trình 3 bước: người bán phản hồi 48h → admin quyết định (có thể yêu cầu giám định lại qua đối tác) → hoàn tiền một phần/toàn bộ hoặc giải ngân; SLA 7 ngày; kết quả ảnh hưởng uy tín hai bên",
+   "money": ""
+  },
+  {
+   "id": "o8_4_pay_b",
+   "a": "pay",
+   "s": "s8",
+   "ty": [
+    "b"
+   ],
+   "st": "ext",
+   "n": "8.4",
+   "t": "Hoàn tiền người mua hoặc giải ngân người bán",
+   "d": "Tiền phải đi đúng hướng theo kết quả tranh chấp; hoàn tiền chậm là phàn nàn hàng đầu của bidder VN [Thanh Niên].",
+   "svc": "API đối tác ký quỹ: giải ngân (giá − hoa hồng − thuế) cho người bán trong 2 ngày làm việc sau xác nhận; hoàn tiền người mua theo quyết định; phí sàn chuyển về tài khoản sàn cùng lúc",
+   "money": "Sàn nhận buyer premium + hoa hồng tại thời điểm giải ngân"
+  },
+  {
+   "id": "o8_5_expert_b",
+   "a": "expert",
+   "s": "s8",
+   "ty": [
+    "b"
+   ],
+   "st": "opp",
+   "n": "8.5",
+   "t": "Kho ký gửi & giao tay tại đối tác",
+   "d": "Lô giá trị cao: người mua muốn nhận tại nơi trung lập, kiểm trước mặt chuyên gia; giảm tranh chấp vận chuyển.",
+   "svc": "Dịch vụ ký gửi: người bán gửi hiện vật vào kho đối tác trước phiên (mức xác minh 4), người mua nhận & kiểm tại kho, biên bản giao nhận ảnh/video",
+   "money": "Phí ký gửi/lưu kho người bán trả; sàn hoa hồng"
+  },
+  {
+   "id": "o8_6_org_a",
+   "a": "org",
+   "s": "s8",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "8.6",
+   "t": "Bàn giao tài sản A & hoàn cọc ngoài sàn",
+   "d": "Kịch bản A: bàn giao theo hợp đồng mua bán; sang tên, hoàn tiền đặt trước cho người không trúng do CTĐG thực hiện.",
+   "svc": "Portal CTĐG cập nhật mốc: ký hợp đồng, thanh toán, bàn giao; nhắc hạn hoàn tiền; chủ tài sản và người trúng thấy tiến độ",
+   "money": ""
+  },
+  {
+   "id": "o9_1_admin_b-a",
+   "a": "admin",
+   "s": "s9",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "9.1",
+   "t": "Báo cáo phiên: tỷ lệ thành, giá trúng/ước giá, doanh thu phí",
+   "d": "Vận hành phiên cần biết lô nào thành, tỷ lệ đạt reserve, bidder mới, doanh thu phí; CTĐG A cần báo cáo theo cuộc.",
+   "svc": "Báo cáo theo phiên & theo danh mục: lô thành/không, giá trúng so ước giá, số bidder/lô, buyer premium, hoa hồng, thuế khấu trừ, tranh chấp; xuất Excel",
+   "money": ""
+  },
+  {
+   "id": "o9_2_seller_b-a",
+   "a": "seller",
+   "s": "s9",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "9.2",
+   "t": "Bảng kê & lịch sử bán, đánh giá người mua",
+   "d": "Người bán chuyên nghiệp cần đối chiếu tiền về với từng lô; đánh giá hai chiều tạo uy tín.",
+   "svc": "Trang thu nhập: từng lô → giá trúng, phí, thuế, ngày giải ngân, chứng từ; đánh giá người mua sau giao dịch; xuất bảng kê tháng",
+   "money": ""
+  },
+  {
+   "id": "o9_3_bidder_b-a",
+   "a": "bidder",
+   "s": "s9",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "9.3",
+   "t": "Lịch sử mua, chứng từ, đánh giá người bán",
+   "d": "Người sưu tầm cần lưu chứng thư, hoá đơn, lịch sử sở hữu (provenance) cho lần bán lại.",
+   "svc": "Bộ sưu tập của tôi: lô đã mua + chứng thư + hoá đơn + mã lô; nút 'bán lại trên sàn' kế thừa provenance; đánh giá người bán",
+   "money": ""
+  },
+  {
+   "id": "o9_4_admin_b",
+   "a": "admin",
+   "s": "s9",
+   "ty": [
+    "b"
+   ],
+   "st": "ext",
+   "n": "9.4",
+   "t": "Tuân thủ NĐ 248: lưu trữ, báo cáo, chuyển thông tin vi phạm 24h",
+   "d": "Nền tảng phải lưu dữ liệu sản phẩm ≥1 năm, hợp đồng ≥3 năm, cung cấp thông tin vi phạm cho cơ quan trong 24h, báo cáo định kỳ Bộ Công Thương; A lưu 20 năm.",
+   "svc": "Kho lưu trữ bất biến (nhật ký bid có hash, hợp đồng điện tử), công cụ xuất hồ sơ theo yêu cầu cơ quan trong 24h, báo cáo định kỳ; chính sách xoá dữ liệu",
+   "money": ""
+  },
+  {
+   "id": "o9_5_gov_b",
+   "a": "gov",
+   "s": "s9",
+   "ty": [
+    "b"
+   ],
+   "st": "ext",
+   "n": "9.5",
+   "t": "Thuế: khấu trừ, kê khai thay, chứng từ",
+   "d": "Sàn TMĐT khấu trừ & nộp thay 1,5% cho hộ/cá nhân kinh doanh, kê khai theo tháng [NĐ 117/2025]; người bán cá nhân không kinh doanh (bán đồ cũ) không thuộc diện — cần phân loại đúng.",
+   "svc": "Phân loại người bán khi định danh; tính khấu trừ tự động ở bảng kê; tờ khai tháng xuất từ hệ thống; chứng từ khấu trừ gửi người bán",
+   "money": ""
+  },
+  {
+   "id": "o9_6_admin_a",
+   "a": "admin",
+   "s": "s9",
+   "ty": [
+    "a"
+   ],
+   "st": "ext",
+   "n": "9.6",
+   "t": "Phí nền tảng từ CTĐG & đối soát theo cuộc",
+   "d": "Kịch bản A sàn không chạm tiền đặt trước/thù lao; nguồn thu là phí nền tảng theo cuộc/lô và media của chủ tài sản.",
+   "svc": "Bảng kê tháng cho CTĐG: số cuộc, lô thành, phí theo biểu; CTĐG xác nhận trong 7 ngày; công nợ & nhắc",
+   "money": "Phí nền tảng theo cuộc/lô; gói tháng cho CTĐG lớn"
+  },
+  {
+   "id": "o9_7_system_b-a",
+   "a": "system",
+   "s": "s9",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "opp",
+   "n": "9.7",
+   "t": "CSDL giá & provenance theo mã tài sản",
+   "d": "Mỗi lô có mã bền, giá trúng thật tích luỹ thành dữ liệu tham chiếu (ước giá, gợi ý khởi điểm) — lợi thế không sao chép được.",
+   "svc": "Mã tài sản UUID + mã hiển thị; lịch sử đấu (kể cả không thành), giá trúng, giám định; API nội bộ cho gợi ý giá ở bước 3.1 và ước giá ở bước 2.7",
+   "money": ""
+  },
+  {
+   "id": "o9_8_admin_b-a",
+   "a": "admin",
+   "s": "s9",
+   "ty": [
+    "b",
+    "a"
+   ],
+   "st": "have",
+   "n": "9.8",
+   "t": "Chỉ số sàn công khai & NPS",
+   "d": "Niềm tin xây bằng minh bạch: tỷ lệ giao thành công, hoàn tiền đúng hạn, tranh chấp; NPS người bán/người mua sau mỗi giao dịch.",
+   "svc": "Trang 'Số liệu minh bạch' cập nhật tháng; khảo sát NPS 1 câu sau giao dịch; dashboard admin theo dõi KPI initiative",
+   "money": ""
+  }
+ ]
+}

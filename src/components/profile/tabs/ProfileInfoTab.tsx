@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { ProfileBasicSection } from "@/components/profile/sections/ProfileBasicSection";
 import { ProfileIntentSection } from "@/components/profile/sections/ProfileIntentSection";
 import { DepositCard } from "@/components/company-onboarding/DepositCard";
+import { VerifiedIdentityCard } from "@/components/vneid/VerifiedIdentityCard";
 
 interface Props {
   name: string;
@@ -139,6 +140,7 @@ export const ProfileInfoTab = ({ name, email, avatarUrl, onNameChange, onAvatarC
       </Card>
 
       <ProfileBasicSection initialName={name} onNameChange={onNameChange} />
+      <VerifiedIdentityCard />
       <ProfileIntentSection />
     </div>
   );

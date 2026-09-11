@@ -15,9 +15,19 @@ import { NotificationsTab } from "@/components/profile/tabs/NotificationsTab";
 import { SavedAssetsTab } from "@/components/profile/tabs/SavedAssetsTab";
 import { CompanyTab } from "@/components/profile/tabs/CompanyTab";
 import { MyAssetsTab } from "@/components/profile/tabs/MyAssetsTab";
+import { BiddingContractsTab } from "@/components/profile/tabs/BiddingContractsTab";
 import { resolveDisplayName } from "@/lib/displayName";
 
-const VALID_TABS: ProfileTab[] = ["profile", "saved", "credits", "password", "notifications", "company", "my-assets"];
+const VALID_TABS: ProfileTab[] = [
+  "profile",
+  "saved",
+  "credits",
+  "password",
+  "notifications",
+  "company",
+  "my-assets",
+  "auction-contracts",
+];
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -108,6 +118,7 @@ const ProfilePage = () => {
             {activeTab === "notifications" && <NotificationsTab />}
             {activeTab === "company" && <CompanyTab />}
             {activeTab === "my-assets" && <MyAssetsTab userId={userId} />}
+            {activeTab === "auction-contracts" && <BiddingContractsTab />}
           </div>
         </div>
       </main>

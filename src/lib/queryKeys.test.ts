@@ -90,6 +90,12 @@ describe("qk — bất biến prefix (chống invalidate câm)", () => {
       [qk.campaignRecipients.all, qk.campaignRecipients.byCampaign(UID)],
       [qk.campaignRecipients.all, qk.campaignRecipients.byUser(UID)],
       [qk.campaignRecipients.byUserAll, qk.campaignRecipients.byUser(UID)],
+      [qk.orgContacts.byOrg(UID), qk.orgContacts.byId(UID, PID)],
+      [qk.sessionAudience.all, qk.sessionAudience.bySession(PID)],
+      [qk.sessionAudience.bySession(PID), qk.sessionAudience.list(PID, `${UID},${PID}`)],
+      [qk.sessionOutreach.bySession(PID), qk.sessionOutreach.edits(PID)],
+      [qk.sessionOutreach.bySession(PID), qk.sessionOutreach.sends(PID)],
+      [qk.orgContacts.byOrg(UID), qk.orgContacts.outreach(UID, PID)],
     ];
     for (const [broad, narrow] of pairs) {
       expect(covers(broad, narrow), `${JSON.stringify(broad)} ⊃ ${JSON.stringify(narrow)}`).toBe(

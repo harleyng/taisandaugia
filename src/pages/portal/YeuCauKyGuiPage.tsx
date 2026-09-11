@@ -4,14 +4,17 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ASSET_CATEGORIES } from '@/constants/category.constants'
 import { formatVnd } from '@/lib/advertising/slug'
-import { useOrgServiceRequests, useRespondServiceRequest } from '@/hooks/useOrgServiceRequests'
-import { QuoteDialog } from '@/components/portal/consignment/QuoteDialog'
+import {
+  useOrgServiceRequestCounts, useOrgServiceRequests, useRespondServiceRequest,
+} from '@/hooks/useOrgServiceRequests'
+import { QuoteDialog } from '@/components/portal/consignment/quote/QuoteDialog'
 import { DeclineDialog } from '@/components/portal/consignment/DeclineDialog'
 import { RequestDetailSheet } from '@/components/portal/consignment/RequestDetailSheet'
 import {
   ORG_REQUEST_STATUS_LABELS, REQUEST_STATUS_BADGE_CLASS,
   type OrgServiceRequest, type ServiceQuoteInput, type ServiceRequestStatus,
 } from '@/types/consignment'
+import { CONTRACT_STATUS_BADGE_CLASS, CONTRACT_STATUS_LABELS_ORG } from '@/types/consignment-contract'
 
 const PARENT_NAME: Record<string, string> = Object.fromEntries(ASSET_CATEGORIES.map((p) => [p.slug, p.name]))
 
@@ -20,12 +23,13 @@ type TabKey = 'open' | 'quoted' | 'declined' | 'won'
 const TABS: { key: TabKey; label: string; match: ServiceRequestStatus[] }[] = [
   { key: 'open', label: 'Cần trả lời', match: ['sent', 'seen'] },
   { key: 'quoted', label: 'Đã báo giá', match: ['quoted'] },
-  { key: 'won', label: 'Đã trúng', match: ['selected', 'accepted'] },
-  { key: 'declined', label: 'Đã đóng', match: ['declined', 'not_selected'] },
+  { key: 'won', label: 'Đã trúng · hợp đồng', match: ['selected', 'accepted'] },
+  { key: 'declined', label: 'Đã đóng', match: ['declined', 'not_selected', 'contract_cancelled'] },
 ]
 
 function RequestCard({ r, onOpen }: { r: OrgServiceRequest; onOpen: () => void }) {
   const location = [r.district, r.province].filter(Boolean).join(', ')
+  const reopened = !!r.reopened_at && (r.status === 'sent' || r.status === 'seen' || r.status === 'quoted')
   return (
     <button
       type="button"
@@ -49,9 +53,19 @@ function RequestCard({ r, onOpen }: { r: OrgServiceRequest; onOpen: () => void }
             {r.origin === 'platform' && ' · Sàn giới thiệu'}
           </p>
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${REQUEST_STATUS_BADGE_CLASS[r.status]}`}>
-          {ORG_REQUEST_STATUS_LABELS[r.status]}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${REQUEST_STATUS_BADGE_CLASS[r.status]}`}>
+            {ORG_REQUEST_STATUS_LABELS[r.status]}
+          </span>
+          {r.contract_status && r.status !== 'contract_cancelled' && (
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${CONTRACT_STATUS_BADGE_CLASS[r.contract_status]}`}>
+              {CONTRACT_STATUS_LABELS_ORG[r.contract_status]}
+            </span>
+          )}
+          {reopened && (
+            <span className="rounded-full bg-accent/20 px-2.5 py-1 text-[11px] font-medium text-foreground">Mở lại</span>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -78,8 +92,9 @@ function RequestCard({ r, onOpen }: { r: OrgServiceRequest; onOpen: () => void }
 
 /** Hộp thư yêu cầu ký gửi tài sản gửi tới tổ chức đấu giá. */
 export default function YeuCauKyGuiPage() {
-  const { requests, isLoading, hasOrg, organizationId } = useOrgServiceRequests()
+  const { requests, isLoading, hasOrg, organizationId, auctionOrgId } = useOrgServiceRequests()
   const respond = useRespondServiceRequest()
+  const { contractsActionCount } = useOrgServiceRequestCounts()
 
   const [tab, setTab] = useState<TabKey>('open')
   const [openId, setOpenId] = useState<string | null>(null)
@@ -163,7 +178,8 @@ export default function YeuCauKyGuiPage() {
       <div>
         <h1 className="text-xl font-bold text-foreground">Yêu cầu ký gửi</h1>
         <p className="text-sm text-muted-foreground">
-          Tài sản chủ sở hữu muốn đưa ra đấu giá. Duyệt và gửi báo giá để chủ tài sản lựa chọn.
+          Tài sản chủ sở hữu muốn đưa ra đấu giá. Duyệt và gửi báo giá; khi được chọn, soạn và ký hợp đồng dịch vụ
+          ngay tại đây.
         </p>
       </div>
 
@@ -178,6 +194,14 @@ export default function YeuCauKyGuiPage() {
           >
             {t.label}
             <span className={tab === t.key ? 'opacity-80' : 'text-muted-foreground'}>{counts[t.key]}</span>
+            {t.key === 'won' && contractsActionCount > 0 && (
+              <span
+                className="rounded-full bg-accent px-1.5 py-0.5 text-[11px] font-semibold text-accent-foreground"
+                aria-label={`${contractsActionCount} hợp đồng cần bạn xử lý`}
+              >
+                {contractsActionCount} cần xử lý
+              </span>
+            )}
           </Button>
         ))}
       </div>
@@ -199,6 +223,7 @@ export default function YeuCauKyGuiPage() {
 
       <RequestDetailSheet
         request={selected}
+        auctionOrgId={auctionOrgId}
         onOpenChange={(open) => !open && setOpenId(null)}
         onQuote={() => setQuoting(true)}
         onDecline={() => setDeclining(true)}

@@ -135,7 +135,8 @@
       "Bash(perl -0pi -e 's{/\\\\*\\\\* Gắn ngắt trang lên phần tử ĐẦU TIÊN của nhóm.*?\\\\n\\\\}\\\\n\\\\ntype FontMap}{type FontMap}s' src/lib/personnel/dossier-pdf/index.ts)",
       "Bash(ls ~/Library/Caches/ms-playwright 2>/dev/null | head; ls /Applications | grep -i \"Google Chrome\" | head -2)",
       "Read(//Users/m116gb/Library/Caches/ms-playwright/**)",
-      "Bash(grep -oiE \"'[a-z0-9_-]{3,40}'\")"
+      "Bash(grep -oiE \"'[a-z0-9_-]{3,40}'\")",
+      "Bash(md5 src/components/asset-posting/wizardSchema.ts)"
     ],
     "additionalDirectories": [
       "/tmp",

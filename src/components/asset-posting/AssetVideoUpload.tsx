@@ -32,10 +32,11 @@ export function AssetVideoUpload({ value, onChange }: AssetVideoUploadProps) {
   const full = value.length >= MAX_VIDEOS;
 
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+    // Xem chú thích ở AssetMediaUpload: phải sao File ra trước khi reset input.
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!files?.length) return;
-    const uploaded = await upload(Array.from(files).slice(0, MAX_VIDEOS - value.length));
+    if (!files.length) return;
+    const uploaded = await upload(files.slice(0, MAX_VIDEOS - value.length));
     if (uploaded.length) onChange([...value, ...uploaded]);
   };
 

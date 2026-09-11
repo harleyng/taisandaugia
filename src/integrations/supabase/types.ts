@@ -666,6 +666,7 @@ export type Database = {
       }
       asset_owner_kyc: {
         Row: {
+          address: string | null
           contact_email: string | null
           created_at: string
           full_name: string | null
@@ -676,6 +677,7 @@ export type Database = {
           id_type: string | null
           phone: string | null
           phone_verified: boolean
+          province: string | null
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -684,8 +686,10 @@ export type Database = {
           submitted_at: string | null
           updated_at: string
           user_id: string
+          ward: string | null
         }
         Insert: {
+          address?: string | null
           contact_email?: string | null
           created_at?: string
           full_name?: string | null
@@ -696,6 +700,7 @@ export type Database = {
           id_type?: string | null
           phone?: string | null
           phone_verified?: boolean
+          province?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -704,8 +709,10 @@ export type Database = {
           submitted_at?: string | null
           updated_at?: string
           user_id: string
+          ward?: string | null
         }
         Update: {
+          address?: string | null
           contact_email?: string | null
           created_at?: string
           full_name?: string | null
@@ -716,6 +723,7 @@ export type Database = {
           id_type?: string | null
           phone?: string | null
           phone_verified?: boolean
+          province?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -724,6 +732,7 @@ export type Database = {
           submitted_at?: string | null
           updated_at?: string
           user_id?: string
+          ward?: string | null
         }
         Relationships: [
           {
@@ -788,6 +797,8 @@ export type Database = {
           created_by: string
           email_domain: string | null
           establishment_doc_url: string | null
+          head_office_address: string | null
+          head_office_province: string | null
           id: string
           linked_asset_owner_id: string | null
           linked_auction_org_id: string | null
@@ -819,6 +830,8 @@ export type Database = {
           created_by: string
           email_domain?: string | null
           establishment_doc_url?: string | null
+          head_office_address?: string | null
+          head_office_province?: string | null
           id?: string
           linked_asset_owner_id?: string | null
           linked_auction_org_id?: string | null
@@ -850,6 +863,8 @@ export type Database = {
           created_by?: string
           email_domain?: string | null
           establishment_doc_url?: string | null
+          head_office_address?: string | null
+          head_office_province?: string | null
           id?: string
           linked_asset_owner_id?: string | null
           linked_auction_org_id?: string | null
@@ -1160,6 +1175,7 @@ export type Database = {
           asset_posting_id: string
           auction_org_id: string
           broker_request_id: string | null
+          closed_by_request_id: string | null
           created_at: string
           decline_reason: string | null
           id: string
@@ -1169,14 +1185,18 @@ export type Database = {
           origin: string
           quote_commission_pct: number | null
           quote_doc_path: string | null
+          quote_fee_items: Json | null
           quote_lead_time_days: number | null
           quote_note: string | null
+          quote_plan: Json | null
           quote_service_fee: number | null
           quote_starting_price: number | null
           quoted_at: string | null
+          reopened_at: string | null
           responded_by: string | null
           seen_at: string | null
           status: string
+          status_before_close: string | null
           updated_at: string
           user_id: string
         }
@@ -1184,6 +1204,7 @@ export type Database = {
           asset_posting_id: string
           auction_org_id: string
           broker_request_id?: string | null
+          closed_by_request_id?: string | null
           created_at?: string
           decline_reason?: string | null
           id?: string
@@ -1193,14 +1214,18 @@ export type Database = {
           origin?: string
           quote_commission_pct?: number | null
           quote_doc_path?: string | null
+          quote_fee_items?: Json | null
           quote_lead_time_days?: number | null
           quote_note?: string | null
+          quote_plan?: Json | null
           quote_service_fee?: number | null
           quote_starting_price?: number | null
           quoted_at?: string | null
+          reopened_at?: string | null
           responded_by?: string | null
           seen_at?: string | null
           status?: string
+          status_before_close?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1208,6 +1233,7 @@ export type Database = {
           asset_posting_id?: string
           auction_org_id?: string
           broker_request_id?: string | null
+          closed_by_request_id?: string | null
           created_at?: string
           decline_reason?: string | null
           id?: string
@@ -1217,14 +1243,18 @@ export type Database = {
           origin?: string
           quote_commission_pct?: number | null
           quote_doc_path?: string | null
+          quote_fee_items?: Json | null
           quote_lead_time_days?: number | null
           quote_note?: string | null
+          quote_plan?: Json | null
           quote_service_fee?: number | null
           quote_starting_price?: number | null
           quoted_at?: string | null
+          reopened_at?: string | null
           responded_by?: string | null
           seen_at?: string | null
           status?: string
+          status_before_close?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1251,6 +1281,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "asset_service_requests_closed_by_request_id_fkey"
+            columns: ["closed_by_request_id"]
+            isOneToOne: false
+            referencedRelation: "asset_service_requests"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "asset_service_requests_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -1269,6 +1306,130 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_bidding_contracts: {
+        Row: {
+          address: string
+          bidder_no: number | null
+          bidder_no_assigned_at: string | null
+          cancelled_at: string | null
+          code: string
+          created_at: string
+          date_of_birth: string | null
+          deposit_amount_received: number | null
+          deposit_note: string | null
+          deposit_received_at: string | null
+          deposit_status: string
+          deposit_status_changed_at: string | null
+          deposit_updated_by: string | null
+          email: string
+          fee_amount: number
+          full_name: string
+          gender: string | null
+          hold_expires_at: string | null
+          id: string
+          id_number: string
+          id_type: string
+          identity_source: string
+          order_id: string | null
+          organization_id: string
+          paid_at: string | null
+          payment_txn_ref: string | null
+          phone: string
+          session_id: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address: string
+          bidder_no?: number | null
+          bidder_no_assigned_at?: string | null
+          cancelled_at?: string | null
+          code: string
+          created_at?: string
+          date_of_birth?: string | null
+          deposit_amount_received?: number | null
+          deposit_note?: string | null
+          deposit_received_at?: string | null
+          deposit_status?: string
+          deposit_status_changed_at?: string | null
+          deposit_updated_by?: string | null
+          email: string
+          fee_amount: number
+          full_name: string
+          gender?: string | null
+          hold_expires_at?: string | null
+          id?: string
+          id_number: string
+          id_type: string
+          identity_source?: string
+          order_id?: string | null
+          organization_id: string
+          paid_at?: string | null
+          payment_txn_ref?: string | null
+          phone: string
+          session_id: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string
+          bidder_no?: number | null
+          bidder_no_assigned_at?: string | null
+          cancelled_at?: string | null
+          code?: string
+          created_at?: string
+          date_of_birth?: string | null
+          deposit_amount_received?: number | null
+          deposit_note?: string | null
+          deposit_received_at?: string | null
+          deposit_status?: string
+          deposit_status_changed_at?: string | null
+          deposit_updated_by?: string | null
+          email?: string
+          fee_amount?: number
+          full_name?: string
+          gender?: string | null
+          hold_expires_at?: string | null
+          id?: string
+          id_number?: string
+          id_type?: string
+          identity_source?: string
+          order_id?: string | null
+          organization_id?: string
+          paid_at?: string | null
+          payment_txn_ref?: string | null
+          phone?: string
+          session_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_bidding_contracts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_bidding_contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_bidding_contracts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -1338,6 +1499,191 @@ export type Database = {
             columns: ["parent_org_id"]
             isOneToOne: false
             referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_session_items: {
+        Row: {
+          asset_posting_id: string | null
+          bid_step: number | null
+          category_slug: string | null
+          created_at: string
+          deposit_amount: number | null
+          district: string | null
+          id: string
+          image_url: string | null
+          listing_id: string | null
+          lot_no: number
+          max_registrants: number | null
+          province: string | null
+          service_request_id: string | null
+          session_id: string
+          source: string
+          starting_price: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          asset_posting_id?: string | null
+          bid_step?: number | null
+          category_slug?: string | null
+          created_at?: string
+          deposit_amount?: number | null
+          district?: string | null
+          id?: string
+          image_url?: string | null
+          listing_id?: string | null
+          lot_no?: number
+          max_registrants?: number | null
+          province?: string | null
+          service_request_id?: string | null
+          session_id: string
+          source: string
+          starting_price?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          asset_posting_id?: string | null
+          bid_step?: number | null
+          category_slug?: string | null
+          created_at?: string
+          deposit_amount?: number | null
+          district?: string | null
+          id?: string
+          image_url?: string | null
+          listing_id?: string | null
+          lot_no?: number
+          max_registrants?: number | null
+          province?: string | null
+          service_request_id?: string | null
+          session_id?: string
+          source?: string
+          starting_price?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_session_items_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_session_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_session_items_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "asset_service_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_session_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_sessions: {
+        Row: {
+          auction_format: string
+          auction_org_id: string | null
+          cancelled_reason: string | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          dossier_fee: number | null
+          ends_at: string
+          id: string
+          max_registrants: number | null
+          organization_id: string
+          province: string | null
+          published_at: string | null
+          registration_end_at: string | null
+          registration_start_at: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+          venue: string | null
+          viewing_end_at: string | null
+          viewing_start_at: string | null
+        }
+        Insert: {
+          auction_format?: string
+          auction_org_id?: string | null
+          cancelled_reason?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          dossier_fee?: number | null
+          ends_at: string
+          id?: string
+          max_registrants?: number | null
+          organization_id: string
+          province?: string | null
+          published_at?: string | null
+          registration_end_at?: string | null
+          registration_start_at?: string | null
+          starts_at: string
+          status?: string
+          title: string
+          updated_at?: string
+          venue?: string | null
+          viewing_end_at?: string | null
+          viewing_start_at?: string | null
+        }
+        Update: {
+          auction_format?: string
+          auction_org_id?: string | null
+          cancelled_reason?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          dossier_fee?: number | null
+          ends_at?: string
+          id?: string
+          max_registrants?: number | null
+          organization_id?: string
+          province?: string | null
+          published_at?: string | null
+          registration_end_at?: string | null
+          registration_start_at?: string | null
+          starts_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          venue?: string | null
+          viewing_end_at?: string | null
+          viewing_start_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_sessions_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1580,6 +1926,642 @@ export type Database = {
           {
             foreignKeyName: "campaign_recipients_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_document_clauses: {
+        Row: {
+          body: string
+          clause_ref: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string | null
+          document_id: string
+          heading: string | null
+          id: string
+          organization_id: string
+          session_id: string
+          sort_order: number
+          source: string
+          status: string
+          topics: string[]
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          clause_ref: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          heading?: string | null
+          id?: string
+          organization_id: string
+          session_id: string
+          sort_order?: number
+          source?: string
+          status?: string
+          topics?: string[]
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          clause_ref?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          heading?: string | null
+          id?: string
+          organization_id?: string
+          session_id?: string
+          sort_order?: number
+          source?: string
+          status?: string
+          topics?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_document_clauses_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "case_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_document_clauses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_document_clauses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_documents: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          doc_type: string
+          extracted_at: string | null
+          extraction_engine: string | null
+          extraction_status: string
+          id: string
+          mime_type: string | null
+          organization_id: string
+          original_filename: string | null
+          review_status: string
+          session_id: string
+          size_bytes: number | null
+          storage_path: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          doc_type: string
+          extracted_at?: string | null
+          extraction_engine?: string | null
+          extraction_status?: string
+          id?: string
+          mime_type?: string | null
+          organization_id: string
+          original_filename?: string | null
+          review_status?: string
+          session_id: string
+          size_bytes?: number | null
+          storage_path?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          doc_type?: string
+          extracted_at?: string | null
+          extraction_engine?: string | null
+          extraction_status?: string
+          id?: string
+          mime_type?: string | null
+          organization_id?: string
+          original_filename?: string | null
+          review_status?: string
+          session_id?: string
+          size_bytes?: number | null
+          storage_path?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_documents_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_question_escalations: {
+        Row: {
+          channel: string
+          conversation_id: string
+          created_at: string
+          detected_topics: string[]
+          id: string
+          message_id: string
+          organization_id: string
+          question: string
+          reason: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resolved_clause_id: string | null
+          session_id: string | null
+          status: string
+        }
+        Insert: {
+          channel: string
+          conversation_id: string
+          created_at?: string
+          detected_topics?: string[]
+          id?: string
+          message_id: string
+          organization_id: string
+          question: string
+          reason: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_clause_id?: string | null
+          session_id?: string | null
+          status?: string
+        }
+        Update: {
+          channel?: string
+          conversation_id?: string
+          created_at?: string
+          detected_topics?: string[]
+          id?: string
+          message_id?: string
+          organization_id?: string
+          question?: string
+          reason?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_clause_id?: string | null
+          session_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_question_escalations_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_question_escalations_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_question_escalations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_question_escalations_resolved_clause_id_fkey"
+            columns: ["resolved_clause_id"]
+            isOneToOne: false
+            referencedRelation: "case_document_clauses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_question_escalations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_conversations: {
+        Row: {
+          bidder_user_id: string | null
+          channel: string
+          contact_name: string
+          contact_phone: string | null
+          created_at: string
+          external_thread_id: string | null
+          id: string
+          is_simulated: boolean
+          last_message_at: string
+          last_session_id: string | null
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bidder_user_id?: string | null
+          channel: string
+          contact_name: string
+          contact_phone?: string | null
+          created_at?: string
+          external_thread_id?: string | null
+          id?: string
+          is_simulated?: boolean
+          last_message_at?: string
+          last_session_id?: string | null
+          organization_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bidder_user_id?: string | null
+          channel?: string
+          contact_name?: string
+          contact_phone?: string | null
+          created_at?: string
+          external_thread_id?: string | null
+          id?: string
+          is_simulated?: boolean
+          last_message_at?: string
+          last_session_id?: string | null
+          organization_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_last_session_id_fkey"
+            columns: ["last_session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          ai_engine: string | null
+          author_kind: string
+          body: string
+          citations: Json
+          confidence: number | null
+          conversation_id: string
+          created_at: string
+          delivery_status: string | null
+          direction: string
+          external_message_id: string | null
+          id: string
+          in_reply_to: string | null
+          organization_id: string
+          qa_state: string | null
+          sent_at: string | null
+          sent_by: string | null
+          session_id: string | null
+        }
+        Insert: {
+          ai_engine?: string | null
+          author_kind: string
+          body: string
+          citations?: Json
+          confidence?: number | null
+          conversation_id: string
+          created_at?: string
+          delivery_status?: string | null
+          direction: string
+          external_message_id?: string | null
+          id?: string
+          in_reply_to?: string | null
+          organization_id: string
+          qa_state?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          ai_engine?: string | null
+          author_kind?: string
+          body?: string
+          citations?: Json
+          confidence?: number | null
+          conversation_id?: string
+          created_at?: string
+          delivery_status?: string | null
+          direction?: string
+          external_message_id?: string | null
+          id?: string
+          in_reply_to?: string | null
+          organization_id?: string
+          qa_state?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_in_reply_to_fkey"
+            columns: ["in_reply_to"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consignment_contract_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          contract_id: string
+          created_at: string
+          data: Json | null
+          id: string
+          side: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          contract_id: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          side?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          contract_id?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          side?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_contract_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "consignment_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consignment_contracts: {
+        Row: {
+          asset_posting_id: string
+          asset_snapshot: Json
+          auction_org_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_side: string | null
+          code: string | null
+          contract_no: string | null
+          created_at: string
+          draft_doc_path: string | null
+          draft_source: string | null
+          draft_uploaded_at: string | null
+          draft_uploaded_by: string | null
+          id: string
+          opportunity_id: string | null
+          org_confirmed_at: string | null
+          org_confirmed_by: string | null
+          org_party: Json
+          organization_id: string
+          owner_confirmed_at: string | null
+          owner_confirmed_by: string | null
+          owner_party: Json
+          owner_user_id: string
+          service_request_id: string
+          signed_at: string | null
+          signed_date: string | null
+          signed_doc_path: string | null
+          signed_uploaded_at: string | null
+          signed_uploaded_by: string | null
+          signed_uploaded_side: string | null
+          source: string
+          status: string
+          terms: Json
+          updated_at: string
+        }
+        Insert: {
+          asset_posting_id: string
+          asset_snapshot?: Json
+          auction_org_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_side?: string | null
+          code?: string | null
+          contract_no?: string | null
+          created_at?: string
+          draft_doc_path?: string | null
+          draft_source?: string | null
+          draft_uploaded_at?: string | null
+          draft_uploaded_by?: string | null
+          id?: string
+          opportunity_id?: string | null
+          org_confirmed_at?: string | null
+          org_confirmed_by?: string | null
+          org_party?: Json
+          organization_id: string
+          owner_confirmed_at?: string | null
+          owner_confirmed_by?: string | null
+          owner_party?: Json
+          owner_user_id: string
+          service_request_id: string
+          signed_at?: string | null
+          signed_date?: string | null
+          signed_doc_path?: string | null
+          signed_uploaded_at?: string | null
+          signed_uploaded_by?: string | null
+          signed_uploaded_side?: string | null
+          source?: string
+          status?: string
+          terms?: Json
+          updated_at?: string
+        }
+        Update: {
+          asset_posting_id?: string
+          asset_snapshot?: Json
+          auction_org_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_side?: string | null
+          code?: string | null
+          contract_no?: string | null
+          created_at?: string
+          draft_doc_path?: string | null
+          draft_source?: string | null
+          draft_uploaded_at?: string | null
+          draft_uploaded_by?: string | null
+          id?: string
+          opportunity_id?: string | null
+          org_confirmed_at?: string | null
+          org_confirmed_by?: string | null
+          org_party?: Json
+          organization_id?: string
+          owner_confirmed_at?: string | null
+          owner_confirmed_by?: string | null
+          owner_party?: Json
+          owner_user_id?: string
+          service_request_id?: string
+          signed_at?: string | null
+          signed_date?: string | null
+          signed_doc_path?: string | null
+          signed_uploaded_at?: string | null
+          signed_uploaded_by?: string | null
+          signed_uploaded_side?: string | null
+          source?: string
+          status?: string
+          terms?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consignment_contracts_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_draft_uploaded_by_fkey"
+            columns: ["draft_uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_org_confirmed_by_fkey"
+            columns: ["org_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_owner_confirmed_by_fkey"
+            columns: ["owner_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: true
+            referencedRelation: "asset_service_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consignment_contracts_signed_uploaded_by_fkey"
+            columns: ["signed_uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3578,6 +4560,251 @@ export type Database = {
           },
         ]
       }
+      org_chat_settings: {
+        Row: {
+          created_at: string
+          escalation_reply: string
+          marketplace_mode: string
+          min_confidence: number
+          organization_id: string
+          updated_at: string
+          updated_by: string | null
+          zalo_mode: string
+        }
+        Insert: {
+          created_at?: string
+          escalation_reply?: string
+          marketplace_mode?: string
+          min_confidence?: number
+          organization_id: string
+          updated_at?: string
+          updated_by?: string | null
+          zalo_mode?: string
+        }
+        Update: {
+          created_at?: string
+          escalation_reply?: string
+          marketplace_mode?: string
+          min_confidence?: number
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          zalo_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_chat_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_contact_group_members: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          contact_id: string
+          group_id: string
+          organization_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          contact_id: string
+          group_id: string
+          organization_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          contact_id?: string
+          group_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_contact_group_members_contact_fk"
+            columns: ["contact_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_contacts"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "org_contact_group_members_group_fk"
+            columns: ["group_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_contact_groups"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      org_contact_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_contact_groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_contact_interests: {
+        Row: {
+          categories: string[]
+          contact_id: string
+          created_at: string
+          id: string
+          note: string | null
+          organization_id: string
+          price_max: number | null
+          price_min: number | null
+          province_keys: string[] | null
+          provinces: string[]
+          updated_at: string
+        }
+        Insert: {
+          categories?: string[]
+          contact_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          organization_id: string
+          price_max?: number | null
+          price_min?: number | null
+          province_keys?: string[] | null
+          provinces?: string[]
+          updated_at?: string
+        }
+        Update: {
+          categories?: string[]
+          contact_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          organization_id?: string
+          price_max?: number | null
+          price_min?: number | null
+          province_keys?: string[] | null
+          provinces?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_contact_interests_contact_fk"
+            columns: ["contact_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_contacts"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      org_contacts: {
+        Row: {
+          code: string
+          company_name: string | null
+          consent_changed_at: string | null
+          consent_changed_by: string | null
+          contact_type: string
+          created_at: string
+          created_by: string | null
+          email: string | null
+          full_name: string
+          id: string
+          note: string | null
+          notifications_enabled: boolean
+          organization_id: string
+          phone: string | null
+          phone_digits: string | null
+          province: string | null
+          source: string
+          status: string
+          updated_at: string
+          zalo: string | null
+        }
+        Insert: {
+          code?: string
+          company_name?: string | null
+          consent_changed_at?: string | null
+          consent_changed_by?: string | null
+          contact_type?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          note?: string | null
+          notifications_enabled?: boolean
+          organization_id: string
+          phone?: string | null
+          phone_digits?: string | null
+          province?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          zalo?: string | null
+        }
+        Update: {
+          code?: string
+          company_name?: string | null
+          consent_changed_at?: string | null
+          consent_changed_by?: string | null
+          contact_type?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          note?: string | null
+          notifications_enabled?: boolean
+          organization_id?: string
+          phone?: string | null
+          phone_digits?: string | null
+          province?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          zalo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_document_folders: {
         Row: {
           color: string | null
@@ -4962,6 +6189,205 @@ export type Database = {
           },
         ]
       }
+      session_outreach_edits: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          field_key: string
+          generator_label: string | null
+          id: string
+          kind: string
+          new_value: string | null
+          old_value: string | null
+          pack_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          field_key: string
+          generator_label?: string | null
+          id?: string
+          kind: string
+          new_value?: string | null
+          old_value?: string | null
+          pack_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          field_key?: string
+          generator_label?: string | null
+          id?: string
+          kind?: string
+          new_value?: string | null
+          old_value?: string | null
+          pack_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_outreach_edits_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "session_outreach_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_outreach_fields: {
+        Row: {
+          field_key: string
+          generated_value: string | null
+          id: string
+          origin: string
+          pack_id: string
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          field_key: string
+          generated_value?: string | null
+          id?: string
+          origin: string
+          pack_id: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Update: {
+          field_key?: string
+          generated_value?: string | null
+          id?: string
+          origin?: string
+          pack_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_outreach_fields_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "session_outreach_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_outreach_packs: {
+        Row: {
+          case_file: Json
+          created_at: string
+          created_by: string | null
+          generated_at: string | null
+          generator_label: string | null
+          id: string
+          input_signature: string | null
+          notice_template_version: string
+          organization_id: string
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          case_file?: Json
+          created_at?: string
+          created_by?: string | null
+          generated_at?: string | null
+          generator_label?: string | null
+          id?: string
+          input_signature?: string | null
+          notice_template_version: string
+          organization_id: string
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          case_file?: Json
+          created_at?: string
+          created_by?: string | null
+          generated_at?: string | null
+          generator_label?: string | null
+          id?: string
+          input_signature?: string | null
+          notice_template_version?: string
+          organization_id?: string
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_outreach_packs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_outreach_packs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_outreach_sends: {
+        Row: {
+          channel: string | null
+          contact_id: string | null
+          contact_method: string | null
+          id: string
+          marked_at: string
+          marked_by: string | null
+          note: string | null
+          pack_id: string
+          recipient_label: string | null
+          segment_key: string | null
+          text_snapshot: string
+        }
+        Insert: {
+          channel?: string | null
+          contact_id?: string | null
+          contact_method?: string | null
+          id?: string
+          marked_at?: string
+          marked_by?: string | null
+          note?: string | null
+          pack_id: string
+          recipient_label?: string | null
+          segment_key?: string | null
+          text_snapshot: string
+        }
+        Update: {
+          channel?: string | null
+          contact_id?: string | null
+          contact_method?: string | null
+          id?: string
+          marked_at?: string
+          marked_by?: string | null
+          note?: string | null
+          pack_id?: string
+          recipient_label?: string | null
+          segment_key?: string | null
+          text_snapshot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_outreach_sends_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "org_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_outreach_sends_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "session_outreach_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_contract_lines: {
         Row: {
           commission_type: string
@@ -5635,6 +7061,48 @@ export type Database = {
           },
         ]
       }
+      user_verified_identities: {
+        Row: {
+          address: string
+          created_at: string
+          date_of_birth: string
+          full_name: string
+          gender: string | null
+          id_issued_on: string | null
+          id_number: string
+          source: string
+          updated_at: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          date_of_birth: string
+          full_name: string
+          gender?: string | null
+          id_issued_on?: string | null
+          id_number: string
+          source?: string
+          updated_at?: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          date_of_birth?: string
+          full_name?: string
+          gender?: string | null
+          id_issued_on?: string | null
+          id_number?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
       workspace_branches: {
         Row: {
           asset_owner_id: string | null
@@ -5697,6 +7165,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _settle_bidding_contract: {
+        Args: { _contract_id: string; _txn_ref: string; _uid: string }
+        Returns: Json
+      }
       accept_org_invite: {
         Args: { _confirm_email_mismatch?: boolean; _token: string }
         Returns: Json
@@ -5875,16 +7347,127 @@ export type Database = {
         }
         Returns: Json
       }
+      ask_case_question: {
+        Args: {
+          _contact_name: string
+          _contact_phone: string
+          _proposal: Json
+          _question: string
+          _session_id: string
+        }
+        Returns: Json
+      }
       asset_parent_slug: { Args: { _slug: string }; Returns: string }
+      asset_posting_selection_locked: {
+        Args: { _posting_id: string }
+        Returns: boolean
+      }
+      auction_dossier_terms: {
+        Args: { _at?: string; _auction_org_id: string; _fee: number }
+        Returns: {
+          t_commission_type: string
+          t_commission_value: number
+          t_contract_id: string
+          t_line_id: string
+          t_service_id: string
+          t_supplier_id: string
+          t_variant_id: string
+        }[]
+      }
+      auction_session_asset_conflict: {
+        Args: { _listing_id: string; _posting_id: string; _session_id: string }
+        Returns: string
+      }
+      auction_session_contract_summary: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
+      auction_session_is_public: {
+        Args: { _session_id: string }
+        Returns: boolean
+      }
       can_access_org_capacity: { Args: { _org_id: string }; Returns: boolean }
       can_access_org_documents: { Args: { _org_id: string }; Returns: boolean }
+      can_edit_chat_settings: { Args: { _org_id: string }; Returns: boolean }
+      can_manage_auction_session_items: {
+        Args: { _action: string; _session_id: string }
+        Returns: boolean
+      }
+      can_manage_auction_sessions: {
+        Args: { _action: string; _org_id: string }
+        Returns: boolean
+      }
+      can_manage_bidding_contracts: {
+        Args: { _action: string; _org_id: string }
+        Returns: boolean
+      }
       can_manage_org_auctioneers: {
+        Args: { _action: string; _org_id: string }
+        Returns: boolean
+      }
+      can_manage_org_contacts: {
         Args: { _action: string; _org_id: string }
         Returns: boolean
       }
       can_manage_org_cpd: {
         Args: { _action: string; _org_id: string }
         Returns: boolean
+      }
+      can_read_asset_doc_for_contract: {
+        Args: { _name: string }
+        Returns: boolean
+      }
+      can_read_consignment_contract_file: {
+        Args: { _name: string }
+        Returns: boolean
+      }
+      can_upload_consignment_contract_file: {
+        Args: { _name: string }
+        Returns: boolean
+      }
+      can_use_case_chat: {
+        Args: { _action: string; _org_id: string }
+        Returns: boolean
+      }
+      cancel_bidding_contract: {
+        Args: { _contract_id: string }
+        Returns: undefined
+      }
+      case_chat_settings: {
+        Args: { _org_id: string }
+        Returns: {
+          escalation_reply: string
+          marketplace_mode: string
+          min_confidence: number
+          zalo_mode: string
+        }[]
+      }
+      case_citable_clauses: {
+        Args: { _session_id: string }
+        Returns: {
+          body: string
+          clause_id: string
+          clause_ref: string
+          doc_title: string
+          doc_type: string
+          document_id: string
+          heading: string
+          sort_order: number
+          topics: string[]
+        }[]
+      }
+      case_document_object_org: { Args: { _name: string }; Returns: string }
+      case_qa_apply_proposal: {
+        Args: { _allow_auto: boolean; _inbound_id: string; _proposal: Json }
+        Returns: Json
+      }
+      case_qa_compose_answer: {
+        Args: { _session_code: string; _snapshot: Json }
+        Returns: string
+      }
+      case_qa_validate_citations: {
+        Args: { _citations: Json; _session_id: string }
+        Returns: Json
       }
       check_email_exists: { Args: { _email: string }; Returns: boolean }
       claim_payment_txn: {
@@ -5894,6 +7477,75 @@ export type Database = {
           _variant_key?: string
         }
         Returns: boolean
+      }
+      consignment_asset_snapshot: {
+        Args: { _posting_id: string }
+        Returns: Json
+      }
+      consignment_can_act: {
+        Args: {
+          _auction_org_id: string
+          _organization_id: string
+          _owner_user_id: string
+          _side: string
+        }
+        Returns: boolean
+      }
+      consignment_contract_attach_signed: {
+        Args: {
+          _confirm?: boolean
+          _contract_id: string
+          _contract_no?: string
+          _side: string
+          _signed_date: string
+          _signed_doc_path: string
+        }
+        Returns: Json
+      }
+      consignment_contract_cancel: {
+        Args: { _contract_id: string; _reason: string; _side: string }
+        Returns: Json
+      }
+      consignment_contract_confirm: {
+        Args: { _contract_id: string; _side: string; _signed_doc_path: string }
+        Returns: Json
+      }
+      consignment_contract_file_check: {
+        Args: {
+          _contract_id: string
+          _kind: string
+          _organization_id: string
+          _path: string
+        }
+        Returns: string
+      }
+      consignment_contract_share_draft: {
+        Args: {
+          _contract_id: string
+          _contract_no?: string
+          _draft_doc_path: string
+          _generated?: boolean
+        }
+        Returns: Json
+      }
+      consignment_missing_parties: {
+        Args: { _org_party: Json; _owner_party: Json }
+        Returns: string[]
+      }
+      consignment_org_party: {
+        Args: { _auction_org_id: string; _organization_id: string }
+        Returns: Json
+      }
+      consignment_owner_party: { Args: { _user_id: string }; Returns: Json }
+      consignment_path_uuid: {
+        Args: { _name: string; _seg: number }
+        Returns: string
+      }
+      consignment_request_terms: {
+        Args: {
+          _r: Database["public"]["Tables"]["asset_service_requests"]["Row"]
+        }
+        Returns: Json
       }
       count_campaign_audience: {
         Args: { _respect_optin?: boolean; _spec: Json }
@@ -5964,16 +7616,97 @@ export type Database = {
         }
         Returns: number
       }
+      lock_asset_posting_consignment: {
+        Args: { _posting_id: string }
+        Returns: undefined
+      }
+      my_case_questions: {
+        Args: { _session_id: string }
+        Returns: {
+          answer_body: string
+          answer_citations: Json
+          answered_at: string
+          answered_by: string
+          asked_at: string
+          message_id: string
+          question: string
+          state: string
+        }[]
+      }
       normalize_org_name: { Args: { p_name: string }; Returns: string }
+      normalize_province: { Args: { _name: string }; Returns: string }
+      normalize_provinces: { Args: { _names: string[] }; Returns: string[] }
+      org_add_clarification_clause: {
+        Args: {
+          _body: string
+          _clause_ref: string
+          _confirm?: boolean
+          _escalation_id: string
+          _heading: string
+          _topics: string[]
+        }
+        Returns: string
+      }
+      org_assign_bidder_no: {
+        Args: { _bidder_no?: number; _contract_id: string }
+        Returns: number
+      }
       org_branch_marker: { Args: { p_name: string }; Returns: string }
+      org_chat_attention_counts: { Args: { _org_id: string }; Returns: Json }
+      org_chat_inbox: {
+        Args: {
+          _channel?: string
+          _filter?: string
+          _org_id: string
+          _session_id?: string
+        }
+        Returns: {
+          awaiting_reply: number
+          channel: string
+          contact_name: string
+          contact_phone: string
+          conversation_id: string
+          is_simulated: boolean
+          last_message_at: string
+          last_preview: string
+          last_session_id: string
+          open_escalations: number
+          pending_drafts: number
+          session_code: string
+          session_title: string
+          status: string
+        }[]
+      }
       org_check_invite_email: {
         Args: { _email: string; _org_id: string }
         Returns: Json
       }
+      org_consignment_contract: { Args: { _request_id: string }; Returns: Json }
+      org_create_contact_group: {
+        Args: {
+          _contact_ids: string[]
+          _description: string
+          _name: string
+          _org_id: string
+        }
+        Returns: string
+      }
+      org_discard_chat_draft: {
+        Args: { _draft_id: string }
+        Returns: undefined
+      }
       org_documents_path_org: { Args: { _name: string }; Returns: string }
+      org_dossier_sale_ready: {
+        Args: { _organization_id: string }
+        Returns: boolean
+      }
       org_has_permission: {
         Args: { _action: string; _module: string; _org_id: string }
         Returns: boolean
+      }
+      org_import_contacts: {
+        Args: { _org_id: string; _rows: Json }
+        Returns: Json
       }
       org_is_owner: { Args: { _org_id: string }; Returns: boolean }
       org_name_similarity: {
@@ -5981,17 +7714,54 @@ export type Database = {
         Returns: number
       }
       org_new_invite_token: { Args: never; Returns: string }
+      org_resolve_case_escalation: {
+        Args: {
+          _clause_id?: string
+          _escalation_id: string
+          _note?: string
+          _status: string
+        }
+        Returns: undefined
+      }
       org_respond_service_request: {
         Args: { _action: string; _quote?: Json; _request_id: string }
         Returns: Json
       }
+      org_retry_case_answer: {
+        Args: { _message_id: string; _proposal: Json }
+        Returns: Json
+      }
+      org_save_extracted_clauses: {
+        Args: { _clauses: Json; _document_id: string; _engine: string }
+        Returns: number
+      }
       org_seed_default_roles: { Args: { _org_id: string }; Returns: string }
+      org_send_chat_draft: {
+        Args: { _draft_id: string; _edited_body?: string }
+        Returns: undefined
+      }
+      org_send_staff_reply: {
+        Args: {
+          _body: string
+          _clause_ids?: string[]
+          _conversation_id: string
+          _in_reply_to?: string
+        }
+        Returns: string
+      }
+      org_service_request_counts: {
+        Args: { _auction_org_id: string }
+        Returns: Json
+      }
       org_service_requests: {
         Args: { _auction_org_id: string }
         Returns: {
           auction_format: string
           child_slug: string
           commission_pct: number
+          contract_code: string
+          contract_id: string
+          contract_status: string
           created_at: string
           decline_reason: string
           delta_fields: Json
@@ -6012,11 +7782,14 @@ export type Database = {
           province: string
           quote_commission_pct: number
           quote_doc_path: string
+          quote_fee_items: Json
           quote_lead_time_days: number
           quote_note: string
+          quote_plan: Json
           quote_service_fee: number
           quote_starting_price: number
           quoted_at: string
+          reopened_at: string
           right_to_sell: boolean
           seen_at: string
           starting_price: number
@@ -6024,13 +7797,144 @@ export type Database = {
           title: string
         }[]
       }
+      org_session_audience: {
+        Args: { _group_ids?: string[]; _session_id: string }
+        Returns: {
+          code: string
+          company_name: string
+          contact_id: string
+          contact_type: string
+          eligible: boolean
+          email: string
+          full_name: string
+          group_ids: string[]
+          matched_item_ids: string[]
+          matched_lot_nos: number[]
+          notifications_enabled: boolean
+          phone: string
+          province: string
+          reasons: Json
+          segment_key: string
+          status: string
+          zalo: string
+        }[]
+      }
+      org_set_contract_deposit: {
+        Args: {
+          _amount?: number
+          _contract_id: string
+          _note?: string
+          _status: string
+        }
+        Returns: undefined
+      }
+      org_set_conversation_status: {
+        Args: { _conversation_id: string; _status: string }
+        Returns: undefined
+      }
       org_set_role_permissions: {
         Args: { _perms: Json; _role_id: string }
         Returns: undefined
       }
       org_significant_tokens: { Args: { p_name: string }; Returns: string[] }
+      org_simulate_zalo_message: {
+        Args: {
+          _body: string
+          _proposal: Json
+          _sender_name: string
+          _sender_phone: string
+          _session_id: string
+        }
+        Returns: Json
+      }
+      outreach_apply_generation: {
+        Args: {
+          _fields: Json
+          _generator_label: string
+          _input_signature: string
+          _overwrite_keys?: string[]
+          _pack_id: string
+        }
+        Returns: number
+      }
+      outreach_edit_field: {
+        Args: { _key: string; _pack_id: string; _value: string }
+        Returns: boolean
+      }
+      outreach_ensure_pack: {
+        Args: { _session_id: string; _template_version: string }
+        Returns: string
+      }
+      outreach_mark_sent: {
+        Args: {
+          _channel: string
+          _contacts?: Json
+          _note?: string
+          _pack_id: string
+          _text: string
+        }
+        Returns: number
+      }
+      outreach_reset_field: {
+        Args: { _key: string; _pack_id: string }
+        Returns: boolean
+      }
+      outreach_save_case_file: {
+        Args: { _case_file: Json; _pack_id: string }
+        Returns: boolean
+      }
+      outreach_send_window_open: {
+        Args: { _session_id: string }
+        Returns: boolean
+      }
+      outreach_writable_pack: {
+        Args: { _pack_id: string }
+        Returns: {
+          case_file: Json
+          created_at: string
+          created_by: string | null
+          generated_at: string | null
+          generator_label: string | null
+          id: string
+          input_signature: string | null
+          notice_template_version: string
+          organization_id: string
+          session_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "session_outreach_packs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      owner_consignment_summary: {
+        Args: never
+        Returns: {
+          contract_id: string
+          contract_status: string
+          has_selection: boolean
+          owner_action: string
+          posting_id: string
+          quoted_count: number
+        }[]
+      }
       owner_select_service_quote: {
         Args: { _request_id: string }
+        Returns: Json
+      }
+      owner_update_kyc_address: {
+        Args: {
+          _address: string
+          _kind: string
+          _province?: string
+          _ward?: string
+        }
+        Returns: Json
+      }
+      pay_bidding_contract: {
+        Args: { _contract_id: string; _txn_ref: string }
         Returns: Json
       }
       personnel_folder_org: { Args: { _name: string }; Returns: string }
@@ -6094,6 +7998,31 @@ export type Database = {
         Returns: Json
       }
       run_workspace_match: { Args: { p_workspace_id: string }; Returns: Json }
+      save_vneid_identity: {
+        Args: {
+          _address: string
+          _date_of_birth: string
+          _full_name: string
+          _gender?: string
+          _id_issued_on?: string
+          _id_number: string
+        }
+        Returns: undefined
+      }
+      start_bidding_contract: {
+        Args: {
+          _address: string
+          _date_of_birth?: string
+          _email: string
+          _full_name: string
+          _gender?: string
+          _id_number: string
+          _id_type: string
+          _phone: string
+          _session_id: string
+        }
+        Returns: Json
+      }
       suggest_org_aliases: { Args: { p_name: string }; Returns: Json }
       supplier_contracts_assert_no_overlap: {
         Args: { _contract_id: string }

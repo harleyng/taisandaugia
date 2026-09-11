@@ -352,6 +352,13 @@ Per-organization RBAC, mirroring admin RBAC but with one deliberate divergence: 
 
 **RPC public cho END-USER (mẫu MỚI):** `request_tool_service(_provider_id,_note)` — CTA "Sử dụng dịch vụ" (bắt buộc đăng nhập), grant `authenticated` nhưng **KHÔNG** gác `admin_has_permission` (khác các RPC chuyển đổi CRM); tạo lead (`source='tool_marketplace'`) + opportunity `stage='selling'` gắn service của provider, dedup theo (`created_by`, `tool_provider_id`, stage mở). Provider chưa gắn `service_id` ⇒ UI đổi CTA sang "Liên hệ tư vấn". Admin chốt thắng qua `admin_win_opportunity` như thường → khách hàng + đơn + hoa hồng. Truy vết: `leads.source='tool_marketplace'` + cột `tool_provider_id` trên `leads` & `opportunities`.
 
+### Hỏi đáp tài liệu phiên + omnichat (`20260912000100-101`)
+- **Bảng:** `case_documents` / `case_document_clauses` (RLS theo `phien-dau-gia`; bucket private `case-documents`, path `{org}/{session}/{doc}/…`, policy gate CẢ 2 segment), `org_chat_settings`, `chat_conversations` (khoá theo tổ chức + kênh + người liên hệ, KHÔNG theo phiên), `chat_messages` (`session_id` trên từng tin), `case_question_escalations`.
+- **Đọc:** engine / FAQ / trang công khai qua RPC `case_citable_clauses` (anon gọi được); người mua `my_case_questions`; hộp thư `org_chat_inbox` + `org_chat_attention_counts` (số đếm TÍNH, không lưu); luồng tin đọc thẳng bảng (policy SELECT).
+- **Ghi — chỉ qua RPC:** `ask_case_question`, `org_simulate_zalo_message`, `org_retry_case_answer` (cả ba gọi `case_qa_apply_proposal`), `org_send_chat_draft`, `org_discard_chat_draft`, `org_send_staff_reply`, `org_add_clarification_clause`, `org_resolve_case_escalation`, `org_save_extracted_clauses`.
+- **Client:** engine thuần `src/lib/caseQa/` (có test); seam AI thật ở hook `useCaseQaAnswer.ts` + `useCaseDocumentExtraction.ts`; keys `qk.caseQa.bySession(sid)` (phủ documents / citable / mine) và `qk.orgChat.all(org)`; polling (chưa realtime). Webhook Zalo OA sau này ghi `chat_conversations.external_thread_id` / `chat_messages.external_message_id` (UNIQUE ⇒ idempotent).
+- **UI:** `/portal/hoi-dap` (tabs `hop-thu|chuyen-tiep|cai-dat`), thẻ "Tài liệu phiên cho hỏi đáp" trên `/portal/phien-dau-gia/:id` + xem trước `/portal/phien-dau-gia/:id/hoi-dap`, công khai `/sessions/:id/hoi-dap` (dùng chung `CaseQaView`).
+
 ---
 
 ## Credits / Paywall

@@ -1,15 +1,12 @@
-import { useState } from "react";
-import { ArrowLeft, Loader2, FileText, Send, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Clock, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { getDeltaFields } from "@/constants/asset-delta-fields";
 import { formatPrice } from "@/utils/formatters";
-import { ChooseOrgAndRequest } from "./ChooseOrgAndRequest";
 import { ConsignmentPanel } from "./ConsignmentPanel";
+import { SendToOrgsCard } from "./SendToOrgsCard";
 import { renderDeltaValue } from "./format";
-import { postingToMatchCriteria } from "./wizardSchema";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { REVIEW_STATUS_BADGE_CLASS, REVIEW_STATUS_LABELS } from "@/lib/asset-posting/reviewStatus";
@@ -21,7 +18,8 @@ import {
   type AuctionFormat,
   type ExpectedTimeline,
 } from "@/types/asset-posting";
-import { useCancelBrokerRequest, usePostingDetail, useSelectQuote } from "@/hooks/useAssetPosting";
+import { useCancelBrokerRequest, usePostingDetail } from "@/hooks/useAssetPosting";
+import { usePostingContracts } from "@/hooks/useConsignmentContract";
 
 const PARENT_NAME: Record<string, string> = Object.fromEntries(ASSET_CATEGORIES.map((p) => [p.slug, p.name]));
 const CHILD_LABEL: Record<string, string> = Object.fromEntries(
@@ -65,9 +63,8 @@ interface AssetPostingDetailProps {
 /** Màn chi tiết một hồ sơ tài sản đấu giá. */
 export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProps) {
   const { data, isLoading } = usePostingDetail(postingId);
-  const [choosingOrg, setChoosingOrg] = useState(false);
-  const selectQuote = useSelectQuote();
   const cancelBroker = useCancelBrokerRequest();
+  const { data: contracts } = usePostingContracts(postingId);
 
   if (isLoading) {
     return (
@@ -93,7 +90,6 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
   }
 
   const { posting: p, org, requests, brokerRequest } = data;
-  const openBroker = brokerRequest && brokerRequest.status !== "cancelled";
   const descriptors = getDeltaFields(p.child_slug);
   const location = [p.address, p.ward, p.district, p.province].filter(Boolean).join(", ");
   const legalFlag = (v: boolean | null) => (v === null ? "—" : v ? "Có" : "Không");
@@ -118,6 +114,12 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          {/* Suy ra từ hợp đồng — KHÔNG ghi asset_postings.status (trigger review guard). */}
+          {contracts?.some((c) => c.status === "signed") && (
+            <span className="rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-medium text-success">
+              Đã ký hợp đồng
+            </span>
+          )}
           <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_STYLE[p.status]}`}>
             {ASSET_POSTING_STATUS_LABELS[p.status]}
           </span>
@@ -163,35 +165,7 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
         </Card>
       )}
 
-      {/* Luồng riêng: gửi cho tổ chức đấu giá (hồ sơ đã số hoá VÀ đã được duyệt, chưa gửi yêu cầu) */}
-      {p.status === "active" && p.review_status === "approved" && requests.length === 0 && !openBroker && (
-        <Card className="border-primary/20">
-          <CardContent className="pt-5 space-y-4">
-            {choosingOrg ? (
-              <ChooseOrgAndRequest
-                postingId={p.id}
-                criteria={postingToMatchCriteria(p)}
-                onSent={() => setChoosingOrg(false)}
-                onSkip={() => setChoosingOrg(false)}
-                skipLabel="Đóng"
-              />
-            ) : (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-foreground">Gửi cho tổ chức đấu giá</p>
-                  <p className="text-sm text-muted-foreground">
-                    Hồ sơ đã số hoá. Chọn tổ chức đấu giá phù hợp để gửi yêu cầu dịch vụ.
-                  </p>
-                </div>
-                <Button onClick={() => setChoosingOrg(true)} className="gap-2 shrink-0">
-                  <Send className="h-4 w-4" />
-                  Gửi cho tổ chức đấu giá
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <SendToOrgsCard posting={p} requests={requests} brokerRequest={brokerRequest} />
 
       {/* Trạng thái ký gửi: tiến trình nhờ sàn · báo giá · tổ chức đã chọn */}
       <ConsignmentPanel
@@ -199,8 +173,6 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
         requests={requests}
         brokerRequest={brokerRequest}
         org={org}
-        onSelectQuote={(requestId) => selectQuote.mutate({ requestId, postingId: p.id })}
-        isSelecting={selectQuote.isPending}
         onCancelBroker={() =>
           brokerRequest && cancelBroker.mutate({ brokerRequestId: brokerRequest.id, postingId: p.id })
         }

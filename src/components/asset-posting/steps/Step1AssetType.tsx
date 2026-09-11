@@ -22,7 +22,7 @@ export function Step1AssetType({ f, up, errs }: StepProps) {
           <label className="text-[13.5px] font-semibold text-foreground">
             Nhóm tài sản<span className="ml-0.5 text-destructive">*</span>
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
             {PARENTS.map((c) => {
               const Icon = c.icon;
               const on = f.parentSlug === c.slug;

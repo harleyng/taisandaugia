@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard, Layers, Wrench } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard, Layers, Wrench, Gavel } from "lucide-react";
 import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
@@ -95,6 +95,18 @@ export const Header = () => {
             <NavigationMenuList>
               <NavigationMenuItem>
                 <Link
+                  to="/sessions"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    transparent
+                      ? "text-white/90 hover:text-white hover:bg-white/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Phiên đấu giá
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link
                   to="/report"
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     transparent
@@ -125,7 +137,7 @@ export const Header = () => {
                   Danh mục
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="grid grid-cols-5 gap-6 p-6 w-[720px]">
+                  <div className="grid grid-cols-4 gap-x-6 gap-y-5 p-6 w-[880px] max-h-[70vh] overflow-y-auto">
                     {ASSET_CATEGORIES.map((cat) => {
                       const Icon = cat.icon;
                       return (
@@ -311,6 +323,13 @@ export const Header = () => {
                   >
                     <Home className="h-5 w-5" />
                     Trang chủ
+                  </Link>
+                  <Link
+                    to="/sessions"
+                    className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                  >
+                    <Gavel className="h-5 w-5" />
+                    Phiên đấu giá
                   </Link>
                   <Link
                     to="/report"

@@ -26,6 +26,8 @@ export const PARENT_LABELS: Record<string, string> = {
   "may-moc": "Máy móc",
   "hang-hoa": "Hàng hóa",
   "do-dung": "Đồ dùng",
+  "thu-cong-my-nghe": "Thủ công mỹ nghệ",
+  "co-vat-suu-tam": "Cổ vật & sưu tầm",
   khac: "Khác / chưa phân nhóm",
 };
 
@@ -82,6 +84,35 @@ export const PARENT_OF: Record<string, string> = {
   "noi-that": "do-dung",
   "thiet-bi": "do-dung",
   "cong-cu": "do-dung",
+  // Thủ công mỹ nghệ
+  "gom-su": "thu-cong-my-nghe",
+  tranh: "thu-cong-my-nghe",
+  tuong: "thu-cong-my-nghe",
+  "cham-khac": "thu-cong-my-nghe",
+  "son-mai": "thu-cong-my-nghe",
+  "do-go": "thu-cong-my-nghe",
+  lua: "thu-cong-my-nghe",
+  theu: "thu-cong-my-nghe",
+  "tho-cam": "thu-cong-my-nghe",
+  "may-tre": "thu-cong-my-nghe",
+  "coi-luc-binh": "thu-cong-my-nghe",
+  "do-dong": "thu-cong-my-nghe",
+  "kim-hoan": "thu-cong-my-nghe",
+  "da-my-nghe": "thu-cong-my-nghe",
+  "giay-do": "thu-cong-my-nghe",
+  // Cổ vật & sưu tầm — lưu ý cặp slug gần giống bên thủ công mỹ nghệ
+  // (gom-su / gom-su-co, do-dong / do-dong-co, tranh / tranh-xua, tuong / tuong-tho)
+  "gom-su-co": "co-vat-suu-tam",
+  "do-dong-co": "co-vat-suu-tam",
+  "do-go-xua": "co-vat-suu-tam",
+  "tuong-tho": "co-vat-suu-tam",
+  "tranh-xua": "co-vat-suu-tam",
+  "tien-co": "co-vat-suu-tam",
+  tem: "co-vat-suu-tam",
+  "sach-tu-lieu": "co-vat-suu-tam",
+  "trang-suc": "co-vat-suu-tam",
+  "da-quy": "co-vat-suu-tam",
+  "dong-ho": "co-vat-suu-tam",
 };
 
 /** Các slug cha có thể tự xuất hiện trong listings.property_type_slug. */
@@ -91,6 +122,8 @@ export const PARENT_SLUGS = [
   "may-moc",
   "hang-hoa",
   "do-dung",
+  "thu-cong-my-nghe",
+  "co-vat-suu-tam",
   "khac",
 ] as const;
 

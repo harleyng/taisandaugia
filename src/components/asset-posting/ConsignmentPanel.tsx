@@ -1,16 +1,22 @@
-import { Building2, Loader2, MapPin, Phone, Sparkles, XCircle } from "lucide-react";
+import { useState } from "react";
+import { Loader2, RotateCcw, Sparkles, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { QuoteComparison } from "./QuoteComparison";
+import { AcceptQuoteDialog } from "./AcceptQuoteDialog";
+import { ChosenOrgCard } from "./ChosenOrgCard";
+import { OwnerContractPanel } from "./OwnerContractPanel";
+import { ContractStatusStepper } from "@/components/consignment/ContractStatusStepper";
 import {
   BROKER_REQUEST_STATUS_LABELS,
   SERVICE_REQUEST_STATUS_LABELS,
   type AssetBrokerRequest,
   type AssetPosting,
+  type ServiceRequestStatus,
 } from "@/types/asset-posting";
-import type { RequestOrg, RequestWithOrg } from "@/hooks/useAssetPosting";
+import { useSelectQuote, type RequestOrg, type RequestWithOrg } from "@/hooks/useAssetPosting";
+import { usePostingContracts } from "@/hooks/useConsignmentContract";
 
 const BROKER_STEPS: { key: AssetBrokerRequest["status"]; label: string }[] = [
   { key: "pending", label: "Đã gửi sàn" },
@@ -18,6 +24,9 @@ const BROKER_STEPS: { key: AssetBrokerRequest["status"]; label: string }[] = [
   { key: "quoted", label: "Có báo giá" },
   { key: "selected", label: "Đã chọn" },
 ];
+
+/** Trạng thái bị owner_select_service_quote đóng thành 'not_selected'. */
+const CLOSED_ON_SELECT: ServiceRequestStatus[] = ["sent", "seen", "quoted"];
 
 function BrokerProgress({ status }: { status: AssetBrokerRequest["status"] }) {
   const idx = BROKER_STEPS.findIndex((s) => s.key === status);
@@ -35,86 +44,58 @@ function BrokerProgress({ status }: { status: AssetBrokerRequest["status"] }) {
   );
 }
 
-function ChosenOrgCard({ org, request }: { org: RequestOrg; request: RequestWithOrg | null }) {
-  return (
-    <Card className="border-primary/20 bg-primary/5">
-      <CardContent className="space-y-3 pt-5">
-        <div className="flex items-center gap-3">
-          {org.logo_url ? (
-            <img src={org.logo_url} alt={org.name} className="h-11 w-11 rounded-lg object-cover" />
-          ) : (
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-background">
-              <Building2 className="h-5 w-5 text-primary" />
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-foreground">{org.name}</p>
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-              {org.province && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> {org.province}
-                </span>
-              )}
-              {org.phone && (
-                <span className="flex items-center gap-1">
-                  <Phone className="h-3 w-3" /> {org.phone}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        {request && (
-          <>
-            <Separator />
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-muted-foreground">Trạng thái</span>
-              <Badge variant="secondary" className="font-normal">
-                {SERVICE_REQUEST_STATUS_LABELS[request.status]}
-              </Badge>
-            </div>
-            {request.message && (
-              <p className="rounded-lg border border-border bg-background p-3 text-sm text-foreground">
-                “{request.message}”
-              </p>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 interface ConsignmentPanelProps {
   posting: AssetPosting;
   requests: RequestWithOrg[];
   brokerRequest: AssetBrokerRequest | null;
   org: RequestOrg | null;
-  onSelectQuote: (requestId: string) => void;
-  isSelecting: boolean;
   onCancelBroker: () => void;
   isCancelling: boolean;
 }
 
 /**
  * Toàn bộ trạng thái ký gửi của một hồ sơ trên trang chủ tài sản: tiến trình
- * nhờ sàn, các báo giá nhận được, và tổ chức cuối cùng được chọn.
+ * nhờ sàn, các báo giá nhận được, hợp đồng dịch vụ với tổ chức đã chốt, và các
+ * hợp đồng đã huỷ trước đó.
+ *
+ * Tự giữ luồng chốt báo giá (xác nhận → RPC) để trang chi tiết không phải
+ * chuyền state qua lại.
  */
 export function ConsignmentPanel({
   posting,
   requests,
   brokerRequest,
   org,
-  onSelectQuote,
-  isSelecting,
   onCancelBroker,
   isCancelling,
 }: ConsignmentPanelProps) {
+  const selectQuote = useSelectQuote();
+  const { data: contracts = [] } = usePostingContracts(posting.id);
+  const [confirming, setConfirming] = useState<RequestWithOrg | null>(null);
+
   const decided = requests.some((r) => r.status === "selected");
+  const activeContract = contracts.find((c) => c.status !== "cancelled") ?? null;
+  const cancelledContracts = contracts.filter((c) => c.status === "cancelled");
   const quotes = requests.filter((r) => r.status === "quoted" || r.status === "selected");
   const declined = requests.filter((r) => r.status === "declined");
   const waiting = requests.filter((r) => r.status === "sent" || r.status === "seen");
+  const hasReopened = quotes.some((r) => r.status === "quoted" && r.reopened_at);
+  const otherOpenCount = confirming
+    ? requests.filter((r) => r.id !== confirming.id && CLOSED_ON_SELECT.includes(r.status)).length
+    : 0;
+  const orgOf = (auctionOrgId: string) => requests.find((r) => r.auction_org_id === auctionOrgId)?.org ?? null;
 
   if (!brokerRequest && requests.length === 0) return null;
+
+  const confirmSelect = () => {
+    if (!confirming) return;
+    // Đóng hộp thoại cả khi lỗi: hook đã refetch nên màn hình hiện đúng tổ chức
+    // thật sự được chốt (vd. vừa chốt ở tab khác).
+    selectQuote.mutate(
+      { requestId: confirming.id, postingId: posting.id },
+      { onSettled: () => setConfirming(null) },
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -152,7 +133,17 @@ export function ConsignmentPanel({
         </Card>
       )}
 
-      {quotes.length > 0 && (
+      {/* Đã chốt + có hợp đồng: hợp đồng là việc chính, điều khoản đã chốt nằm trong đó. */}
+      {activeContract && (
+        <OwnerContractPanel
+          contract={activeContract}
+          org={orgOf(activeContract.auction_org_id)}
+          postingId={posting.id}
+          startingPrice={posting.starting_price}
+        />
+      )}
+
+      {quotes.length > 0 && !(decided && activeContract) && (
         <Card>
           <CardContent className="space-y-3 pt-5">
             <div>
@@ -165,11 +156,20 @@ export function ConsignmentPanel({
                 </p>
               )}
             </div>
+            {hasReopened && !decided && (
+              <p className="flex items-start gap-1.5 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <RotateCcw className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Một số báo giá đã mở lại sau khi hợp đồng trước bị huỷ. Báo giá có thể đã cũ — hỏi lại tổ chức
+                trước khi chọn.
+              </p>
+            )}
             <QuoteComparison
               quotes={quotes}
               acceptableCommissionPct={posting.commission_pct}
-              onSelect={onSelectQuote}
-              isSelecting={isSelecting}
+              requestedAuctionFormat={posting.auction_format}
+              startingPrice={posting.starting_price}
+              onSelect={setConfirming}
+              isSelecting={selectQuote.isPending}
               decided={decided}
             />
           </CardContent>
@@ -209,7 +209,37 @@ export function ConsignmentPanel({
         </Card>
       )}
 
-      {decided && org && <ChosenOrgCard org={org} request={requests.find((r) => r.status === "selected") ?? null} />}
+      {/* Yêu cầu cũ đã chốt nhưng không có hợp đồng trên sàn (tổ chức chưa có tài khoản). */}
+      {decided && !activeContract && org && (
+        <ChosenOrgCard org={org} request={requests.find((r) => r.status === "selected") ?? null} />
+      )}
+
+      {cancelledContracts.length > 0 && (
+        <Card className="border-border">
+          <CardContent className="space-y-3 pt-5">
+            <p className="text-sm font-semibold text-foreground">Hợp đồng đã huỷ</p>
+            {cancelledContracts.map((c) => (
+              <div key={c.id} className="space-y-1.5">
+                <p className="text-sm text-foreground">
+                  {orgOf(c.auction_org_id)?.name ?? "Tổ chức đấu giá"}
+                  <span className="text-muted-foreground"> · {c.code}</span>
+                </p>
+                <ContractStatusStepper contract={c} viewer="owner" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <AcceptQuoteDialog
+        quote={confirming}
+        otherOpenCount={otherOpenCount}
+        isPending={selectQuote.isPending}
+        onConfirm={confirmSelect}
+        onOpenChange={(open) => {
+          if (!open && !selectQuote.isPending) setConfirming(null);
+        }}
+      />
     </div>
   );
 }

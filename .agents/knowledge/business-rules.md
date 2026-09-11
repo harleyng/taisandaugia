@@ -21,6 +21,16 @@
 
 ---
 
+## Tiếp thị phiên & danh bạ khách hàng của tổ chức (2026-09-12)
+
+- **Sàn không cung cấp dữ liệu người mua cho tổ chức.** Danh bạ `/portal/khach-hang` (`org_contacts`) do tổ chức tự nhập / import. Module quyền `khach-hang`: MANAGER đủ 5 action, AGENT chỉ `view`.
+- **Người nhận hợp lệ** = `status='active'` VÀ `notifications_enabled=true`. Mặc định `false`; trigger đóng dấu `consent_changed_at/by`. Khách khớp nhưng chưa đồng ý vẫn hiện (mục riêng) để tổ chức thấy vì sao danh sách gửi nhỏ hơn.
+- **Luật khớp** (chỉ ở RPC `org_session_audience`): mỗi dòng nhu cầu × mỗi lô; AND trong một dòng, OR giữa các dòng. Loại tài sản = slug hoặc slug cha; tỉnh so qua `normalize_province`; giá khởi điểm trong `[min, max]` tính cả hai đầu. Chiều bỏ trống = không giới hạn; lô thiếu dữ liệu ở chiều bị ràng buộc thì KHÔNG khớp. Không chấm điểm.
+- **Phân khúc:** `lot:<item_uuid>` (khớp đúng 1 lô) / `multi` (≥2 lô). Tin gửi từng khách = câu chào của phân khúc + đúng các lô khách đó khớp.
+- **Thông báo đấu giá:** câu chữ khoá theo phiên bản trong code; trình soạn chỉ điền ô `draft` (mô tả, hiện trạng), ô `case` do tổ chức nhập, ô `fact` đọc từ phiên. Mẫu `2026-09-12` **đang chờ pháp chế rà soát**.
+- **Đánh dấu đã gửi:** chỉ khi phiên `published` và còn trong giai đoạn nhận hồ sơ; liên hệ từng khách chỉ với khách đang đủ điều kiện; nhật ký append-only. Phiên đã huỷ khoá mọi ghi.
+- **Quyền:** xem gói = `phien-dau-gia.view`; soạn / sửa / đánh dấu kênh = `phien-dau-gia.update`; xem người nhận = thêm `khach-hang.view`; ghi nhận liên hệ khách = `khach-hang.update`.
+
 ## Credits — the paywall economy
 
 Single access point: **`useCredits()`** (`src/hooks/useCredits.tsx`). Underlying logic in `src/lib/credits.ts`. Never read/write credit state directly — always through the hook. All mutations invalidate the `["user-credits", userId]` query key.
@@ -97,6 +107,7 @@ Locking is a **real GoTrue ban** (`auth.admin.updateUserById(id, { ban_duration 
 - **Fulfillment ("đã trả quyền lợi") = `fulfillment_status`** `pending | fulfilled | cancelled`. An advertising order auto-fulfills via DB trigger when its linked banner runs: `orders_fulfill_on_ad_active` (banner status → `active` fulfils linked `pending` orders) + `orders_fulfill_on_link` (order linked to an already-`active` banner fulfils on insert). Admin can still set status manually. (No scheduler exists — a banner reaches `active` only by an admin action.)
 - **Revenue recognition (fixed rule):** *Doanh thu tổng* = credit **top-up** VND + `Σ orders.amount` (excluding `cancelled`). **Credit is counted at top-up (package purchase), NEVER at credit spend** — spend on features is consumption, not new cash. Direct orders recognized at placement (`pending`+`fulfilled`), bucketed by `ordered_at`. Report `revenueReport.ts`; see `architecture.md` Reporting.
 - `orders.customer_id`/`service_id` are `ON DELETE RESTRICT` (can't delete a customer/service with orders); `advertisement_id` is `ON DELETE SET NULL`.
+- **Money collected on behalf of an auction org is NEVER a `direct` order.** Hồ sơ tham gia đấu giá: `_settle_bidding_contract` ghi đơn `commission` (`gross_amount` = tiền hồ sơ, `amount` = phần sàn theo hợp đồng, `user_id` = người mua, `fulfilled`). Xem mục "Hồ sơ tham gia đấu giá".
 
 ---
 
@@ -283,12 +294,69 @@ Hồ sơ đã số hoá (`status='active'`) **và đã duyệt** (`review_status
 
 | Lối | Đường đi |
 |---|---|
-| **Tự chọn** (`orgMode='self'`) | Chủ tài sản chọn 1 tổ chức → `asset_service_requests` (`origin='owner'`, `sent`) |
+| **Tự chọn** (`orgMode='self'`) | Chủ tài sản chọn tới **`MAX_RFQ_ORGS`=5 tổ chức** → 1 dòng `asset_service_requests` mỗi tổ chức (`origin='owner'`, `sent`), cùng một `message` → so sánh báo giá → chốt 1 |
 | **Nhờ sàn chọn giúp** (`orgMode='platform'`) | `asset_broker_requests` (`pending`) → admin fan-out N tổ chức (`origin='platform'`, broker→`sourcing`) → tổ chức báo giá (`quoted`, broker→`quoted`) → chủ tài sản chốt 1 (`selected`) |
 
 **Luật bất biến:**
 - **Chỉ gửi tới tổ chức ĐÃ CÓ TÀI KHOẢN** (`organizations.kyc_status='APPROVED'` + `auction_org_id` trỏ danh bạ). Áp cho cả hai lối — `useMatchedOrgs` mặc định `onlyAccounted: true`, và `admin_dispatch_service_requests` bỏ qua tổ chức không đạt. Gửi cho tổ chức không có tài khoản = yêu cầu không ai trả lời được.
-- **Chốt một báo giá là cam kết**: `owner_select_service_quote` đặt dòng đó `selected`, đóng anh em cùng hồ sơ (`sent/seen/quoted`) thành `not_selected`, và mở lead `source='asset_brokerage'` + cơ hội `stage='selling'` (dịch vụ "Môi giới ký gửi tài sản", `variant_key='broker_consignment'`).
+- **Trần RFQ đếm theo yêu cầu CÒN SỐNG**, không theo số dòng đã gửi: `isLiveServiceRequest` (`sent`/`seen`/`quoted`/`accepted`/`selected`) so với `MAX_RFQ_ORGS` (`constants/asset-posting-rules.ts`). `UNIQUE(asset_posting_id, auction_org_id)` chặn gửi lại một tổ chức **vĩnh viễn** kể cả sau khi nó `declined` — đếm cả dòng đã chết thì 5 lời từ chối là hết đường gửi tiếp. Hai tập KHÁC nhau: `alreadySentIds` (mọi dòng → làm mờ thẻ) vs `activeCount` (dòng sống → áp trần).
+- **Gửi thêm tổ chức được, cho tới khi chốt**: card "Gửi thêm tổ chức" ở trang chi tiết hồ sơ mở cho tới khi có dòng `selected` (hoặc sàn đang gửi hộ, hoặc đủ trần). Đang gửi thêm thì lối "nhờ sàn chọn giúp" bị ẩn — hai luồng song song trên cùng hồ sơ làm thanh tiến trình "sàn đã gửi N tổ chức" đếm cả tổ chức chủ tài sản tự gửi.
+- **Một bản brief cho mọi tổ chức** — `asset_service_requests.message` giống nhau trên mọi dòng của một lần gửi. Đó là định nghĩa của RFQ; không có ô nhắn riêng từng tổ chức.
+- **Chốt một báo giá là cam kết**: `owner_select_service_quote` đặt dòng đó `selected`, đóng anh em cùng hồ sơ (`sent/seen/quoted`) thành `not_selected` (ghi `closed_by_request_id` + `status_before_close` để mở lại chính xác), và mở lead `source='asset_brokerage'` + cơ hội `stage='selling'` (dịch vụ "Môi giới ký gửi tài sản", `variant_key='broker_consignment'`). UI bắt buộc qua hộp thoại xác nhận (`AcceptQuoteDialog`).
+- **Tối đa MỘT dòng đã chốt / hồ sơ — enforce ở DB, không chỉ RPC** (`20260912000001`): partial UNIQUE `(asset_posting_id) WHERE status IN ('selected','accepted')`; mọi đường ghi (chốt · báo giá · chèn yêu cầu · dispatch) lấy advisory lock `lock_asset_posting_consignment` rồi mới `FOR UPDATE` dòng; trigger chặn chèn yêu cầu vào hồ sơ đã chốt. Tổ chức **không báo giá được khi hồ sơ đã chốt** — chặn theo hồ sơ, vì dòng `declined` không bị đóng khi chốt.
+- RPC ký gửi phía chủ tài sản/tổ chức trả `{ok:false, reason}` cho lỗi nghiệp vụ (`already_selected`, `not_quoted`, `posting_already_selected`, `request_closed`…) — client phải `assertRpcOk`, câu tiếng Việt ở `src/lib/consignment/errors.ts`.
+
+### Hợp đồng dịch vụ đấu giá (chủ tài sản ↔ tổ chức đã chốt)
+
+```
+consignment_contracts.status:
+  drafting ─(tổ chức chia sẻ dự thảo)→ awaiting_signatures ─(một bên tải bản đã ký)→ awaiting_confirmation ─(đủ 2 xác nhận)→ signed
+  mọi trạng thái mở ─(một bên huỷ, lý do ≥ 10 ký tự)→ cancelled
+```
+- **Tạo cùng giao dịch với việc chốt báo giá**; `terms` = báo giá đóng băng lúc chốt, bất biến. Tối đa một hợp đồng chưa huỷ / hồ sơ.
+- **Ký ngoài sàn, xác nhận trên sàn.** Chỉ tổ chức chia sẻ dự thảo; bên nào cũng tải được bản scan. Dự thảo mới hoặc scan mới **xoá mọi xác nhận**. Xác nhận phải gửi kèm đúng path đang xem (`document_changed` nếu tệp vừa bị thay).
+- **Đã ký / đã huỷ là bất biến** (trigger guard; chỉ cho FK bị SET NULL).
+- **Huỷ ⇒ chọn lại:** yêu cầu đã chốt → `contract_cancelled` (không gửi lại tổ chức đó); các dòng bị CHÍNH lần chốt đó đóng mở lại đúng trạng thái cũ (`reopened_at`); broker request về quoted/sourcing; cơ hội CRM `selling|pending_approval` → `lost`. Không huỷ được sau khi đã ký.
+- **Ai thấy gì:** chủ tài sản đọc bảng qua RLS. Tổ chức KHÔNG có policy đọc — chỉ qua RPC `org_consignment_contract`, và chỉ khi hợp đồng chưa huỷ mới thấy danh tính, địa chỉ tài sản, giấy tờ sở hữu (`asset-docs` policy `asset_docs_contract_org_read`). Thao tác phía tổ chức cần `yeu-cau-ky-gui.update` (hoặc chủ sở hữu tổ chức).
+- **Thông tin pháp lý tối thiểu** (`consignment_missing_parties`): địa chỉ chủ tài sản (KYC: `asset_owner_kyc.address` / `asset_owner_org_kyc.head_office_address`, bắt buộc khi nộp KYC, sửa sau duyệt qua `owner_update_kyc_address`) + `org_general_info.legal_rep_name`. Thiếu ⇒ `party_incomplete`, chặn chia sẻ dự thảo & tải bản ký. Bên A = KYC **tổ chức** nếu có, không thì cá nhân.
+- **Phiên đấu giá chỉ nhận tài sản ký gửi có hợp đồng `signed`** — cả lúc thêm lô (`auction_session_items_validate`) lẫn lúc công bố (`auction_sessions_guard`).
+- "Đã ký hợp đồng" trên hồ sơ là **suy ra** từ hợp đồng — không bao giờ ghi `asset_postings.status`.
+- Tệp: bucket PRIVATE `consignment-contracts`, path `{organization_id}/{contract_id}/{draft|signed}-{epoch}-{tên}`; không UPDATE/DELETE.
+- **Dự thảo tự sinh** (`src/lib/consignment/contract-pdf/`): dựng từ báo giá ĐÃ ĐÓNG BĂNG + thông tin các bên; điều khoản là MẪU chưa rà soát pháp lý, luôn in "DỰ THẢO"; thiếu thông tin các bên thì không cho tạo. Tổ chức vẫn có thể tải lên bản của mình (`draft_source = uploaded`).
+- **Việc đang chờ (badge):** tổ chức = soạn/ký (`drafting`, `awaiting_signatures`) hoặc chưa xác nhận bản ký — cộng vào badge "Yêu cầu ký gửi". Chủ tài sản (`owner_consignment_summary.owner_action`, ưu tiên theo thứ tự): `confirm_contract` › `add_address` (hợp đồng mở mà KYC chưa có địa chỉ) › `choose_quote` (có báo giá, chưa chốt) — badge nav "Số hoá tài sản" = số hồ sơ có việc.
 - **Miễn phí với chủ tài sản** — không trừ credit, không đụng `credit_transactions`. Doanh thu ghi nhận khi admin chốt thắng cơ hội (`admin_win_opportunity`), amount do admin nhập.
 - Máy trạng thái nằm ở RPC, không ở client: tổ chức không có UPDATE qua RLS, chủ tài sản chỉ tự `withdrawn` được.
-- Báo giá gồm thù lao % · phí dịch vụ · giá khởi điểm đề xuất · thời gian dự kiến · ghi chú · 1 tệp (bucket `quote-docs`, path `{organization_id}/{request_id}/{file}`). Tổ chức sửa lại báo giá được cho tới khi chủ tài sản chốt.
+- Báo giá gồm **phương án tổ chức đấu giá** (`quote_plan` JSONB: hình thức đề xuất · bước giá · tiền đặt trước · địa điểm · kênh niêm yết · mốc thời gian · phạm vi dịch vụ) · **chi phí theo khoản mục** (`quote_fee_items` JSONB: `{key,label,amount,optional}`) · thù lao % · giá khởi điểm đề xuất · ghi chú · 1 tệp (bucket `quote-docs`, path `{organization_id}/{request_id}/{file}`). Tổ chức sửa lại báo giá được cho tới khi chủ tài sản chốt.
+- **`quote_service_fee` và `quote_lead_time_days` là GIÁ TRỊ DẪN XUẤT — server tính, client không nhập.** `org_respond_service_request` đặt `quote_service_fee` = tổng các khoản **bắt buộc** (`optional=false`; khoản tuỳ chọn KHÔNG cộng) và `quote_lead_time_days` = mốc `mo_phien` trong `quote_plan.milestones`. Bắt buộc tính ở server vì `owner_select_service_quote` đẩy `quote_service_fee` thẳng vào `opportunities.gross_amount`: con số CRM phải đúng bằng con số chủ tài sản so sánh. Không có `fee_items` (dòng cũ/seed) thì mới lấy giá trị client gửi lên.
+- **Danh mục phương án là hằng số trong code** (`src/constants/quote-plan.ts`: kênh niêm yết, mốc thời gian, phạm vi dịch vụ, preset khoản phí) — cố tình không master data: nhãn tự do thì hai báo giá không còn so sánh được, đúng thứ mà phương án có cấu trúc sinh ra để thay thế. Key ghi thẳng vào JSONB nên **bất biến**; đổi key là mất dữ liệu báo giá đã gửi. Tiền đặt trước ngoài 5–20% giá khởi điểm chỉ **cảnh báo**, không chặn.
+
+## Hồ sơ tham gia đấu giá (người mua → phiên đấu giá)
+
+Người mua mua hồ sơ của một **PHIÊN** đã công bố trên `/sessions/:id`, trả VND qua VNPay (mô phỏng); tổ chức quản lý ở `/portal/ho-so-tham-gia` và thẻ trong chi tiết phiên. Bảng `auction_bidding_contracts` (migration `20260911000005`).
+
+**Luật bất biến:**
+- **Một hồ sơ / (phiên, người mua)** — lô không tham gia điều kiện mua. Thành viên/chủ tổ chức KHÔNG mua được phiên của chính tổ chức mình.
+- **Chỉ bán trực tuyến khi**: phiên `published`, trong `[registration_start_at, registration_end_at]`, trước `starts_at`, `dossier_fee > 0`, **và** tổ chức có `suppliers.auction_org_id` active + hợp đồng active có dòng cho dịch vụ "Bán hồ sơ tham gia đấu giá" (variant `auction_dossier_fee`). Không có hợp đồng ⇒ không bán, KHÔNG rơi về `direct`.
+- **Giữ chỗ 15 phút** (`pending_payment` + `hold_expires_at`). Trần `max_registrants` = đã trả + giữ chỗ còn hạn; không hạ được trần dưới số đã trả (trigger `auction_sessions_cap_guard`).
+- **Giá là bản chụp** (`fee_amount`) lúc giữ chỗ; đổi giá phiên không đổi hồ sơ đã có.
+- **Thanh toán idempotent ở server** qua `payment_claims`; F5 trả `already_paid`. Mỗi lần trả = một đơn `commission`; hợp đồng hết hiệu lực giữa lúc giữ chỗ và trả ⇒ đơn `fixed 0` kèm ghi chú "cần đối soát" (không chặn người đã trả).
+- **Riêng tư**: bảng không có policy ghi; người mua đọc dòng của mình, tổ chức (`ho-so-tham-gia` view) chỉ đọc dòng `paid`, admin chỉ đọc. Mọi thay đổi qua RPC tự kiểm quyền.
+- **Tiền đặt trước**: `pending → received → refunded | forfeited` (forfeited bắt buộc ghi chú); lùi một bước được để sửa nhầm, lùi về `pending` **xoá số báo danh**. Phiên đã huỷ chỉ cho `received → refunded`.
+- **Số báo danh** duy nhất trong phiên, chỉ cấp khi `deposit_status='received'` và phiên chưa huỷ; tự cấp = max + 1.
+- **VNeID**: `user_verified_identities` (1 dòng/người, huỷ liên kết = xoá). Server gắn `identity_source='vneid'` khi họ tên + CCCD khớp và lấy ngày sinh/giới tính từ bản xác thực.
+- **MÔ PHỎNG — chưa dùng cho tiền thật**: `pay_bidding_contract` và `save_vneid_identity` tin client. Trước khi có tiền thật phải thay bằng IPN VNPay / OAuth VNeID ở Edge Function (service_role) rồi thu hồi 2 hàm này.
+- Chưa có: sổ khoản sàn phải trả tổ chức (`gross − amount`), hoàn tiền hồ sơ khi phiên huỷ.
+
+## Hỏi đáp theo tài liệu phiên (người mua → tổ chức đấu giá)
+
+Người mua hỏi trên `/sessions/:id/hoi-dap` hoặc Zalo (hiện giả lập); tổ chức trả lời ở `/portal/hoi-dap`. Migrations `20260912000100-101`.
+
+**Luật bất biến:**
+- **Chỉ trả lời từ tài liệu của CHÍNH phiên đó** — không dùng phiên khác, không kiến thức chung. Tư vấn / dự đoán / hỏi phiên khác ⇒ chuyển chuyên viên.
+- **Câu trả lời AI luôn có 1–3 trích dẫn NGUYÊN VĂN** từ điều khoản citable (`clause.status='confirmed'` VÀ tài liệu `confirmed`; riêng `clarification` xác nhận theo từng điều khoản). Không có trích dẫn phân giải được ⇒ không bao giờ tới người mua.
+- **Không trả lời được ⇒ chuyển chuyên viên VÀ ghi sổ `case_question_escalations`.** Trạng thái sổ (lỗ hổng tài liệu đã bù chưa) TÁCH khỏi `qa_state` (người hỏi đã được trả lời chưa).
+- **Tự gửi hay soạn nháp** theo cấu hình tổ chức từng kênh + ngưỡng `min_confidence`; mặc định soạn nháp. "Chạy lại AI" luôn ra nháp. Tin chờ khi chuyển tiếp chỉ gửi ở kênh bật tự gửi và không chứa số liệu.
+- **Điều khoản trích xuất tự động là NHÁP**; còn `[[CẦN NHẬP]]` thì không xác nhận được; sửa nội dung / đổi tệp ⇒ về nháp. Câu trả lời đã gửi mà điều khoản không còn khớp ⇒ người mua thấy "tài liệu đã thay đổi", nội dung bị ẩn.
+- **Chuyên viên được trả lời không trích dẫn** (nhãn "Chuyên viên trả lời"); đính kèm điều khoản thì phải citable + cùng phiên.
+- Hỏi trên sàn phải đăng nhập; phiên `published` và chưa kết thúc; tối đa 10 câu/10 phút và 40 câu/ngày mỗi người.
+- Quyền: tài liệu phiên = `phien-dau-gia.update`; hộp thư = `hoi-dap` view/update (MANAGER + AGENT); bật tự gửi = `hoi-dap-cai-dat` (MANAGER, OWNER).

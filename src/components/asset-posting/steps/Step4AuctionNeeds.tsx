@@ -1,9 +1,12 @@
-import { AlertCircle, Camera, Check, Clock, Landmark, Loader2, Tag } from "lucide-react";
+import { AlertCircle, Check, Clock, Landmark, Tag } from "lucide-react";
+import { MAX_RFQ_ORGS } from "@/constants/asset-posting-rules";
 import { AUCTION_FORMAT_LABELS, EXPECTED_TIMELINE_LABELS, type AuctionFormat, type ExpectedTimeline } from "@/types/asset-posting";
 import type { OrgMatchResult } from "@/lib/orgMatching";
-import { Group, OptionalGroup, TextField, SelectField, WideRadio, Pill } from "../fields";
+import { AssetBriefEditor } from "../AssetBriefEditor";
+import { Group, TextField, SelectField, WideRadio, Pill } from "../fields";
 import { groupNumber, parseNumber, vnWords } from "../format";
-import type { WizardValues } from "../wizardSchema";
+import { OrgPicker } from "../OrgPicker";
+import { buildBriefInput, buildMatchCriteria, toggleOrg, type WizardValues } from "../wizardSchema";
 
 interface StepProps {
   f: WizardValues;
@@ -18,6 +21,13 @@ const TIMELINES = (Object.keys(EXPECTED_TIMELINE_LABELS) as ExpectedTimeline[]).
   value: v,
   label: EXPECTED_TIMELINE_LABELS[v],
 }));
+
+/** Nhãn nơi nhận cho ô soạn nội dung: một tên khi chọn một, còn lại là "N tổ chức". */
+function recipientLabel(ids: string[], results: OrgMatchResult[]): string | null {
+  if (ids.length === 0) return null;
+  if (ids.length === 1) return results.find((r) => r.org.id === ids[0])?.org.name ?? null;
+  return `${ids.length} tổ chức`;
+}
 
 /** Bước 4: quyết định đấu giá (có/chưa) → nếu có: giá + hình thức + tổ chức + tùy chọn. */
 export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepProps) {
@@ -34,7 +44,7 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
             { v: "yes", t: "Có — tôi muốn đấu giá", d: "Khai giá khởi điểm, hình thức và chọn tổ chức ký gửi." },
             { v: "no", t: "Chưa — chỉ số hoá & lưu hồ sơ", d: "Hồ sơ lưu trong “Tài sản của tôi”, gửi đấu giá sau." },
           ].map((o) => (
-            <WideRadio key={o.v} on={want === o.v} onClick={() => up({ wantsAuction: o.v as "yes" | "no", chosenOrg: null })}>
+            <WideRadio key={o.v} on={want === o.v} onClick={() => up({ wantsAuction: o.v as "yes" | "no", chosenOrgs: [] })}>
               <span className="text-sm font-semibold text-foreground block">{o.t}</span>
               <span className="text-xs text-muted-foreground block mt-0.5">{o.d}</span>
             </WideRadio>
@@ -49,18 +59,30 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
 
       {want === "yes" && (
         <>
-          <Group icon={<Tag className="h-4 w-4" />} title="Giá khởi điểm & hình thức">
+          {/* Khối này ĐỨNG TRƯỚC danh sách tổ chức vì cả 4 trường đều là ĐẦU VÀO
+              chấm điểm khớp (buildMatchCriteria). Trước đây thù lao/thời gian nằm
+              trong OptionalGroup đóng sẵn BÊN DƯỚI danh sách mà nó xếp hạng. */}
+          <Group
+            icon={<Tag className="h-4 w-4" />}
+            title="Giá khởi điểm, hình thức & kỳ vọng"
+            desc="Đây là căn cứ để sàn gợi ý tổ chức đấu giá phù hợp bên dưới"
+          >
             <div className="flex flex-col gap-[18px]">
               <div className="flex flex-col gap-2">
                 <label className="text-[13.5px] font-semibold text-foreground">
                   Cách xác định giá<span className="ml-0.5 text-destructive">*</span>
                 </label>
-                <div className="flex flex-col gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {[
                     { v: "self", t: "Tôi tự đưa ra giá khởi điểm" },
                     { v: "appraisal", t: "Nhờ tổ chức đấu giá định giá" },
                   ].map((o) => (
-                    <WideRadio key={o.v} on={f.pricingMode === o.v} onClick={() => up({ pricingMode: o.v as "self" | "appraisal" })}>
+                    <WideRadio
+                      key={o.v}
+                      on={f.pricingMode === o.v}
+                      onClick={() => up({ pricingMode: o.v as "self" | "appraisal" })}
+                      className="h-full"
+                    >
                       <span className="text-sm font-semibold text-foreground">{o.t}</span>
                     </WideRadio>
                   ))}
@@ -103,32 +125,54 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
                   })}
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border pt-[18px]">
+                <TextField
+                  label="Thù lao chấp nhận (tùy chọn)"
+                  type="number"
+                  unit="%"
+                  placeholder="2"
+                  help="Tổ chức chào thù lao cao hơn mức này sẽ bị xếp hạng thấp hơn."
+                  value={f.commissionPct ?? ""}
+                  onChange={(v) => up({ commissionPct: v })}
+                />
+                <SelectField
+                  label="Thời gian kỳ vọng (tùy chọn)"
+                  options={TIMELINES}
+                  value={f.expectedTimeline ?? ""}
+                  onChange={(v) => up({ expectedTimeline: v })}
+                  placeholder="Chọn mốc thời gian"
+                />
+              </div>
             </div>
           </Group>
 
           <Group
-            icon={<Landmark className="h-4 w-4" />}
+            icon={<Clock className="h-4 w-4" />}
             title="Tổ chức đấu giá ký gửi"
             desc="Có thể quyết định sau khi số hoá"
             right={
               f.orgMode === "platform" ? (
                 <Pill tone="ok">Nhờ sàn</Pill>
-              ) : f.chosenOrg ? (
-                <Pill tone="ok">Đã chọn</Pill>
+              ) : f.chosenOrgs.length > 0 ? (
+                <Pill tone="ok">Đã chọn {f.chosenOrgs.length}</Pill>
               ) : null
             }
           >
-            <div className="flex flex-col gap-2.5">
+            {/* 3 lựa chọn xếp ngang: đây là 3 lối đi ngang hàng nhau, xếp dọc khiến
+                "Để quyết định sau" trông như phương án hạng hai. h-full cho 3 thẻ
+                bằng chiều cao dù mô tả dài ngắn khác nhau. */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
               {[
                 {
                   v: "self",
                   t: "Tôi tự chọn tổ chức",
-                  d: "Xem danh sách tổ chức phù hợp và chọn nơi ký gửi.",
+                  d: `So sánh và gửi yêu cầu báo giá tới tối đa ${MAX_RFQ_ORGS} tổ chức.`,
                 },
                 {
                   v: "platform",
                   t: "Nhờ sàn chọn giúp",
-                  d: "Sàn gửi hồ sơ tới nhiều tổ chức, bạn so sánh báo giá rồi chọn. Miễn phí.",
+                  d: "Sàn gửi hồ sơ tới nhiều tổ chức, bạn so sánh báo giá rồi chọn.",
                 },
                 {
                   v: "",
@@ -139,7 +183,8 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
                 <WideRadio
                   key={o.v || "later"}
                   on={f.orgMode === o.v}
-                  onClick={() => up({ orgMode: o.v as "" | "self" | "platform", chosenOrg: null })}
+                  onClick={() => up({ orgMode: o.v as "" | "self" | "platform", chosenOrgs: [] })}
+                  className="h-full"
                 >
                   <span className="text-sm font-semibold text-foreground block">{o.t}</span>
                   <span className="text-xs text-muted-foreground block mt-0.5">{o.d}</span>
@@ -148,32 +193,36 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
             </div>
 
             {f.orgMode === "self" && (
-              <div className="mt-4">
-                {orgLoading ? (
-                  <div className="flex items-center justify-center py-10">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : orgResults.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-2">
-                    Chưa có tổ chức nào trên sàn khớp tiêu chí này. Hãy chọn “Nhờ sàn chọn giúp” — sàn sẽ tìm hộ bạn.
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-2.5">
-                    {orgResults.slice(0, 5).map((r) => {
-                      const on = f.chosenOrg === r.org.id;
-                      const meta = [r.org.province, `${r.attrs.successful_sessions} phiên`, `thù lao ~${r.attrs.commission_rate}%`]
-                        .filter(Boolean)
-                        .join(" · ");
-                      return (
-                        <WideRadio key={r.org.id} on={on} onClick={() => up({ chosenOrg: on ? null : r.org.id })}>
-                          <span className="text-sm font-semibold text-foreground flex items-center gap-2.5">
-                            {r.org.name}
-                            <Pill tone="ok">{Math.round(r.score)}%</Pill>
-                          </span>
-                          <span className="text-xs text-muted-foreground block mt-0.5">{meta}</span>
-                        </WideRadio>
-                      );
-                    })}
+              <div className="mt-4 flex flex-col gap-3">
+                {/* Người dùng đang sắp gửi hồ sơ tài sản của mình cho một doanh
+                    nghiệp — phải nói trước điều đó dẫn tới đâu, có mất phí không,
+                    có đổi được không. Trước đây bước này im lặng hoàn toàn. */}
+                <ul className="flex flex-col gap-1.5 rounded-xl border border-primary/20 bg-primary/5 p-3 text-[13px] text-foreground">
+                  <li>
+                    • Chọn được nhiều tổ chức (tối đa {MAX_RFQ_ORGS}). Khi hoàn tất số hoá, hồ sơ sẽ được gửi tới tất
+                    cả tổ chức bạn chọn. Miễn phí.
+                  </li>
+                  <li>• Từng tổ chức xem hồ sơ rồi gửi báo giá thù lao, phí và thời gian để bạn so sánh.</li>
+                  <li>• Đây chưa phải hợp đồng ký gửi — bạn chỉ chốt một tổ chức sau khi đã có báo giá.</li>
+                </ul>
+                <OrgPicker
+                  results={orgResults}
+                  criteria={buildMatchCriteria(f)}
+                  isLoading={orgLoading}
+                  selectedIds={f.chosenOrgs}
+                  onToggle={(id) => up({ chosenOrgs: toggleOrg(f.chosenOrgs, id) })}
+                  onSwitchToPlatform={() => up({ orgMode: "platform", chosenOrgs: [] })}
+                />
+                {/* Chỉ hiện sau khi đã chọn tổ chức: nhãn ô này gọi tên nơi nhận,
+                    mà chưa chọn thì chưa có tên để gọi. */}
+                {f.chosenOrgs.length > 0 && (
+                  <div className="border-t border-border pt-3.5">
+                    <AssetBriefEditor
+                      input={buildBriefInput(f)}
+                      recipientLabel={recipientLabel(f.chosenOrgs, orgResults)}
+                      value={f.orgMessage ?? ""}
+                      onChange={(v) => up({ orgMessage: v })}
+                    />
                   </div>
                 )}
               </div>
@@ -195,33 +244,6 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
               </div>
             )}
           </Group>
-
-          <OptionalGroup
-            icon={<Clock className="h-4 w-4" />}
-            title="Thù lao & thời gian"
-            desc="Giúp gợi ý tổ chức chính xác hơn"
-            count={2}
-          >
-            <div className="flex flex-col gap-[18px]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <TextField
-                  label="Thù lao chấp nhận"
-                  type="number"
-                  unit="%"
-                  placeholder="2"
-                  value={f.commissionPct ?? ""}
-                  onChange={(v) => up({ commissionPct: v })}
-                />
-                <SelectField
-                  label="Thời gian kỳ vọng"
-                  options={TIMELINES}
-                  value={f.expectedTimeline ?? ""}
-                  onChange={(v) => up({ expectedTimeline: v })}
-                  placeholder="Chọn mốc thời gian"
-                />
-              </div>
-            </div>
-          </OptionalGroup>
         </>
       )}
     </div>

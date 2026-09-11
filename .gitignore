@@ -45,3 +45,6 @@ srv.pid
 # ("supabaseUrl is required"). Chỉ chứa khoá PUBLIC (URL + anon key).
 # Secret thật luôn nằm ở .env.local (đã ignore qua *.local) và KHÔNG dùng tiền
 # tố VITE_ — mọi biến VITE_ đều bị nhúng vào bundle trình duyệt đọc được.
+
+# Python bytecode cache
+__pycache__/

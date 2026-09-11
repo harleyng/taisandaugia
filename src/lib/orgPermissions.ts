@@ -81,6 +81,24 @@ export const ORG_MODULE_DEFINITIONS: OrgModuleDef[] = [
   // Hộp thư tài sản chủ sở hữu muốn ký gửi (asset_service_requests). "update" =
   // được báo giá / từ chối; chỉ "view" thì xem chứ không trả lời được.
   { module: "yeu-cau-ky-gui", label: "Yêu cầu ký gửi", category: "kinh-doanh", actions: ["view", "update"] },
+  // Phiên đấu giá (auction_sessions). Thêm/sửa/xoá LÔ tài sản cần "update" — đó là
+  // sửa phiên. "delete" chỉ xoá được phiên nháp; phiên đã công bố thì huỷ.
+  { module: "phien-dau-gia", label: "Phiên đấu giá", category: "kinh-doanh", actions: ["view", "create", "update", "delete"] },
+  // Hộp thư hỏi đáp đa kênh (sàn + Zalo): trả lời người mua từ tài liệu phiên.
+  // "update" = duyệt/gửi nháp AI, trả lời, xử lý câu hỏi chuyển tiếp. Tài liệu phiên
+  // KHÔNG nằm ở đây — đó là sửa phiên (phien-dau-gia.update).
+  { module: "hoi-dap", label: "Hỏi đáp & Omnichat", category: "kinh-doanh", actions: ["view", "update"] },
+  // Bật TỰ GỬI câu trả lời AI là quyền tin cậy cao hơn trả lời ⇒ tách module riêng.
+  { module: "hoi-dap-cai-dat", label: "Cấu hình trả lời tự động", category: "kinh-doanh", actions: ["update"], hiddenFromNav: true },
+  // Danh bạ khách hàng RIÊNG của tổ chức (org_contacts) — sàn không cấp dữ liệu
+  // người mua. Trùng mã với module admin "khach-hang" nhưng lưu ở bảng khác.
+  // "update" = sửa khách/nhu cầu/nhóm VÀ ghi nhận "đã liên hệ" khi tiếp thị phiên.
+  // "export" = xuất Excel danh bạ / danh sách người nhận.
+  { module: "khach-hang", label: "Khách hàng", category: "kinh-doanh", actions: ["view", "create", "update", "delete", "export"] },
+  // Hồ sơ tham gia người mua đã thanh toán (auction_bidding_contracts) — CHỨA CCCD,
+  // nên tách khỏi phien-dau-gia. "update" = xác nhận tiền đặt trước + cấp số báo
+  // danh. Không có create/delete: hồ sơ do người mua tạo và không bao giờ bị xoá.
+  { module: "ho-so-tham-gia", label: "Hồ sơ tham gia đấu giá", category: "kinh-doanh", actions: ["view", "update"] },
   // Không có mục sidebar: module này tồn tại để đỡ RLS listings (org_listings_update
   // / org_listings_delete trong 20260805000020_org_rbac.sql).
   { module: "tin-dang", label: "Tin đăng tài sản", category: "kinh-doanh", actions: ["view", "create", "update", "delete"], hiddenFromNav: true },

@@ -1,24 +1,33 @@
-import { useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Ban, ExternalLink, Loader2, Megaphone, Send, ShieldAlert, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, FileText, Gavel, Info, Loader2, Megaphone, Package, ShieldAlert, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { InfoBox } from "@/components/shared/InfoBox";
-import { SessionStateBadge } from "@/components/auction-sessions/SessionStateBadge";
-import { CancelSessionDialog } from "@/components/portal/auction-sessions/CancelSessionDialog";
-import { DeleteSessionDialog } from "@/components/portal/auction-sessions/DeleteSessionDialog";
-import { PublishSessionDialog } from "@/components/portal/auction-sessions/PublishSessionDialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SessionDetailHero } from "@/components/portal/auction-sessions/SessionDetailHero";
 import { SessionFormCard } from "@/components/portal/auction-sessions/SessionFormCard";
-import { SessionItemsCard } from "@/components/portal/auction-sessions/SessionItemsCard";
-import { CaseDocumentsCard } from "@/components/portal/case-documents/CaseDocumentsCard";
-import { SessionContractsCard } from "@/components/portal/bidding-contracts/SessionContractsCard";
+import { SessionContractsTab } from "@/components/portal/auction-sessions/tabs/SessionContractsTab";
+import { SessionControlTab } from "@/components/portal/auction-sessions/tabs/SessionControlTab";
+import { SessionDocumentsTab } from "@/components/portal/auction-sessions/tabs/SessionDocumentsTab";
+import { SessionInfoTab } from "@/components/portal/auction-sessions/tabs/SessionInfoTab";
+import { SessionItemsTab } from "@/components/portal/auction-sessions/tabs/SessionItemsTab";
+import { SessionOutreachTab } from "@/components/portal/auction-sessions/tabs/SessionOutreachTab";
 import { useAuctionSession, useSessionOrg } from "@/hooks/useAuctionSessions";
-import { useHasOrgPermission } from "@/hooks/useOrgPermissions";
+import { useHasOrgPermission, useHasOrgPermissionIn } from "@/hooks/useOrgPermissions";
 
-type DialogKind = "publish" | "cancel" | "delete" | null;
+export type SessionTab = "thong-tin" | "tai-san" | "tai-lieu" | "ho-so" | "tiep-thi" | "dieu-hanh";
 
-/** /portal/phien-dau-gia/moi và /portal/phien-dau-gia/:id — tạo, sửa, thêm tài sản, công bố / huỷ. */
-export default function PhienDauGiaDetailPage() {
+const ONLINE_FORMATS = new Set(["truc_tuyen", "ca_hai"]);
+
+/**
+ * /portal/phien-dau-gia/moi và /portal/phien-dau-gia/:id — hero tóm tắt + 3 tab.
+ *
+ * Tab chạy trên ĐƯỜNG DẪN chứ không phải state hay ?tab=: ba route cũ
+ * (`:id`, `:id/tiep-thi`, `:id/dieu-hanh`) vẫn còn nguyên, và quan trọng hơn,
+ * `/dieu-hanh` được gác ở cấp route bằng module RIÊNG `dieu-hanh-dau-gia`
+ * (App.tsx) — gộp thành một route là mất lớp gác đó.
+ */
+export default function PhienDauGiaDetailPage({ tab = "thong-tin" }: { tab?: SessionTab }) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isNew = !id;
@@ -29,10 +38,14 @@ export default function PhienDauGiaDetailPage() {
   const canDelete = useHasOrgPermission("phien-dau-gia", "delete");
   const canViewContracts = useHasOrgPermission("ho-so-tham-gia", "view");
   const canUpdateContracts = useHasOrgPermission("ho-so-tham-gia", "update");
-  const [dialog, setDialog] = useState<DialogKind>(null);
+  // Theo tổ chức của PHIÊN — xem chú thích ở useHasOrgPermissionIn.
+  const canRunAuction = useHasOrgPermissionIn(session?.organization_id, "dieu-hanh-dau-gia", "view");
+  // Chế độ sửa nằm trên URL chứ không phải state: nút "Chỉnh sửa" bấm được từ
+  // mọi tab, mà mỗi tab là một route — state sẽ mất khi điều hướng.
+  const [searchParams] = useSearchParams();
+  const editing = tab === "thong-tin" && searchParams.get("sua") === "1";
 
   const backToList = () => navigate("/portal/phien-dau-gia");
-  const closeDialog = (open: boolean) => !open && setDialog(null);
 
   const shell = (content: ReactNode) => (
     <div className="space-y-5 px-6 py-6">
@@ -72,116 +85,116 @@ export default function PhienDauGiaDetailPage() {
     );
   }
 
-  const status = session?.status ?? "draft";
-  const editable = session ? status !== "cancelled" && canUpdate : canCreate;
-
-  return shell(
-    <>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-bold text-foreground">{session ? session.title : "Tạo phiên đấu giá"}</h1>
-            {session && <SessionStateBadge session={session} />}
-          </div>
+  // Phiên chưa tồn tại thì chưa có gì để chia tab — chỉ mỗi form khai báo.
+  if (!session) {
+    return shell(
+      <>
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Tạo phiên đấu giá</h1>
           <p className="text-sm text-muted-foreground">
-            {session ? (
-              <>
-                Mã phiên <span className="font-mono">{session.code}</span>
-              </>
-            ) : (
-              "Khai báo thông tin và lịch phiên, lưu nháp rồi thêm tài sản trước khi công bố."
-            )}
+            Khai báo thông tin và lịch phiên, lưu nháp rồi thêm tài sản trước khi công bố.
           </p>
         </div>
-
-        {session && (
-          <div className="flex flex-wrap gap-2">
-            {status !== "cancelled" && (
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate(`/portal/phien-dau-gia/${session.id}/tiep-thi`)}>
-                <Megaphone className="h-4 w-4" />
-                Tiếp thị phiên
-              </Button>
-            )}
-            {status !== "draft" && (
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate(`/sessions/${session.id}`)}>
-                <ExternalLink className="h-4 w-4" />
-                Xem trên sàn
-              </Button>
-            )}
-            {status === "draft" && canDelete && (
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setDialog("delete")}>
-                <Trash2 className="h-4 w-4" />
-                Xoá nháp
-              </Button>
-            )}
-            {status === "published" && canUpdate && (
-              <Button variant="outline" size="sm" className="gap-1.5 text-destructive" onClick={() => setDialog("cancel")}>
-                <Ban className="h-4 w-4" />
-                Huỷ phiên
-              </Button>
-            )}
-            {status === "draft" && canUpdate && (
-              <Button size="sm" className="gap-1.5" onClick={() => setDialog("publish")}>
-                <Send className="h-4 w-4" />
-                Công bố
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {session?.status === "cancelled" && (
-        <InfoBox variant="amber" className="text-sm">
-          Phiên đã huỷ{session.cancelled_reason ? ` — lý do: ${session.cancelled_reason}` : ""}. Phiên vẫn hiện trên sàn kèm
-          lý do và không chỉnh sửa được nữa.
-        </InfoBox>
-      )}
-
-      <SessionFormCard
-        key={session ? `${session.id}:${session.updated_at}` : "new"}
-        session={session ?? null}
-        readOnly={!editable}
-        onCreated={(newId) => navigate(`/portal/phien-dau-gia/${newId}`, { replace: true })}
-      />
-
-      {session ? (
-        <SessionItemsCard
-          session={session}
-          auctionOrgId={auctionOrgId}
-          readOnly={status === "cancelled" || !canUpdate}
+        <SessionFormCard
+          session={null}
+          readOnly={!canCreate}
+          onCreated={(newId) => navigate(`/portal/phien-dau-gia/${newId}`, { replace: true })}
         />
-      ) : (
         <Card className="rounded-2xl border-dashed p-6 text-center text-sm text-muted-foreground">
           Lưu nháp phiên để bắt đầu thêm tài sản.
         </Card>
-      )}
+      </>,
+    );
+  }
 
-      {/* Tài liệu phiên: nguồn duy nhất để AI trả lời người mua (kèm trích dẫn). */}
-      {session && <CaseDocumentsCard session={session} readOnly={status === "cancelled" || !canUpdate} />}
+  const tabPath = (value: SessionTab) =>
+    `/portal/phien-dau-gia/${session.id}${value === "thong-tin" ? "" : `/${value}`}`;
 
-      {/* Phiên nháp không bao giờ có hồ sơ: chỉ bán được khi đã công bố. */}
-      {session && status !== "draft" && canViewContracts && (
-        <SessionContractsCard session={session} canUpdate={canUpdateContracts} />
-      )}
+  // Hai tab dưới đây chỉ hiện khi có gì để xem — nhưng VẪN hiện nếu người dùng
+  // đang đứng sẵn ở route đó, để họ không mất lối ra khỏi tab đang mở.
+  // Hồ sơ: chỉ phiên đã công bố mới bán được hồ sơ.
+  const showContractsTab = (session.status !== "draft" && canViewContracts) || tab === "ho-so";
+  // Điều hành: phiên trực tiếp không có phòng điều hành; quyền xét theo tổ chức
+  // CỦA PHIÊN.
+  const showControlTab = (ONLINE_FORMATS.has(session.auction_format) && canRunAuction) || tab === "dieu-hanh";
 
-      {session && (
-        <>
-          <PublishSessionDialog
+  return shell(
+    <>
+      <SessionDetailHero
+        session={session}
+        isApproved={isApproved}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        editing={editing}
+        onEdit={() => navigate(`${tabPath("thong-tin")}?sua=1`)}
+        onDeleted={backToList}
+      />
+
+      <Tabs value={tab} onValueChange={(v) => navigate(tabPath(v as SessionTab))}>
+        <TabsList className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="thong-tin" className="gap-1.5">
+            <Info className="h-4 w-4" />
+            Thông tin
+          </TabsTrigger>
+          <TabsTrigger value="tai-san" className="gap-1.5">
+            <Package className="h-4 w-4" />
+            Tài sản trong phiên
+            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+              {session.auction_session_items.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="tai-lieu" className="gap-1.5">
+            <FileText className="h-4 w-4" />
+            Tài liệu phiên
+          </TabsTrigger>
+          {showContractsTab && (
+            <TabsTrigger value="ho-so" className="gap-1.5">
+              <Users className="h-4 w-4" />
+              Hồ sơ tham gia
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="tiep-thi" className="gap-1.5">
+            <Megaphone className="h-4 w-4" />
+            Tiếp thị phiên
+          </TabsTrigger>
+          {showControlTab && (
+            <TabsTrigger value="dieu-hanh" className="gap-1.5">
+              <Gavel className="h-4 w-4" />
+              Điều hành phiên
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        {/* Mỗi tab là một route riêng nên chỉ một TabsContent được dựng mỗi lần —
+            không tab nào chạy query nền sau lưng tab đang mở. */}
+        <TabsContent value="thong-tin" className="mt-4">
+          <SessionInfoTab
             session={session}
-            isApproved={isApproved}
-            open={dialog === "publish"}
-            onOpenChange={closeDialog}
+            editing={editing}
+            onExitEdit={() => navigate(tabPath("thong-tin"), { replace: true })}
           />
-          <CancelSessionDialog sessionId={session.id} open={dialog === "cancel"} onOpenChange={closeDialog} />
-          <DeleteSessionDialog
-            sessionId={session.id}
-            title={session.title}
-            open={dialog === "delete"}
-            onOpenChange={closeDialog}
-            onDeleted={backToList}
-          />
-        </>
-      )}
+        </TabsContent>
+
+        <TabsContent value="tai-san" className="mt-4">
+          <SessionItemsTab session={session} auctionOrgId={auctionOrgId} canUpdate={canUpdate} />
+        </TabsContent>
+
+        <TabsContent value="tai-lieu" className="mt-4">
+          <SessionDocumentsTab session={session} canUpdate={canUpdate} />
+        </TabsContent>
+
+        <TabsContent value="ho-so" className="mt-4">
+          <SessionContractsTab session={session} canView={canViewContracts} canUpdate={canUpdateContracts} />
+        </TabsContent>
+
+        <TabsContent value="tiep-thi" className="mt-4">
+          <SessionOutreachTab session={session} />
+        </TabsContent>
+
+        <TabsContent value="dieu-hanh" className="mt-4">
+          <SessionControlTab session={session} />
+        </TabsContent>
+      </Tabs>
     </>,
   );
 }

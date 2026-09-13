@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  bidderRosterRows,
   EMPTY_CONTRACT_FILTERS,
   expectedDeposit,
   filterOrgContracts,
@@ -67,5 +68,70 @@ describe("contractErrorMessage", () => {
     expect(contractErrorMessage({ message: "permission denied for function x" })).toBe(
       "Bạn không có quyền thực hiện thao tác này.",
     );
+  });
+});
+
+describe("bidderRosterRows", () => {
+  const contract = (patch: Partial<Parameters<typeof bidderRosterRows>[0][number]> = {}) => ({
+    id: "c1",
+    session_id: "s1",
+    full_name: "Nguyễn Văn A",
+    bidder_no: 1,
+    deposit_status: "received" as const,
+    ...patch,
+  });
+
+  it("chỉ lấy hồ sơ của phiên đang xem", () => {
+    const rows = bidderRosterRows([contract(), contract({ id: "c2", session_id: "s2" })], [], "s1");
+    expect(rows.map((r) => r.contractId)).toEqual(["c1"]);
+  });
+
+  it("xếp theo số báo danh, chưa cấp số thì xuống cuối", () => {
+    const rows = bidderRosterRows(
+      [
+        contract({ id: "c3", bidder_no: null }),
+        contract({ id: "c2", bidder_no: 2 }),
+        contract({ id: "c1", bidder_no: 1 }),
+      ],
+      [],
+      "s1",
+    );
+    expect(rows.map((r) => r.contractId)).toEqual(["c1", "c2", "c3"]);
+  });
+
+  it("đủ điều kiện cần CẢ tiền đặt trước lẫn số báo danh", () => {
+    const rows = bidderRosterRows(
+      [
+        contract({ id: "ok" }),
+        contract({ id: "no-deposit", bidder_no: 2, deposit_status: "pending" }),
+        contract({ id: "no-number", bidder_no: null }),
+        contract({ id: "forfeited", bidder_no: 3, deposit_status: "forfeited" }),
+      ],
+      [],
+      "s1",
+    );
+    const by = Object.fromEntries(rows.map((r) => [r.contractId, r.eligible]));
+    expect(by).toEqual({ ok: true, "no-deposit": false, "no-number": false, forfeited: false });
+  });
+
+  it("hồ sơ bị tịch thu tiền đặt trước vẫn được liệt kê", () => {
+    const rows = bidderRosterRows([contract({ deposit_status: "forfeited" })], [], "s1");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].depositStatus).toBe("forfeited");
+  });
+
+  it("đếm số lô đang dẫn đầu, bỏ qua lô đã đóng", () => {
+    const rows = bidderRosterRows(
+      [contract({ bidder_no: 1 }), contract({ id: "c2", bidder_no: 2 })],
+      [
+        { leading_bidder_no: 1, status: "open" },
+        { leading_bidder_no: 1, status: "paused" },
+        { leading_bidder_no: 1, status: "closed" },
+        { leading_bidder_no: 2, status: "withdrawn" },
+      ],
+      "s1",
+    );
+    expect(rows.find((r) => r.contractId === "c1")!.leadingLots).toBe(2);
+    expect(rows.find((r) => r.contractId === "c2")!.leadingLots).toBe(0);
   });
 });

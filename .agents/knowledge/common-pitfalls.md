@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-09-12 — Chốt phiên đấu giá làm lộ 3 lớp bẫy im lặng
+
+- **Union hẹp hơn CHECK của DB = nhãn trống, không phải lỗi biên dịch.** `DepositStatus` thiếu `applied`/`pending_refund` suốt từ `20260913000001`; `DEPOSIT_STATUS_LABELS[x]` trả `undefined` và React render ra ô rỗng. Chỉ lộ ra khi chốt phiên vì đó là lúc hai trạng thái kia sinh ra. Nới CHECK ở migration thì phải nới union NGAY trong cùng lần đó.
+- **`PublicSession = Omit<AuctionSession, 4 cột nội bộ>` KHAI mọi cột còn lại là có.** Quên một cột trong chuỗi `select(...)` viết tay ⇒ `undefined` lúc chạy, typecheck vẫn xanh, và mọi cổng `if (session.cot_do)` im lặng sai mãi mãi. Đã cắn hai lần: `max_bid_steps` (Bước 4), `finalized_at` (Bước 6). Thêm cột là phải sửa CẢ BA select trong `usePublicAuctionSessions.ts`.
+- **`deposit_status !== 'received'` KHÔNG có nghĩa là "chưa nộp tiền".** Sau `org_finalize_session` nó là `applied` (trúng) hoặc `pending_refund` (không trúng). Bất cứ chỗ nào suy ra câu chữ từ phép so sánh này đều nói sai với người đã nộp tiền — xem `useMyBidderStatus`.
+- **Badge `rounded-full` mà cho xuống dòng sẽ thành cục tròn.** Nhãn dài ("Chuyển vào tiền mua tài sản" ~200px) trong cột hẹp: hoặc `whitespace-nowrap` + nhường chỗ, hoặc đưa xuống dòng phụ. Kèm theo: nút thao tác nằm sau một cột quá rộng sẽ trôi ra ngoài vùng `overflow-x-auto` — vẫn trong DOM, người dùng không thấy. Đo bằng `getBoundingClientRect().right` so với thẻ, đừng tin ảnh chụp đã cắt.
+- **jsdom 20 không có `crypto.subtle`** (node có). Test cần SHA-256 phải mở đầu bằng `// @vitest-environment node`, và `src/test/setup.ts` phải bọc `typeof window !== "undefined"` nếu không nó đổ trước khi test chạy.
+
 ## 2026-09-12 — `asset_parent_slug(NULL)` = 'khac'; ba cặp nhân bản SQL↔TS mới của tiếp thị phiên
 
 - **`asset_parent_slug(NULL)` trả `'khac'`** (CASE … ELSE 'khac'). Truy vấn nào so slug cha phải kiểm `category_slug IS NOT NULL` trước, nếu không lô chưa phân loại sẽ khớp mọi khách quan tâm "Khác". Xem `org_session_audience`.
@@ -258,3 +266,61 @@ Bẫy đi kèm:
 - Supabase **tự GRANT EXECUTE hàm mới cho `anon` + `authenticated`** ⇒ hàm nội bộ (`case_qa_apply_proposal`, `case_qa_validate_citations`…) phải `REVOKE … FROM PUBLIC, anon, authenticated` tường minh; khối kiểm chứng cuối migration nên assert điều đó.
 - plpgsql `RETURNS TABLE (status …)` + truy vấn có cột `status` ⇒ lỗi "ambiguous column" — thêm `#variable_conflict use_column` hoặc qualify mọi cột.
 - Trên UI "hồ sơ" đã là hồ sơ tham gia đấu giá của người mua ⇒ tài liệu của phiên gọi là **"Tài liệu phiên"**.
+
+## Phòng đấu giá (Bước 4): 4 cái bẫy ở lớp giao diện
+
+- **Truy vấn công khai liệt kê cột BẰNG TAY, type thì không.** `usePublicAuctionSession` thiếu `bidding_method` / `extension_seconds` / `max_bid_steps` trong khi `PublicSession` khai báo có ⇒ TypeScript im lặng, `max_bid_steps` là `undefined`, `maxBid()` ra `NaN`, mọi lượt bị chặn oan bằng `bid_too_many_steps`. Thêm cột mới vào `auction_sessions` thì phải sửa cả 3 chuỗi `.select()` trong `usePublicAuctionSessions.ts`.
+- **`biddingReasonMessage(reason)` thiếu tham số thứ hai là ra câu KHÁC server.** Server trả kèm `min_amount` / `max_amount` và ghép vào câu; client không truyền `{ min_amount, max_amount }` sẽ hiện câu chung chung trong khi server nói rõ số tiền.
+- **Lô TẠM DỪNG: `ends_at` là số cũ.** `org_resume_lot` mới cộng bù `(now − paused_at)`. Chạy đồng hồ lúc đang dừng = nói dối. Ẩn đồng hồ khi `phase === 'paused'`.
+- **Rút giá xong thì `useMyBidderStatus` báo `no_deposit`** ("tổ chức chưa ghi nhận tiền đặt trước") — SAI: tiền đã nhận rồi bị tịch thu. Phải có nhánh `forfeited` riêng, và nhớ họ vẫn có thể đang dẫn đầu lô khác (`_recompute_lot_leader` chỉ chạy cho ĐÚNG lô vừa rút).
+- Phụ: `useLotBids` không có kênh riêng — màn nào hiện nó cũng phải đang mount `useLotStates` cùng phiên. Nonce phải đóng băng CÙNG số tiền, đổi tiền mà giữ nonce thì server trả về đúng lượt CŨ.
+
+## Đấu giá trực tuyến: bảng CHỈ GHI THÊM chặn cả migration, seed và xoá tài khoản
+
+`auction_bids`, `auction_lot_events`, `auction_deposit_events`, `auction_session_minutes` (`20260913000001`) có trigger ném lỗi với MỌI UPDATE/DELETE — kể cả `postgres`/`service_role` — và FK `ON DELETE RESTRICT` sang lô/phiên/hồ sơ.
+
+- **Gỡ seed demo** (bước 2 dựng PDG000013): `ALTER TABLE … DISABLE TRIGGER` trên các bảng này, DELETE theo thứ tự con → cha (`auction_lot_states.current_bid_id` trỏ `auction_bids` nên xoá/NULL trạng thái lô trước), rồi ENABLE lại. Xoá phiên/lô/hồ sơ đã có lượt trả giá bằng tay sẽ vỡ FK.
+- **Đừng thêm FK `actor_id → auth.users ON DELETE SET NULL`** vào bảng chỉ ghi thêm: SET NULL là một UPDATE ⇒ guard chặn ⇒ không xoá được tài khoản.
+- **Sổ tiền đặt trước ghi bằng trigger** trên `auction_bidding_contracts.deposit_status`. RPC mới chỉ cần UPDATE cờ (sau `_bidding_ctx(lý do, lô)`); INSERT tay vào sổ = ghi đôi.
+- **GUC `app.bidding_rpc` sống tới hết transaction.** RPC đã bật phải `_bidding_ctx_clear()` trước khi trả về, nếu không lệnh sau trong cùng transaction (script kiểm chứng, migration) lách được guard mà không biết. Supabase cũng tự GRANT EXECUTE hàm mới ⇒ `_bidding_ctx*` phải REVOKE (khối kiểm chứng cuối migration đã assert).
+
+## `auction_lot_states.payment_status` có HAI người ghi
+
+`org_confirm_winner_payment` (nút "Đã thanh toán" của Bước 6) và sổ tiền hợp đồng
+mua bán (`_sale_settle`) ghi **cùng một cột**. Luật:
+
+- Lô **đã có hợp đồng còn sống** ⇒ sổ tiền là sự thật. `WinnerPaymentCard` giấu
+  nút "Đã thanh toán", **và** `org_confirm_winner_payment` trả `sale_contract_exists`.
+  Giấu nút không phải là bảo vệ — cổng thật nằm ở RPC (`20260914000001` mục 8b).
+- Tổ chức **không dùng hợp đồng** vẫn bấm nút cũ như trước.
+- `_sale_settle` chỉ đụng vào lô đang `pending`/`paid`, **không bao giờ** lật một
+  lô đã `defaulted` — người trúng bỏ cọc là quyết định khác, không phải hệ quả
+  của một bút toán thu tiền.
+
+## Hai chuỗi bên bán, một bảng hợp đồng
+
+`auction_session_items` **cố ý không có** cột chủ sở hữu. Lô ký gửi truy ra chủ
+tài sản qua `service_request_id → consignment_contracts.owner_user_id`; lô tin
+đăng chỉ có `listings.asset_owner_id → asset_owners`, một thực thể danh bạ
+**không có tài khoản, không có CCCD, không có điện thoại**.
+
+Hệ quả hay quên:
+- `seller_unresolved` là nhánh THẬT, không phải phòng xa: hợp đồng ký gửi bị huỷ
+  sau khi lô đã vào phiên (không có gì kiểm lại), hoặc `listings.asset_owner_id`
+  NULL (~20% tin đăng trong DB hiện tại).
+- Với lô `org_on_behalf`, `sale_can_act(contract,'seller')` đúng cho **thành viên
+  tổ chức**; với lô `owner_user` thì tổ chức **không** ký thay được (RPC trả
+  `not_found`). Đừng giả định tổ chức luôn thao tác được cả hai vai.
+- Dự thảo PDF cho bên bán danh bạ chỉ in tên + địa chỉ, **không bịa CCCD**.
+
+## Sổ tiền hợp đồng mua bán: hoàn là DÒNG MỚI
+
+`auction_sale_payments` mang `auction_append_only_guard` ⇒ **mọi** UPDATE/DELETE
+bị chặn, kể cả từ migration và seed (phải `DISABLE TRIGGER`). Vì thế:
+- `installment_id` là `ON DELETE RESTRICT`, **không phải** `SET NULL` — `SET NULL`
+  là một UPDATE và sẽ bị guard chặn khi `set_terms` xoá kỳ hạn. Đó là lý do
+  `set_terms` từ chối bằng `payments_exist` khi sổ đã có tiền.
+- `recorded_by` **không có FK** tới `auth.users`: `ON DELETE SET NULL` cũng là
+  UPDATE (cùng bài học với `auction_lot_events.actor_id`).
+- Hoàn bút toán = INSERT một dòng có `reversed_payment_id`; `sale_net_paid` cộng
+  dòng đó với **dấu trừ**. Đừng đi tìm cột `amount` âm — CHECK ép `amount > 0`.

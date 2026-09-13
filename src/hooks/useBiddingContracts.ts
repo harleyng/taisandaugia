@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { qk } from "@/lib/queryKeys";
 import { contractErrorMessage } from "@/lib/biddingContracts/errors";
 import type { StartContractArgs } from "@/lib/biddingContracts/identityForm";
+import type { LotPaymentStatus } from "@/types/auction-bidding";
 import type { BiddingContract, ContractSummary, ContractWithSession } from "@/types/bidding-contract";
 
 /**
@@ -15,7 +16,8 @@ import type { BiddingContract, ContractSummary, ContractWithSession } from "@/ty
  * phiên, hồ sơ của tôi, và danh sách của tổ chức.
  */
 
-export const CONTRACT_WITH_SESSION_SELECT = "*, auction_sessions(id, code, title, starts_at, ends_at, status)";
+export const CONTRACT_WITH_SESSION_SELECT =
+  "*, auction_sessions(id, code, title, starts_at, ends_at, status, auction_format, finalized_at)";
 
 export interface StartContractResult {
   contract_id: string;
@@ -73,6 +75,47 @@ export function useMySessionContract(sessionId?: string) {
 }
 
 /** Mọi hồ sơ của tôi (mới nhất trước) — tab hồ sơ cá nhân + điền sẵn form. */
+/** Một lô mà hồ sơ của tôi đã trúng — đủ để hiện thông báo trúng + hạn thanh toán. */
+export interface MyWonLot {
+  lot_id: string;
+  session_id: string;
+  winner_contract_id: string;
+  winning_amount: number | null;
+  payment_status: LotPaymentStatus | null;
+  payment_due_at: string | null;
+  auction_session_items: { lot_no: number; title: string } | null;
+}
+
+/**
+ * Lô mà các hồ sơ này trúng đấu giá.
+ *
+ * Đọc auction_lot_states trực tiếp: RLS cho anon + authenticated đọc mọi lô của
+ * phiên đã công bố (auction_lot_states_public_read), nên lọc theo
+ * winner_contract_id phía client là an toàn và không cần policy mới.
+ *
+ * KHÔNG nhúng vào CONTRACT_WITH_SESSION_SELECT: quan hệ đi ngược chiều (lô trỏ
+ * về hồ sơ), và chỉ tab hồ sơ cá nhân mới cần — kéo vào select dùng chung là bắt
+ * mọi màn hồ sơ gánh thêm một join.
+ */
+export function useMyWonLots(contractIds: string[]) {
+  const { userId } = useAuth();
+  return useQuery({
+    queryKey: qk.biddingContracts.wonLots(userId, contractIds),
+    enabled: !!userId && contractIds.length > 0,
+    queryFn: async (): Promise<MyWonLot[]> => {
+      const { data, error } = await supabase
+        .from("auction_lot_states")
+        .select(
+          "lot_id, session_id, winner_contract_id, winning_amount, payment_status, payment_due_at, auction_session_items!inner(lot_no, title)",
+        )
+        .in("winner_contract_id", contractIds)
+        .eq("result", "sold");
+      if (error) throw error;
+      return (data ?? []) as unknown as MyWonLot[];
+    },
+  });
+}
+
 export function useMyBiddingContracts() {
   const { userId } = useAuth();
   return useQuery({

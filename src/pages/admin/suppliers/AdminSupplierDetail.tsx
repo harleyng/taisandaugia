@@ -11,7 +11,7 @@ import { useSupplierContracts } from "@/hooks/useSupplierContracts";
 import { useSupplierOrders } from "@/hooks/useOrders";
 import { useServices } from "@/hooks/useServices";
 import { useHasAdminPermission } from "@/hooks/useAdminPermissions";
-import { CrmDetailHero } from "@/components/admin/crm/CrmDetailHero";
+import { DetailHero } from "@/components/shared/DetailHero";
 import { SupplierFormDialog } from "@/components/admin/suppliers/SupplierFormDialog";
 import { SupplierStatusBadge } from "@/components/admin/suppliers/SupplierStatusBadge";
 import { SupplierInfoTab } from "@/components/admin/suppliers/detail/SupplierInfoTab";
@@ -95,7 +95,7 @@ export default function AdminSupplierDetail() {
         <ArrowLeft className="h-4 w-4 mr-1.5" /> Đối tác
       </Button>
 
-      <CrmDetailHero
+      <DetailHero
         status={<SupplierStatusBadge status={supplier.status} />}
         code={supplier.code}
         badges={

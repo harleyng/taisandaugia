@@ -43,14 +43,19 @@ const DATE_GROUPS: { label: string; from: DateField; to: DateField; required?: b
 interface Props {
   session: AuctionSession | null;
   readOnly: boolean;
-  onCreated: (id: string) => void;
+  /** Chỉ dùng khi tạo mới: điều hướng sang phiên vừa tạo. */
+  onCreated?: (id: string) => void;
+  /** Lưu xong một phiên đã có ⇒ tab Thông tin thoát chế độ sửa. */
+  onSaved?: () => void;
+  /** Có truyền thì hiện nút "Huỷ" cạnh nút Lưu. */
+  onCancel?: () => void;
 }
 
 /**
  * Thông tin chung + lịch phiên. Parent gắn `key` theo id + updated_at nên form
  * dựng lại khi server trả bản mới — không cần effect reset.
  */
-export function SessionFormCard({ session, readOnly, onCreated }: Props) {
+export function SessionFormCard({ session, readOnly, onCreated, onSaved, onCancel }: Props) {
   const save = useSaveAuctionSession();
   const { data: saleReady } = useDossierSaleReady();
   const form = useForm<SessionFormValues>({
@@ -64,7 +69,7 @@ export function SessionFormCard({ session, readOnly, onCreated }: Props) {
   const onSubmit = (values: SessionFormValues) => {
     save.mutate(
       { id: session?.id, input: formToSessionInput(values) },
-      { onSuccess: ({ id, created }) => created && onCreated(id) },
+      { onSuccess: ({ id, created }) => (created ? onCreated?.(id) : onSaved?.()) },
     );
   };
 
@@ -272,7 +277,12 @@ export function SessionFormCard({ session, readOnly, onCreated }: Props) {
           </fieldset>
 
           {!readOnly && (
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              {onCancel && (
+                <Button type="button" variant="ghost" disabled={busy} onClick={onCancel}>
+                  Huỷ
+                </Button>
+              )}
               <Button type="submit" disabled={busy} className="gap-1.5">
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {session ? "Lưu thay đổi" : "Lưu nháp"}

@@ -246,7 +246,7 @@ Roles are **per-organization and user-creatable** (`org_roles`, since `202608050
 
 - `org_seed_default_roles(org_id)` seeds every new org with **Chủ sở hữu** (`OWNER`, `is_system`), **Quản lý** (`MANAGER`), **Nhân viên** (`AGENT`). Called by the `create_owner_membership` trigger — never insert the owner membership manually.
 - `OWNER` stores **no permission rows**; full access short-circuits inside `org_has_permission()`. Its matrix is not editable (RPC refuses it).
-- Permission catalog lives in **code**: `src/lib/orgPermissions.ts` (module × action `view/create/update/delete/export`). DB stores only granted `(module, action)` rows. **Module codes are immutable** — renaming one strips that permission from every role of every org.
+- Permission catalog lives in **code**: `src/lib/orgPermissions.ts` (module × action `view/create/update/delete/export`, plus `operate/finalize` used only by `dieu-hanh-dau-gia`; the matrix editor draws each module's own actions). DB stores only granted `(module, action)` rows. **Module codes are immutable** — renaming one strips that permission from every role of every org.
 - **Splitting a module out** (e.g. `nhan-su` out of `nl-dau-gia-vien`, `20260805000040`): always ship a backfill that *preserves what users could already do*, mapping across renamed actions where needed — there, `view` also had to grant `export`, because the "Xuất hồ sơ" button previously required only view. Also `CREATE OR REPLACE org_seed_default_roles()` so new orgs get the same presets.
 - Gate by **permission, never by role name** — `org_has_permission(org_id, module, action)` / `org_is_owner(org_id)`, both SECURITY DEFINER.
 
@@ -341,11 +341,32 @@ Người mua mua hồ sơ của một **PHIÊN** đã công bố trên `/session
 - **Giá là bản chụp** (`fee_amount`) lúc giữ chỗ; đổi giá phiên không đổi hồ sơ đã có.
 - **Thanh toán idempotent ở server** qua `payment_claims`; F5 trả `already_paid`. Mỗi lần trả = một đơn `commission`; hợp đồng hết hiệu lực giữa lúc giữ chỗ và trả ⇒ đơn `fixed 0` kèm ghi chú "cần đối soát" (không chặn người đã trả).
 - **Riêng tư**: bảng không có policy ghi; người mua đọc dòng của mình, tổ chức (`ho-so-tham-gia` view) chỉ đọc dòng `paid`, admin chỉ đọc. Mọi thay đổi qua RPC tự kiểm quyền.
-- **Tiền đặt trước**: `pending → received → refunded | forfeited` (forfeited bắt buộc ghi chú); lùi một bước được để sửa nhầm, lùi về `pending` **xoá số báo danh**. Phiên đã huỷ chỉ cho `received → refunded`.
+- **Tiền đặt trước**: `pending → received → refunded | forfeited` (forfeited bắt buộc ghi chú); lùi một bước được để sửa nhầm, lùi về `pending` **xoá số báo danh**. Phiên đã huỷ chỉ cho `received → refunded`. Sau chốt phiên trực tuyến thêm `applied` / `pending_refund` (xem mục dưới); hồ sơ đã trả giá hoặc phiên đã chốt thì `org_set_contract_deposit` bị trigger chặn.
 - **Số báo danh** duy nhất trong phiên, chỉ cấp khi `deposit_status='received'` và phiên chưa huỷ; tự cấp = max + 1.
 - **VNeID**: `user_verified_identities` (1 dòng/người, huỷ liên kết = xoá). Server gắn `identity_source='vneid'` khi họ tên + CCCD khớp và lấy ngày sinh/giới tính từ bản xác thực.
 - **MÔ PHỎNG — chưa dùng cho tiền thật**: `pay_bidding_contract` và `save_vneid_identity` tin client. Trước khi có tiền thật phải thay bằng IPN VNPay / OAuth VNeID ở Edge Function (service_role) rồi thu hồi 2 hàm này.
 - Chưa có: sổ khoản sàn phải trả tổ chức (`gross − amount`), hoàn tiền hồ sơ khi phiên huỷ.
+
+## Đấu giá trực tuyến (trả giá lên) — phiên `truc_tuyen` / `ca_hai`
+
+Engine ở SQL, migration `20260913000001` (kế hoạch + các bước UI còn lại: `docs/online-auction-plan.md`). v1 là thí điểm, chưa phải trang đấu giá trực tuyến được phê duyệt.
+
+**Luật bất biến:**
+- **Chỉ trả giá lên** (`bidding_method='ascending'`). Đủ điều kiện trả giá = hồ sơ `paid` + có số báo danh + `deposit_status='received'`.
+- **Giá hợp lệ**: lượt đầu ≥ giá khởi điểm; sau đó ≥ giá hiện tại + 1 bước; phải nằm trên lưới `giá khởi điểm + k × bước giá`; nhảy tối đa `max_bid_steps` bước (mặc định 10). Người đang dẫn đầu không tự trả giá đè (`already_leading`).
+- **Thời gian = server.** Lô đóng khi `ends_at` qua; lượt hợp lệ khi còn < `extension_seconds` (mặc định 300) ⇒ `ends_at = now + extension_seconds`. Tạm dừng: không nhận giá, tiếp tục cộng lại thời gian dừng. Mốc kết thúc ban đầu = giờ kết thúc phiên.
+- **Rút lại giá đang dẫn đầu chỉ ảnh hưởng LÔ đó** (người dùng chọn 2026-09-12): lô quay về lượt hợp lệ trước; tiền đặt trước (tính theo PHIÊN) bị tịch thu ngay ⇒ không trả giá thêm ở đâu nữa, nhưng vẫn giữ dẫn đầu lô khác và vẫn trúng.
+- **Kết quả**: có lượt hợp lệ ⇒ `sold`, người trúng = người dẫn đầu, hạn thanh toán = giờ đóng + 30 ngày; không ⇒ `unsold`. Tổ chức xác nhận thanh toán thủ công; không thanh toán ⇒ tịch thu tiền đặt trước (`applied → forfeited`).
+- **Chốt phiên** chỉ khi mọi lô `closed`/`withdrawn` (lô chưa mở phải rút trước). Tiền `received`: người trúng ⇒ `applied`, người không trúng ⇒ `pending_refund` ⇒ `refunded` (quyền `ho-so-tham-gia.update`). Đã `forfeited` thì giữ nguyên.
+- **Biên bản công khai SAU chốt** (người dùng chọn 2026-09-12) ⇒ PDF biên bản chỉ ghi họ tên + số báo danh người trúng, **không CCCD / địa chỉ**. Công khai lượt trả giá chỉ theo số báo danh.
+- **Biên bản (Bước 6)**: tệp tải lên `auction-minutes/{orgId}/{sessionId}/{tên}.pdf` TRƯỚC rồi mới gọi `org_issue_minutes` (RPC từ chối `file_missing`). Tệp bất biến, `pdf_path` UNIQUE, `sequence_no` do server cấp max+1 ⇒ **giấy không in số thứ tự cũng không in hash của chính nó** (quyết định 2026-09-12); số thứ tự + SHA-256 hiện cạnh link tải. Thử lại chỉ gọi lại RPC, không tải lại tệp. Tiền in kèm chữ (`soThanhChu.ts`); đấu giá viên chọn từ `org_auctioneers`. Mẫu `MINUTES_TEMPLATE_VERSION` — **chưa rà soát pháp lý**.
+- **Kết quả công khai chỉ hiện sau `finalized_at`** (người dùng chọn 2026-09-12), cùng mốc RLS mở biên bản cho khách. Không có "kết quả sơ bộ".
+- **Khi đã có lô rời `pending`**: không đổi hình thức/giờ/quy tắc phiên, không thêm/xoá lô, không đổi giá khởi điểm/bước giá/tiền đặt trước, không đổi tiền đặt trước/số báo danh của người đã trả giá — tất cả chặn ở trigger.
+- Quyền: module `dieu-hanh-dau-gia` — `operate` (mở / tạm dừng / tiếp tục / rút tài sản), `finalize` (chốt, biên bản, xác nhận thanh toán). MANAGER có cả ba, AGENT chỉ `view`.
+- **Phòng trả giá `/sessions/:id/dau-gia` (Bước 4):** route công khai, KHÔNG `ProtectedRoute`. Chưa đủ điều kiện ⇒ **chặn cả trang** (người dùng chọn 2026-09-12), không xem được giá/diễn biến. Cổng là hàm thuần `roomGateOf()` (`src/lib/bidding/roomAccess.ts`) với thứ tự: loading → not_found/draft → cancelled → not_online → method_unsupported → not_started (`now < starts_at`) → forfeited → blocked → open.
+- **Người đã rút giá (`deposit_status='forfeited'`) có nhánh riêng**, không dùng câu `no_deposit`: họ vẫn có thể đang dẫn đầu lô khác và vẫn trúng, chỉ mất quyền trả giá tiếp.
+- **"Vào được phòng" KHÁC "trả giá được" (Bước 6).** Chốt phiên đẩy mọi tiền đặt trước đã nộp sang `applied`/`pending_refund`, nên `deposit_status !== 'received'` KHÔNG có nghĩa là chưa nộp tiền. `roomGateOf` trả `view_only { reason: forfeited | settled | refunded }` — giữ người đã tham gia ở lại đọc kết quả, chỉ khoá ô trả giá; `view_only` đòi có số báo danh, không thì `blocked("no_bidder_no")`.
+- **Lô tạm dừng thì KHÔNG chạy đồng hồ**: `org_resume_lot` cộng bù khoảng dừng vào `ends_at`, nên `ends_at` lúc đang dừng là số cũ.
 
 ## Hỏi đáp theo tài liệu phiên (người mua → tổ chức đấu giá)
 
@@ -360,3 +381,59 @@ Người mua hỏi trên `/sessions/:id/hoi-dap` hoặc Zalo (hiện giả lập
 - **Chuyên viên được trả lời không trích dẫn** (nhãn "Chuyên viên trả lời"); đính kèm điều khoản thì phải citable + cùng phiên.
 - Hỏi trên sàn phải đăng nhập; phiên `published` và chưa kết thúc; tối đa 10 câu/10 phút và 40 câu/ngày mỗi người.
 - Quyền: tài liệu phiên = `phien-dau-gia.update`; hộp thư = `hoi-dap` view/update (MANAGER + AGENT); bật tự gửi = `hoi-dap-cai-dat` (MANAGER, OWNER).
+
+## Hợp đồng mua bán tài sản đấu giá (sau khi phiên chốt kết quả)
+
+Bảng `auction_sale_contracts` (`20260914000001`). MỘT hợp đồng cho MỘT lô đã bán,
+do tổ chức lập **tường minh** sau khi chốt phiên — không tự sinh lúc finalize.
+
+**Vòng đời** (`status`):
+`drafting → awaiting_signatures → awaiting_confirmation → signed → completed`,
+và `cancelled` cắt ngang từ bất kỳ trạng thái nào **trừ** `completed`.
+Giai đoạn hiển thị (`stage`, suy ra) : `signing · paying · handover · completed · cancelled`.
+`completed` đòi **cả** `paid_at` **và** `handed_over_at`.
+
+**Bên bán suy từ nguồn của lô — KHÔNG có cột chủ sở hữu trên `auction_session_items`:**
+
+| Nguồn lô | `seller_kind` | Ai thao tác phía bên bán |
+|---|---|---|
+| `posting` (ký gửi) | `owner_user` | Chủ tài sản, trong cổng chủ tài sản |
+| `listing` (tin đăng) | `org_on_behalf` | Tổ chức đấu giá ký thay (chủ tài sản là thực thể danh bạ, không có tài khoản) |
+
+Không giải được bên bán ⇒ RPC trả `seller_unresolved`. **Không bịa ra một bên bán.**
+
+**Chữ ký:** bên mua + bên bán bắt buộc; tổ chức là bên thứ ba chỉ khi `org_signs`.
+Chia sẻ dự thảo mới **xoá** bản ký và mọi xác nhận. Xác nhận phải gửi lại đúng
+đường dẫn đang hiển thị (`document_changed`).
+
+**Tiền — sổ ghi thêm, không phải một nút bấm:**
+- Số dư = `price − deposit_credit − Σ(thu ròng)`. Tiền đặt trước chỉ thành
+  `deposit_credit` khi engine đã chuyển cọc sang `applied`; cọc nộp theo PHIÊN
+  nên phải trừ phần đã ghi cho hợp đồng khác của cùng hồ sơ, và kẹp `≤ price`.
+- Phân bổ **FIFO tính lại từ đầu** ⇒ hoàn bút toán tự mở lại đúng các kỳ đã đóng.
+- Số dư về 0 ⇒ `paid_at` + `auction_lot_states.payment_status = 'paid'`.
+- Chỉ **tổ chức** ghi nhận tiền. Ghi được cả khi chưa ký (cọc thường chuyển sớm),
+  nhưng giai đoạn không nhảy sang `paying` cho tới khi ký xong.
+- Đổi lịch kỳ hạn chỉ khi **chưa ký VÀ sổ tiền còn trống** (`payments_exist`).
+
+**Huỷ — hậu quả tiền đặt trước khác nhau theo `cancel_kind`** (Điều 39 Luật ĐGTS):
+
+| `cancel_kind` | Tiền đặt trước | Lô |
+|---|---|---|
+| `buyer_refused` | **MẤT** (`forfeited`) | `payment_status = 'defaulted'` |
+| `seller_refused` | `pending_refund` | về `pending` |
+| `mutual` | `pending_refund` | về `pending` |
+
+Lý do huỷ tối thiểu 10 ký tự. Huỷ một hợp đồng **đã ký** là hợp lệ (thoả thuận).
+
+**Bàn giao:** tổ chức hẹn lịch; **hai bên** (mua + bán) cùng xác nhận mới có
+`handed_over_at`. Tổ chức không xác nhận thay. Sang tên (`title_transfer_status`)
+chỉ là **ghi nhận**, không phải quy trình — thủ tục ở cơ quan nhà nước.
+
+**Mặc định:** hạn ký `now + 7 ngày`; một kỳ duy nhất đến hạn đúng `payment_due_at`
+của lô (ends_at + 30 ngày); hạn bàn giao `now + 7 ngày` kể từ lúc ký xong.
+Bên nhận tiền mặc định là **tổ chức** (`payee_side = 'org'`).
+
+**Mẫu hợp đồng `HDMB-MAU-2026-09` CHƯA được rà soát pháp lý** — như `HDDV-MAU`
+và `BBDG-MAU`. Ngoài phạm vi: người trả giá liền kề (Điều 51), huỷ kết quả đấu
+giá (Điều 72), công chứng (chỉ ghi nhận), sổ thanh toán tổ chức→bên bán.

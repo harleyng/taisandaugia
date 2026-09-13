@@ -5,6 +5,7 @@ import {
   GitBranch,
   UploadCloud,
   CreditCard,
+  FileSignature,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -15,7 +16,7 @@ export interface NavItem {
 }
 
 /** Loại số đếm động hiện cạnh mục nav — số trả về ở OwnerPortalSidebar. */
-export type OwnerCountBadgeKind = 'owner-consignment'
+export type OwnerCountBadgeKind = 'owner-consignment' | 'owner-sale'
 
 export interface NavSection {
   label: string
@@ -50,6 +51,12 @@ export const OWNER_NAV_SECTIONS: NavSection[] = [
     label: 'Báo cáo',
     icon: BarChart2,
     href: '/chu-tai-san/bao-cao',
+  },
+  {
+    label: 'Hợp đồng mua bán',
+    icon: FileSignature,
+    href: '/chu-tai-san/hop-dong-mua-ban',
+    countBadge: 'owner-sale',
   },
   {
     label: 'Credit',

@@ -48,3 +48,6 @@ srv.pid
 
 # Python bytecode cache
 __pycache__/
+
+# Thư mục link của Vercel CLI
+.vercel

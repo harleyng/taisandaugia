@@ -142,6 +142,53 @@ export function useSaveAuctionSession() {
   });
 }
 
+/**
+ * Quy tắc trả giá trực tuyến — TÁCH khỏi useSaveAuctionSession có chủ đích:
+ * form chính (SessionFormCard) không đụng tới ba cột này, và ba cột này bị
+ * auction_sessions_bidding_guard khoá lại ngay khi lô đầu tiên được mở, nên
+ * gộp chung sẽ làm hỏng cả việc sửa tên phiên sau khi phiên đã chạy.
+ */
+export interface SessionBiddingRules {
+  bidding_method: string;
+  extension_seconds: number;
+  max_bid_steps: number;
+}
+
+export function useSaveSessionBiddingRules() {
+  const invalidate = useInvalidateSessions();
+  return useMutation({
+    mutationFn: async ({ id, rules }: { id: string; rules: SessionBiddingRules }) => {
+      const { error } = await supabase.from("auction_sessions").update(rules).eq("id", id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (id) => {
+      invalidate(id);
+      toast.success("Đã lưu quy tắc trả giá trực tuyến.");
+    },
+    onError: showError,
+  });
+}
+
+/**
+ * Phiên đã có lô nào rời trạng thái chờ chưa. Dùng để khoá form quy tắc TRƯỚC
+ * khi người dùng gõ — trigger sẽ từ chối, nhưng bắt người ta điền xong mới báo
+ * là sai thứ tự. Hàm SQL được GRANT cho anon + authenticated đúng vì việc này.
+ */
+export function useSessionBiddingStarted(sessionId?: string | null) {
+  return useQuery({
+    queryKey: qk.bidding.started(sessionId),
+    enabled: !!sessionId,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await supabase.rpc("auction_session_bidding_started", {
+        _session_id: sessionId!,
+      });
+      if (error) throw error;
+      return data === true;
+    },
+  });
+}
+
 export function usePublishAuctionSession() {
   const invalidate = useInvalidateSessions();
   return useMutation({

@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 /**
- * Hero dùng chung cho hai trang chi tiết CRM: khách hàng tiềm năng và khách hàng.
+ * Hero dùng chung cho các trang chi tiết (CRM admin + chi tiết phiên portal): khách hàng tiềm năng và khách hàng.
  *
  * Vì sao phải tách ra: hai trang vốn là bản copy của nhau và đã bắt đầu phân kỳ
  * (mã ở trang này là badge, ở trang kia là chữ mono). Quan trọng hơn, cả hai
@@ -43,7 +43,7 @@ export interface HeroStat {
   value: string | number;
 }
 
-interface CrmDetailHeroProps {
+interface DetailHeroProps {
   /** Menu/badge trạng thái — đứng ĐẦU hàng badge. */
   status: ReactNode;
   /** Mã bản ghi; render thành badge "#<code>". Rỗng thì ẩn hẳn, không hiện "#—". */
@@ -71,9 +71,9 @@ function StatCard({ icon: Icon, label, value }: HeroStat) {
   );
 }
 
-export function CrmDetailHero({
+export function DetailHero({
   status, code, badges, name, subtitle, stats = [], actions, overflow,
-}: CrmDetailHeroProps) {
+}: DetailHeroProps) {
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <div className="flex flex-wrap items-start gap-4">

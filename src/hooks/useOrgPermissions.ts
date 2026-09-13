@@ -64,6 +64,27 @@ export function useHasOrgPermission(module: string, action: OrgAction = "view"):
   return isOwner || orgMatrixHas(matrix, module, action);
 }
 
+/**
+ * Như useHasOrgPermission nhưng xét trong MỘT tổ chức cụ thể, không phải tổ
+ * chức đang chọn ở OrgSwitcher.
+ *
+ * Cần cho những màn gắn với một bản ghi chứ không với tổ chức đang xem — ví dụ
+ * phòng điều hành mở theo link của một phiên. Một người có thể là OWNER của tổ
+ * chức A (⇒ toàn quyền) rồi mở phòng điều hành phiên của tổ chức B: hỏi theo tổ
+ * chức đang chọn sẽ bày ra nút điều hành mà server chắc chắn từ chối.
+ *
+ * orgId rỗng ⇒ trả false (fail-closed) cho tới khi biết tổ chức.
+ */
+export function useHasOrgPermissionIn(
+  orgId: string | null | undefined,
+  module: string,
+  action: OrgAction = "view",
+): boolean {
+  const { isOwner, matrix } = useOrgPermissions(orgId);
+  if (!orgId) return false;
+  return isOwner || orgMatrixHas(matrix, module, action);
+}
+
 export function useCanViewOrgModule(module: string): boolean {
   return useHasOrgPermission(module, "view");
 }

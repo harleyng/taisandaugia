@@ -7,7 +7,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// Chỉ cần Item: khung DropdownMenu do CrmDetailHero dựng, trang chỉ đưa nội dung.
+// Chỉ cần Item: khung DropdownMenu do DetailHero dựng, trang chỉ đưa nội dung.
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -26,7 +26,7 @@ import { useHasAdminPermission } from "@/hooks/useAdminPermissions";
 import { CustomerFormDialog } from "@/components/admin/customers/CustomerFormDialog";
 import { CustomerStatusBadge } from "@/components/admin/customers/CustomerStatusBadge";
 import { CustomerStatusMenu } from "@/components/admin/customers/CustomerStatusMenu";
-import { CrmDetailHero } from "@/components/admin/crm/CrmDetailHero";
+import { DetailHero } from "@/components/shared/DetailHero";
 import { CustomerInfoTab } from "@/components/admin/customers/detail/CustomerInfoTab";
 import { CustomerOrdersTab } from "@/components/admin/customers/detail/CustomerOrdersTab";
 import { CustomerCampaignsTab } from "@/components/admin/customers/detail/CustomerCampaignsTab";
@@ -134,7 +134,7 @@ export default function AdminCustomerDetail() {
         <ArrowLeft className="h-4 w-4 mr-1.5" /> Khách hàng
       </Button>
 
-      <CrmDetailHero
+      <DetailHero
         // Badge CHỈ ĐỂ ĐỌC ở cả hai trường hợp quyền; thao tác đổi nằm ở nút
         // riêng và nút đó mới bị cổng quyền canEdit chặn.
         status={<CustomerStatusBadge status={customer.status} />}

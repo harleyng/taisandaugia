@@ -9,22 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { DepositStatusBadge } from "@/components/bidding-contracts/DepositStatusBadge";
 import { useSetContractDeposit } from "@/hooks/useOrgBiddingContracts";
 import { formatVnd } from "@/lib/advertising/slug";
-import type { ContractWithSession, DepositStatus } from "@/types/bidding-contract";
+import { depositActionsFor } from "@/lib/biddingContracts/deposit";
+import type { ContractWithSession, DepositActionStatus } from "@/types/bidding-contract";
 
-const ACTION_LABELS: Record<DepositStatus, string> = {
+const ACTION_LABELS: Record<DepositActionStatus, string> = {
   received: "Đã nhận tiền đặt trước",
   refunded: "Đã hoàn trả cho người đăng ký",
   forfeited: "Không hoàn trả (vi phạm quy chế cuộc đấu giá)",
   pending: "Chuyển về chưa nhận — sửa nhầm, số báo danh sẽ bị thu hồi",
 };
-
-/** Bản sao chuyển trạng thái của org_set_contract_deposit — sửa một bên, sửa cả hai. */
-function targetsFor(current: DepositStatus, sessionCancelled: boolean): DepositStatus[] {
-  if (sessionCancelled) return current === "received" ? ["refunded"] : [];
-  if (current === "pending") return ["received"];
-  if (current === "received") return ["refunded", "forfeited", "pending"];
-  return ["received"];
-}
 
 interface Props {
   contract: ContractWithSession | null;
@@ -35,16 +28,26 @@ interface Props {
 
 export function ContractDepositDialog({ contract, expected, onOpenChange }: Props) {
   const save = useSetContractDeposit();
-  const [target, setTarget] = useState<DepositStatus>("received");
+  const [target, setTarget] = useState<DepositActionStatus>("received");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
-  const sessionCancelled = contract?.auction_sessions?.status === "cancelled";
-  const targets = contract ? targetsFor(contract.deposit_status, sessionCancelled) : [];
+  const actions = contract
+    ? depositActionsFor(contract.deposit_status, {
+        sessionCancelled: contract.auction_sessions?.status === "cancelled",
+        sessionFinalized: !!contract.auction_sessions?.finalized_at,
+      })
+    : { targets: [], blockedNote: null };
+  const targets = actions.targets;
 
   useEffect(() => {
     if (!contract) return;
-    setTarget(targetsFor(contract.deposit_status, contract.auction_sessions?.status === "cancelled")[0] ?? "received");
+    setTarget(
+      depositActionsFor(contract.deposit_status, {
+        sessionCancelled: contract.auction_sessions?.status === "cancelled",
+        sessionFinalized: !!contract.auction_sessions?.finalized_at,
+      }).targets[0] ?? "received",
+    );
     const known = contract.deposit_amount_received ?? expected ?? null;
     setAmount(known != null ? String(known) : "");
     setNote(contract.deposit_note ?? "");
@@ -78,10 +81,10 @@ export function ContractDepositDialog({ contract, expected, onOpenChange }: Prop
         </DialogHeader>
 
         {targets.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Phiên đã huỷ — hồ sơ này không có tiền đặt trước cần hoàn trả.</p>
+          <p className="text-sm text-muted-foreground">{actions.blockedNote}</p>
         ) : (
           <div className="space-y-4 py-1">
-            <RadioGroup value={target} onValueChange={(v) => setTarget(v as DepositStatus)} className="space-y-2">
+            <RadioGroup value={target} onValueChange={(v) => setTarget(v as DepositActionStatus)} className="space-y-2">
               {targets.map((t) => (
                 <div key={t} className="flex items-center gap-2">
                   <RadioGroupItem value={t} id={`deposit-${t}`} />

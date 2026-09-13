@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InfoBox } from "@/components/shared/InfoBox";
+import { SessionResultsCard } from "@/components/auction-sessions/SessionResultsCard";
 import { SessionLotList } from "@/components/auction-sessions/SessionLotList";
 import { SessionStateBadge } from "@/components/auction-sessions/SessionStateBadge";
 import { SessionTimeline } from "@/components/auction-sessions/SessionTimeline";
 import { SessionQaLinkCard } from "@/components/case-qa/SessionQaLinkCard";
+import { SessionBiddingEntryCard } from "@/components/auction-sessions/SessionBiddingEntryCard";
 import { SessionContractCard } from "@/components/auction-sessions/SessionContractCard";
 import { usePublicAuctionSession } from "@/hooks/usePublicAuctionSessions";
 import { formatVnd } from "@/lib/advertising/slug";
@@ -106,6 +108,8 @@ export default function AuctionSessionDetail() {
                   </div>
                 </Card>
 
+                <SessionResultsCard session={session} />
+
                 <section>
                   <h2 className="mb-3 text-lg font-bold text-foreground">Danh sách tài sản ({lots.length})</h2>
                   <SessionLotList lots={lots} />
@@ -115,6 +119,7 @@ export default function AuctionSessionDetail() {
               <aside className="order-first space-y-4 lg:sticky lg:top-4 lg:order-none lg:self-start">
                 <SessionTimeline session={session} />
                 <SessionContractCard session={session} />
+                <SessionBiddingEntryCard session={session} />
                 {session.status === "published" && <SessionQaLinkCard sessionId={session.id} />}
                 {org && (
                   <Card className="flex items-center gap-3 rounded-2xl p-4">

@@ -7,7 +7,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// Chỉ cần Item: khung DropdownMenu do CrmDetailHero dựng, trang chỉ đưa nội dung.
+// Chỉ cần Item: khung DropdownMenu do DetailHero dựng, trang chỉ đưa nội dung.
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -21,7 +21,7 @@ import { useProspectStatsMap } from "@/hooks/useProspects";
 import { LeadFormDialog } from "@/components/admin/leads/LeadFormDialog";
 import { LeadStatusMenu } from "@/components/admin/leads/LeadStatusMenu";
 import { LeadStatusBadge } from "@/components/admin/leads/LeadStatusBadge";
-import { CrmDetailHero } from "@/components/admin/crm/CrmDetailHero";
+import { DetailHero } from "@/components/shared/DetailHero";
 import { LeadInfoTab } from "@/components/admin/leads/detail/LeadInfoTab";
 import { ProspectAuctionHistoryTab } from "@/components/admin/crm/prospect/ProspectAuctionHistoryTab";
 import { ProspectBranchesTab } from "@/components/admin/crm/prospect/ProspectBranchesTab";
@@ -127,7 +127,7 @@ export default function AdminLeadDetail() {
         <ArrowLeft className="h-4 w-4 mr-1.5" /> Khách hàng tiềm năng
       </Button>
 
-      <CrmDetailHero
+      <DetailHero
         // Badge CHỈ ĐỂ ĐỌC; thao tác đổi nằm ở nút riêng trong hàng thao tác —
         // badge vừa hiển thị vừa bấm được thì không nhìn ra là bấm được.
         status={<LeadStatusBadge status={lead.status} />}

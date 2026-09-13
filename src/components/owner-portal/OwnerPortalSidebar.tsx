@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { OWNER_NAV_SECTIONS, type OwnerCountBadgeKind } from './owner-nav-config'
 import { useOwnerConsignmentSummary } from '@/hooks/useConsignmentContract'
+import { useOwnerSaleSummary } from '@/hooks/useSaleContracts'
 import { ArrowLeft, Home } from 'lucide-react'
 
 interface Props {
@@ -11,11 +12,16 @@ interface Props {
 export function OwnerPortalSidebar({ onNavigate }: Props) {
   const navigate = useNavigate()
   const { data: summary } = useOwnerConsignmentSummary()
+  const { data: saleSummary } = useOwnerSaleSummary()
 
   // Số hồ sơ đang chờ chủ tài sản làm gì đó (chọn báo giá, bổ sung địa chỉ,
   // xác nhận hợp đồng). Luật nằm ở RPC owner_consignment_summary.
   const badgeCount = (kind?: OwnerCountBadgeKind) =>
-    kind === 'owner-consignment' ? (summary?.actionCount ?? 0) : 0
+    kind === 'owner-consignment'
+      ? (summary?.actionCount ?? 0)
+      : kind === 'owner-sale'
+        ? (saleSummary?.actionCount ?? 0)
+        : 0
 
   return (
     <aside className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">

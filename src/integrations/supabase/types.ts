@@ -1434,6 +1434,274 @@ export type Database = {
           },
         ]
       }
+      auction_bids: {
+        Row: {
+          amount: number
+          bidder_no: number
+          client_nonce: string
+          contract_id: string
+          id: string
+          lot_id: string
+          placed_at: string
+          seq: number
+          session_id: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          amount: number
+          bidder_no: number
+          client_nonce: string
+          contract_id: string
+          id?: string
+          lot_id: string
+          placed_at?: string
+          seq: number
+          session_id: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          amount?: number
+          bidder_no?: number
+          client_nonce?: string
+          contract_id?: string
+          id?: string
+          lot_id?: string
+          placed_at?: string
+          seq?: number
+          session_id?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_bids_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_bidding_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_bids_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "auction_session_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_bids_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_deposit_events: {
+        Row: {
+          actor_id: string | null
+          amount: number | null
+          at: string
+          contract_id: string
+          id: string
+          kind: string
+          lot_id: string | null
+          reason: string | null
+          session_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          amount?: number | null
+          at?: string
+          contract_id: string
+          id?: string
+          kind: string
+          lot_id?: string | null
+          reason?: string | null
+          session_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          amount?: number | null
+          at?: string
+          contract_id?: string
+          id?: string
+          kind?: string
+          lot_id?: string | null
+          reason?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_deposit_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_bidding_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_deposit_events_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "auction_session_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_deposit_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_lot_events: {
+        Row: {
+          actor_id: string | null
+          at: string
+          id: string
+          kind: string
+          lot_id: string | null
+          payload: Json
+          session_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          at?: string
+          id?: string
+          kind: string
+          lot_id?: string | null
+          payload?: Json
+          session_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          at?: string
+          id?: string
+          kind?: string
+          lot_id?: string | null
+          payload?: Json
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_lot_events_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "auction_session_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_lot_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_lot_states: {
+        Row: {
+          bid_count: number
+          closed_at: string | null
+          created_at: string
+          current_bid_id: string | null
+          current_price: number | null
+          ends_at: string | null
+          extension_count: number
+          leading_bidder_no: number | null
+          lot_id: string
+          opened_at: string | null
+          pause_reason: string | null
+          paused_at: string | null
+          payment_confirmed_at: string | null
+          payment_due_at: string | null
+          payment_status: string | null
+          result: string | null
+          session_id: string
+          status: string
+          updated_at: string
+          winner_contract_id: string | null
+          winning_amount: number | null
+          withdraw_reason: string | null
+        }
+        Insert: {
+          bid_count?: number
+          closed_at?: string | null
+          created_at?: string
+          current_bid_id?: string | null
+          current_price?: number | null
+          ends_at?: string | null
+          extension_count?: number
+          leading_bidder_no?: number | null
+          lot_id: string
+          opened_at?: string | null
+          pause_reason?: string | null
+          paused_at?: string | null
+          payment_confirmed_at?: string | null
+          payment_due_at?: string | null
+          payment_status?: string | null
+          result?: string | null
+          session_id: string
+          status?: string
+          updated_at?: string
+          winner_contract_id?: string | null
+          winning_amount?: number | null
+          withdraw_reason?: string | null
+        }
+        Update: {
+          bid_count?: number
+          closed_at?: string | null
+          created_at?: string
+          current_bid_id?: string | null
+          current_price?: number | null
+          ends_at?: string | null
+          extension_count?: number
+          leading_bidder_no?: number | null
+          lot_id?: string
+          opened_at?: string | null
+          pause_reason?: string | null
+          paused_at?: string | null
+          payment_confirmed_at?: string | null
+          payment_due_at?: string | null
+          payment_status?: string | null
+          result?: string | null
+          session_id?: string
+          status?: string
+          updated_at?: string
+          winner_contract_id?: string | null
+          winning_amount?: number | null
+          withdraw_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_lot_states_current_bid_fkey"
+            columns: ["current_bid_id"]
+            isOneToOne: false
+            referencedRelation: "auction_bids"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_lot_states_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: true
+            referencedRelation: "auction_session_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_lot_states_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_lot_states_winner_contract_id_fkey"
+            columns: ["winner_contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_bidding_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auction_organizations: {
         Row: {
           address: string | null
@@ -1499,6 +1767,475 @@ export type Database = {
             columns: ["parent_org_id"]
             isOneToOne: false
             referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_sale_contract_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          at: string
+          contract_id: string
+          data: Json
+          id: string
+          side: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          at?: string
+          contract_id: string
+          data?: Json
+          id?: string
+          side?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          at?: string
+          contract_id?: string
+          data?: Json
+          id?: string
+          side?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_sale_contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sale_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_sale_contracts: {
+        Row: {
+          asset_snapshot: Json
+          auction_org_id: string | null
+          buyer_confirmed_at: string | null
+          buyer_confirmed_by: string | null
+          buyer_contract_id: string
+          buyer_party: Json
+          buyer_user_id: string | null
+          cancel_kind: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_side: string | null
+          code: string | null
+          completed_at: string | null
+          consignment_contract_id: string | null
+          contract_no: string | null
+          created_at: string
+          created_by: string | null
+          deposit_credit: number
+          draft_doc_path: string | null
+          draft_source: string | null
+          draft_uploaded_at: string | null
+          draft_uploaded_by: string | null
+          handed_over_at: string | null
+          handover_buyer_confirmed_at: string | null
+          handover_buyer_confirmed_by: string | null
+          handover_doc_path: string | null
+          handover_due_at: string | null
+          handover_location: string | null
+          handover_scheduled_at: string | null
+          handover_seller_confirmed_at: string | null
+          handover_seller_confirmed_by: string | null
+          id: string
+          lot_id: string
+          notarization_required: boolean
+          notarized_at: string | null
+          notary_office: string | null
+          org_confirmed_at: string | null
+          org_confirmed_by: string | null
+          org_party: Json
+          org_signs: boolean
+          organization_id: string
+          paid_at: string | null
+          payee_bank_info: string | null
+          payee_side: string
+          price: number
+          seller_asset_owner_id: string | null
+          seller_confirmed_at: string | null
+          seller_confirmed_by: string | null
+          seller_kind: string
+          seller_party: Json
+          seller_user_id: string | null
+          session_id: string
+          sign_due_at: string | null
+          signed_at: string | null
+          signed_date: string | null
+          signed_doc_path: string | null
+          signed_uploaded_at: string | null
+          signed_uploaded_by: string | null
+          signed_uploaded_side: string | null
+          status: string
+          title_transfer_doc_path: string | null
+          title_transfer_note: string | null
+          title_transfer_status: string
+          updated_at: string
+        }
+        Insert: {
+          asset_snapshot?: Json
+          auction_org_id?: string | null
+          buyer_confirmed_at?: string | null
+          buyer_confirmed_by?: string | null
+          buyer_contract_id: string
+          buyer_party?: Json
+          buyer_user_id?: string | null
+          cancel_kind?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_side?: string | null
+          code?: string | null
+          completed_at?: string | null
+          consignment_contract_id?: string | null
+          contract_no?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_credit?: number
+          draft_doc_path?: string | null
+          draft_source?: string | null
+          draft_uploaded_at?: string | null
+          draft_uploaded_by?: string | null
+          handed_over_at?: string | null
+          handover_buyer_confirmed_at?: string | null
+          handover_buyer_confirmed_by?: string | null
+          handover_doc_path?: string | null
+          handover_due_at?: string | null
+          handover_location?: string | null
+          handover_scheduled_at?: string | null
+          handover_seller_confirmed_at?: string | null
+          handover_seller_confirmed_by?: string | null
+          id?: string
+          lot_id: string
+          notarization_required?: boolean
+          notarized_at?: string | null
+          notary_office?: string | null
+          org_confirmed_at?: string | null
+          org_confirmed_by?: string | null
+          org_party?: Json
+          org_signs?: boolean
+          organization_id: string
+          paid_at?: string | null
+          payee_bank_info?: string | null
+          payee_side?: string
+          price: number
+          seller_asset_owner_id?: string | null
+          seller_confirmed_at?: string | null
+          seller_confirmed_by?: string | null
+          seller_kind: string
+          seller_party?: Json
+          seller_user_id?: string | null
+          session_id: string
+          sign_due_at?: string | null
+          signed_at?: string | null
+          signed_date?: string | null
+          signed_doc_path?: string | null
+          signed_uploaded_at?: string | null
+          signed_uploaded_by?: string | null
+          signed_uploaded_side?: string | null
+          status?: string
+          title_transfer_doc_path?: string | null
+          title_transfer_note?: string | null
+          title_transfer_status?: string
+          updated_at?: string
+        }
+        Update: {
+          asset_snapshot?: Json
+          auction_org_id?: string | null
+          buyer_confirmed_at?: string | null
+          buyer_confirmed_by?: string | null
+          buyer_contract_id?: string
+          buyer_party?: Json
+          buyer_user_id?: string | null
+          cancel_kind?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_side?: string | null
+          code?: string | null
+          completed_at?: string | null
+          consignment_contract_id?: string | null
+          contract_no?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_credit?: number
+          draft_doc_path?: string | null
+          draft_source?: string | null
+          draft_uploaded_at?: string | null
+          draft_uploaded_by?: string | null
+          handed_over_at?: string | null
+          handover_buyer_confirmed_at?: string | null
+          handover_buyer_confirmed_by?: string | null
+          handover_doc_path?: string | null
+          handover_due_at?: string | null
+          handover_location?: string | null
+          handover_scheduled_at?: string | null
+          handover_seller_confirmed_at?: string | null
+          handover_seller_confirmed_by?: string | null
+          id?: string
+          lot_id?: string
+          notarization_required?: boolean
+          notarized_at?: string | null
+          notary_office?: string | null
+          org_confirmed_at?: string | null
+          org_confirmed_by?: string | null
+          org_party?: Json
+          org_signs?: boolean
+          organization_id?: string
+          paid_at?: string | null
+          payee_bank_info?: string | null
+          payee_side?: string
+          price?: number
+          seller_asset_owner_id?: string | null
+          seller_confirmed_at?: string | null
+          seller_confirmed_by?: string | null
+          seller_kind?: string
+          seller_party?: Json
+          seller_user_id?: string | null
+          session_id?: string
+          sign_due_at?: string | null
+          signed_at?: string | null
+          signed_date?: string | null
+          signed_doc_path?: string | null
+          signed_uploaded_at?: string | null
+          signed_uploaded_by?: string | null
+          signed_uploaded_side?: string | null
+          status?: string
+          title_transfer_doc_path?: string | null
+          title_transfer_note?: string | null
+          title_transfer_status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_sale_contracts_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_buyer_confirmed_by_fkey"
+            columns: ["buyer_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_buyer_contract_id_fkey"
+            columns: ["buyer_contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_bidding_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_consignment_contract_id_fkey"
+            columns: ["consignment_contract_id"]
+            isOneToOne: false
+            referencedRelation: "consignment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_draft_uploaded_by_fkey"
+            columns: ["draft_uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_handover_buyer_confirmed_by_fkey"
+            columns: ["handover_buyer_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_handover_seller_confirmed_by_fkey"
+            columns: ["handover_seller_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "auction_session_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_org_confirmed_by_fkey"
+            columns: ["org_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_seller_asset_owner_id_fkey"
+            columns: ["seller_asset_owner_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_seller_confirmed_by_fkey"
+            columns: ["seller_confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_contracts_signed_uploaded_by_fkey"
+            columns: ["signed_uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_sale_installments: {
+        Row: {
+          amount: number
+          contract_id: string
+          created_at: string
+          due_at: string | null
+          id: string
+          label: string | null
+          paid_amount: number
+          paid_at: string | null
+          seq: number
+        }
+        Insert: {
+          amount: number
+          contract_id: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          label?: string | null
+          paid_amount?: number
+          paid_at?: string | null
+          seq: number
+        }
+        Update: {
+          amount?: number
+          contract_id?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          label?: string | null
+          paid_amount?: number
+          paid_at?: string | null
+          seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_sale_installments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sale_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_sale_payments: {
+        Row: {
+          amount: number
+          at: string
+          contract_id: string
+          evidence_path: string | null
+          id: string
+          installment_id: string | null
+          method: string
+          note: string | null
+          received_at: string
+          recorded_by: string | null
+          reversal_reason: string | null
+          reversed_payment_id: string | null
+          txn_ref: string | null
+        }
+        Insert: {
+          amount: number
+          at?: string
+          contract_id: string
+          evidence_path?: string | null
+          id?: string
+          installment_id?: string | null
+          method: string
+          note?: string | null
+          received_at?: string
+          recorded_by?: string | null
+          reversal_reason?: string | null
+          reversed_payment_id?: string | null
+          txn_ref?: string | null
+        }
+        Update: {
+          amount?: number
+          at?: string
+          contract_id?: string
+          evidence_path?: string | null
+          id?: string
+          installment_id?: string | null
+          method?: string
+          note?: string | null
+          received_at?: string
+          recorded_by?: string | null
+          reversal_reason?: string | null
+          reversed_payment_id?: string | null
+          txn_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_sale_payments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sale_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_payments_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sale_installments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sale_payments_reversed_payment_id_fkey"
+            columns: ["reversed_payment_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sale_payments"
             referencedColumns: ["id"]
           },
         ]
@@ -1595,10 +2332,49 @@ export type Database = {
           },
         ]
       }
+      auction_session_minutes: {
+        Row: {
+          content_hash: string
+          id: string
+          issued_at: string
+          issued_by: string | null
+          pdf_path: string
+          sequence_no: number
+          session_id: string
+        }
+        Insert: {
+          content_hash: string
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          pdf_path: string
+          sequence_no: number
+          session_id: string
+        }
+        Update: {
+          content_hash?: string
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          pdf_path?: string
+          sequence_no?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_session_minutes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auction_sessions: {
         Row: {
           auction_format: string
           auction_org_id: string | null
+          bidding_method: string
           cancelled_reason: string | null
           code: string | null
           created_at: string
@@ -1606,7 +2382,11 @@ export type Database = {
           description: string | null
           dossier_fee: number | null
           ends_at: string
+          extension_seconds: number
+          finalized_at: string | null
+          finalized_by: string | null
           id: string
+          max_bid_steps: number
           max_registrants: number | null
           organization_id: string
           province: string | null
@@ -1624,6 +2404,7 @@ export type Database = {
         Insert: {
           auction_format?: string
           auction_org_id?: string | null
+          bidding_method?: string
           cancelled_reason?: string | null
           code?: string | null
           created_at?: string
@@ -1631,7 +2412,11 @@ export type Database = {
           description?: string | null
           dossier_fee?: number | null
           ends_at: string
+          extension_seconds?: number
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
+          max_bid_steps?: number
           max_registrants?: number | null
           organization_id: string
           province?: string | null
@@ -1649,6 +2434,7 @@ export type Database = {
         Update: {
           auction_format?: string
           auction_org_id?: string | null
+          bidding_method?: string
           cancelled_reason?: string | null
           code?: string | null
           created_at?: string
@@ -1656,7 +2442,11 @@ export type Database = {
           description?: string | null
           dossier_fee?: number | null
           ends_at?: string
+          extension_seconds?: number
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
+          max_bid_steps?: number
           max_registrants?: number | null
           organization_id?: string
           province?: string | null
@@ -7165,6 +7955,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _bidding_ctx: {
+        Args: { _lot_id?: string; _reason?: string }
+        Returns: undefined
+      }
+      _bidding_ctx_clear: { Args: never; Returns: undefined }
+      _bidding_rpc_active: { Args: never; Returns: boolean }
+      _close_lot: { Args: { _at: string; _lot_id: string }; Returns: boolean }
+      _lot_event: {
+        Args: {
+          _kind: string
+          _lot_id: string
+          _payload?: Json
+          _session_id: string
+        }
+        Returns: undefined
+      }
+      _lot_lock: { Args: { _lot_id: string }; Returns: undefined }
+      _recompute_lot_leader: { Args: { _lot_id: string }; Returns: undefined }
+      _sale_ctx: { Args: never; Returns: undefined }
+      _sale_ctx_clear: { Args: never; Returns: undefined }
+      _sale_event: {
+        Args: {
+          _action: string
+          _contract_id: string
+          _data?: Json
+          _side?: string
+        }
+        Returns: undefined
+      }
+      _sale_lock: { Args: { _contract_id: string }; Returns: undefined }
+      _sale_maybe_complete: { Args: { _contract_id: string }; Returns: boolean }
+      _sale_reallocate: { Args: { _contract_id: string }; Returns: undefined }
+      _sale_rpc_active: { Args: never; Returns: boolean }
+      _sale_settle: { Args: { _contract_id: string }; Returns: boolean }
       _settle_bidding_contract: {
         Args: { _contract_id: string; _txn_ref: string; _uid: string }
         Returns: Json
@@ -7362,6 +8186,10 @@ export type Database = {
         Args: { _posting_id: string }
         Returns: boolean
       }
+      auction_deposit_event_visible: {
+        Args: { _contract_id: string; _session_id: string }
+        Returns: boolean
+      }
       auction_dossier_terms: {
         Args: { _at?: string; _auction_org_id: string; _fee: number }
         Returns: {
@@ -7374,13 +8202,29 @@ export type Database = {
           t_variant_id: string
         }[]
       }
+      auction_minutes_object_is_public: {
+        Args: { _name: string }
+        Returns: boolean
+      }
+      auction_minutes_object_session: {
+        Args: { _name: string }
+        Returns: string
+      }
       auction_session_asset_conflict: {
         Args: { _listing_id: string; _posting_id: string; _session_id: string }
         Returns: string
       }
+      auction_session_bidding_started: {
+        Args: { _session_id: string }
+        Returns: boolean
+      }
       auction_session_contract_summary: {
         Args: { _session_id: string }
         Returns: Json
+      }
+      auction_session_is_finalized: {
+        Args: { _session_id: string }
+        Returns: boolean
       }
       auction_session_is_public: {
         Args: { _session_id: string }
@@ -7413,6 +8257,10 @@ export type Database = {
         Args: { _action: string; _org_id: string }
         Returns: boolean
       }
+      can_manage_sale_contracts: {
+        Args: { _action: string; _org_id: string }
+        Returns: boolean
+      }
       can_read_asset_doc_for_contract: {
         Args: { _name: string }
         Returns: boolean
@@ -7421,7 +8269,20 @@ export type Database = {
         Args: { _name: string }
         Returns: boolean
       }
+      can_read_sale_contract_file: { Args: { _name: string }; Returns: boolean }
+      can_run_auction: {
+        Args: { _action: string; _org_id: string }
+        Returns: boolean
+      }
+      can_run_auction_session: {
+        Args: { _action: string; _session_id: string }
+        Returns: boolean
+      }
       can_upload_consignment_contract_file: {
+        Args: { _name: string }
+        Returns: boolean
+      }
+      can_upload_sale_contract_file: {
         Args: { _name: string }
         Returns: boolean
       }
@@ -7478,6 +8339,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      close_due_lots: { Args: never; Returns: Json }
       consignment_asset_snapshot: {
         Args: { _posting_id: string }
         Returns: Json
@@ -7620,6 +8482,13 @@ export type Database = {
         Args: { _posting_id: string }
         Returns: undefined
       }
+      lot_is_open: {
+        Args: {
+          _at: string
+          _state: Database["public"]["Tables"]["auction_lot_states"]["Row"]
+        }
+        Returns: boolean
+      }
       my_case_questions: {
         Args: { _session_id: string }
         Returns: {
@@ -7681,6 +8550,10 @@ export type Database = {
         Args: { _email: string; _org_id: string }
         Returns: Json
       }
+      org_confirm_winner_payment: {
+        Args: { _lot_id: string; _paid: boolean }
+        Returns: Json
+      }
       org_consignment_contract: { Args: { _request_id: string }; Returns: Json }
       org_create_contact_group: {
         Args: {
@@ -7691,6 +8564,15 @@ export type Database = {
         }
         Returns: string
       }
+      org_create_sale_contract: {
+        Args: {
+          _lot_id: string
+          _org_signs?: boolean
+          _payee_side?: string
+          _sign_due_at?: string
+        }
+        Returns: Json
+      }
       org_discard_chat_draft: {
         Args: { _draft_id: string }
         Returns: undefined
@@ -7700,6 +8582,7 @@ export type Database = {
         Args: { _organization_id: string }
         Returns: boolean
       }
+      org_finalize_session: { Args: { _session_id: string }; Returns: Json }
       org_has_permission: {
         Args: { _action: string; _module: string; _org_id: string }
         Returns: boolean
@@ -7709,11 +8592,39 @@ export type Database = {
         Returns: Json
       }
       org_is_owner: { Args: { _org_id: string }; Returns: boolean }
+      org_issue_minutes: {
+        Args: { _hash: string; _pdf_path: string; _session_id: string }
+        Returns: Json
+      }
+      org_mark_deposit_refunded: {
+        Args: { _contract_id: string; _note?: string }
+        Returns: Json
+      }
       org_name_similarity: {
         Args: { p_a: string; p_b: string }
         Returns: number
       }
       org_new_invite_token: { Args: never; Returns: string }
+      org_open_lot: {
+        Args: { _duration_seconds?: number; _lot_id: string }
+        Returns: Json
+      }
+      org_pause_lot: {
+        Args: { _lot_id: string; _reason: string }
+        Returns: Json
+      }
+      org_record_sale_payment: {
+        Args: {
+          _amount: number
+          _contract_id: string
+          _evidence_path?: string
+          _method: string
+          _note?: string
+          _received_at?: string
+          _txn_ref?: string
+        }
+        Returns: Json
+      }
       org_resolve_case_escalation: {
         Args: {
           _clause_id?: string
@@ -7727,8 +8638,17 @@ export type Database = {
         Args: { _action: string; _quote?: Json; _request_id: string }
         Returns: Json
       }
+      org_resume_lot: { Args: { _lot_id: string }; Returns: Json }
       org_retry_case_answer: {
         Args: { _message_id: string; _proposal: Json }
+        Returns: Json
+      }
+      org_reverse_sale_payment: {
+        Args: { _payment_id: string; _reason: string }
+        Returns: Json
+      }
+      org_sale_contract_counts: {
+        Args: { _organization_id: string }
         Returns: Json
       }
       org_save_extracted_clauses: {
@@ -7847,6 +8767,10 @@ export type Database = {
         }
         Returns: Json
       }
+      org_withdraw_lot: {
+        Args: { _lot_id: string; _reason: string }
+        Returns: Json
+      }
       outreach_apply_generation: {
         Args: {
           _fields: Json
@@ -7920,6 +8844,16 @@ export type Database = {
           quoted_count: number
         }[]
       }
+      owner_sale_contract_summary: {
+        Args: never
+        Returns: {
+          code: string
+          contract_id: string
+          owner_action: string
+          stage: string
+          status: string
+        }[]
+      }
       owner_select_service_quote: {
         Args: { _request_id: string }
         Returns: Json
@@ -7938,6 +8872,10 @@ export type Database = {
         Returns: Json
       }
       personnel_folder_org: { Args: { _name: string }; Returns: string }
+      place_bid: {
+        Args: { _amount: number; _lot_id: string; _nonce: string }
+        Returns: Json
+      }
       public_org_auctioneers: {
         Args: { _auction_org_id: string }
         Returns: {
@@ -7998,6 +8936,102 @@ export type Database = {
         Returns: Json
       }
       run_workspace_match: { Args: { p_workspace_id: string }; Returns: Json }
+      sale_asset_snapshot: { Args: { _lot_id: string }; Returns: Json }
+      sale_balance: { Args: { _contract_id: string }; Returns: number }
+      sale_buyer_snapshot: {
+        Args: { _buyer_contract_id: string }
+        Returns: Json
+      }
+      sale_can_act: {
+        Args: { _contract_id: string; _side: string }
+        Returns: boolean
+      }
+      sale_contract_attach_signed: {
+        Args: {
+          _confirm?: boolean
+          _contract_id: string
+          _contract_no?: string
+          _side: string
+          _signed_date: string
+          _signed_doc_path: string
+        }
+        Returns: Json
+      }
+      sale_contract_cancel: {
+        Args: {
+          _contract_id: string
+          _kind: string
+          _reason: string
+          _side: string
+        }
+        Returns: Json
+      }
+      sale_contract_confirm: {
+        Args: { _contract_id: string; _side: string; _signed_doc_path: string }
+        Returns: Json
+      }
+      sale_contract_confirm_handover: {
+        Args: { _contract_id: string; _doc_path?: string; _side: string }
+        Returns: Json
+      }
+      sale_contract_detail: { Args: { _contract_id: string }; Returns: Json }
+      sale_contract_file_check: {
+        Args: {
+          _contract_id: string
+          _kind: string
+          _organization_id: string
+          _path: string
+        }
+        Returns: string
+      }
+      sale_contract_schedule_handover: {
+        Args: { _contract_id: string; _handover_at: string; _location?: string }
+        Returns: Json
+      }
+      sale_contract_set_terms: {
+        Args: {
+          _contract_id: string
+          _contract_no?: string
+          _handover_due_at?: string
+          _installments?: Json
+          _notarization_required?: boolean
+          _org_signs?: boolean
+          _payee_bank_info?: string
+          _payee_side?: string
+          _sign_due_at?: string
+        }
+        Returns: Json
+      }
+      sale_contract_set_title_transfer: {
+        Args: {
+          _contract_id: string
+          _doc_path?: string
+          _note?: string
+          _status: string
+        }
+        Returns: Json
+      }
+      sale_contract_share_draft: {
+        Args: {
+          _contract_id: string
+          _draft_doc_path: string
+          _generated?: boolean
+        }
+        Returns: Json
+      }
+      sale_contract_stage: {
+        Args: {
+          _c: Database["public"]["Tables"]["auction_sale_contracts"]["Row"]
+        }
+        Returns: string
+      }
+      sale_contract_visible: {
+        Args: { _contract_id: string }
+        Returns: boolean
+      }
+      sale_net_paid: { Args: { _contract_id: string }; Returns: number }
+      sale_path_uuid: { Args: { _name: string; _seg: number }; Returns: string }
+      sale_seller_snapshot: { Args: { _lot_id: string }; Returns: Json }
       save_vneid_identity: {
         Args: {
           _address: string
@@ -8009,6 +9043,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      server_now: { Args: never; Returns: string }
       start_bidding_contract: {
         Args: {
           _address: string
@@ -8042,6 +9077,7 @@ export type Database = {
         Args: { _user1_id: string; _user2_id: string }
         Returns: boolean
       }
+      withdraw_bid: { Args: { _bid_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "USER" | "ADMIN"

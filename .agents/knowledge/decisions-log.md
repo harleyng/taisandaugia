@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-09-12 — Giai đoạn sau đấu giá: hợp đồng mua bán, sổ tiền, bàn giao
+
+**Context:** Sau `org_finalize_session`, sàn chỉ biết ai trúng, giá bao nhiêu, hạn 30 ngày và MỘT cờ một-lần `payment_status`. Không có hợp đồng mua bán, không biết đã trả bao nhiêu, không có bàn giao, không có phía bên bán. Công cụ duy nhất của tổ chức là hai cái nút không hoàn tác được.
+**Decision:**
+- **Sổ tiền thay cho một cái nút.** `auction_sale_payments` chỉ ghi thêm + lịch kỳ hạn; số dư về 0 thì chính RPC sổ tiền lật `auction_lot_states.payment_status='paid'` — giữ nguyên cột Bước 6 đọc thay vì đẻ cột mới. Hai người ghi cùng một cột ⇒ `org_confirm_winner_payment` được thêm cổng `sale_contract_exists` ở SERVER, không chỉ ẩn nút ở UI.
+- **Hoàn bút toán là DÒNG MỚI** (`reversed_payment_id`), giữ `amount > 0`. Phân bổ FIFO **tính lại từ đầu** chứ không cộng dồn — nhờ vậy một lần hoàn tự mở lại đúng các kỳ đã đóng mà không cần logic đi ngược, và bản TS `allocateFifo` chỉ là một vòng lặp thay vì phát lại lịch sử.
+- **Bên bán suy từ NGUỒN của lô, không thêm cột.** `auction_session_items` cố ý không có chủ sở hữu; lô ký gửi có chủ tài sản CÓ tài khoản, lô tin đăng chỉ có thực thể danh bạ KHÔNG tài khoản ⇒ hai `seller_kind`, và `seller_unresolved` là nhánh thật (hợp đồng ký gửi huỷ sau khi lô vào phiên; ~20% tin đăng không có `asset_owner_id`).
+- **Người dùng chốt:** hỗ trợ lô tin đăng qua `org_on_behalf`; trang bên mua là route độc lập `/hop-dong-mua-ban/:id`; **hoãn** Bước 6b (trả góp qua VNPay mô phỏng); seed demo là phiên PDG000014 độc lập.
+- **Một thân trang cho ba cổng.** `SaleContractBody` dùng chung cho cổng tổ chức, người trúng và chủ tài sản; vai người xem suy từ `can_act` của RPC chứ không từ route — nên người vừa là thành viên tổ chức vừa ký thay bên bán thấy đúng hai nút xác nhận, không cần nhánh giao diện riêng.
+- **Bỏ ý định dùng GUC cho `auction_lot_states`.** Bảng đó không có guard trigger (chỉ `set_updated_at`), nên RPC ghi thẳng; ngược lại `_bidding_ctx` LÀ bắt buộc khi đụng `deposit_status` vì `auction_bidding_contracts_bidding_lock` chặn sau khi phiên đã chốt. Kế hoạch ban đầu ghi ngược cả hai.
+**Consequences:** Nghiệm thu trên DB thật trong giao dịch rollback: toàn bộ vòng đời dự thảo → ký → thu đủ → bàn giao → `completed`, và mọi mã lý do (`already_exists`, `lot_defaulted`, `installments_mismatch`, `amount_exceeds_balance`, `invalid_path`, `already_confirmed`, `document_changed`, `already_completed`, `sale_contract_exists`) trả đúng như tài liệu; `buyer_refused` mất cọc + lô `defaulted`; RLS: người lạ và anon thấy 0 dòng trên cả bốn bảng. 133 test mới (702 pass; 4 lỗi cũ trong `auctionPriceAnalytics.test.ts` không đụng tới). Mẫu `HDMB-MAU-2026-09` CHƯA rà soát pháp lý và IN CCCD cả hai bên ⇒ bucket private, mục kiểm chứng của migration khẳng định không có policy anon. Chưa làm: Bước 6b, Điều 51/72, sổ thanh toán tổ chức→bên bán, trang admin cho hợp đồng mua bán.
+
+## 2026-09-12 — Đấu giá trực tuyến Bước 6: chốt kết quả, thanh toán, biên bản
+
+**Context:** Bước 1–5 chạy được từ lúc mở lô tới lúc `pg_cron` đóng lô rồi DỪNG: không chốt được kết quả, không xác nhận thanh toán, không hoàn tiền đặt trước, không biên bản, không công khai kết quả. Backend (4 RPC + bảng biên bản + sổ tiền đặt trước + bucket) và 4 mutation client đã có từ `20260913000001` nhưng chưa component nào gọi ⇒ Bước 6 KHÔNG cần migration.
+**Decision:**
+- **Tách "vào được phòng" khỏi "trả giá được".** `org_finalize_session` đẩy mọi tiền đặt trước đã nộp khỏi `received`, mà `useMyBidderStatus` coi mọi thứ khác là `no_deposit` ⇒ chốt phiên xong là cả phòng bị đuổi bằng câu SAI. Thêm mã `settled`/`refunded`, đổi nhánh `forfeited` thành `view_only { reason }`, đổi prop `canBid: boolean` thành `noBid: NoBidReason | null`. `view_only` đòi `bidderNo != null`, không thì `blocked("no_bidder_no")` — thiếu nó trang render `null` (màn trắng), lỗ vốn đã có sẵn cho `forfeited`.
+- **Biên bản KHÔNG in số thứ tự phát hành, cũng không in hash của chính nó.** `sequence_no` do server cấp SAU khi tệp đã vào storage (`file_missing` chặn trước), tệp bất biến, `pdf_path` UNIQUE ⇒ không dựng lại được để in số. In số đoán = ký tờ giấy có thể mâu thuẫn với sổ. Giấy mang THỜI ĐIỂM LẬP; số thứ tự + SHA-256 hiện cạnh link tải.
+- **Thử lại chỉ gọi lại RPC, không bao giờ tải lại tệp.** Chốt trùng đọc `auction_session_minutes.pdf_path` chứ không đọc `storage.objects`, nên gọi lại cùng đường dẫn: thành công nếu lần trước chết trước INSERT, `invalid_path` nếu đã ghi — cả hai đều là kết luận đúng.
+- **Điều kiện chốt tính ở client theo `lotPhaseOf`, không theo `state.status`**, vì server chỉ trả `lots_not_closed` + một con số còn đấu giá viên cần biết LÔ NÀO; và vì dòng `open` quá `ends_at` vẫn ghi `open` trong DB đúng lúc `org_finalize_session` sắp tự đóng nó.
+- **Kết quả công khai chỉ hiện sau `finalized_at`** (người dùng chọn) — cùng mốc RLS mở biên bản cho khách; không có chế độ "kết quả sơ bộ". **Số tiền in kèm chữ** (người dùng chọn) ⇒ `soThanhChu.ts`. **Đấu giá viên chọn từ `org_auctioneers`** (người dùng chọn).
+**Consequences:** Nghiệm thu trên DB thật + Chrome headless: hash tệp tải về khớp `content_hash` tuyệt đối; ẩn danh đọc được biên bản + trạng thái lô nhưng events/contracts = 0. Kéo theo 4 vá nợ cũ: `DepositStatus` thiếu `applied`/`pending_refund` (5 màn hiện nhãn trống sau khi chốt), `finalized_at` được KHAI mà không select (3 truy vấn công khai), `SessionStateBadge` thiếu nhãn đã chốt, lời InfoBox "chỉ còn để tra cứu" thành sai. `src/test/setup.ts` phải bọc `window` vì `hash.test.ts` chạy môi trường node (jsdom 20 không có `SubtleCrypto`). Chưa làm: mẫu biên bản CHƯA rà soát pháp lý (`MINUTES_TEMPLATE_VERSION` = `BBDG-MAU-2026-09`); không có đường hoàn tác xác nhận thanh toán; tệp mồ côi trong bucket không xoá được.
+
+## 2026-09-12 — Đấu giá trực tuyến Bước 4: phòng trả giá công khai
+
+**Context:** Engine (Bước 1) + phiên demo (Bước 2) + hook/luật client (Bước 3) đã xong nhưng KHÔNG có màn hình nào dùng — người đã nộp tiền đặt trước chỉ trả giá được bằng `psql`. Kế hoạch: `docs/online-auction-plan.md` Bước 4.
+**Decision:**
+- `/sessions/:id/dau-gia` là route CÔNG KHAI, không bọc `ProtectedRoute` (nó `Navigate` sang `/auth`); ẩn danh thì mở `AuthDialog` tại chỗ như các trang phiên khác.
+- **Chưa đủ điều kiện ⇒ chặn CẢ TRANG** (người dùng chọn), không cho xem giá/diễn biến dù RLS cho phép.
+- Chuỗi cổng là HÀM THUẦN `roomGateOf()` (`src/lib/bidding/roomAccess.ts`), không phải nhánh trong JSX ⇒ test được; thêm 2 nhánh kế hoạch bỏ sót: `cancelled` (truy vấn công khai trả cả phiên huỷ) và `not_started` (trước `starts_at` mọi RPC trả `session_not_live`).
+- **`forfeited` là nhánh RIÊNG:** rút giá xong `deposit_status='forfeited'` ⇒ `useMyBidderStatus` báo `no_deposit`, câu đó SAI với họ. Giữ trang, khoá ô trả giá.
+- Đồng hồ tự đổi định dạng theo độ dài (người dùng chọn); lô TẠM DỪNG thì ẨN đồng hồ vì `org_resume_lot` cộng bù nên `ends_at` đang cũ.
+- Tách `BiddingRoom` khỏi trang vì `useLotStates` mở socket trong effect vô điều kiện — để trong trang là mở kênh cho cả người bị chặn.
+**Consequences:** Nghiệm thu trên DB thật: realtime 836 ms không reload, gia hạn đẩy đồng hồ, mọi câu từ chối trùng server (kèm số tiền). Đăng nhập tài khoản demo bằng magic link do service_role sinh — KHÔNG đổi mật khẩu ai. Bước 5 (phòng điều hành) sẽ thay việc mở lô bằng `psql`; chưa có: rút ngắn `ends_at` cho demo, kết quả công khai (Bước 6).
+
+## 2026-09-12 — Đấu giá trực tuyến Bước 1: engine trả giá ở SQL
+
+**Context:** Phiên đã công bố chỉ có hồ sơ + tiền đặt trước, không có trả giá/kết quả. Luật sửa đổi + NĐ 172/2024 đòi ghi nhận lượt trả giá chống sửa đổi, giờ server. Kế hoạch: `docs/online-auction-plan.md`.
+**Decision:**
+- Mig `20260913000001`: `auction_lot_states` + `auction_bids` / `auction_lot_events` / `auction_deposit_events` / `auction_session_minutes` CHỈ GHI THÊM (trigger chặn UPDATE/DELETE, FK RESTRICT, không policy ghi); RPC `{ok:false, reason}`; khoá `'lot:'||lot_id`; `clock_timestamp()` sau khi khoá.
+- Rút giá chỉ ảnh hưởng LÔ đó (người dùng chọn): tịch thu tiền đặt trước ngay nhưng giữ dẫn đầu lô khác. Biên bản công khai SAU chốt (người dùng chọn) ⇒ PDF không CCCD/địa chỉ.
+- Guard khoá quy tắc/giá lô/tiền đặt trước khi đã bắt đầu trả giá; RPC lách bằng GUC `app.bidding_rpc`. Sổ tiền đặt trước = trigger trên `deposit_status`.
+- Module quyền `dieu-hanh-dau-gia` (view/operate/finalize); pg_cron `close_due_lots` mỗi 10s + đóng lười trong RPC.
+**Consequences:** 55 check (rollback) pass trên DB thật. Bước 2 seed PDG000013 (teardown phải DISABLE TRIGGER) + test 2 client đồng thời; Bước 3–6 UI. Chưa: rate limit, rà soát pháp lý, trang đấu giá được phê duyệt.
+
 ## 2026-09-12 — Hỏi đáp theo tài liệu phiên + hộp thư đa kênh (sàn + Zalo giả lập)
 
 **Context:** Người mua hỏi đi hỏi lại ~20 câu (tiền đặt trước, hạn, xem tài sản, bước giá) qua điện thoại/Zalo, câu hỏi 9 giờ tối thì mất khách. Sai một con số = mất khách + khiếu nại doanh nghiệp có giấy phép ⇒ từ chối được, đoán thì không.

@@ -115,11 +115,48 @@ export const qk = {
     mineBySession: (userId?: string | null, sessionId?: string | null) =>
       ["bidding-contracts", "mine", userId, sessionId] as const,
     summary: (sessionId?: string | null) => ["bidding-contracts", "summary", sessionId] as const,
+    bySession: (sessionId?: string | null) => ["bidding-contracts", "session", sessionId] as const,
     byOrg: (orgId?: string | null) => ["bidding-contracts", "org", orgId] as const,
     byId: (id?: string | null) => ["bidding-contracts", "id", id] as const,
+    /**
+     * Lô mà các hồ sơ này đã trúng. `contractIds` được SẮP XẾP vào key để thứ tự
+     * mảng đầu vào không sinh ra hai cache khác nhau cho cùng một tập hồ sơ.
+     */
+    wonLots: (userId?: string | null, contractIds: readonly string[] = []) =>
+      ["bidding-contracts", "won", userId, [...contractIds].sort().join(",")] as const,
   },
   /** Danh tính đã xác thực qua VNeID — dữ liệu CÁ NHÂN, key theo userId. */
   verifiedIdentity: (userId?: string | null) => ["verified-identity", userId] as const,
+
+  /** Đấu giá trực tuyến. Một lượt trả giá đổi CÙNG LÚC trạng thái lô, sổ trả
+   *  giá và nhật ký, nên cả ba nằm dưới `all(sessionId)` để mutation chỉ phải
+   *  invalidate một key. sessionId đứng TRƯỚC biến thể — xem LUẬT PREFIX. */
+  bidding: {
+    all: (sessionId?: string | null) => ["bidding", sessionId] as const,
+    lotStates: (sessionId?: string | null) => ["bidding", sessionId, "lot-states"] as const,
+    lotBids: (sessionId?: string | null, lotId?: string | null) =>
+      ["bidding", sessionId, "lot-bids", lotId] as const,
+    lotEvents: (sessionId?: string | null) => ["bidding", sessionId, "events"] as const,
+    /** Phiên đã có lô rời trạng thái chờ chưa — quyết định khoá form quy tắc. */
+    started: (sessionId?: string | null) => ["bidding", sessionId, "started"] as const,
+    /** Kết quả từng lô cho TRANG CÔNG KHAI — query thường, không mở kênh realtime. */
+    results: (sessionId?: string | null) => ["bidding", sessionId, "results"] as const,
+    /** Biên bản đã phát hành. Cùng key cho org và khách — RLS quyết ai thấy gì. */
+    minutes: (sessionId?: string | null) => ["bidding", sessionId, "minutes"] as const,
+  },
+
+  /** Hợp đồng mua bán tài sản đấu giá. Một lần thu tiền / huỷ đổi CÙNG LÚC hợp
+   *  đồng, kỳ hạn, sổ tiền và trạng thái lô, nên mutation chỉ invalidate `all`.
+   *  id đứng TRƯỚC biến thể — xem LUẬT PREFIX. */
+  saleContracts: {
+    all: ["sale-contracts"] as const,
+    byOrg: (orgId?: string | null) => ["sale-contracts", "org", orgId] as const,
+    byId: (id?: string | null) => ["sale-contracts", "id", id] as const,
+    detail: (id?: string | null) => ["sale-contracts", "id", id, "detail"] as const,
+    mine: (userId?: string | null) => ["sale-contracts", "mine", userId] as const,
+    ownerMine: (userId?: string | null) => ["sale-contracts", "owner", userId] as const,
+    counts: (orgId?: string | null) => ["sale-contracts", "counts", orgId] as const,
+  },
 
   // ─── Khách hàng của tổ chức & tiếp thị phiên ─────────────────────────────
   /** Danh bạ riêng của tổ chức. byOrg là PREFIX của byId nên sửa khách rồi

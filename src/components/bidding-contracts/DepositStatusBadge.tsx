@@ -4,6 +4,8 @@ import { DEPOSIT_STATUS_LABELS, type DepositStatus } from "@/types/bidding-contr
 const VARIANT: Record<DepositStatus, BadgeProps["variant"]> = {
   pending: "outline",
   received: "default",
+  applied: "default",
+  pending_refund: "outline",
   refunded: "secondary",
   forfeited: "destructive",
 };

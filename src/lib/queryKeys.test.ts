@@ -42,6 +42,9 @@ describe("qk — ghim giá trị key", () => {
     expect(qk.orders.byCustomerUser(UID, null)).toEqual(["orders", "by-customer-user", UID, null]);
     expect(qk.opportunities.byLead(UID)).toEqual(["opportunities", "by-lead", UID]);
     expect(qk.personnel.documents(UID)).toEqual(["personnel", UID, "documents"]);
+    expect(qk.bidding.lotStates(PID)).toEqual(["bidding", PID, "lot-states"]);
+    expect(qk.bidding.lotBids(PID, UID)).toEqual(["bidding", PID, "lot-bids", UID]);
+    expect(qk.bidding.started(PID)).toEqual(["bidding", PID, "started"]);
   });
 
   it("chuẩn hoá userId thiếu thành null ở byCustomerUser", () => {
@@ -96,12 +99,49 @@ describe("qk — bất biến prefix (chống invalidate câm)", () => {
       [qk.sessionOutreach.bySession(PID), qk.sessionOutreach.edits(PID)],
       [qk.sessionOutreach.bySession(PID), qk.sessionOutreach.sends(PID)],
       [qk.orgContacts.byOrg(UID), qk.orgContacts.outreach(UID, PID)],
+      [qk.bidding.all(PID), qk.bidding.lotStates(PID)],
+      [qk.bidding.all(PID), qk.bidding.lotBids(PID, UID)],
+      [qk.bidding.all(PID), qk.bidding.lotEvents(PID)],
+      // Mở lô làm "đã bắt đầu trả giá" thành true ⇒ thẻ quy tắc phải tự khoá.
+      [qk.bidding.all(PID), qk.bidding.started(PID)],
+      // Chốt phiên / phát hành biên bản chỉ invalidate qk.bidding.all(sessionId).
+      [qk.bidding.all(PID), qk.bidding.results(PID)],
+      [qk.bidding.all(PID), qk.bidding.minutes(PID)],
+      [qk.biddingContracts.all, qk.biddingContracts.wonLots(UID, [PID])],
+      // Hợp đồng mua bán: ghi nhận tiền / huỷ đổi cùng lúc trang tổ chức, trang
+      // bên mua và cổng chủ tài sản ⇒ mutation chỉ invalidate `all`.
+      [qk.saleContracts.all, qk.saleContracts.byOrg(UID)],
+      [qk.saleContracts.all, qk.saleContracts.byId(PID)],
+      [qk.saleContracts.all, qk.saleContracts.mine(UID)],
+      [qk.saleContracts.all, qk.saleContracts.ownerMine(UID)],
+      [qk.saleContracts.all, qk.saleContracts.counts(UID)],
+      // id đứng TRƯỚC biến thể nên byId phủ được detail.
+      [qk.saleContracts.byId(PID), qk.saleContracts.detail(PID)],
     ];
     for (const [broad, narrow] of pairs) {
       expect(covers(broad, narrow), `${JSON.stringify(broad)} ⊃ ${JSON.stringify(narrow)}`).toBe(
         true,
       );
     }
+  });
+
+  it("ghim key hợp đồng mua bán", () => {
+    expect(qk.saleContracts.all).toEqual(["sale-contracts"]);
+    expect(qk.saleContracts.byOrg("o1")).toEqual(["sale-contracts", "org", "o1"]);
+    expect(qk.saleContracts.byId("c1")).toEqual(["sale-contracts", "id", "c1"]);
+    expect(qk.saleContracts.detail("c1")).toEqual(["sale-contracts", "id", "c1", "detail"]);
+    expect(qk.saleContracts.counts("o1")).toEqual(["sale-contracts", "counts", "o1"]);
+  });
+
+  it("wonLots không phụ thuộc thứ tự danh sách hồ sơ", () => {
+    expect(qk.biddingContracts.wonLots(UID, [PID, UID])).toEqual(qk.biddingContracts.wonLots(UID, [UID, PID]));
+  });
+
+  it("hợp đồng mua bán KHÔNG dính vào hồ sơ tham gia đấu giá", () => {
+    // Hai thực thể khác nhau trên cùng một phiên — gộp prefix là invalidate thừa.
+    expect(covers(qk.saleContracts.all, qk.biddingContracts.all)).toBe(false);
+    expect(covers(qk.biddingContracts.all, qk.saleContracts.all)).toBe(false);
+    expect(covers(qk.saleContracts.byId(PID), qk.saleContracts.byId(UID))).toBe(false);
   });
 
   it("KHÔNG phủ chéo giữa hai thực thể khác nhau", () => {

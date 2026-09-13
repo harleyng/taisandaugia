@@ -4,13 +4,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DepositStatusBadge } from "@/components/bidding-contracts/DepositStatusBadge";
+import { WonLotsNotice } from "@/components/bidding-contracts/WonLotsNotice";
 import { VneidVerifiedBadge } from "@/components/vneid/VneidButton";
-import { useCancelBiddingContract, useMyBiddingContracts, useStartBiddingContract } from "@/hooks/useBiddingContracts";
+import {
+  useCancelBiddingContract,
+  useMyBiddingContracts,
+  useMyWonLots,
+  useStartBiddingContract,
+} from "@/hooks/useBiddingContracts";
 import { formatVnd } from "@/lib/advertising/slug";
 import { formatDateTime } from "@/lib/auctionSessions/datetime";
 import { identityDefaults, identityToRpcArgs } from "@/lib/biddingContracts/identityForm";
 import { contractCheckoutPath, formatBidderNo } from "@/lib/biddingContracts/paths";
 import { CONTRACT_STATUS_LABELS, type ContractWithSession } from "@/types/bidding-contract";
+
+const ONLINE_FORMATS = new Set(["truc_tuyen", "ca_hai"]);
 
 /** /profile?tab=auction-contracts — hồ sơ tham gia đấu giá của tôi. */
 export const BiddingContractsTab = () => {
@@ -20,6 +28,15 @@ export const BiddingContractsTab = () => {
   const cancel = useCancelBiddingContract();
   const contracts = data.filter((c) => c.status !== "cancelled");
   const busy = start.isPending || cancel.isPending;
+
+  const paidIds = contracts.filter((c) => c.status === "paid").map((c) => c.id);
+  const { data: wonLots = [] } = useMyWonLots(paidIds);
+  const wonByContract = new Map<string, typeof wonLots>();
+  for (const lot of wonLots) {
+    const list = wonByContract.get(lot.winner_contract_id) ?? [];
+    list.push(lot);
+    wonByContract.set(lot.winner_contract_id, list);
+  }
 
   const continuePayment = (c: ContractWithSession) =>
     start.mutate(identityToRpcArgs(c.session_id, { ...identityDefaults({ last: c }), consent: true }), {
@@ -75,20 +92,32 @@ export const BiddingContractsTab = () => {
               </div>
 
               {c.status === "paid" ? (
-                <div className="grid gap-2 rounded-xl bg-muted p-3 text-sm sm:grid-cols-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Số báo danh</p>
-                    <p className="font-semibold text-foreground">{formatBidderNo(c.bidder_no) ?? "Chưa cấp"}</p>
+                <>
+                  <WonLotsNotice lots={wonByContract.get(c.id) ?? []} />
+                  <div className="grid gap-2 rounded-xl bg-muted p-3 text-sm sm:grid-cols-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Số báo danh</p>
+                      <p className="font-semibold text-foreground">{formatBidderNo(c.bidder_no) ?? "Chưa cấp"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Tiền đặt trước</p>
+                      <DepositStatusBadge status={c.deposit_status} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Thanh toán lúc</p>
+                      <p className="text-foreground">{formatDateTime(c.paid_at)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Tiền đặt trước</p>
-                    <DepositStatusBadge status={c.deposit_status} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Thanh toán lúc</p>
-                    <p className="text-foreground">{formatDateTime(c.paid_at)}</p>
-                  </div>
-                </div>
+                  {s && ONLINE_FORMATS.has(s.auction_format) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(s.finalized_at ? `/sessions/${s.id}` : `/sessions/${s.id}/dau-gia`)}
+                    >
+                      {s.finalized_at ? "Xem kết quả" : "Vào phòng đấu giá"}
+                    </Button>
+                  )}
+                </>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={() => continuePayment(c)} disabled={busy}>

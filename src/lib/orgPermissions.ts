@@ -7,7 +7,9 @@
 // "module" là MÃ ỔN ĐỊNH lưu trong DB — KHÔNG đổi. Đổi mã = mọi vai trò của mọi
 // tổ chức mất quyền đó. Nhãn hiển thị bằng tiếng Việt, đổi thoải mái.
 
-export type OrgAction = "view" | "create" | "update" | "delete" | "export";
+// "operate" / "finalize" chỉ dùng cho module điều hành đấu giá trực tuyến — ma
+// trận vẽ action theo từng module nên các module khác không bị thêm cột.
+export type OrgAction = "view" | "create" | "update" | "delete" | "export" | "operate" | "finalize";
 
 export type OrgCategory =
   | "tong-quan"
@@ -28,7 +30,7 @@ export interface OrgModuleDef {
 // module -> danh sách action đang bật (dùng cho ma trận + quyền hiệu lực)
 export type OrgPermissionMatrix = Record<string, OrgAction[]>;
 
-export const ORG_ACTIONS: OrgAction[] = ["view", "create", "update", "delete", "export"];
+export const ORG_ACTIONS: OrgAction[] = ["view", "create", "update", "delete", "export", "operate", "finalize"];
 
 export const ORG_ACTION_LABELS: Record<OrgAction, string> = {
   view: "Xem",
@@ -36,6 +38,8 @@ export const ORG_ACTION_LABELS: Record<OrgAction, string> = {
   update: "Sửa",
   delete: "Xóa",
   export: "Xuất",
+  operate: "Điều hành",
+  finalize: "Chốt kết quả",
 };
 
 export const ORG_CATEGORY_LABELS: Record<OrgCategory, string> = {
@@ -99,6 +103,25 @@ export const ORG_MODULE_DEFINITIONS: OrgModuleDef[] = [
   // nên tách khỏi phien-dau-gia. "update" = xác nhận tiền đặt trước + cấp số báo
   // danh. Không có create/delete: hồ sơ do người mua tạo và không bao giờ bị xoá.
   { module: "ho-so-tham-gia", label: "Hồ sơ tham gia đấu giá", category: "kinh-doanh", actions: ["view", "update"] },
+  // Điều hành phiên đấu giá trực tuyến (auction_lot_states / auction_bids).
+  // "operate" = mở / tạm dừng / tiếp tục / rút tài sản khỏi phiên đang diễn ra.
+  // "finalize" = chốt kết quả phiên, phát hành biên bản, xác nhận người trúng thanh
+  // toán — hệ quả tiền đặt trước không đảo ngược được nên tách khỏi operate.
+  // Hoàn trả tiền đặt trước vẫn thuộc ho-so-tham-gia.update. Không có mục sidebar:
+  // vào từ trang chi tiết phiên.
+  {
+    module: "dieu-hanh-dau-gia",
+    label: "Điều hành đấu giá",
+    category: "kinh-doanh",
+    actions: ["view", "operate", "finalize"],
+    hiddenFromNav: true,
+  },
+  // Hợp đồng mua bán tài sản đấu giá — giai đoạn SAU khi phiên chốt kết quả
+  // (auction_sale_contracts + sổ tiền + bàn giao). Tách khỏi dieu-hanh-dau-gia vì
+  // đây là việc của kế toán / pháp chế chứ không phải của đấu giá viên đang điều
+  // hành phiên, và dòng hợp đồng mang CCCD của CẢ HAI bên.
+  // "update" = lập hợp đồng, sửa điều khoản, ghi nhận thanh toán, hẹn bàn giao.
+  { module: "hop-dong-mua-ban", label: "Hợp đồng mua bán", category: "kinh-doanh", actions: ["view", "update"] },
   // Không có mục sidebar: module này tồn tại để đỡ RLS listings (org_listings_update
   // / org_listings_delete trong 20260805000020_org_rbac.sql).
   { module: "tin-dang", label: "Tin đăng tài sản", category: "kinh-doanh", actions: ["view", "create", "update", "delete"], hiddenFromNav: true },

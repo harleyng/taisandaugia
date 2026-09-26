@@ -2,10 +2,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, PackageOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAssetOwnerWorkspace } from "@/hooks/useAssetOwnerWorkspace";
+import { useClaimWriteAccess, useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
+import { useOwnerAssetOutcomes } from "@/hooks/useOwnerAssetOutcomes";
+import { useStoredChoice } from "@/hooks/useStoredChoice";
 import { ClaimsTable } from "@/components/asset-owner-management/ClaimsTable";
+import { ReportOutcomeDialog } from "@/components/asset-owner-portal/outcomes/ReportOutcomeDialog";
+import { OwnerPageHeader } from "@/components/asset-owner-portal/ui/OwnerPageHeader";
+import { AssetViewToggle } from "@/components/asset-owner-portal/pipeline/AssetViewToggle";
+import { PipelineView } from "@/components/asset-owner-portal/pipeline/PipelineView";
+import { OWNER_ASSETS_VIEWS, OWNER_ASSETS_VIEW_KEY } from "@/components/asset-owner-portal/pipeline/assetsView";
+import { claimToReportTarget, type ReportOutcomeTarget } from "@/lib/ownerOutcomeReport";
 
 interface UserKYCStatus {
   userId: string;
@@ -22,24 +32,32 @@ const OwnerAssetsPage = () => {
   const [searchParams] = useSearchParams();
   const initialMatchedName = searchParams.get("source") ?? undefined;
 
-  const [loading, setLoading] = useState(true);
+  const { userId, loading: authLoading } = useAuth();
   const [kycStatus, setKycStatus] = useState<UserKYCStatus | null>(null);
 
-  const userId = kycStatus?.userId ?? null;
-
+  // Không gian đến từ tư cách THÀNH VIÊN — người được mời không có KYC riêng
+  // vẫn thấy danh mục. KYC cá nhân chỉ còn quyết định màn trống khi chưa có không gian.
   const {
     workspace, wsLoading,
     claims, claimsLoading,
     roundCountsByListing,
     confirmClaim, rejectClaim, confirmAllPending,
-  } = useAssetOwnerWorkspace(userId);
+  } = useAssetOwnerWorkspace();
+  const { canWriteClaim, canConfirmAll } = useClaimWriteAccess();
+  const { isPersonal } = useOwnerWorkspace();
+  const { byListing: outcomesByListing, isLoading: outcomesLoading } = useOwnerAssetOutcomes(workspace?.id);
+  // Bảng / Giai đoạn — tiện ích theo trình duyệt (Phase 12).
+  const [view, setView] = useStoredChoice(OWNER_ASSETS_VIEW_KEY, OWNER_ASSETS_VIEWS, "table");
+
+  // "Khai kết quả": giữ target khi đóng để dialog không trống chữ lúc đang tắt dần.
+  const [reportTarget, setReportTarget] = useState<ReportOutcomeTarget | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setLoading(false); return; }
-
-      const uid = session.user.id;
+      const uid = userId;
 
       const [indRes, orgRes] = await Promise.all([
         supabase
@@ -56,6 +74,7 @@ const OwnerAssetsPage = () => {
           .maybeSingle(),
       ]);
 
+      if (cancelled) return;
       setKycStatus({
         userId: uid,
         indApproved: !!indRes.data,
@@ -63,30 +82,32 @@ const OwnerAssetsPage = () => {
         orgApproved: !!orgRes.data,
         orgName: (orgRes.data as any)?.org_name ?? null,
       });
-      setLoading(false);
     };
     load();
-  }, []);
+    return () => { cancelled = true; };
+  }, [userId]);
 
-  if (loading) {
+  const kycLoading = !!userId && kycStatus?.userId !== userId;
+
+  if (authLoading || wsLoading || kycLoading) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (!kycStatus) {
+  if (!userId || !kycStatus) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24">
         <p className="text-sm text-muted-foreground">Vui lòng đăng nhập để tiếp tục.</p>
       </div>
     );
   }
 
-  if (!kycStatus.indApproved && !kycStatus.orgApproved) {
+  if (!workspace && !kycStatus.indApproved && !kycStatus.orgApproved) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24">
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
             <PackageOpen className="h-8 w-8 text-muted-foreground" />
@@ -106,26 +127,61 @@ const OwnerAssetsPage = () => {
   }
 
   const isOrgApproved = kycStatus.orgApproved;
-  const isLoadingData = wsLoading || claimsLoading;
+  const isLoadingData = claimsLoading;
+  // Đường ống cần một tenant: không gian (tin đã nhận + hồ sơ) hoặc Cá nhân (hồ sơ).
+  const hasBoard = !!workspace || isPersonal;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Content */}
-      {isLoadingData ? (
+    <div className="space-y-6">
+      <OwnerPageHeader
+        title="Tài sản"
+        subtitle={
+          isPersonal
+            ? "Hồ sơ số hoá của bạn — từ số hoá tới thu tiền."
+            : "Tài sản của đơn vị — từ số hoá tới thu tiền."
+        }
+        actions={hasBoard && <AssetViewToggle view={view} onChange={setView} />}
+      />
+
+      {hasBoard && view === "kanban" ? (
+        <PipelineView
+          claims={claims}
+          outcomesByListing={outcomesByListing}
+          loading={claimsLoading || outcomesLoading}
+          onShowTable={() => setView("table")}
+        />
+      ) : isLoadingData ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : isOrgApproved ? (
+      ) : workspace || isOrgApproved ? (
         workspace ? (
-          <ClaimsTable
-            claims={claims}
-            roundCountsByListing={roundCountsByListing}
-            onConfirm={(id) => confirmClaim.mutate(id)}
-            onReject={(id) => rejectClaim.mutate({ claimId: id })}
-            onConfirmAll={() => confirmAllPending.mutate()}
-            isProcessing={confirmClaim.isPending || rejectClaim.isPending || confirmAllPending.isPending}
-            initialMatchedName={initialMatchedName}
-          />
+          <>
+            <ClaimsTable
+              claims={claims}
+              roundCountsByListing={roundCountsByListing}
+              outcomesByListing={outcomesByListing}
+              onConfirm={(id) => confirmClaim.mutate(id)}
+              onReject={(id) => rejectClaim.mutate({ claimId: id })}
+              onConfirmAll={() => confirmAllPending.mutate()}
+              isProcessing={confirmClaim.isPending || rejectClaim.isPending || confirmAllPending.isPending}
+              initialMatchedName={initialMatchedName}
+              canWriteClaim={canWriteClaim}
+              canConfirmAll={canConfirmAll}
+              onReportOutcome={(claim) => {
+                const target = claimToReportTarget(claim);
+                if (!target) return;
+                setReportTarget(target);
+                setReportOpen(true);
+              }}
+            />
+            <ReportOutcomeDialog
+              open={reportOpen}
+              onOpenChange={setReportOpen}
+              workspaceId={workspace.id}
+              target={reportTarget}
+            />
+          </>
         ) : (
           <div className="flex items-center justify-center py-24">
             <div className="text-center space-y-4 max-w-sm">

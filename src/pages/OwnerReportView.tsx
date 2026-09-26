@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { Loader2 } from "lucide-react";
 import { useOwnerPortfolioMetrics, type PortfolioFilter } from "@/hooks/useOwnerPortfolioMetrics";
 import { PortfolioOverviewBlock } from "@/components/asset-owner-portal/shared/PortfolioOverviewBlock";
@@ -17,28 +17,11 @@ const OwnerReportView = () => {
   const filter: PortfolioFilter = stateFilter ?? {};
   const viewedAt = useRef(new Date());
 
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { workspaceId, isLoading: loading } = useOwnerWorkspace();
 
   useEffect(() => {
     // If no state, someone navigated directly — redirect to filter screen
-    if (!location.state) {
-      navigate("/chu-tai-san/bao-cao", { replace: true });
-      return;
-    }
-
-    const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/chu-tai-san/bao-cao", { replace: true }); return; }
-      const { data: ws } = await supabase
-        .from("asset_owner_workspaces")
-        .select("id")
-        .eq("owner_user_id", session.user.id)
-        .maybeSingle();
-      setWorkspaceId(ws?.id ?? null);
-      setLoading(false);
-    };
-    load();
+    if (!location.state) navigate("/chu-tai-san/bao-cao", { replace: true });
   }, [location.state, navigate]);
 
   const { metrics: filteredMetrics, isLoading: filteredLoading } =

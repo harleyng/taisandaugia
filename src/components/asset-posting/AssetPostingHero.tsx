@@ -1,4 +1,4 @@
-import { CalendarClock, Coins, FileSignature, MapPin, Send, Tag } from "lucide-react";
+import { CalendarClock, Coins, FileSignature, GitBranch, MapPin, Send, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { DetailHero, type HeroStat } from "@/components/shared/DetailHero";
@@ -6,6 +6,7 @@ import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { formatPrice } from "@/utils/formatters";
 import { REVIEW_STATUS_BADGE_CLASS, REVIEW_STATUS_LABELS } from "@/lib/asset-posting/reviewStatus";
 import { ASSET_POSTING_STATUS_LABELS, type AssetPosting, type AssetPostingStatus } from "@/types/asset-posting";
+import { useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
 
 const PARENT_NAME: Record<string, string> = Object.fromEntries(ASSET_CATEGORIES.map((p) => [p.slug, p.name]));
 const CHILD_LABEL: Record<string, string> = Object.fromEntries(
@@ -44,6 +45,8 @@ interface AssetPostingHeroProps {
  */
 export function AssetPostingHero({ posting: p, sentCount, quoteCount, hasSignedContract }: AssetPostingHeroProps) {
   const location = [p.ward, p.district, p.province].filter(Boolean).join(", ");
+  const { data: branches } = useWorkspaceBranchOptions(p.branch_id ? p.workspace_id : null);
+  const branch = p.branch_id ? branches?.find((b) => b.id === p.branch_id)?.label : null;
 
   // Chỉ hiện cụm số khi hồ sơ đã đi vào luồng ký gửi — hồ sơ vừa số hoá mà treo
   // hai số 0 to tướng ở góc phải thì đọc như lỗi.
@@ -76,6 +79,12 @@ export function AssetPostingHero({ posting: p, sentCount, quoteCount, hasSignedC
             <span className="inline-flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               {location}
+            </span>
+          )}
+          {branch && (
+            <span className="inline-flex items-center gap-1.5">
+              <GitBranch className="h-3.5 w-3.5 shrink-0" />
+              {branch}
             </span>
           )}
           <span className="inline-flex items-center gap-1.5">

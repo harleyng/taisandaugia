@@ -22,6 +22,7 @@ import {
   Package,
   PackageCheck,
   ClipboardList,
+  ConciergeBell,
   Wallet,
   UserPlus,
   Target,
@@ -36,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SERVICE_KIND_MODULES } from "@/lib/serviceRequests/kinds";
 
 interface NavItem {
   to: string;
@@ -44,6 +46,8 @@ interface NavItem {
   end?: boolean;
   /** Mã module trong danh mục quyền; có mặt ⇒ menu chỉ hiện khi có quyền 'view'. */
   module?: string;
+  /** Mục gộp nhiều module ⇒ hiện khi có quyền 'view' ở ít nhất một module. */
+  anyModules?: readonly string[];
   /** Nested sub-menu rendered indented beneath this item. */
   children?: NavItem[];
 }
@@ -82,6 +86,8 @@ const NAV: NavSection[] = [
     title: "Vận hành & Hỗ trợ",
     items: [
       { to: "/admin/tai-san", label: "Tài sản tự nguyện", icon: PackageCheck, module: "tai-san-tu-nguyen" },
+      // Gộp tư vấn pháp lý / tư vấn đấu giá / giám định / VR tour — hiện khi xem được ít nhất một loại.
+      { to: "/admin/yeu-cau-dich-vu", label: "Yêu cầu dịch vụ", icon: ConciergeBell, anyModules: SERVICE_KIND_MODULES },
       { to: "/admin/dich-vu", label: "Dịch vụ", icon: Package, module: "dich-vu" },
       { to: "/admin/cong-viec", label: "Công việc", icon: ListTodo, module: "cong-viec" },
       { to: "/admin/ticket", label: "Ticket", icon: Ticket, module: "lien-he" },
@@ -146,14 +152,16 @@ export default function AdminLayout() {
   const { pathname } = useLocation();
   const { isSuperAdmin, matrix, ready } = useAdminPermissions();
 
+  const hasView = (module: string) => matrix[module]?.includes("view") ?? false;
   const canView = (item: NavItem) =>
-    !item.module || isSuperAdmin || (matrix[item.module]?.includes("view") ?? false);
+    isSuperAdmin ||
+    (item.anyModules ? item.anyModules.some(hasView) : !item.module || hasView(item.module));
 
   // Lọc menu theo quyền 'view'. Trong lúc đang nạp quyền chỉ hiện mục không gắn
   // module (Tổng quan) để tránh nháy link chưa được phép.
   const visibleNav = NAV.map((section) => ({
     ...section,
-    items: section.items.filter((it) => (ready ? canView(it) : !it.module)),
+    items: section.items.filter((it) => (ready ? canView(it) : !it.module && !it.anyModules)),
   })).filter((section) => section.items.length > 0);
 
   const isWithin = (to: string) => pathname === to || pathname.startsWith(to + "/");

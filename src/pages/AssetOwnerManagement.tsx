@@ -39,7 +39,7 @@ const AssetOwnerManagement = () => {
     claims, claimsLoading,
     runMatch,
     confirmClaim, rejectClaim, confirmAllPending,
-  } = useAssetOwnerWorkspace(userId);
+  } = useAssetOwnerWorkspace();
 
   // ─── Load auth + KYC status ──────────────────────────────────────────────
 

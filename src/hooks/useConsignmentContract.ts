@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { qk } from "@/lib/queryKeys";
 import { assertRpcOk } from "@/lib/consignment/errors";
 import {
@@ -243,76 +244,78 @@ export function useCancelContract(ctx: ContractCtx) {
 
 // ─── Địa chỉ chủ tài sản (Bên A) ─────────────────────────────────────────────
 
-export interface OwnerKycAddress {
-  kind: "individual" | "organization";
+/**
+ * Địa chỉ Bên A của MỘT hồ sơ (RPC owner_posting_party_address): hồ sơ Cá nhân ⇒
+ * KYC cá nhân của người tạo; hồ sơ của không gian ⇒ KYC tổ chức của không gian.
+ * Chỉ phần địa chỉ — thành viên không đọc được bảng KYC. `canEdit`: người tạo
+ * (cá nhân) / Trưởng đơn vị (không gian).
+ */
+export interface PostingPartyAddress {
+  kind: "individual" | "organization" | "unknown";
   address: string | null;
   ward: string | null;
   province: string | null;
+  workspaceId: string | null;
+  canEdit: boolean;
 }
 
-/** Địa chỉ trên KYC đã duyệt — CÙNG thứ tự với consignment_owner_party(): tổ chức trước. */
-export function useOwnerKycAddress() {
-  const { userId } = useAuth();
-
+export function usePostingPartyAddress(postingId: string | null | undefined) {
   return useQuery({
-    queryKey: qk.consignment.ownerKycAddress(userId),
-    enabled: !!userId,
-    queryFn: async (): Promise<OwnerKycAddress | null> => {
-      const org = await supabase
-        .from("asset_owner_org_kyc")
-        .select("head_office_address, head_office_province")
-        .eq("created_by", userId!)
-        .eq("status", "approved")
-        .maybeSingle();
-      if (org.error) throw org.error;
-      if (org.data) {
-        return {
-          kind: "organization",
-          address: org.data.head_office_address,
-          ward: null,
-          province: org.data.head_office_province,
-        };
-      }
-
-      const ind = await supabase
-        .from("asset_owner_kyc")
-        .select("address, ward, province")
-        .eq("user_id", userId!)
-        .eq("status", "approved")
-        .maybeSingle();
-      if (ind.error) throw ind.error;
-      return ind.data ? { kind: "individual", ...ind.data } : null;
+    queryKey: qk.consignment.partyAddress(postingId),
+    enabled: !!postingId,
+    queryFn: async (): Promise<PostingPartyAddress | null> => {
+      const { data, error } = await supabase.rpc("owner_posting_party_address", { p_posting_id: postingId! });
+      if (error) throw error;
+      const r = (data ?? {}) as {
+        ok?: boolean; kind?: string; address?: string | null; ward?: string | null;
+        province?: string | null; workspace_id?: string | null; can_edit?: boolean;
+      };
+      if (r.ok !== true) return null;
+      return {
+        kind: r.kind === "individual" || r.kind === "organization" ? r.kind : "unknown",
+        address: r.address ?? null,
+        ward: r.ward ?? null,
+        province: r.province ?? null,
+        workspaceId: r.workspace_id ?? null,
+        canEdit: r.can_edit === true,
+      };
     },
   });
 }
 
 export interface UpdateOwnerAddressArgs {
-  kind: OwnerKycAddress["kind"];
+  current: PostingPartyAddress;
   address: string;
   ward?: string;
   province?: string;
 }
 
-/** Sửa địa chỉ trên KYC đã duyệt (RPC chỉ chạm cột địa chỉ). */
-export function useUpdateOwnerAddress() {
+/** Sửa địa chỉ Bên A (RPC chỉ chạm cột địa chỉ; hồ sơ không gian cần Trưởng đơn vị). */
+export function useUpdateOwnerAddress(postingId: string) {
   const queryClient = useQueryClient();
   const { userId } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ kind, address, ward, province }: UpdateOwnerAddressArgs) => {
-      const { data, error } = await supabase.rpc("owner_update_kyc_address", {
-        _kind: kind,
-        _address: address.trim(),
-        _ward: ward?.trim() || undefined,
-        _province: province?.trim() || undefined,
-      });
+    mutationFn: async ({ current, address, ward, province }: UpdateOwnerAddressArgs) => {
+      const { data, error } = current.workspaceId
+        ? await supabase.rpc("owner_ws_update_org_address", {
+            p_workspace_id: current.workspaceId,
+            _address: address.trim(),
+            _province: province?.trim() || undefined,
+          })
+        : await supabase.rpc("owner_update_kyc_address", {
+            _kind: "individual",
+            _address: address.trim(),
+            _ward: ward?.trim() || undefined,
+            _province: province?.trim() || undefined,
+          });
       if (error) throw error;
       assertRpcOk(data);
     },
     onSuccess: () => toast.success("Đã lưu địa chỉ. Tổ chức đấu giá sẽ dùng địa chỉ này trong hợp đồng."),
     onError: toastError("Không lưu được địa chỉ."),
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: qk.consignment.ownerKycAddress(userId) });
+      queryClient.invalidateQueries({ queryKey: qk.consignment.partyAddress(postingId) });
       // Bổ sung địa chỉ gỡ việc "Cần bổ sung địa chỉ" khỏi badge.
       queryClient.invalidateQueries({ queryKey: qk.consignment.ownerSummary(userId) });
     },
@@ -327,16 +330,23 @@ export interface OwnerConsignmentSummary {
   actionCount: number;
 }
 
-/** Tóm tắt ký gửi theo hồ sơ của chủ tài sản (RPC owner_consignment_summary, SECURITY INVOKER). */
+/**
+ * Tóm tắt ký gửi theo hồ sơ của TENANT hiện tại (RPC owner_consignment_summary):
+ * không gian ⇒ hồ sơ của không gian; Cá nhân ⇒ hồ sơ cá nhân. Việc cần làm chỉ
+ * tính cho hồ sơ người dùng GHI được (Người xem không có badge).
+ */
 export function useOwnerConsignmentSummary() {
   const { userId } = useAuth();
+  const { workspaceId, tenantKey, isLoading: tenantLoading } = useOwnerWorkspace();
 
   return useQuery({
-    queryKey: qk.consignment.ownerSummary(userId),
-    enabled: !!userId,
+    queryKey: qk.consignment.ownerSummaryIn(userId, tenantKey),
+    enabled: !!userId && !tenantLoading && !!tenantKey,
     staleTime: 60_000,
     queryFn: async (): Promise<OwnerConsignmentSummary> => {
-      const { data, error } = await supabase.rpc("owner_consignment_summary");
+      const { data, error } = await supabase.rpc("owner_consignment_summary", {
+        p_workspace_id: workspaceId ?? undefined,
+      });
       if (error) throw error;
       const rows = (data ?? []) as unknown as OwnerConsignmentSummaryRow[];
       return {

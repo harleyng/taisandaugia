@@ -124,6 +124,8 @@ export function useReviewAssetPosting() {
     },
     onSuccess: (args) => {
       queryClient.invalidateQueries({ queryKey: qk.adminAssetPostings.all });
+      // Duyệt / bỏ duyệt bật-tắt công khai model 3D ở trigger DB.
+      queryClient.invalidateQueries({ queryKey: qk.asset3d.all });
       toast.success(REVIEW_TOAST[args.action]);
     },
     onError: (err) => {

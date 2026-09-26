@@ -5,6 +5,271 @@
 
 ---
 
+## 2026-09-27 — Cổng chủ tài sản: bỏ nhãn "Nhịp đập" / "Đường ống"
+
+**Context:** P1 đổi "Tổng quan" → "Nhịp đập" và "Tài sản" → "Đường ống" — dịch từng chữ "Pulse" / "Pipeline"; người dùng thấy vô lý ("đường ống" là ống nước).
+**Decision:** **Người dùng chốt:** trả về "Tổng quan" (`/chu-tai-san/dashboard`) và "Tài sản" (`/chu-tai-san/tai-san`) ở mọi chữ người dùng thấy (menu, breadcrumb, tab trình duyệt, tiêu đề trang, chữ trong kanban, hướng dẫn mẫu Excel). Tên cổng Trạm/Tháp Điều Hành, tên nhóm menu, route, tên code (`useOwnerPulse`, `PipelineView`, `ownerPipeline`…) và comment giữ nguyên.
+**Consequences:** Comment / tài liệu cũ vẫn gọi "Nhịp đập" / "Đường ống" = khái niệm nội bộ, không phải nhãn giao diện. Nhãn mới phải dùng Tiếng Việt thường, không dịch từng chữ thuật ngữ tiếng Anh.
+
+## 2026-09-26 — Trạm Điều Hành P15a: Dòng tiền + Tháp Điều Hành; tách Phase 15; D1 = ví chung
+
+**Context:** Phase 15 ("Tháp Điều Hành" cho trụ sở) quá lớn cho một lượt; tiền của một kết quả phiên chỉ là 4 cột ghi đè, không có lịch sử, phí, hạn hay dự báo; ngân hàng không đọc được sổ tiền HĐMB của lô trên sàn (`org_on_behalf`).
+**Decision:**
+- **Người dùng chốt:** lượt này chỉ 15a; 15b (xếp hạng chi nhánh + chấm điểm tổ chức), 15c (chỉ tiêu từ trụ sở + duyệt giảm giá), **15d (ví credit chung — D1 = ví chung)** thành prompt riêng; dự báo = còn phải thu theo hạn + ước tính từ phiên sắp tới; khoản thu chi SỬA / XOÁ được (không bút toán đảo).
+- Sổ `owner_cash_events`; 4 cột tiền cũ thành TỔNG do trigger `owner_asset_outcomes_money` tính (mọi chỗ đọc cũ giữ nguyên); `defaulted` là cờ tay duy nhất; client ghi thẳng ⇒ P0001. Mig `20260926223747` áp qua psql, SQL 63 PASS (ROLLBACK), trình duyệt 36 PASS.
+- Tự quyết: không lưu `branch_id` trên khoản (lấy từ kết quả phiên); tiền đặt trước / phí / hoàn được ghi cho mọi kết quả, chỉ `payment` đòi "thành"; "Đã thu đủ" tính số còn lại ở server (`owner_cash_settle`); lô trên sàn không theo dõi ở đây; ước tính cần ≥ 3 kết quả 12 tháng, cửa sổ phiên +60 ngày.
+- Sửa 1 dòng thân `owner_outcomes_overview_core`: `paid_amount` chỉ khi nguồn thắng là bản tự khai (trước đó lô trên sàn thắng vẫn kéo số tự khai vào Chỉ tiêu).
+- Tên cổng "Tháp Điều Hành" khi Trạm đang chọn có Trạm con đọc được (`ownerPortalName`); trụ sở không thấy tên cán bộ chi nhánh trên sổ.
+**Consequences:**
+- Luật "phiên sắp tới" giờ có 2 bản (P10 payload + `owner_cash_flow`) — sửa cùng lúc.
+- Một khoản đặt trước ⇒ `partial` ⇒ Đường ống xếp vào "HĐ mua bán".
+- Tài sản ngoài sàn đã bán chưa có ở "Chờ thu tiền" của Nhịp đập (thu ở trang Dòng tiền); chưa có huy hiệu quá hạn, nút "bỏ cờ bỏ cọc", nhật ký sửa khoản.
+
+## 2026-09-26 — Trạm Điều Hành P14: liên kết trụ sở ↔ chi nhánh, so sánh ẩn danh, tín hiệu bán hàng
+
+**Context:** Phase 14 của `docs/owner-control-tower-plan.md`. Chi nhánh đã tự onboard (P13) và gửi báo cáo bằng link (P11); giờ cần nối trụ sở vào và báo cho sale khi một ngân hàng "chín".
+**Decision:**
+- Cây một cấp `asset_owner_workspaces.parent_workspace_id` + bảng `owner_workspace_link_requests` (trụ sở gửi, Trưởng đơn vị chi nhánh đồng ý). Mig `20260926185917` áp qua psql (phiên song song), SQL 77 PASS (ROLLBACK), trình duyệt 34 PASS.
+- `owner_ws_can` mở `read` cho Trưởng đơn vị trụ sở. `owner_ws_role` GIỮ chỉ-thành-viên vì guard thành viên dựa vào nó.
+- **Người dùng chốt:** trụ sở KHÔNG thấy danh sách thành viên chi nhánh; lead tách riêng mỗi công ty mẹ một cái kể cả khi đã có lead `market_data`; ngưỡng lượt xem N = 10.
+- Tự quyết:
+  - so sánh chỉ cho thành viên trực tiếp; chỉ số hiện từ 3 chi nhánh, số chi tiết từ 5 (3 giá trị + tứ phân vị giải ngược được);
+  - tỷ lệ thành công theo định nghĩa "Kết quả phiên", không theo ô KPI;
+  - cha `inferred` vẫn liên kết được (cần chi nhánh đồng ý);
+  - liên kết giữ khi danh bạ đổi cha;
+  - trụ sở xem cả hợp đồng + dữ liệu người mua của chi nhánh.
+- Tách `owner_asset_outcomes_resolved_core` / `owner_outcomes_overview_core` (không kiểm quyền, không client gọi được). Hàm công khai thành vỏ mỏng, chữ ký giữ nguyên, trả đúng như cũ (so trên dữ liệu thật).
+**Consequences:**
+- Công thức "ngày đầu tiên biết tài sản" giờ có 3 bản (P10 payload, benchmark, TS) — sửa cùng lúc.
+- Lượt xem link giờ đếm cả trụ sở đã liên kết.
+- Nguồn lead hệ thống (`SYSTEM_SOURCES`) không chọn tay được; lead tín hiệu bị DB khoá nguồn.
+- P15 (Tháp Điều Hành) đọc các Trạm con qua liên kết này.
+
+## 2026-09-26 — Trạm Điều Hành P11: link chia sẻ báo cáo /r/:token
+
+**Context:** Phase 11 của `docs/owner-control-tower-plan.md`. Cán bộ gửi báo cáo đã chốt lên trụ sở bằng link chỉ đọc, không cần tài khoản. Dữ liệu nợ xấu rất nhạy cảm (Rủi ro #2), và trang có CTA "Tháp Điều Hành".
+**Decision:**
+- Thêm cột chia sẻ trên `owner_report_snapshots` + 3 RPC `send_report` (`owner_share_report` / `owner_revoke_report_share` / `owner_report_share_link`) + RPC anon `get_shared_owner_report`. Mig `20260926181355` áp qua psql.
+- **Chỉ Trưởng đơn vị thấy / sao chép được token (người dùng chốt).** Thực thi ở server bằng quyền SELECT theo CỘT (không có `share_token`). Thành viên khác chỉ thấy hạn và lượt xem.
+- Tự quyết:
+  - chỉ chia sẻ báo cáo đã chốt; hạn 1–90 ngày (UI cho chọn 7/30/90);
+  - tạo khi link còn hạn = gia hạn, giữ token; hết hạn thì cấp token mới;
+  - thu hồi giữ lịch sử lượt xem;
+  - thành viên tự mở link không tính lượt xem.
+- Payload công khai đi qua `owner_report_public_payload`: danh sách trắng cấp 1 + gỡ đệ quy `id` / `*_id(s)` / `winner*` / `*evidence*`.
+- Nới guard cho cột chia sẻ, và cho `created_by` / `finalized_by` về NULL. Đây là vá lỗi P10: trước đó xoá tài khoản từng chốt báo cáo bị chặn, và ở bản nháp SET NULL bị đảo ngược.
+**Consequences:**
+- Không được `select('*')` trên bảng này.
+- AnalyticsTracker che `/r/:token` thành `/r/:id`. `/loi-moi*/:token` vẫn lộ token vào analytics (việc cho sau).
+- P14 dùng `view_count` làm tín hiệu mềm, vì anon mở lặp lại vẫn tăng số.
+
+## 2026-09-26 — Trạm Điều Hành P10: Báo cáo định kỳ đóng băng ở server
+
+**Context:** Phase 10 của `docs/owner-control-tower-plan.md`. Đây là "cái móc" để kéo trụ sở vào dùng. Rủi ro #1 của plan là cán bộ "làm đẹp" số trước khi gửi lên, nên số trong báo cáo không được do client gửi.
+**Decision:**
+- Bảng `owner_report_snapshots`, vòng đời `draft → final`. Nháp: RPC `owner_build_report_payload` tính lại số mỗi lần mở. Chốt: `owner_finalize_report` (`send_report`) để server tự dựng rồi đóng băng. Quyền cột chặn client ghi `status`/`payload`. Mig `20260926172328` áp qua psql, KHÔNG `db push`, vì P4/P12 chạy song song.
+- Cán bộ được lập nháp (§A2 "draft reports"), nhưng chỉ cho chi nhánh trong phạm vi của mình.
+- **Báo cáo đã chốt không sửa, không xoá (người dùng chốt).** Muốn đính chính thì lập bản mới cho cùng kỳ. Trigger guard chặn cả postgres; ngoại lệ duy nhất là FK chi nhánh SET NULL.
+- **Tồn đọng > 90 ngày tính từ lần đầu được biết** (phiên giá / lượt tự khai / ngày tin lên sàn) — người dùng chốt. Dashboard vẫn giữ luật cũ (≥ 2 lượt).
+- Phần theo kỳ lấy theo ngày phiên. Phần theo trạng thái (tồn đọng, chờ thu kỳ trước, lịch sắp tới) tính tới `as_of` = ngày lập.
+- `owner_report_recovery()` là bản SQL của `recoveryOf()`. Đã so SQL ↔ TS 56/56.
+- Trang in là route riêng ngoài `OwnerPortalLayout`, chân trang dùng ô lề `@page`. Excel có 5 sheet, tiền là số.
+**Consequences:**
+- P11 chỉ nới guard cho cột chia sẻ và dùng lại `ReportDocument`. Payload không có `workspace_id`, id tin, người trúng.
+- Hai luật "Tồn đọng" đang khác nhau.
+- `/chu-tai-san/ket-qua` chưa có tiêu đề ở TopBar (có từ P8).
+
+## 2026-09-26 — Trạm Điều Hành P12: "Đường ống" kanban theo giai đoạn
+
+**Context:** Phase 12 của `docs/owner-control-tower-plan.md`. Hai loại tài sản không nối với nhau: tin đã nhận (claims) và hồ sơ số hoá (postings). Ba cột đầu chỉ hồ sơ mới có. Dữ liệu không ghi lại lúc nào tài sản "chờ đấu lại". Người dùng chọn chờ P4 xong mới làm.
+**Decision:**
+- Luật thuần R1–R16 ở `src/lib/ownerPipeline.ts`, adapter ở `ownerPipelineFacts.ts`. Lượt hiện tại quyết định cột; các bước trước phiên chỉ xét khi chưa có lượt.
+- **Người dùng chốt "theo lượt kế tiếp":** Không thành = lượt mới nhất không bán được (kể cả bỏ cọc) và chưa có lịch mới. Chờ đấu lại = đã công bố lượt mới sau một lượt trước, hoặc phiên hoãn/huỷ/rút. Tự quyết: "đã bán rồi lại công bố" cũng vào Chờ đấu lại.
+- HĐ dịch vụ đã ký mà lô chưa vào phiên đã công bố ⇒ vẫn ở HĐ dịch vụ. Phiên nháp lọc ở client, vì quản lý tổ chức đọc được phiên nháp. Claim "Chờ xác nhận" không lên bảng.
+- Không migration: một lượt đọc PostgREST lồng nhau theo tenant, key nằm dưới prefix `my-postings`.
+**Consequences:** Lô đấu trực tiếp không bao giờ có kết quả trên sàn ⇒ nằm đỏ ở "Phiên · Chờ kết quả", mà chủ tài sản chưa tự khai được cho hồ sơ số hoá (cần theo sau P8). Chưa lọc theo phạm vi chi nhánh. Tin "đã bán" ước tính (cào) không có ngày ⇒ nằm ở Trúng, không có số ngày.
+
+## 2026-09-26 — Trạm Điều Hành P4: hồ sơ số hoá thuộc không gian (mô hình tenant)
+
+**Context:** Phase 4 của `docs/owner-control-tower-plan.md`. Có ~30 hàm/policy phía chủ tài sản khoá theo `user_id` / `owner_user_id` / `seller_user_id`: hồ sơ, yêu cầu tổ chức, nhờ sàn, hợp đồng ký gửi, bên bán HĐMB, 3D/VR/giám định/tư vấn, storage. Cán bộ nghỉ việc là đơn vị mất hồ sơ.
+**Decision:**
+- `asset_postings.workspace_id` (NULL = Cá nhân) + `branch_id` (FK kép tới chi nhánh cùng không gian). Mọi quyền đi qua `owner_posting_row_can` / `owner_posting_can`. Mig `20260926152759` áp qua psql; kiểm SQL 47 PASS + trình duyệt 26 PASS, dữ liệu thử đã xoá.
+- **Người dùng chốt:** người tạo đã rời đơn vị MẤT quyền. Có cột chi nhánh (Cán bộ bị giới hạn chỉ ghi trong phạm vi). Multi-tenant: mỗi không gian + "Cá nhân", hồ sơ tạo trong tenant đang chọn.
+- Backfill KHÔNG chuyển hết: ai vừa có KYC cá nhân vừa có không gian thì chỉ chuyển hồ sơ có hợp đồng mà Bên A là tổ chức. Nếu chuyển hết, CCCD của Bên A cá nhân (demo f10d) sẽ lộ cho cả ngân hàng. Kết quả: harleyngx 8 → "cơ quan", secsosoo 1 → "ngân hàng", 7 ở lại Cá nhân.
+- Bên A suy theo HỒ SƠ (`consignment_posting_owner_party`): Cá nhân = CHỈ KYC cá nhân, không gian = KYC tổ chức của không gian. Hàm cũ ưu tiên KYC tổ chức ⇒ sai với người có cả hai.
+- Đóng lỗ kèm theo: INSERT hồ sơ "đã duyệt"; UPDATE mọi cột của yêu cầu/nhờ sàn (nay đi qua RPC); người tạo sửa/xoá KYC tổ chức đã duyệt; xoá tệp asset-docs/media; dán đường dẫn tệp người ngoài để đọc (`owner_posting_file_owner_ok`).
+- Thanh toán dịch vụ vẫn chỉ người gửi yêu cầu (`_settle_*` không đổi) ⇒ không có chuyện hai người trả cùng một báo giá.
+**Consequences:** Mọi policy viết lại đều `TO authenticated` (policy `TO public` gọi hàm đã thu hồi quyền của anon sẽ làm hỏng mọi truy vấn đọc storage của anon). Lần áp đầu chết vì deadlock ⇒ migration khoá trước mọi bảng. P12 đọc `useMyPostings` theo tenant. Tồn: xoá TÀI KHOẢN người tạo vẫn cascade xoá hồ sơ; lead chốt báo giá mang tên cán bộ; chưa chuyển được hồ sơ giữa các tenant.
+
+## 2026-09-26 — Trạm Điều Hành P8: Kết quả phiên, tài sản ngoài sàn, nhập Excel, xử lý lệch
+
+**Context:** Phase 8 của `docs/owner-control-tower-plan.md`. Plan viết "khớp tin theo mã", nhưng `listings` không có cột mã (mâu thuẫn với code). Cờ "Lệch số liệu" chưa có cách nào gỡ. Phần sửa/xoá lượt, P6 để lại cho P8.
+**Decision:**
+- Mỗi tài sản một dòng (user chọn), đọc từ RPC mới `owner_outcomes_overview`. Server gộp nguồn, client chỉ lọc và cộng tổng. Mig `20260926145216`, áp qua psql. Kiểm bằng 38 kịch bản SQL (luôn ROLLBACK). Kết quả của 28 dòng thật không đổi.
+- Mã tài sản = 8 ký tự hex đầu của `listings.id`, hiện trong danh sách; file Excel khớp theo mã này (user chọn thay cho mẫu điền sẵn). Mã không khớp thì báo lỗi, không đoán.
+- Định danh tài sản ngoài sàn = cột sinh `title_key`, cộng unique theo lượt ⇒ nhập lại cùng file không nhân đôi dữ liệu.
+- Nhập Excel qua RPC SECURITY INVOKER, mỗi dòng một savepoint (tối đa 500 dòng) ⇒ đạt tiêu chí "20 dòng, 2 lỗi ⇒ ghi 18".
+- Xử lý lệch bằng dấu vân tay nguồn trong `conflict_resolution.dismissed`. Nguồn bị bỏ qua cũng rời khỏi cửa sổ lượt và khỏi phần chọn nguồn thắng: nếu chỉ tắt cờ thì tổ chức khai ngày mới hơn vẫn thắng. Quyết định bị huỷ khi nguồn đổi số hoặc đơn vị sửa số của mình.
+- Vá lỗ của P6: trigger riêng `_guard_scope` luôn suy lại `branch_id` của dòng gắn tin. Không thay guard của P6 vì các phase chạy song song trên cùng DB (bên ghi sau cùng thắng).
+**Consequences:** Nhịp đập (KPI P5/P7) chưa tính tài sản ngoài sàn. Chỉ tiêu P9 đã đọc overview. P16 phải loại dòng có `conflict_resolution.adopted` (dùng số tổ chức ⇒ "Đã đối chiếu" mà không có biên bản). P4 thêm guard cho `asset_posting_id`. Rule 44px chạm của `index.css` làm badge nguồn cao trên mobile — có từ trước P8.
+
+## 2026-09-26 — Trạm Điều Hành P13: chi nhánh tự onboard (KYC rút gọn)
+
+**Context:** Phase 13 của `docs/owner-control-tower-plan.md`. Spike trên dữ liệu thật: chi nhánh làm KYC tổ chức thì `run_workspace_match` khớp mờ theo tên, kéo luôn cả công ty mẹ, chi nhánh anh em và AMC. VD "VCB – CN Hà Nội": 24 tin, trong đó chỉ 4 là của chi nhánh. `linked_asset_owner_id` được lưu nhưng không nơi nào đọc.
+**Decision:**
+- `asset_owner_org_kyc.kyc_scope` (`organization|branch`) + `parent_asset_owner_id`. Không gian có thêm `asset_owner_id` + `match_scope` (`names|entity`), mỗi chi nhánh tối đa MỘT Trạm (unique từng phần).
+- `match_scope='entity'` ⇒ `run_workspace_match` chỉ nhận tin đứng tên đúng `asset_owner_id` (`linked_entity`), bỏ qua mọi seed tên. Nhánh tổ chức giữ nguyên khớp mờ.
+- **D3 (người dùng chốt):** email công vụ + giấy giao việc / uỷ quyền của GĐ chi nhánh + họ tên, số và 2 ảnh giấy tờ của cán bộ. Không bắt buộc QĐ thành lập, selfie, MST. Hộp thư miễn phí chỉ gắn cờ cho admin, không chặn.
+- **Chi nhánh chưa có trong danh bạ (người dùng chốt):** tạo khi duyệt, dưới công ty mẹ đã khai, `parent_source='confirmed'`.
+- Server ép phần quyết định phạm vi: trigger nộp hồ sơ `asset_owner_org_kyc_branch_guard` và trigger claim `owner_ws_claims_entity_guard` (chỉ nhận tin của chi nhánh, của trụ sở, hoặc chưa rõ chủ). Luật FE ở `src/lib/assetOwnerKyc/orgKycValidation.ts`.
+- Mig `20260926145010` áp qua psql. Kiểm SQL 27 PASS (ROLLBACK) + chạy trình duyệt end-to-end, dữ liệu thử đã xoá.
+**Consequences:** `asset_owner_org_kyc` giờ có 2 FK tới `asset_owners` ⇒ mọi embed phải chỉ đích danh FK (PGRST201). P14 dùng `asset_owner_workspaces.asset_owner_id` + `parent_owner_id` để nối HQ ↔ chi nhánh. Còn tồn: người tạo vẫn tự hạ hồ sơ đã duyệt về `draft` được (policy `own_rows` USING không xét status). Phòng giao dịch dưới chi nhánh không được gộp.
+
+## 2026-09-26 — Trạm Điều Hành P9: Chỉ tiêu + luật "Đã thu" theo tiền thật
+
+**Context:** Phase 9 của `docs/owner-control-tower-plan.md`. Plan viết "tổng paid_amount, không có thì lấy giá trúng". Đọc đúng chữ thì tài sản chưa thu tính đủ giá, còn ghi "Thu một phần" lại làm TỤT tiến độ.
+**Decision:**
+- **"Đã thu" tính theo tiền thật (người dùng chốt).** paid → `paid_amount ?? giá`; partial → `paid_amount`; pending → 0 (hiện riêng "Chờ thu"); defaulted → loại khỏi CẢ tiền lẫn số tài sản. Chỉ nguồn không theo dõi thu tiền (tổ chức tự khai / tin cào) mới tạm tính bằng giá trúng.
+- Số liệu dựng từ các dòng `owner_outcomes_overview` của P8, tức CÙNG nguồn với trang "Kết quả phiên". Bỏ bản tự gom (bản ghi đã bán + gộp ngoài sàn theo tên) vì sẽ lệch với trang đó.
+- Kỳ tính theo ngày phiên. Tính cả tài sản `pending_confirmation` để khớp KPI và trang Kết quả phiên. Bảng chỉ lưu chỉ tiêu; số đã thu luôn là số tính.
+- Quyền ghi giữ `manage_members` đúng chữ plan (người dùng chốt), dù P3 đã tách `manage_workspace`. Hiện hai quyền trùng nghĩa.
+- Mig `20260926145733` áp qua psql, KHÔNG dùng `db push`: file P8 lúc đó chưa áp và `db push` sẽ đẩy luôn.
+**Consequences:** P10 phải chép `recoveryOf()` sang SQL. Số tài sản của chỉ tiêu = số "đã bán" của trang Kết quả phiên trừ các tài sản bỏ cọc. 11 tài sản bán không có ngày (tin cào) không thuộc kỳ nào. Có thể sau này chuyển sang tính theo ngày thu tiền (`paid_at`).
+
+## 2026-09-26 — Trạm Điều Hành P7: "Nhịp đập" thành danh sách việc cần làm
+
+**Context:** Phase 7 của `docs/owner-control-tower-plan.md`. Có bảng tự khai (P6) rồi thì dashboard phải hỏi cán bộ còn thiếu gì, thay vì chỉ bày số. Dữ liệu thật: 9 phiên đã qua mà chưa có kết quả, 1 tài sản đấu lại mà chỉ có kết quả lượt cũ.
+**Decision:**
+- Luật chọn việc thuần ở `src/lib/ownerPulse.ts`, dùng chung cho trang và huy hiệu qua `useOwnerPulse()`. **Không migration**: `ref_id` + `payment_status` vốn đã có trong `sources` của RPC.
+- "Chờ khai kết quả": phiên đã qua, và chưa có kết quả HOẶC kết quả cũ hơn ngày phiên > 7 ngày (lượt cũ, cùng luật "cùng lượt" của RPC). Plan chỉ nói "chưa có kết quả" — tự thêm vì dữ liệu thật có ca đấu lại. Bỏ claim "Chờ xác nhận" (xác nhận trước rồi mới khai). Tin chỉ có ngày ⇒ tính từ hôm sau.
+- "Chờ thu tiền": chỉ ghi được khi nguồn thắng là `owner_report`. Lô trên sàn hiện CHỈ XEM vì tiền ghi ở sổ hợp đồng mua bán phía bên bán, chủ tài sản không ghi được.
+- Thao tác: "Đã thu đủ" bấm một lần, toast có "Hoàn tác"; "Thu một phần" ghi số TÍCH LUỸ; "Bỏ cọc" phải xác nhận và giữ nguyên `paid_amount`. Cập nhật đọc lại id, vì RLS lọc dòng mà không báo lỗi.
+- Cán bộ bị giới hạn chi nhánh chỉ thấy việc của chi nhánh mình. Người xem thấy danh sách nhưng không có nút. Huy hiệu chỉ hiện với người có quyền ghi.
+- "Xem tất cả" mở rộng tại chỗ (chưa có `/chu-tai-san/ket-qua`). KPI dashboard: "Giá trúng" thay ô "Tổng giá KĐ"; `PortfolioOverviewBlock` giữ nguyên.
+**Consequences:** Phiên thành rồi bỏ cọc vẫn tính vào "Tỷ lệ thành công" — để P9/P10 quyết. Sidebar giờ tải truy vấn danh mục ở mọi trang của cổng (cache 2 phút, dùng chung với dashboard). P8 có thể trỏ "Xem tất cả" sang trang Kết quả phiên.
+
+## 2026-09-26 — Trạm Điều Hành P3: mời thành viên + chuyển quyền ghi sang vai trò
+
+**Context:** Phase 3 của `docs/owner-control-tower-plan.md`. P2 để thành viên chỉ ĐỌC, FE tìm workspace bằng `owner_user_id` ⇒ người được mời không vào được cổng; Trưởng đơn vị thứ hai bấm nút ghi sẽ lỗi RLS.
+**Decision:**
+- Mig `20260926140447` (áp qua psql): bảng `asset_owner_workspace_invites` + RPC `owner_ws_create_invite / invite_preview / accept_invite / update_member / remove_member / revoke_invite / list_members`, trả `{ok:false, reason}`. Mọi RPC ghi **khoá dòng workspace trước** (trigger owner cuối đếm không khoá ⇒ hai owner gỡ nhau cùng lúc sẽ cùng lọt).
+- **Chuyển quyền ghi sang vai trò NGAY P3** (người dùng chốt): bỏ 3 policy `owner_user_id`; claims ⇐ `owner_ws_claim_write_ok` (write + phạm vi chi nhánh suy từ `asset_owner_id`); chi nhánh / seed / `run_workspace_match` ⇐ action mới `manage_workspace` (chỉ owner). Quyền cột: authenticated chỉ UPDATE được `primary_name/abbreviations/branch_names`.
+- **Ghi bảng thành viên CHỈ qua RPC** — bỏ policy ghi trực tiếp của P2 (cho thêm người không cần đồng ý, tự đổi vai trò, né khoá).
+- Lời mời chỉ `staff`/`viewer` (người dùng chốt); co-owner = đổi vai trò sau khi tham gia ⇒ guard P2 giữ nguyên.
+- Khớp email **CỨNG** (khác lời mời tổ chức); cổng kích hoạt giống tổ chức. Xác thực email đang tắt ⇒ khớp email không chứng minh sở hữu hộp thư, **liên kết là bí mật**.
+- Route riêng `/loi-moi-chu-tai-san/:token`: token không mang loại, `InviteAcceptPage` gắn chặt RPC/câu chữ/điều hướng tổ chức; chỉ tách `InviteShell` dùng chung.
+- `useOwnerWorkspace()` thay mọi `.eq("owner_user_id")`; nhiều không gian ⇒ nhớ lựa chọn theo user ở localStorage + switcher ở TopBar; layout remount khi ĐỔI (không phải lúc tải xong).
+**Consequences:** `run_workspace_match` hết gọi được bằng anon. Người tạo bị gỡ mất toàn quyền (đúng ý). Còn cá nhân tới P4: `OwnerKycGate` ("Số hoá tài sản"), hợp đồng mua bán; mở khoá báo cáo trừ ví riêng (D1). Tài khoản chỉ có SĐT (`…@phone.local`) phải được mời bằng đúng địa chỉ đó.
+
+## 2026-09-26 — Trạm Điều Hành P6: đơn vị tự khai kết quả phiên
+
+**Context:** Phase 6 của `docs/owner-control-tower-plan.md`: 10/28 tài sản của workspace thử không có nguồn kết quả nào; chủ tài sản chưa có cách nói "phiên hôm qua ra sao".
+**Decision:**
+- Bảng `owner_asset_outcomes` đúng §A4 + trigger guard (ép `reported_by`, suy `branch_id`/`auction_org_id` từ claim/tin, chặn tin ngoài danh mục, biên bản phải là tệp THẬT trong `{ws}/{id}/`). RLS `owner_ws_can` + `owner_ws_branch_ok`. Mig `20260926140659`, áp qua psql.
+- `evidence_urls` chứa **đường dẫn** bucket private `owner-outcome-evidence`; ghi theo thứ tự tạo dòng → tải tệp → gắn đường dẫn (policy storage đòi bản ghi đã tồn tại).
+- RPC hợp nhất: nguồn `owner_report` chỉ lấy **lượt mới nhất** của đơn vị; hạng 2 `reconciled` (khớp OAR thật cùng lượt, giá ≤ 1%) / 3 `owner_evidence` / 4 `self_reported`. Chọn nguồn thắng **theo lượt hiện tại trước** (≤ 7 ngày so với ngày mới nhất), rồi mới tới hạng — tự quyết, plan không nói; đo trên dữ liệu thật: 0 kết quả cũ đổi.
+- Lượt mặc định = lượt lớn nhất đã khai + 1 (không đụng unique khi có lượt bỏ trống). Dialog chờ danh sách lượt TƯƠI rồi mới dựng form.
+- Nút "Khai kết quả" gác bằng `canWriteClaim(claim)` của P3 (cùng cách suy chi nhánh với trigger) thay vì hook RPC riêng.
+**Consequences:** Chưa có UI sửa/xoá lượt đã khai (P8). `reported_by` không ON DELETE (đúng §A4) ⇒ chặn xoá profile đã khai. `asset_posting_id` chưa kiểm thuộc workspace (P4).
+
+## 2026-09-26 — Trạm Điều Hành P5: hợp nhất giá trúng từ các nguồn sẵn có
+
+**Context:** Phase 5 của `docs/owner-control-tower-plan.md`: cổng chủ tài sản chỉ đọc giá trúng ở `listings.custom_attributes`, bỏ sót phiên trên sàn (`auction_lot_states`) và báo cáo tổ chức (`org_auction_records`). Hai bảng sau không đọc được bởi chủ tài sản dưới RLS.
+**Decision:**
+- MỘT RPC SECURITY DEFINER `owner_asset_outcomes_resolved(p_workspace_id)` (mig `20260926134757`, áp qua psql) gộp nguồn; client không tự gộp. Hạng: 1 `platform` · 4 `self_reported` (OAR; `source='CRAWLED'` ⇒ `estimated`) · 5 `estimated` (giá cào hoặc `SOLD_RENTED`). Hạng 2/3 để dành P6.
+- **Giữ `SOLD_RENTED` làm nguồn "Ước tính"** — plan §A1 bỏ sót; bỏ đi thì KPI rơi 54% → ~18%.
+- Kết quả/giá/ngày lấy trọn từ MỘT ứng viên thắng (con số luôn mang nhãn nguồn của nó). Lệch = cùng lượt (ngày ≤ 7 ngày hoặc thiếu ngày) mà khác kết quả hoặc giá > 1% — lượt 1 không thành, lượt 2 bán được KHÔNG là lệch.
+- Chữ ký RETURNS TABLE đóng băng, đã có sẵn `resolved_date` + `payment_status` cho P7–P9.
+- Bảng tài sản chưa từng hiện giá trúng ⇒ thêm cột "Kết quả" (`OutcomeResultCell` + `OutcomeSourceBadge`).
+**Consequences:** Test workspace 4ca4be7b: tỷ lệ thành công 15/28 (54%) → 16/28 (57%) nhờ lô PDG000013. P6 thay thân hàm bằng CREATE OR REPLACE, đổi cột ⇒ DROP. `types.ts` đã regen thật (gen types chạy lại được cùng ngày; bản sinh ra là superset của các entry thêm tay trước đó, chỉ khác định dạng). Mọi mutation khai kết quả phải invalidate `qk.ownerAssetOutcomes`.
+
+## 2026-09-26 — Trạm Điều Hành P2: thành viên không gian chủ tài sản (chỉ DB)
+
+**Context:** Phase 2 của `docs/owner-control-tower-plan.md`: 1 workspace = 1 `owner_user_id` nên chi nhánh ngân hàng không thể có nhiều cán bộ; dữ liệu gắn với cá nhân.
+**Decision:**
+- Bảng `asset_owner_workspace_members` + 3 vai trò cố định (owner/staff/viewer), không ma trận quyền. Helper SECURITY DEFINER `owner_ws_role/can/branch_ok` (tránh RLS đệ quy, giống `org_has_permission`). Mig `20260926000001` áp qua psql (không `db push` vì migration dở của phiên khác).
+- Bất biến ở trigger chứ không ở RLS: owner cuối (port `org_protect_last_owner`) + chỉ owner trao/thu hồi owner. Hai ngoại lệ bắt buộc: **bootstrap** (trigger tạo workspace chạy dưới JWT admin duyệt KYC — admin không phải owner) và **xoá dây chuyền** (không có thì ON DELETE CASCADE chặn luôn việc xoá user/workspace).
+- Owner row tự sinh bằng AFTER INSERT trên workspaces ⇒ không phải sửa `create_workspace_on_org_approval`.
+- Chỉ THÊM policy SELECT cho thành viên; policy ghi `owner_user_id` giữ nguyên để không đổi hành vi trong phase DB-only.
+**Consequences:** Phase 3/4 phải chuyển quyền ghi (workspace/claims/branches, `run_workspace_match`) sang `owner_ws_can` — tới lúc đó người tạo bị gỡ khỏi thành viên vẫn còn toàn quyền qua `owner_user_id`. Bảng có 2 FK tới `profiles` (`user_id`, `invited_by`) ⇒ embed phải ghi tên FK (PGRST201). `types.ts` thêm tay (gen types 403).
+
+## 2026-09-26 — Trạm Điều Hành P1: nav nhóm, khối UI dùng chung, định dạng tiền
+
+**Context:** Phase 1 của `docs/owner-control-tower-plan.md` — cổng chủ tài sản chuyển sang "Trạm Điều Hành"; các phase sau cần MỘT bộ thẻ/tiêu đề/KPI/trạng thái trống thay vì mỗi trang tự vẽ. Plan §A8.3 ghi tiền kiểu vi-VN ("12,4 tỷ", "12.400.000.000 ₫"), trái với quy tắc dấu phẩy đã lưu.
+**Decision:**
+- Nav `OWNER_NAV_GROUPS` 4 nhóm (Điều hành / Tác nghiệp / Phân tích / Thiết lập); chỉ thêm mục khi route đã có. Nhãn: Nhịp đập, Đường ống, Phân tích danh mục. Tab title đặt ở `OwnerPortalTopBar`, rời cổng thì trả lại.
+- Khối dùng chung ở `src/components/asset-owner-portal/ui/` (OwnerPageHeader, SectionCard, HeroFigure, StatTile, ActionCard, EmptyState, IconTile). Màu trạng thái chỉ trên icon/badge, không phủ cả thẻ.
+- Tiền: `src/utils/money.ts` — user chọn **phẩy nhóm nghìn, chấm thập phân** ("12.4 tỷ", "12,400,000,000 ₫"), khớp `formatVnd`; đã sửa ví dụ §A8.3 trong plan.
+- `PortfolioOverviewBlock` giữ nguyên vì `OwnerReportView` dùng chung; dashboard dùng `DashboardKpiRow` mới.
+**Consequences:** Trang owner mới phải dùng khối `ui/` + `money.ts` (design-system.md → Owner portal). Các chỗ `formatPrice` cũ trong báo cáo owner chưa đổi. Badge cảnh báo chữ nhỏ dùng `bg-warning/15 text-foreground` (text-warning thiếu tương phản).
+
+## 2026-09-14 — Gộp 4 menu dịch vụ thành "Yêu cầu dịch vụ"
+
+**Context:** Tư vấn pháp lý, tư vấn đấu giá, giám định, VR tour mỗi loại một menu + danh sách + dialog huỷ/báo giá/hẹn lịch/thẻ hoa hồng chép lại gần y hệt; vận hành không có một chỗ nhìn mọi việc đang chờ. Sắp thêm thẩm định giá và cổng đối tác.
+**Decision:**
+- Một menu **Yêu cầu dịch vụ** (`/admin/yeu-cau-dich-vu`, nhóm Vận hành & Hỗ trợ): tab loại lọc theo quyền + 5 nhóm trạng thái chung (Chờ báo giá / Chờ thanh toán / Đang thực hiện / Hoàn tất / Đã huỷ; VR `delivered` = Đang thực hiện vì còn chờ gắn lô). Chi tiết `/:loai/:id`; 8 route cũ redirect.
+- **Không migration, không gộp bảng**: gộp ở client từ 4 hook danh sách sẵn có (`enabled` theo quyền view). View SQL để dành cho cổng đối tác (khi đó đọc qua RPC che cột).
+- **Mã quyền giữ nguyên** (`don-vr-tour`, `don-giam-dinh`, `tu-van-phap-ly`, `tu-van-dau-gia` nằm trong RLS/RPC); menu + route danh sách dùng `anyOf`.
+- Registry `src/lib/serviceRequests/` + component `src/components/admin/service-requests/` (shell chi tiết, huỷ, báo giá, hẹn lịch, hoa hồng); phần riêng từng loại chỉ còn editor kết quả. 3D chưa vào (tự động, không báo giá).
+**Consequences:** Dịch vụ mới = 1 dòng registry + 1 bộ chuẩn hoá trong `normalize.ts` + trang chi tiết dùng `ServiceDetailShell`. `useUrlFilterState` có thêm `setFilters` (đổi nhiều khóa một lần — gọi setFilter 2 lần liên tiếp thì lần sau đè lần trước). Chưa làm: số đếm trên sidebar, SLA thật (chỉ cảnh báo báo giá hết hạn / quá lịch hẹn), thử UI đăng nhập admin.
+
+## 2026-09-15 — Tư vấn đấu giá (đề xuất phương án trước khi lập phiên)
+
+**Context:** Người bán muốn chuyên gia đề xuất hình thức, giá khởi điểm / bảo lưu, bước giá, thời lượng, cọc trước khi tổ chức lập phiên. Đặc tả BR-CNS-04..06: đề xuất không tự đổi cấu hình phiên; mỗi phương án lưu phiên bản + người tư vấn; dùng được một phần khi lập phiên.
+**Decision:**
+- Người dùng chốt: **clone khuôn Tư vấn pháp lý** (báo giá riêng + VNPay mô phỏng, admin thay đối tác, hoa hồng lúc hoàn tất); **mỗi phiên bản = một yêu cầu mới**; Lập phiên dùng **panel gợi ý + nút Áp dụng từng trường** (không tự điền); **giá bảo lưu + phương thức khác trả giá lên chỉ tham khảo**, không sửa engine.
+- Phương án ở BẢNG CON thay vì cột trên yêu cầu: RLS chủ đơn đọc `*` của yêu cầu nên cột nháp sẽ lộ khi `in_review`.
+- RPC tổ chức theo PHIÊN (một lần gọi cho Sửa lô, Thêm lô, bảng lô, Mở lô) và dùng đúng cổng selected + signed của trigger gán lô; chấp nhận cả quyền điều hành để Mở lô đọc được.
+- Không đụng `SessionFormCard` (296 dòng) / `BiddingControlRoom` (306): cảnh báo hình thức nằm ở bảng lô, `OpenLotDialog` tự gọi hook.
+**Consequences:** Áp qua psql + ghi `schema_migrations`; `types.ts` thêm tay (bảng sinh từ information_schema). Nghiệm thu SQL rollback (scratchpad): nháp 0 dòng cho người bán; `reserve_invalid`/`duration_required`/`deposit_value_invalid`/`field_notes_invalid`; v1 + hoa hồng 20%; tổ chức 0 dòng khi pending, 1 khi accepted, 0 khi declined, org khác 0, anon denied; v2 ⇒ v1 superseded vẫn đọc, decide v1 `invalid_status`; sửa proposal đã chốt ⇒ exception; md5 posting/phiên/lô không đổi. Chưa làm: tài khoản chuyên gia thật, thông báo, lịch sử sự kiện quyết định, engine descending/sealed + enforce giá bảo lưu, extension/max_bid_steps trong đề xuất, thử UI trong trình duyệt.
+
+## 2026-09-15 — Tư vấn pháp lý trong luồng số hoá tài sản
+
+**Context:** Người bán muốn biết hồ sơ pháp lý đã đủ để đưa ra đấu giá chưa. Đặc tả BR-CNS-01..03: kết quả không tự chuyển tài sản sang đủ điều kiện; chỉ người bán + chuyên gia được phân công + admin xem; mỗi lần tư vấn lưu phiên bản + thời gian.
+**Decision:**
+- Người dùng chốt: **báo giá riêng + VNPay mô phỏng**; **admin thao tác thay đối tác** ("chuyên gia được phân công" = `supplier_id` + `expert_name` trên đơn, truy cập nội bộ bằng quyền module — KHÔNG lọc theo người được gán); **mẫu checklist theo nhóm tài sản ở TS + chuyên gia thêm mục**; khối ở **bước 3 + tab hồ sơ**.
+- Clone khuôn Giám định nhưng đối tác gán lúc BÁO GIÁ (không phải người bán chọn) vì điều khoản hoa hồng phụ thuộc đối tác.
+- `version` gán lúc hoàn tất chứ không lúc tạo — yêu cầu bị huỷ không đốt số phiên bản.
+- Người bán không đọc được items khi chưa hoàn tất (RLS), để checklist nháp không lộ.
+- Tệp nộp là bản chụp path trong `asset-docs`, tải thêm vào `legal-consult/` — không ghi ngược vào `asset_postings.doc_urls` (review guard + tránh lộ cho tổ chức có hợp đồng).
+**Consequences:** Áp qua psql + ghi `schema_migrations`; `types.ts` thêm tay. Nghiệm thu SQL rollback: path người khác ⇒ `doc_invalid`; người bán 0 item khi `in_review`; thiếu `required_action` ⇒ `item_action_required`; 3 mục cần làm hiện cho người bán; v1→`superseded`, v2 `completed`; `asset_postings` không đổi; admin không quyền 0/0 dòng + `not_authorized`; 2 dòng hoa hồng. Chưa làm: tài khoản chuyên gia thật (lọc theo người được gán), hoàn tiền, thông báo, file ý kiến pháp lý PDF, thử UI trong trình duyệt.
+
+## 2026-09-15 — Giám định tài sản (bước 4 wizard số hoá)
+
+**Context:** Sàn cổ vật chuyên nghiệp giám định trước khi lên catalogue; người mua trả cao cho lô có chứng thư. Đặc tả BR-GD-01..03: chứng thư chỉ do đối tác tải, kết luận tiêu cực chặn nhóm Cổ vật + báo riêng người bán, admin đặt giám định bắt buộc (lô > 50 triệu / người bán bị hạn chế).
+**Decision:**
+- Người dùng chốt: **admin thao tác thay đối tác** (như VR — BR-GD-01 hiện được enforce bằng quyền `don-giam-dinh:update` + storage policy, chưa phải tài khoản đối tác); **báo giá riêng từng đơn**; bắt buộc = **chính sách tự động + cờ người bán + cờ lô**; khối giám định hiện ở **mọi nhóm**, luật chỉ cắn ở Cổ vật.
+- Clone khuôn VR (bảng riêng, RPC `{ok,reason}`, VNPay mô phỏng, hoa hồng qua `resolve_contract_terms`). Khác VR: có kết luận + PDF private; KHÔNG bước "gắn lô" — chứng thư xác thực tự công khai khi hồ sơ được duyệt (AC "tải chứng thư xác thực ⇒ có huy hiệu").
+- Cổng nộp hồ sơ là trigger RAISE (không nuốt): người bán phải thấy lỗi. Cổng đưa lô vào phiên là trigger RIÊNG, không sửa `auction_session_items_validate` (đã bị viết lại ở `20260912000005`, phiên song song còn đụng).
+- Trả về nháp ghi thẳng `asset_postings.status` từ RPC: guard duyệt chỉ nuốt 5 cột duyệt; tự hạ `review_status` về pending cho caller có quyền approve (guard không làm hộ). Lý do nằm trên đơn, không ghi `rejection_reason` (bị guard nuốt).
+- `inconclusive` chỉ trả về nháp khi ở nhóm Cổ vật; `suspected_fake` luôn trả về nháp (đúng AC).
+- Mức xác minh là giá trị dẫn xuất 0–4 (chưa từng có khái niệm này trong repo).
+**Consequences:** Migration áp qua psql + ghi `schema_migrations`; `types.ts` thêm tay. Nghiệm thu SQL rollback: chính sách chặn nộp, người bán không INSERT được bucket, pay idempotent, level 3, hoa hồng 20%, nghi giả ⇒ nháp + lý do chỉ chủ đọc, chặn nộp lại Cổ vật + chặn đưa vào phiên, cờ lô chặn + chủ không tự gỡ, hồ sơ approved bị `inconclusive` ⇒ draft/pending. Đối tác seed `Trung tâm Giám định Cổ vật & Nghệ thuật` + HĐ `02/2026/HĐHT-GD` 20% + giá gói là GIỮ CHỖ. Chưa làm: tài khoản/cổng đối tác thật, hoàn tiền, thông báo email, rút lô tự động khi đang trong phiên.
+
+## 2026-09-15 — VR tour (đối tác Silver Sea) trong luồng số hoá tài sản
+
+**Context:** Nhà xưởng / BĐS / bộ sưu tập lớn cần trải nghiệm không gian hơn ảnh hay model 3D. Đặc tả BR-VR-01..04: đơn dịch vụ theo trạng thái Báo giá → Đã thanh toán → Đã hẹn → Đã giao → Đã gắn lô, link gắn theo lot_id, chỉ công khai sau khi admin duyệt cùng lô, hoa hồng đối tác ghi trên mỗi đơn Đã giao theo hợp đồng.
+**Decision:**
+- Người dùng chốt: trả **VND qua VNPay mô phỏng** (không credit); **báo giá riêng** do admin nhập ⇒ thêm bước `requested` trước `quoted`; **admin thao tác thay đối tác** (không cổng đối tác); làm **chồng lên** tính năng 3D.
+- Bảng riêng `asset_vr_tour_orders` (`20260915000010`), cùng lý do 3D: review guard nuốt ghi vào `asset_postings`. Mọi ghi qua RPC `{ok, reason}`.
+- Dịch vụ `VR tour tài sản` kind commission, `supplier_scope='per_order'` (người bán chọn đối tác trên đơn). Seed supplier Silver Sea + hợp đồng `01/2026/HĐHT-VR` 20% — GIÁ TRỊ GIỮ CHỖ.
+- Hoa hồng ghi LÚC GIAO, không lúc trả (đúng chữ BR-VR-03 + AC "Đã giao ⇒ 1 dòng"). Thiếu hợp đồng ⇒ chặn thay vì ghi 0%, vì người thao tác là admin gia hạn được.
+- Gắn lô dùng quyền `tai-san-tu-nguyen:approve` (như duyệt model 3D) chứ không quyền của module đơn; KHÔNG tự gắn khi duyệt hồ sơ — "admin duyệt và gắn" là bước chủ động.
+- Viewer: iframe sandbox cho mọi link https (link chỉ do admin nhập + duyệt), bỏ ý định allowlist host vì chưa biết domain trình xem của Silver Sea.
+**Consequences:** Nghiệm thu trên DB thật trong giao dịch rollback: 3 AC + các mã lý do (`already_active`, `quote_changed`, `already_paid`, `txn_used`, `invalid_url`, `duplicate`, `posting_not_approved`, `no_contract_terms`), RLS user khác/anon 0 dòng, ghi thẳng bị chặn, ẩn/hiện theo review guard, supersede. `types.ts` thêm TAY theo định dạng generator (token CLI là account cũ → 403). Chưa làm: hoàn tiền/huỷ sau trả, sửa link sau giao, cổng/webhook đối tác thật, sổ công nợ sàn→đối tác, seed demo.
+
+## 2026-09-14 — Model 3D cho hồ sơ số hoá ("Thêm 3D", tự quét bằng điện thoại)
+
+**Context:** Ảnh phẳng không thể hiện bề mặt/vết nứt. Đặc tả BR-3D-01..03: model về qua SDK/webhook đối tác, gắn đúng lot_id, chỉ công khai sau khi admin duyệt cùng lô, lô có model mang nhãn "3D". Chưa có đối tác thật, chưa có webhook ngoài nào trong repo.
+**Decision:**
+- "lô nháp" = `asset_postings`; lot_id webhook = `asset_postings.id`. Bảng RIÊNG `asset_3d_scans` (`20260915000001`) — không cột trên `asset_postings` vì review guard nuốt ghi của service_role và đá hồ sơ đã duyệt về pending.
+- Người dùng chốt: TRẢ credit (variant `scan_3d_owner`, 30 — sửa ở /admin/dich-vu). Trừ **atomic ở RPC** `start_asset_3d_scan`; hoàn ở server khi `scan.failed` / hết hạn 24h (lazy, không cron), chốt một lần bằng `refunded_at`.
+- Webhook ngoài đầu tiên: edge fn `scan3d-webhook`, `verify_jwt=false`, HMAC `sha256(ts.body)` ±5 phút. Luật nghiệp vụ nằm ở hàm SQL chỉ `service_role` gọi được (attach/fail/mark_processing) — webhook chỉ xác thực chữ ký.
+- Công khai = trigger AFTER UPDATE trên `review_status` (WHEN OLD≠NEW, KHÔNG dùng `UPDATE OF`). Model về SAU khi đã duyệt ⇒ ẩn tới khi admin bấm "Duyệt model 3D".
+- Đối tác GIẢ LẬP: trang `/doi-tac-3d/quet` + RPC `mock_partner_deliver_asset_3d_scan` (`…0002`), chỉ partner='mock' + đúng token, model luôn là file mẫu CC0 trong bucket `asset-3d`. Viewer: GLB → `@google/model-viewer` (chunk lazy, loại khỏi PWA precache), embed → iframe.
+- Người dùng chốt: trang lô công khai = dialog từ `SessionLotList` (không route mới).
+**Consequences:** Edge fn CHƯA deploy + secret CHƯA đặt — token CLI trong keychain là account cũ (403); cần login `secsosoo@gmail.com` rồi `functions deploy scan3d-webhook --no-verify-jwt` + `secrets set SCAN3D_WEBHOOK_SECRET`. Thử sau deploy: `scripts/scan3d-send-webhook.mts`. Có đối tác thật: đổi `buildScanDeeplink` + `partner`, xoá RPC/trang giả lập. Báo cáo giao dịch credit đếm hoàn tiền là dòng "nạp" chứ không trừ vào tiêu dùng.
+
 ## 2026-09-12 — Giai đoạn sau đấu giá: hợp đồng mua bán, sổ tiền, bàn giao
 
 **Context:** Sau `org_finalize_session`, sàn chỉ biết ai trúng, giá bao nhiêu, hạn 30 ngày và MỘT cờ một-lần `payment_status`. Không có hợp đồng mua bán, không biết đã trả bao nhiêu, không có bàn giao, không có phía bên bán. Công cụ duy nhất của tổ chức là hai cái nút không hoàn tác được.

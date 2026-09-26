@@ -7,6 +7,7 @@ import { SaleStageBadge } from "@/components/sale-contracts/SaleStageBadge";
 import { useSaleContractDetail } from "@/hooks/useSaleContracts";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import type { SaleAssetSnapshot } from "@/types/auction-sale-contract";
+import { cn } from "@/lib/utils";
 
 const CHILD_LABEL: Record<string, string> = Object.fromEntries(
   ASSET_CATEGORIES.flatMap((p) => p.children.map((ch) => [ch.slug, ch.name])),
@@ -18,15 +19,19 @@ const CHILD_LABEL: Record<string, string> = Object.fromEntries(
  *
  * Dùng chung `SaleContractBody` với cổng tổ chức — vai của người xem suy từ
  * `can_act`, nên không có nhánh giao diện riêng cho từng bên.
+ *
+ * `embedded`: đang nằm trong cổng chủ tài sản — layout đã dựng khung trang
+ * (lề + bề rộng), nên trang không bọc thêm `container` của riêng nó.
  */
-export default function SaleContractPage() {
+export default function SaleContractPage({ embedded = false }: { embedded?: boolean }) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, error } = useSaleContractDetail(id ?? null);
+  const frame = embedded ? "" : "container mx-auto px-4";
 
   if (isLoading) {
     return (
-      <div className="container mx-auto flex items-center justify-center gap-2 px-4 py-24 text-muted-foreground">
+      <div className={cn(frame, "flex items-center justify-center gap-2 py-24 text-muted-foreground")}>
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
         Đang tải hợp đồng…
       </div>
@@ -35,7 +40,7 @@ export default function SaleContractPage() {
 
   if (error || !data) {
     return (
-      <div className="container mx-auto max-w-3xl px-4 py-16">
+      <div className={cn(frame, "mx-auto max-w-3xl py-16")}>
         <Card className="rounded-2xl p-10 text-center">
           <p className="text-sm text-muted-foreground">
             Không tìm thấy hợp đồng này, hoặc bạn không có quyền xem.
@@ -51,7 +56,7 @@ export default function SaleContractPage() {
   const asset = (data.contract.asset_snapshot ?? {}) as SaleAssetSnapshot;
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
+    <div className={cn(!embedded && "container mx-auto max-w-4xl px-4 py-8")}>
       <Button
         type="button"
         variant="ghost"

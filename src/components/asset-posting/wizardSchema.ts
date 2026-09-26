@@ -31,6 +31,8 @@ export const wizardSchema = z
     ward: z.string().optional(),
     address: z.string().optional(),
     deltaFields: z.record(z.unknown()),
+    /** Chi nhánh trong không gian ("" = không thuộc chi nhánh nào) — Phase 4. */
+    branchId: z.string(),
 
     // Bước 3 — pháp lý & hiện trạng
     // Bắt buộc hay không tuỳ nhóm cấp 1 — quyết định ở requirements().
@@ -94,6 +96,7 @@ export const wizardDefaults: WizardValues = {
   ward: "",
   address: "",
   deltaFields: {},
+  branchId: "",
   ownershipProofUrls: [],
   declarationAccepted: false,
   declarationName: "",
@@ -150,10 +153,26 @@ export const REQUIREMENT_MSG: Record<string, string> = {
   wantsAuction: "Chọn một phương án",
   auctionFormat: "Chọn hình thức đấu giá",
   startingPrice: "Nhập giá hoặc chọn nhờ định giá",
+  branchId: "Chọn chi nhánh trong phạm vi được giao",
+  authentication: "Cần chứng thư giám định “xác thực” — lưu nháp và nộp lại khi có kết quả",
 };
 
-/** Toàn bộ điều kiện bắt buộc theo giá trị form hiện tại (mirror sohoa-app.jsx). */
-export function requirements(v: WizardValues): Requirement[] {
+/** Ngữ cảnh giám định (BR-GD-03) — đọc từ server, không nằm trong form. */
+export interface AuthenticationContext {
+  required: boolean;
+  authentic: boolean;
+}
+
+/**
+ * Toàn bộ điều kiện bắt buộc theo giá trị form hiện tại (mirror sohoa-app.jsx).
+ * `branchRequired`: Cán bộ bị giới hạn chi nhánh — hồ sơ không chi nhánh thì RLS
+ * không cho họ ghi (owner_posting_row_can), nên bắt chọn ngay từ bước 2.
+ */
+export function requirements(
+  v: WizardValues,
+  gd?: AuthenticationContext,
+  opts: { branchRequired?: boolean } = {},
+): Requirement[] {
   const r: Requirement[] = [
     { step: 1, key: "parentSlug", label: "Nhóm tài sản", ok: !!v.parentSlug },
     { step: 1, key: "childSlug", label: "Loại tài sản", ok: !!v.childSlug },
@@ -161,6 +180,9 @@ export function requirements(v: WizardValues): Requirement[] {
     { step: 2, key: "province", label: "Khu vực", ok: !!v.province },
     { step: 2, key: "imageUrls", label: "Ảnh tài sản", ok: v.imageUrls.length >= MIN_IMAGES },
   ];
+  if (opts.branchRequired) {
+    r.push({ step: 2, key: "branchId", label: "Chi nhánh", ok: !!v.branchId });
+  }
   getDeltaFields(v.childSlug)
     .filter((d) => d.required)
     .forEach((d) => r.push({ step: 2, key: `delta.${d.key}`, label: d.label, ok: filled(v.deltaFields[d.key]) }));
@@ -184,6 +206,10 @@ export function requirements(v: WizardValues): Requirement[] {
     if (v.pricingMode === "self") {
       r.push({ step: 4, key: "startingPrice", label: "Giá khởi điểm", ok: Number(v.startingPrice) > 0 });
     }
+  }
+  // Không chặn "Tiếp tục" (bước 5 vẫn xem được) mà chặn "Hoàn tất"; trigger server là cổng thật.
+  if (gd?.required) {
+    r.push({ step: 4, key: "authentication", label: "Chứng thư giám định", ok: gd.authentic });
   }
   return r;
 }
@@ -402,6 +428,7 @@ export function postingToWizardValues(p: AssetPosting): WizardValues {
     ward: p.ward ?? "",
     address: p.address ?? "",
     deltaFields: p.delta_fields ?? {},
+    branchId: p.branch_id ?? "",
     ownershipProofUrls: p.ownership_proof_urls ?? [],
     declarationAccepted: !!p.ownership_declaration,
     declarationName: p.ownership_declaration?.name ?? "",
@@ -436,6 +463,7 @@ export function buildPostingPayload(v: WizardValues): NewAssetPosting {
     district: v.district || null,
     ward: v.ward || null,
     address: v.address || null,
+    branch_id: v.branchId || null,
     pricing_mode: v.pricingMode,
     starting_price: v.pricingMode === "self" && v.startingPrice ? Number(v.startingPrice) : null,
     auction_format: v.auctionFormat,

@@ -2,6 +2,7 @@ import { AlertCircle, FileText, List, ShieldCheck } from "lucide-react";
 import { AssetDocUpload } from "../AssetDocUpload";
 import { Group, OptionalGroup, TextField, SegYesNo, Switch, Pill } from "../fields";
 import { OwnershipDeclaration } from "../OwnershipDeclaration";
+import { LegalConsultGroup } from "./LegalConsultGroup";
 import { getProofMode } from "@/constants/asset-posting-rules";
 import type { WizardValues } from "../wizardSchema";
 
@@ -9,6 +10,10 @@ interface StepProps {
   f: WizardValues;
   up: (patch: Partial<WizardValues>) => void;
   errs: Record<string, string>;
+  /** null khi hồ sơ chưa từng được lưu. */
+  postingId: string | null;
+  /** Tự lưu nháp khi gửi yêu cầu tư vấn pháp lý. */
+  ensurePostingId: () => Promise<string | null>;
 }
 
 const LEGAL_Q: { name: "hasDispute" | "hasMortgage" | "isSeized"; label: string }[] = [
@@ -17,8 +22,8 @@ const LEGAL_Q: { name: "hasDispute" | "hasMortgage" | "isSeized"; label: string 
   { name: "isSeized", label: "Tài sản có đang bị kê biên không?" },
 ];
 
-/** Bước 3: giấy tờ sở hữu + tình trạng pháp lý (3 câu) + ghi chú. */
-export function Step3LegalStatus({ f, up, errs }: StepProps) {
+/** Bước 3: giấy tờ sở hữu + tình trạng pháp lý (3 câu) + ghi chú + tư vấn pháp lý (tuỳ chọn). */
+export function Step3LegalStatus({ f, up, errs, postingId, ensurePostingId }: StepProps) {
   const answered = LEGAL_Q.filter((q) => f[q.name]).length;
   // Chỉ bất động sản & xe cộ có giấy tờ đăng ký sở hữu; nhóm còn lại ký cam kết.
   const proofMode = getProofMode(f.parentSlug);
@@ -107,6 +112,12 @@ export function Step3LegalStatus({ f, up, errs }: StepProps) {
           <AssetDocUpload value={f.docUrls} onChange={(v) => up({ docUrls: v })} prefix="extra" />
         </div>
       </OptionalGroup>
+
+      <LegalConsultGroup
+        postingId={postingId}
+        ensurePostingId={ensurePostingId}
+        docPaths={[...f.ownershipProofUrls, ...f.docUrls]}
+      />
     </div>
   );
 }

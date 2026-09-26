@@ -6,6 +6,9 @@ import { Separator } from "@/components/ui/separator";
 import { getDeltaFields } from "@/constants/asset-delta-fields";
 import { formatPrice } from "@/utils/formatters";
 import { renderDeltaValue } from "../format";
+import { PostingModel3dCard } from "@/components/asset-3d/PostingModel3dCard";
+import { PostingVrTourCard } from "@/components/vr-tour/PostingVrTourCard";
+import { PostingAuthenticationSection } from "@/components/authentication/PostingAuthenticationSection";
 import {
   AUCTION_FORMAT_LABELS,
   EXPECTED_TIMELINE_LABELS,
@@ -124,6 +127,41 @@ export function PostingInfoTab({ posting: p }: { posting: AssetPosting }) {
             </Section>
           </>
         )}
+
+        {/* Model 3D — chủ tài sản thêm/quét lại được cả sau khi đã số hoá. */}
+        <Separator />
+        <Section title="Model 3D">
+          <PostingModel3dCard
+            postingId={p.id}
+            title={p.title}
+            reviewStatus={p.review_status}
+            mode="owner"
+            locked={p.status === "cancelled" || p.status === "contracted"}
+          />
+        </Section>
+
+        {/* VR tour — đặt dịch vụ đối tác, thanh toán và theo dõi đơn ngay trong hồ sơ. */}
+        <Separator />
+        <Section title="VR tour">
+          <PostingVrTourCard
+            postingId={p.id}
+            title={p.title}
+            reviewStatus={p.review_status}
+            mode="owner"
+            locked={p.status === "cancelled" || p.status === "contracted"}
+          />
+        </Section>
+
+        {/* Giám định — chứng thư chỉ do đối tác cấp (BR-GD-01); người bán đặt đơn, trả tiền, gửi hiện vật. */}
+        <Separator />
+        <Section title="Giám định">
+          <PostingAuthenticationSection
+            postingId={p.id}
+            reviewStatus={p.review_status}
+            mode="owner"
+            locked={p.status === "cancelled" || p.status === "contracted"}
+          />
+        </Section>
 
         {/* Video */}
         {p.video_urls?.length > 0 && (

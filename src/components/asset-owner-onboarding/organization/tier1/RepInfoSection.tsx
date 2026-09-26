@@ -9,6 +9,8 @@ interface Props {
   repTitle: string;
   repIdType: IdType;
   repIdNumber: string;
+  /** Hồ sơ chi nhánh: người khai là cán bộ được Giám đốc chi nhánh giao việc / uỷ quyền. */
+  isBranch?: boolean;
   onChange: (fields: Partial<{
     rep_full_name: string;
     rep_title: string;
@@ -18,16 +20,18 @@ interface Props {
 }
 
 export const RepInfoSection = ({
-  repFullName, repTitle, repIdType, repIdNumber, onChange,
+  repFullName, repTitle, repIdType, repIdNumber, isBranch = false, onChange,
 }: Props) => (
   <Card className="rounded-2xl p-5 space-y-5">
     <div>
       <h3 className="font-semibold text-foreground flex items-center gap-2">
         <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">B</span>
-        Người đại diện / Được ủy quyền
+        {isBranch ? "Cán bộ được giao" : "Người đại diện / Được ủy quyền"}
       </h3>
       <p className="text-xs text-muted-foreground mt-0.5">
-        Người đại diện theo pháp luật hoặc người được ủy quyền thực hiện KYC thay tổ chức.
+        {isBranch
+          ? "Cán bộ được Giám đốc chi nhánh giao việc / uỷ quyền đăng ký Trạm Điều Hành cho chi nhánh."
+          : "Người đại diện theo pháp luật hoặc người được ủy quyền thực hiện KYC thay tổ chức."}
       </p>
     </div>
 
@@ -47,7 +51,7 @@ export const RepInfoSection = ({
         id="rep_title"
         value={repTitle}
         onChange={(e) => onChange({ rep_title: e.target.value })}
-        placeholder="Giám đốc / Trưởng phòng Pháp lý / ..."
+        placeholder={isBranch ? "Chuyên viên xử lý nợ / Trưởng phòng KHDN / ..." : "Giám đốc / Trưởng phòng Pháp lý / ..."}
       />
     </div>
 

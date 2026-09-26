@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { OwnerNoWorkspaceState } from "@/components/asset-owner-portal/ui/OwnerNoWorkspaceState";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Loader2, SlidersHorizontal, X, ChevronDown, ChevronUp,
   FileBarChart2, Lock, Coins, ArrowUpDown, Check, ChevronsUpDown,
@@ -33,8 +33,9 @@ for (const cat of ASSET_CATEGORIES) {
 }
 
 const STATUS_LABELS = ["Chờ đấu", "Đã thành", "Tồn đọng", "Không thành", "Đang đấu"];
-import { useOwnerPortfolioMetrics, type PortfolioFilter } from "@/hooks/useOwnerPortfolioMetrics";
+import { isSoldRow, useOwnerPortfolioMetrics, type PortfolioFilter } from "@/hooks/useOwnerPortfolioMetrics";
 import { useOwnerReportAccess } from "@/hooks/useOwnerReportAccess";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useCredits } from "@/hooks/useCredits";
 import { OWNER_REPORT_COST } from "@/lib/credits";
 import { Button } from "@/components/ui/button";
@@ -245,28 +246,13 @@ function MultiSelectPopover({
 
 const OwnerReportPage = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  // Không gian theo tư cách thành viên (kể cả người được mời), không theo người tạo.
+  const { workspaceId, isLoading: loading } = useOwnerWorkspace();
   const [filter, setFilter] = useState<PortfolioFilter>({});
   const [advOpen, setAdvOpen] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const prevFilterRef = useRef<string>("{}");
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { setLoading(false); return; }
-      supabase
-        .from("asset_owner_workspaces")
-        .select("id")
-        .eq("owner_user_id", session.user.id)
-        .maybeSingle()
-        .then(({ data: ws }) => {
-          setWorkspaceId(ws?.id ?? null);
-          setLoading(false);
-        });
-    });
-  }, []);
 
   const { metrics, isLoading: metricsLoading } = useOwnerPortfolioMetrics(workspaceId, filter);
   const { metrics: allMetrics } = useOwnerPortfolioMetrics(workspaceId, {});
@@ -389,7 +375,7 @@ const OwnerReportPage = () => {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -397,21 +383,23 @@ const OwnerReportPage = () => {
 
   if (!workspaceId) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
-        <div className="text-center space-y-4 max-w-sm">
-          <div className="p-3 rounded-xl bg-primary/10 w-fit mx-auto">
-            <FileBarChart2 className="w-6 h-6 text-primary" />
+      <OwnerNoWorkspaceState icon={FileBarChart2}>
+        <div className="flex items-center justify-center py-24">
+          <div className="text-center space-y-4 max-w-sm">
+            <div className="p-3 rounded-xl bg-primary/10 w-fit mx-auto">
+              <FileBarChart2 className="w-6 h-6 text-primary" />
+            </div>
+            <p className="text-sm text-muted-foreground">Bạn chưa có workspace Chủ tài sản.</p>
+            <Button onClick={() => navigate("/tro-thanh-chu-tai-san")}>Bắt đầu KYC</Button>
           </div>
-          <p className="text-sm text-muted-foreground">Bạn chưa có workspace Chủ tài sản.</p>
-          <Button onClick={() => navigate("/tro-thanh-chu-tai-san")}>Bắt đầu KYC</Button>
         </div>
-      </div>
+      </OwnerNoWorkspaceState>
     );
   }
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6">
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground font-serif">Báo cáo Danh mục Tài sản</h1>
@@ -901,7 +889,7 @@ const OwnerReportPage = () => {
                   {sortedListings.slice(0, 20).map((l) => {
                     const nowIso = new Date().toISOString();
                     const isFuture = l.auctionTime && l.auctionTime > nowIso;
-                    const isSold = l.listingStatus === "SOLD_RENTED" || !!l.winPrice;
+                    const isSold = isSoldRow(l);
                     const isPending = !isSold && l.sessionStatus === "ended" && l.roundCount >= 2;
                     const statusLabel = isSold ? "Đã thành"
                       : l.sessionStatus === "registration_open" ? "Đăng ký"

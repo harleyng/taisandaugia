@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, ArrowRight, Building2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertCircle, Building2, CheckCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { ListingRow } from "@/hooks/useOwnerPortfolioMetrics";
-import { formatPrice } from "@/utils/formatters";
+import { formatMoneyShort } from "@/utils/money";
+import { SectionCard } from "@/components/asset-owner-portal/ui/SectionCard";
+import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
 
 interface PendingConfirmationsBlockProps {
   items: ListingRow[];
@@ -15,11 +16,12 @@ interface PendingConfirmationsBlockProps {
 function ConfidenceBadge({ score }: { score: number | null }) {
   if (score === null) return null;
   const pct = Math.round(score * 100);
+  // Chữ giữ màu foreground trên nền nhạt của token warning để đủ tương phản.
   const cls = pct >= 80
-    ? "bg-amber-100 text-amber-700"
-    : "bg-red-100 text-red-600";
+    ? "bg-warning/15 text-foreground"
+    : "bg-destructive/10 text-destructive";
   return (
-    <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0", cls)}>
+    <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 tabular-nums", cls)}>
       {pct}% khớp
     </span>
   );
@@ -29,31 +31,13 @@ export function PendingConfirmationsBlock({ items, totalCount, loading }: Pendin
   const navigate = useNavigate();
 
   return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-600" />
-          <span className="text-sm font-semibold text-amber-800">
-            Tài sản chờ xác nhận
-          </span>
-          {totalCount > 0 && (
-            <span className="text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full">
-              {totalCount}
-            </span>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100 h-7 px-2 gap-1"
-          onClick={() => navigate("/chu-tai-san/tai-san")}
-        >
-          Xem tất cả
-          <ArrowRight className="w-3 h-3" />
-        </Button>
-      </div>
-
+    <SectionCard
+      title="Tài sản chờ xác nhận"
+      icon={AlertCircle}
+      tone="warning"
+      count={totalCount}
+      viewAllHref="/chu-tai-san/tai-san"
+    >
       {/* Body */}
       {loading ? (
         <div className="space-y-2">
@@ -62,15 +46,13 @@ export function PendingConfirmationsBlock({ items, totalCount, loading }: Pendin
           ))}
         </div>
       ) : items.length === 0 ? (
-        <p className="text-sm text-amber-700/70 py-3 text-center">
-          Không có tài sản nào chờ xác nhận
-        </p>
+        <EmptyState compact icon={CheckCheck} tone="success" title="Không có tài sản nào chờ xác nhận" />
       ) : (
         <div className="space-y-1.5">
           {items.map((item) => (
             <button
               key={item.id}
-              className="w-full flex items-center gap-3 rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-left hover:bg-amber-50 transition-colors"
+              className="w-full flex items-center gap-3 rounded-xl border bg-background px-3 py-2.5 text-left hover:bg-muted/50 transition-colors"
               onClick={() => navigate(`/listings/${item.id}`)}
             >
               {/* Thumbnail */}
@@ -79,7 +61,7 @@ export function PendingConfirmationsBlock({ items, totalCount, loading }: Pendin
                   <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    <Building2 className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
                   </div>
                 )}
               </div>
@@ -89,8 +71,8 @@ export function PendingConfirmationsBlock({ items, totalCount, loading }: Pendin
                 <p className="text-sm font-medium text-foreground truncate leading-tight">
                   {item.title}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatPrice(item.price, "TOTAL")}
+                <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+                  {formatMoneyShort(item.price)}
                   {item.matchedName && (
                     <span className="ml-1.5">· {item.matchedName}</span>
                   )}
@@ -103,6 +85,6 @@ export function PendingConfirmationsBlock({ items, totalCount, loading }: Pendin
           ))}
         </div>
       )}
-    </div>
+    </SectionCard>
   );
 }

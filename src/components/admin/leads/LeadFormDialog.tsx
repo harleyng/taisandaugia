@@ -12,7 +12,7 @@ import {
 import { toast } from "sonner";
 import { useUpsertLead } from "@/hooks/useLeads";
 import {
-  SOURCE_LABELS, LEAD_TYPE_LABELS, MANUAL_SOURCES, MARKET_DATA_SOURCE,
+  SOURCE_LABELS, LEAD_TYPE_LABELS, MANUAL_SOURCES, HQ_EXPANSION_SOURCE, isSystemSource,
 } from "@/lib/leads/leadStatus";
 import { vietnamProvinces } from "@/constants/vietnam-locations";
 import type { Lead, LeadFields, LeadSource, LeadType } from "@/types/leads";
@@ -136,13 +136,18 @@ export function LeadFormDialog({ open, onOpenChange, editing }: Props) {
             </div>
             <div className="space-y-1.5">
               <Label>Nguồn</Label>
-              <Select value={form.source} onValueChange={(v) => set("source", v as LeadSource)}>
+              <Select
+                value={form.source}
+                onValueChange={(v) => set("source", v as LeadSource)}
+                disabled={form.source === HQ_EXPANSION_SOURCE}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {/* 'Dữ liệu sàn' chỉ hiện khi lead đang sửa vốn đã mang nguồn đó,
-                      để Select không rỗng — không cho chọn mới. */}
-                  {(form.source === MARKET_DATA_SOURCE
-                    ? [MARKET_DATA_SOURCE, ...MANUAL_SOURCES]
+                  {/* Nguồn hệ thống chỉ hiện khi lead đang sửa vốn đã mang nguồn đó,
+                      để Select không rỗng — không cho chọn mới. Tín hiệu Tháp Điều
+                      Hành bị DB khoá hẳn (đổi đi sẽ sinh lead trùng). */}
+                  {(isSystemSource(form.source)
+                    ? [form.source, ...MANUAL_SOURCES]
                     : MANUAL_SOURCES
                   ).map((k) => (
                     <SelectItem key={k} value={k}>{SOURCE_LABELS[k]}</SelectItem>

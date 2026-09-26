@@ -9,15 +9,17 @@ interface Props {
   token: string;
   expiresAt?: string | null;
   label?: string;
+  /** Liên kết đầy đủ khi không phải lời mời tổ chức (vd. /loi-moi-chu-tai-san/:token). */
+  url?: string;
 }
 
 /**
  * Hiển thị liên kết mời để người mời tự copy gửi đi — dự án CHƯA có hạ tầng gửi
  * email, đây là cách giao link duy nhất (giống CreateUserDialog của admin).
  */
-export function InviteLinkPanel({ token, expiresAt, label = "Liên kết tham gia" }: Props) {
+export function InviteLinkPanel({ token, expiresAt, label = "Liên kết tham gia", url: urlOverride }: Props) {
   const [copied, setCopied] = useState(false);
-  const url = inviteLink(token);
+  const url = urlOverride ?? inviteLink(token);
 
   const copy = async () => {
     try {
@@ -39,7 +41,7 @@ export function InviteLinkPanel({ token, expiresAt, label = "Liên kết tham gi
           onFocus={(e) => e.currentTarget.select()}
           className="text-xs"
         />
-        <Button type="button" variant="outline" size="icon" onClick={copy} title="Sao chép">
+        <Button type="button" variant="outline" size="icon" onClick={copy} title="Sao chép" aria-label="Sao chép liên kết">
           {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
         </Button>
       </div>

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { AssetOwnerOrgKYC } from "@/types/asset-owner";
 import type { TablesInsert } from "@/integrations/supabase/types";
+import { mapOrgKycError } from "@/lib/assetOwnerKyc/orgKycValidation";
 
 type OrgKycWrite = TablesInsert<"asset_owner_org_kyc">;
 
@@ -73,7 +74,8 @@ export function useAssetOwnerOrgKYC(userId: string | null) {
       queryClient.invalidateQueries({ queryKey: qk });
       toast.success("Hồ sơ tổ chức đã được gửi, SLA 1–2 ngày làm việc");
     },
-    onError: () => toast.error("Gửi hồ sơ thất bại"),
+    // Trigger asset_owner_org_kyc_branch_guard trả mã lỗi nghiệp vụ cho hồ sơ chi nhánh.
+    onError: (err) => toast.error(mapOrgKycError(err, "Gửi hồ sơ thất bại")),
   });
 
   const uploadDoc = async (

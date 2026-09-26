@@ -1,78 +1,35 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { OwnerNoWorkspaceState } from "@/components/asset-owner-portal/ui/OwnerNoWorkspaceState";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, LayoutDashboard, FlaskConical } from "lucide-react";
+import { Loader2, LayoutDashboard, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { useOwnerPortfolioMetrics } from "@/hooks/useOwnerPortfolioMetrics";
-import { PortfolioOverviewBlock } from "@/components/asset-owner-portal/shared/PortfolioOverviewBlock";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
+import { useOwnerPulse } from "@/hooks/useOwnerPulse";
+import { useOwnerTargetProgress } from "@/hooks/useOwnerTargets";
+import { OwnerPageHeader } from "@/components/asset-owner-portal/ui/OwnerPageHeader";
+import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
+import { DashboardKpiRow } from "@/components/asset-owner-portal/dashboard/DashboardKpiRow";
 import { UpcomingAuctionsBlock } from "@/components/asset-owner-portal/dashboard/UpcomingAuctionsBlock";
 import { PendingConfirmationsBlock } from "@/components/asset-owner-portal/dashboard/PendingConfirmationsBlock";
 import { StuckAssetsBlock } from "@/components/asset-owner-portal/dashboard/StuckAssetsBlock";
+import { OutcomeDueBlock } from "@/components/asset-owner-portal/pulse/OutcomeDueBlock";
+import { AwaitingPaymentBlock } from "@/components/asset-owner-portal/pulse/AwaitingPaymentBlock";
+import { TargetProgressBlock } from "@/components/asset-owner-portal/targets/TargetProgressBlock";
+import { BenchmarkBlock } from "@/components/asset-owner-portal/benchmark/BenchmarkBlock";
 import type { ListingRow } from "@/hooks/useOwnerPortfolioMetrics";
-import { qk } from "@/lib/queryKeys";
 
 const OwnerDashboard = () => {
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  // Không gian theo tư cách thành viên (kể cả người được mời), không theo người tạo.
+  const { workspaceId, isLoading: loading } = useOwnerWorkspace();
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setLoading(false); return; }
+  // Chỉ số + việc cần làm (cùng cache với huy hiệu "Nhịp đập" ở sidebar).
+  const { metrics, outcomeDue, awaitingPayment, isLoading: metricsLoading } = useOwnerPulse();
 
-      const { data: ws } = await supabase
-        .from("asset_owner_workspaces")
-        .select("id")
-        .eq("owner_user_id", session.user.id)
-        .maybeSingle();
-
-      if (ws) setWorkspaceId(ws.id);
-      setLoading(false);
-    };
-    load();
-  }, []);
-
-  const queryClient = useQueryClient();
-  const { metrics, isLoading: metricsLoading } = useOwnerPortfolioMetrics(workspaceId, {});
-
-  // Dev-only: seed pending_confirmation claims
-  const [seeding, setSeeding] = useState(false);
-  const seedPendingClaims = async () => {
-    if (!workspaceId) return;
-    setSeeding(true);
-    try {
-      // Fetch lowest-confidence auto_claimed or confirmed claims
-      const { data: candidates, error: fetchErr } = await supabase
-        .from("asset_owner_claims")
-        .select("id, confidence_score, status")
-        .eq("workspace_id", workspaceId)
-        .in("status", ["auto_claimed", "confirmed"])
-        .order("confidence_score", { ascending: true })
-        .limit(6);
-      if (fetchErr) throw fetchErr;
-      if (!candidates?.length) { toast.info("Không có claim nào để seed"); return; }
-
-      // Take up to 5 lowest-confidence claims
-      const toUpdate = candidates.slice(0, 5).map((c) => c.id);
-      const { error: updateErr } = await supabase
-        .from("asset_owner_claims")
-        .update({ status: "pending_confirmation" })
-        .in("id", toUpdate);
-      if (updateErr) throw updateErr;
-
-      toast.success(`Đã cập nhật ${toUpdate.length} claim → chờ xác nhận`);
-      queryClient.invalidateQueries({ queryKey: ["pending-claims-dashboard", workspaceId] });
-      queryClient.invalidateQueries({ queryKey: qk.ownerPortfolioClaims(workspaceId) });
-    } catch (e) {
-      toast.error("Seed thất bại: " + String(e));
-    } finally {
-      setSeeding(false);
-    }
-  };
+  // L1 — chỉ tiêu kỳ này (dùng chung cache kết quả hợp nhất với các khối dưới).
+  const targetProgress = useOwnerTargetProgress();
 
   // Direct query for pending_confirmation claims — bypasses metrics join issue
   const { data: pendingClaims = [], isLoading: pendingLoading } = useQuery({
@@ -110,6 +67,9 @@ const OwnerDashboard = () => {
       auctionOrgId: null,
       auctionOrgName: null,
       winPrice: null,
+      resolvedOutcome: null,
+      confidenceLabel: null,
+      hasConflict: false,
       auctionTime: l?.custom_attributes?.auction_time ?? l?.custom_attributes?.auction_date ?? null,
       registrationDeadline: null,
       imageUrl: l?.image_url ?? null,
@@ -119,6 +79,7 @@ const OwnerDashboard = () => {
       matchedName: c.matched_name ?? null,
       claimStatus: "pending_confirmation",
       confidenceScore: c.confidence_score ?? null,
+      assetOwnerId: null,
     };
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -127,7 +88,7 @@ const OwnerDashboard = () => {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -135,48 +96,57 @@ const OwnerDashboard = () => {
 
   if (!workspaceId) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
-        <div className="text-center space-y-4 max-w-sm">
-          <div className="p-3 rounded-xl bg-primary/10 w-fit mx-auto">
-            <LayoutDashboard className="w-6 h-6 text-primary" />
-          </div>
-          <p className="text-muted-foreground text-sm">
-            Bạn chưa có workspace Chủ tài sản.
-          </p>
-          <Button onClick={() => navigate("/tro-thanh-chu-tai-san")}>
-            Bắt đầu KYC
-          </Button>
+      <OwnerNoWorkspaceState icon={LayoutDashboard}>
+        <div className="py-24">
+          <EmptyState
+            icon={LayoutDashboard}
+            title="Bạn chưa có workspace Chủ tài sản."
+            action={<Button onClick={() => navigate("/tro-thanh-chu-tai-san")}>Bắt đầu KYC</Button>}
+          />
         </div>
-      </div>
+      </OwnerNoWorkspaceState>
     );
   }
 
   return (
-    <div className="p-6 space-y-4">
-      {/* Dev seed button */}
-      {import.meta.env.DEV && workspaceId && (
-        <div className="flex justify-end">
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 text-xs text-muted-foreground border-dashed"
-            onClick={seedPendingClaims}
-            disabled={seeding}
-          >
-            <FlaskConical className="w-3 h-3" />
-            {seeding ? "Đang seed..." : "Seed: chờ xác nhận"}
+    <div className="space-y-6">
+      <OwnerPageHeader
+        title="Tổng quan"
+        subtitle="Việc cần làm hôm nay và toàn cảnh danh mục của đơn vị bạn."
+        actions={
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/chu-tai-san/bao-cao")}>
+            <BarChart2 className="h-4 w-4" strokeWidth={1.5} />
+            Xem phân tích danh mục
           </Button>
-        </div>
-      )}
+        }
+      />
 
-      {/* KPI overview */}
-      <PortfolioOverviewBlock metrics={metrics} loading={metricsLoading} />
+      {/* L1 — đã thu bao nhiêu so với chỉ tiêu kỳ này */}
+      <TargetProgressBlock
+        workspaceId={workspaceId}
+        targets={targetProgress.targets}
+        progress={targetProgress.progress}
+        branches={targetProgress.branches}
+        preferredBranchIds={targetProgress.preferredBranchIds}
+        canManage={targetProgress.canManage}
+        loading={targetProgress.isLoading}
+      />
+
+      {/* Chỉ số danh mục — theo kết quả đã hợp nhất nguồn */}
+      <DashboardKpiRow metrics={metrics} loading={metricsLoading} />
+
+      {/* So sánh ẩn danh với chi nhánh cùng hệ thống — tự ẩn khi không đủ dữ liệu */}
+      <BenchmarkBlock />
+
+      {/* L2 — việc cần làm: mỗi khối tự giữ dialog của mình */}
+      <OutcomeDueBlock workspaceId={workspaceId} items={outcomeDue} loading={metricsLoading} />
+      <AwaitingPaymentBlock workspaceId={workspaceId} items={awaitingPayment} loading={metricsLoading} />
 
       {/* Cuộc đấu giá sắp tới — full width */}
       <UpcomingAuctionsBlock listings={metrics.allListings} loading={metricsLoading} />
 
       {/* Tài sản chờ xác nhận + Tài sản tồn đọng — two-column row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <PendingConfirmationsBlock
           items={pendingItems}
           totalCount={pendingItems.length}

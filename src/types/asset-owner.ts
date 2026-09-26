@@ -8,7 +8,12 @@ export type OwnerKind =
   | "individual" | "bank_credit" | "amc" | "enforcement"
   | "state_agency" | "company" | "other";
 export type ClaimStatus = "auto_claimed" | "pending_confirmation" | "confirmed" | "rejected";
-export type MatchBasis = "auto_name" | "manual_search" | "admin_assigned";
+/** linked_entity = không gian chi nhánh, claim từ đúng thực thể asset_owner_id (không khớp tên). */
+export type MatchBasis = "auto_name" | "manual_search" | "admin_assigned" | "linked_entity";
+/** organization = KYC tổ chức đầy đủ; branch = chi nhánh, KYC rút gọn (Phase 13, D3). */
+export type OrgKycScope = "organization" | "branch";
+/** names = khớp mờ theo tên/alias; entity = chỉ tài sản đứng tên asset_owner_id (Trạm của chi nhánh). */
+export type WorkspaceMatchScope = "names" | "entity";
 
 export interface AssetOwnerKYC {
   id: string;
@@ -50,6 +55,10 @@ export interface AssetOwnerOrgKYC {
   /** Chủ tài sản trong danh bạ đã chọn ở ô "Tên theo Giấy phép / Quyết định
    *  thành lập". NULL = người khai tự nhập tay vì chưa có trong danh bạ. */
   linked_asset_owner_id: string | null;
+  /** 'branch' ⇒ Trạm chỉ chứa tài sản của đúng thực thể chi nhánh; giấy tờ rút gọn. */
+  kyc_scope: OrgKycScope;
+  /** Công ty mẹ người khai chọn (chỉ với kyc_scope = 'branch'). */
+  parent_asset_owner_id: string | null;
   registry_match_score: number | null;
   registry_match_data: Record<string, unknown> | null;
   rep_full_name: string | null;
@@ -81,6 +90,12 @@ export interface AssetOwnerWorkspace {
   branch_names: string[];
   last_matched_at: string | null;
   total_claimed: number;
+  /** Thực thể asset_owners mà không gian đại diện; NULL = tên tự nhập. */
+  asset_owner_id: string | null;
+  match_scope: WorkspaceMatchScope;
+  /** Trạm trụ sở đã được chấp nhận liên kết (Phase 14); cây đúng một cấp. */
+  parent_workspace_id: string | null;
+  parent_linked_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +122,9 @@ export interface AssetOwnerClaim {
     image_url: string | null;
     status: string | null;
     address: Record<string, unknown> | null;
+    custom_attributes?: Record<string, unknown> | null;
+    /** Mốc "Niêm yết" của Đường ống (Phase 12) — tuỳ chọn cho các nơi dựng claim bằng tay. */
+    created_at?: string | null;
   };
   asset_owner?: { name: string; address: string | null };
 }
@@ -118,7 +136,14 @@ export interface RegistryAssetOwner {
   address: string | null;
   owner_kind: OwnerKind | null;
   aliases: string[];
+  /** Có giá trị ⇒ đây là chi nhánh / đơn vị thành viên của công ty mẹ này. */
+  parent_owner_id?: string | null;
+  parent?: { id: string; name: string } | null;
 }
+
+/** Cột + embed công ty mẹ dùng chung cho mọi truy vấn danh bạ ở KYC tổ chức. */
+export const REGISTRY_OWNER_SELECT =
+  "id, name, address, owner_kind, aliases, parent_owner_id, parent:parent_owner_id(id, name)";
 
 export const OWNER_KIND_LABELS: Record<OwnerKind, string> = {
   individual: "Cá nhân",

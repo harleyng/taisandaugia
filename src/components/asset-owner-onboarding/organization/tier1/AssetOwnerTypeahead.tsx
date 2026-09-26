@@ -2,18 +2,32 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Building2, CheckCircle2, X, Loader2, PenLine } from "lucide-react";
+import { Search, Building2, CheckCircle2, X, Loader2, PenLine, GitBranch } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { OWNER_KIND_LABELS, type RegistryAssetOwner } from "@/types/asset-owner";
+import { OWNER_KIND_LABELS, REGISTRY_OWNER_SELECT, type RegistryAssetOwner } from "@/types/asset-owner";
 
 interface Props {
   /** Chủ tài sản đã chọn trong danh bạ. null = chưa chọn hoặc đang tự nhập tay. */
   value: RegistryAssetOwner | null;
   onSelect: (owner: RegistryAssetOwner) => void;
   onClear: () => void;
-  /** Chuyển sang ô nhập tay khi tổ chức chưa có trong danh bạ. */
-  onManual: () => void;
+  /** Chuyển sang ô nhập tay khi tổ chức chưa có trong danh bạ. Bỏ trống ⇒ không có lối nhập tay. */
+  onManual?: () => void;
+  /** Ẩn một bản ghi khỏi kết quả (VD ô chọn công ty mẹ không được chọn chính chi nhánh). */
+  excludeId?: string | null;
+  placeholder?: string;
+  /** Dòng xác nhận dưới thẻ đã chọn. */
+  selectedHint?: string;
 }
+
+/** "Chi nhánh của «mẹ»" — dòng phụ cho bản ghi danh bạ là đơn vị thành viên. */
+const ParentLine = ({ owner, wrap = false }: { owner: RegistryAssetOwner; wrap?: boolean }) =>
+  owner.parent ? (
+    <p className="text-xs text-muted-foreground mt-0.5 flex items-start gap-1">
+      <GitBranch className="h-3 w-3 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+      <span className={wrap ? undefined : "truncate"}>Chi nhánh của «{owner.parent.name}»</span>
+    </p>
+  ) : null;
 
 /**
  * Chọn tổ chức từ danh bạ chủ tài sản (public.asset_owners) — bản tương ứng của
@@ -26,7 +40,11 @@ interface Props {
  * Chỉ liệt kê pháp nhân: bản ghi owner_kind = 'individual' là chủ tài sản cá
  * nhân, thuộc nhánh KYC Cá nhân chứ không phải nhánh Tổ chức.
  */
-export const AssetOwnerTypeahead = ({ value, onSelect, onClear, onManual }: Props) => {
+export const AssetOwnerTypeahead = ({
+  value, onSelect, onClear, onManual, excludeId = null,
+  placeholder = "Tìm theo tên tổ chức, ngân hàng, cơ quan...",
+  selectedHint = "Đã khớp với danh bạ chủ tài sản trên sàn",
+}: Props) => {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<RegistryAssetOwner[]>([]);
@@ -45,7 +63,7 @@ export const AssetOwnerTypeahead = ({ value, onSelect, onClear, onManual }: Prop
       setLoadError(false);
       let query = supabase
         .from("asset_owners")
-        .select("id, name, address, owner_kind, aliases")
+        .select(REGISTRY_OWNER_SELECT)
         .or("owner_kind.is.null,owner_kind.neq.individual")
         .order("name")
         .limit(20);
@@ -57,24 +75,27 @@ export const AssetOwnerTypeahead = ({ value, onSelect, onClear, onManual }: Prop
         setLoadError(true);
         setResults([]);
       } else {
-        setResults((data ?? []) as RegistryAssetOwner[]);
+        setResults(
+          ((data ?? []) as unknown as RegistryAssetOwner[]).filter((o) => o.id !== excludeId),
+        );
       }
       setLoading(false);
     }, 300);
 
     return () => { cancelled = true; clearTimeout(t); };
-  }, [q, value]);
+  }, [q, value, excludeId]);
 
   if (value) {
     return (
       <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-3 min-w-0">
+          <div className="flex flex-1 items-start gap-3 min-w-0">
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Building2 className="h-4 w-4 text-primary" />
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-sm text-foreground leading-tight">{value.name}</p>
+              <ParentLine owner={value} wrap />
               {value.address && (
                 <p className="text-xs text-muted-foreground mt-0.5">{value.address}</p>
               )}
@@ -82,7 +103,7 @@ export const AssetOwnerTypeahead = ({ value, onSelect, onClear, onManual }: Prop
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {value.owner_kind && OWNER_KIND_LABELS[value.owner_kind] && (
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="hidden sm:inline-flex text-[10px]">
                 {OWNER_KIND_LABELS[value.owner_kind]}
               </Badge>
             )}
@@ -99,7 +120,7 @@ export const AssetOwnerTypeahead = ({ value, onSelect, onClear, onManual }: Prop
 
         <div className="flex items-center gap-1.5 text-xs text-primary">
           <CheckCircle2 className="h-3.5 w-3.5" />
-          <span>Đã khớp với danh bạ chủ tài sản trên sàn</span>
+          <span>{selectedHint}</span>
         </div>
       </div>
     );
@@ -110,7 +131,7 @@ export const AssetOwnerTypeahead = ({ value, onSelect, onClear, onManual }: Prop
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
-          placeholder="Tìm theo tên tổ chức, ngân hàng, cơ quan..."
+          placeholder={placeholder}
           className="pl-9"
           value={q}
           onChange={(e) => { setQ(e.target.value); setOpen(true); }}
@@ -153,6 +174,7 @@ export const AssetOwnerTypeahead = ({ value, onSelect, onClear, onManual }: Prop
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-foreground">{o.name}</p>
+                    <ParentLine owner={o} />
                     {o.address && (
                       <p className="text-xs text-muted-foreground truncate">{o.address}</p>
                     )}
@@ -169,19 +191,21 @@ export const AssetOwnerTypeahead = ({ value, onSelect, onClear, onManual }: Prop
 
           {/* Danh bạ dựng từ tài sản đã lên sàn nên chưa phủ hết pháp nhân — không
               có lối thoát này thì tổ chức mới sẽ không nộp được hồ sơ. */}
-          <div className="border-t border-border p-2 flex items-center justify-between gap-2 bg-muted/20">
-            <p className="text-xs text-muted-foreground">Không tìm thấy tổ chức?</p>
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="h-auto py-0 text-xs"
-              onMouseDown={(e) => { e.preventDefault(); onManual(); setOpen(false); }}
-            >
-              <PenLine className="h-3 w-3 mr-1" />
-              Nhập tên thủ công
-            </Button>
-          </div>
+          {onManual && (
+            <div className="border-t border-border p-2 flex items-center justify-between gap-2 bg-muted/20">
+              <p className="text-xs text-muted-foreground">Không tìm thấy tổ chức?</p>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto py-0 text-xs"
+                onMouseDown={(e) => { e.preventDefault(); onManual(); setOpen(false); }}
+              >
+                <PenLine className="h-3 w-3 mr-1" />
+                Nhập tên thủ công
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

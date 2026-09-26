@@ -2,7 +2,10 @@ import { AlertCircle, Check, Clock, Landmark, Tag } from "lucide-react";
 import { MAX_RFQ_ORGS } from "@/constants/asset-posting-rules";
 import { AUCTION_FORMAT_LABELS, EXPECTED_TIMELINE_LABELS, type AuctionFormat, type ExpectedTimeline } from "@/types/asset-posting";
 import type { OrgMatchResult } from "@/lib/orgMatching";
+import type { AuthenticationRequiredReason } from "@/types/authentication";
 import { AssetBriefEditor } from "../AssetBriefEditor";
+import { AuctionConsultGroup } from "./AuctionConsultGroup";
+import { AuthenticationGroup } from "./AuthenticationGroup";
 import { Group, TextField, SelectField, WideRadio, Pill } from "../fields";
 import { groupNumber, parseNumber, vnWords } from "../format";
 import { OrgPicker } from "../OrgPicker";
@@ -14,6 +17,12 @@ interface StepProps {
   errs: Record<string, string>;
   orgResults: OrgMatchResult[];
   orgLoading: boolean;
+  /** null khi hồ sơ chưa từng được lưu. */
+  postingId: string | null;
+  /** Tự lưu nháp khi đặt giám định. */
+  ensurePostingId: () => Promise<string | null>;
+  gdReasons: AuthenticationRequiredReason[];
+  gdLotReason: string | null;
 }
 
 const FORMATS = Object.keys(AUCTION_FORMAT_LABELS) as AuctionFormat[];
@@ -29,8 +38,18 @@ function recipientLabel(ids: string[], results: OrgMatchResult[]): string | null
   return `${ids.length} tổ chức`;
 }
 
-/** Bước 4: quyết định đấu giá (có/chưa) → nếu có: giá + hình thức + tổ chức + tùy chọn. */
-export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepProps) {
+/** Bước 4: quyết định đấu giá (có/chưa) → nếu có: giá + hình thức + tổ chức + tùy chọn; giám định. */
+export function Step4AuctionNeeds({
+  f,
+  up,
+  errs,
+  orgResults,
+  orgLoading,
+  postingId,
+  ensurePostingId,
+  gdReasons,
+  gdLotReason,
+}: StepProps) {
   const want = f.wantsAuction;
 
   return (
@@ -147,6 +166,8 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
             </div>
           </Group>
 
+          <AuctionConsultGroup f={f} postingId={postingId} ensurePostingId={ensurePostingId} />
+
           <Group
             icon={<Clock className="h-4 w-4" />}
             title="Tổ chức đấu giá ký gửi"
@@ -246,6 +267,15 @@ export function Step4AuctionNeeds({ f, up, errs, orgResults, orgLoading }: StepP
           </Group>
         </>
       )}
+
+      {/* Cuối bước, sau giá khởi điểm — giá quyết định chính sách bắt buộc giám định (BR-GD-03). */}
+      <AuthenticationGroup
+        postingId={postingId}
+        ensurePostingId={ensurePostingId}
+        reasons={gdReasons}
+        lotReason={gdLotReason}
+        isAntique={f.parentSlug === "co-vat-suu-tam"}
+      />
     </div>
   );
 }

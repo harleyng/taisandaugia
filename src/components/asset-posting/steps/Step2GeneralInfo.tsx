@@ -5,8 +5,11 @@ import { getDeltaFields } from "@/constants/asset-delta-fields";
 import { Group, OptionalGroup, Pill, TextField, SelectField, DeltaField } from "../fields";
 import { AiExtractionCard } from "../AiExtractionCard";
 import { AiFieldSuggestion } from "../AiFieldSuggestion";
+import { BranchField } from "../BranchField";
 import { AssetMediaUpload } from "../AssetMediaUpload";
 import { AssetVideoUpload } from "../AssetVideoUpload";
+import { PostingModel3dCard } from "@/components/asset-3d/PostingModel3dCard";
+import { PostingVrTourCard } from "@/components/vr-tour/PostingVrTourCard";
 import { mediaSignature } from "@/lib/aiMediaExtraction";
 import type { UseAiMediaExtraction } from "@/hooks/useAiMediaExtraction";
 import { applyExtractedFields, fieldCurrentValue, type WizardValues } from "../wizardSchema";
@@ -17,6 +20,10 @@ interface StepProps {
   errs: Record<string, string>;
   /** State trích xuất AI — giữ ở cấp wizard để không mất khi qua bước khác rồi quay lại. */
   ai: UseAiMediaExtraction;
+  /** Id hồ sơ đã lưu (null = chưa lưu lần nào) — model 3D gắn theo id này. */
+  postingId: string | null;
+  /** Lưu nháp ngầm để có id trước khi mở phiên quét 3D. */
+  ensurePostingId: () => Promise<string | null>;
 }
 
 const CHILD_NAME: Record<string, string> = Object.fromEntries(
@@ -24,7 +31,7 @@ const CHILD_NAME: Record<string, string> = Object.fromEntries(
 );
 
 /** Bước 2: nhận diện tài sản (tên, khu vực) + thông số theo loại + thông số phụ. */
-export function Step2GeneralInfo({ f, up, errs, ai }: StepProps) {
+export function Step2GeneralInfo({ f, up, errs, ai, postingId, ensurePostingId }: StepProps) {
   const deltas = getDeltaFields(f.childSlug);
   const req = deltas.filter((d) => d.required);
   const opt = deltas.filter((d) => !d.required);
@@ -100,6 +107,26 @@ export function Step2GeneralInfo({ f, up, errs, ai }: StepProps) {
         </label>
         <AssetVideoUpload value={f.videoUrls} onChange={(v) => up({ videoUrls: v })} />
 
+        <label className="block text-[13.5px] font-semibold text-foreground mb-2 mt-4">
+          Model 3D <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
+        </label>
+        <PostingModel3dCard
+          postingId={postingId}
+          title={f.title || "Tài sản"}
+          mode="owner"
+          resolvePostingId={ensurePostingId}
+        />
+
+        <label className="block text-[13.5px] font-semibold text-foreground mb-2 mt-4">
+          VR tour <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
+        </label>
+        <PostingVrTourCard
+          postingId={postingId}
+          title={f.title || "Tài sản"}
+          mode="owner"
+          resolvePostingId={ensurePostingId}
+        />
+
         {/* Banner đi LIỀN với ô upload: nó chỉ chạy được khi đã có ảnh, và đây là
             chỗ người dùng vừa nhìn thấy ảnh của mình. Gợi ý từng trường thì hiện
             dưới đúng ô tương ứng ở các khối bên dưới. */}
@@ -129,6 +156,7 @@ export function Step2GeneralInfo({ f, up, errs, ai }: StepProps) {
             placeholder="Chọn tỉnh / thành phố"
             suggestion={suggest("province")}
           />
+          <BranchField value={f.branchId} onChange={(v) => up({ branchId: v })} err={errs.branchId} />
         </div>
       </Group>
 

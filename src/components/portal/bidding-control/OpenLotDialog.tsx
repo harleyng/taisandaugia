@@ -15,6 +15,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { formatVnd } from "@/lib/advertising/slug";
 import { formatDateTime } from "@/lib/auctionSessions/datetime";
+import { useLotAuctionConsultSuggestion } from "@/hooks/useAuctionConsultSuggestions";
+import { durationChoice } from "@/lib/auctionConsult/suggestion";
 import {
   DEFAULT_DURATION_MINUTES,
   DURATION_PRESETS,
@@ -60,6 +62,10 @@ export function OpenLotDialog({
 }: Props) {
   const [choice, setChoice] = useState(String(DEFAULT_DURATION_MINUTES));
   const [custom, setCustom] = useState("");
+  // Thời lượng từ đề xuất tư vấn đã được chủ tài sản chấp nhận — chỉ gợi ý, mặc định giữ nguyên.
+  const suggestion = useLotAuctionConsultSuggestion(lot?.session_id, lot?.asset_posting_id, !!lot);
+  const suggested = durationChoice(suggestion?.lot_duration_minutes, CUSTOM);
+  const suggestedApplied = !!suggested && choice === suggested.choice && (suggested.custom ?? custom) === custom;
 
   const close = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -99,6 +105,26 @@ export function OpenLotDialog({
 
         <div className="space-y-2">
           <Label>Thời lượng trả giá</Label>
+          {suggestion && suggested && (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+              <span className="text-foreground">
+                Đề xuất tư vấn v{suggestion.version}: <strong>{suggestion.lot_duration_minutes} phút</strong>
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant={suggestedApplied ? "ghost" : "outline"}
+                className="h-7 px-2.5 text-xs"
+                disabled={suggestedApplied}
+                onClick={() => {
+                  setChoice(suggested.choice);
+                  if (suggested.custom) setCustom(suggested.custom);
+                }}
+              >
+                {suggestedApplied ? "Đang dùng" : "Áp dụng"}
+              </Button>
+            </div>
+          )}
           <RadioGroup value={choice} onValueChange={setChoice} className="gap-2">
             {DURATION_PRESETS.map((m) => (
               <div key={m} className="flex items-center gap-2">

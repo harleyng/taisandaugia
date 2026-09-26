@@ -14,6 +14,8 @@ import {
   User,
   FileText,
   Eye,
+  Box,
+  RotateCcw,
 } from "lucide-react";
 import { useCredits } from "@/hooks/useCredits";
 import { useServiceCatalog, type CatalogVariantRow } from "@/hooks/useServiceCatalog";
@@ -73,6 +75,8 @@ const TYPE_ICON: Record<TransactionType, typeof ShoppingCart> = {
   unlock_opp_report: FileText,
   export_profile: FileText,
   export_personnel_dossier: FileText,
+  scan_3d: Box,
+  scan_3d_refund: RotateCcw,
 };
 
 const TransactionRow = ({ tx }: { tx: Transaction }) => {

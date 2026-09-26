@@ -17,6 +17,7 @@ import {
 } from "@/types/asset-posting";
 import { useSelectQuote, type RequestOrg, type RequestWithOrg } from "@/hooks/useAssetPosting";
 import { usePostingContracts } from "@/hooks/useConsignmentContract";
+import { usePostingCanWrite } from "./postingAccess";
 
 const BROKER_STEPS: { key: AssetBrokerRequest["status"]; label: string }[] = [
   { key: "pending", label: "Đã gửi sàn" },
@@ -70,6 +71,7 @@ export function ConsignmentPanel({
   isCancelling,
 }: ConsignmentPanelProps) {
   const selectQuote = useSelectQuote();
+  const canWrite = usePostingCanWrite();
   const { data: contracts = [] } = usePostingContracts(posting.id);
   const [confirming, setConfirming] = useState<RequestWithOrg | null>(null);
 
@@ -114,7 +116,7 @@ export function ConsignmentPanel({
                 </div>
               </div>
               {/* Huỷ được khi sàn chưa gửi đi đâu; đã có báo giá thì chọn hoặc để đó. */}
-              {brokerRequest.status === "pending" && (
+              {brokerRequest.status === "pending" && canWrite && (
                 <Button variant="ghost" size="sm" className="gap-1.5" onClick={onCancelBroker} disabled={isCancelling}>
                   {isCancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
                   Huỷ
@@ -171,6 +173,7 @@ export function ConsignmentPanel({
               onSelect={setConfirming}
               isSelecting={selectQuote.isPending}
               decided={decided}
+              readOnly={!canWrite}
             />
           </CardContent>
         </Card>

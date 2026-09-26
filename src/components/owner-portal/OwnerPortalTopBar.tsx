@@ -11,16 +11,27 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useCredits } from '@/hooks/useCredits'
+import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
+import { useOwnerPortalName } from '@/hooks/useOwnerPortalName'
+import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
+import { ownerWsAccessLabel } from '@/lib/ownerWorkspace/roles'
 import { CreditCard, LogOut, Menu, Plus, ChevronRight, ArrowLeft } from 'lucide-react'
 
 type PageMeta = { title: string; parent?: string }
 
 const PAGE_META: Record<string, PageMeta> = {
   '/chu-tai-san/dashboard': { title: 'Tổng quan' },
-  '/chu-tai-san/tai-san': { title: 'Danh sách tài sản' },
+  '/chu-tai-san/tai-san': { title: 'Tài sản' },
+  '/chu-tai-san/ket-qua': { title: 'Kết quả phiên' },
+  '/chu-tai-san/dong-tien': { title: 'Dòng tiền' },
   '/chu-tai-san/dang-tai-san': { title: 'Số hoá tài sản' },
-  '/chu-tai-san/bao-cao': { title: 'Báo cáo' },
+  '/chu-tai-san/hop-dong-mua-ban': { title: 'Hợp đồng mua bán' },
+  '/chu-tai-san/bao-cao': { title: 'Phân tích danh mục' },
+  '/chu-tai-san/bao-cao-dinh-ky': { title: 'Báo cáo định kỳ' },
+  '/chu-tai-san/chi-nhanh-amc': { title: 'Chi nhánh' },
+  '/chu-tai-san/thanh-vien': { title: 'Thành viên' },
+  '/chu-tai-san/lien-ket': { title: 'Liên kết' },
   '/chu-tai-san/credits': { title: 'Credit & Thanh toán' },
 }
 
@@ -29,6 +40,12 @@ function pageMetaFor(pathname: string): PageMeta | undefined {
   if (PAGE_META[pathname]) return PAGE_META[pathname]
   if (pathname.startsWith('/chu-tai-san/dang-tai-san/')) {
     return { title: 'Chi tiết hồ sơ', parent: 'Số hoá tài sản' }
+  }
+  if (pathname.startsWith('/chu-tai-san/hop-dong-mua-ban/')) {
+    return { title: 'Chi tiết hợp đồng', parent: 'Hợp đồng mua bán' }
+  }
+  if (pathname.startsWith('/chu-tai-san/bao-cao-dinh-ky/')) {
+    return { title: 'Chi tiết báo cáo', parent: 'Báo cáo định kỳ' }
   }
   return undefined
 }
@@ -42,36 +59,37 @@ export function OwnerPortalTopBar({ onMenuClick }: Props) {
   const location = useLocation()
   const { balance } = useCredits()
   const page = pageMetaFor(location.pathname)
-  const [displayName, setDisplayName] = useState('')
+  const { userId } = useAuth()
+  const { workspace, role, accessVia, isPersonal } = useOwnerWorkspace()
+  const [kycNames, setKycNames] = useState<{ org: string; individual: string }>({ org: '', individual: '' })
+  // Thành viên (kể cả người được mời) thấy tên đơn vị; tenant Cá nhân thấy tên KYC cá nhân.
+  const displayName = isPersonal
+    ? kycNames.individual || kycNames.org
+    : workspace?.primary_name || kycNames.org || kycNames.individual
+
+  // Tên tab theo trang; rời cổng thì trả lại tiêu đề cũ để không dính sang trang khác.
+  useEffect(() => {
+    const previous = document.title
+    return () => { document.title = previous }
+  }, [])
+
+  const portalName = useOwnerPortalName()
+  const tabTitle = page ? `${page.title} · ${portalName}` : portalName
+  useEffect(() => {
+    document.title = tabTitle
+  }, [tabTitle])
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return
-      const uid = session.user.id
-      // Try org KYC first, fall back to individual KYC
-      supabase
-        .from('asset_owner_org_kyc')
-        .select('org_name')
-        .eq('created_by', uid)
-        .eq('status', 'approved')
-        .maybeSingle()
-        .then(({ data: orgData }) => {
-          if (orgData?.org_name) {
-            setDisplayName(orgData.org_name)
-            return
-          }
-          supabase
-            .from('asset_owner_kyc')
-            .select('full_name')
-            .eq('user_id', uid)
-            .eq('status', 'approved')
-            .maybeSingle()
-            .then(({ data: indData }) => {
-              if (indData?.full_name) setDisplayName(indData.full_name)
-            })
-        })
+    if (!userId) return
+    let cancelled = false
+    Promise.all([
+      supabase.from('asset_owner_org_kyc').select('org_name').eq('created_by', userId).eq('status', 'approved').maybeSingle(),
+      supabase.from('asset_owner_kyc').select('full_name').eq('user_id', userId).eq('status', 'approved').maybeSingle(),
+    ]).then(([org, ind]) => {
+      if (!cancelled) setKycNames({ org: org.data?.org_name ?? '', individual: ind.data?.full_name ?? '' })
     })
-  }, [])
+    return () => { cancelled = true }
+  }, [userId])
 
   const initials = displayName
     ? displayName.trim().split(' ').slice(-2).map((w: string) => w[0]).join('').toUpperCase()
@@ -131,6 +149,9 @@ export function OwnerPortalTopBar({ onMenuClick }: Props) {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="font-normal">
               <p className="text-sm font-medium truncate">{displayName || 'Chủ tài sản'}</p>
+              {isPersonal
+                ? <p className="text-xs text-muted-foreground">Cá nhân</p>
+                : role && <p className="text-xs text-muted-foreground">{ownerWsAccessLabel(role, accessVia ?? 'member')}</p>}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/')}>

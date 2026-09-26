@@ -21,7 +21,7 @@ export default function OwnerSaleContractsPage() {
   const { data: rows = [], isLoading, error } = useOwnerSaleContracts();
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Hợp đồng mua bán</h1>
         <p className="mt-1 text-sm text-muted-foreground">

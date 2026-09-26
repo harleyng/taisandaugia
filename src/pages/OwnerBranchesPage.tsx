@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
+import { OwnerNoWorkspaceState } from "@/components/asset-owner-portal/ui/OwnerNoWorkspaceState";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Loader2, GitBranch, Building2, Phone, Mail, FileText,
   Pencil, Power, PowerOff, ExternalLink, AlertCircle, Plus, Upload, Trash2,
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useAssetOwnerWorkspace } from "@/hooks/useAssetOwnerWorkspace";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import {
   useWorkspaceBranches,
   type WorkspaceBranch,
@@ -34,40 +35,36 @@ import {
 } from "@/hooks/useWorkspaceBranches";
 import { BranchImportDialog } from "@/components/owner-branches/BranchImportDialog";
 import { WorkspaceAliasPanel } from "@/components/owner-branches/WorkspaceAliasPanel";
+import { BranchEntityScopePanel } from "@/components/owner-branches/BranchEntityScopePanel";
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 const OwnerBranchesPage = () => {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user.id ?? null);
-      setAuthLoading(false);
-    });
-  }, []);
-
-  const { workspace, wsLoading } = useAssetOwnerWorkspace(userId);
+  const { workspace, wsLoading } = useAssetOwnerWorkspace();
+  // Chi nhánh / alias / khớp lại là thiết lập không gian ⇒ chỉ Trưởng đơn vị (RLS
+  // 'manage_workspace'); vai trò khác xem được nhưng không thấy nút ghi.
+  const { can } = useOwnerWorkspace();
+  const canManage = can("manage_workspace");
   const { branches, branchesLoading, metrics, syncFromClaims, createBranch, bulkCreateBranches, deleteBranch, updateBranch, toggleActive } =
     useWorkspaceBranches(workspace?.id ?? null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
-  // Auto-sync on first load if no branches yet
+  // Auto-sync on first load if no branches yet — là một lần GHI, nên chỉ người
+  // quản lý không gian mới chạy (với vai trò khác upsert bị RLS chặn trong im lặng).
   useEffect(() => {
-    if (!workspace?.id || branchesLoading || branches.length > 0) return;
+    if (!canManage || !workspace?.id || branchesLoading || branches.length > 0) return;
     if (syncFromClaims.isPending) return;
     syncFromClaims.mutate();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspace?.id, branchesLoading, branches.length]);
+  }, [canManage, workspace?.id, branchesLoading, branches.length]);
 
-  const isLoading = authLoading || wsLoading || branchesLoading;
+  const isLoading = wsLoading || branchesLoading;
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -75,17 +72,19 @@ const OwnerBranchesPage = () => {
 
   if (!workspace) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
-        <div className="text-center space-y-3 max-w-sm">
-          <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mx-auto">
-            <GitBranch className="h-7 w-7 text-muted-foreground" />
+      <OwnerNoWorkspaceState icon={GitBranch}>
+        <div className="flex items-center justify-center py-24">
+          <div className="text-center space-y-3 max-w-sm">
+            <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mx-auto">
+              <GitBranch className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <p className="font-semibold text-foreground">Chưa có workspace</p>
+            <p className="text-sm text-muted-foreground">
+              Hoàn thành xác thực tổ chức để quản lý chi nhánh và AMC.
+            </p>
           </div>
-          <p className="font-semibold text-foreground">Chưa có workspace</p>
-          <p className="text-sm text-muted-foreground">
-            Hoàn thành xác thực tổ chức để quản lý chi nhánh và AMC.
-          </p>
         </div>
-      </div>
+      </OwnerNoWorkspaceState>
     );
   }
 
@@ -101,7 +100,7 @@ const OwnerBranchesPage = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-foreground">Chi nhánh</h1>
@@ -109,35 +108,37 @@ const OwnerBranchesPage = () => {
             Quản lý các đơn vị thành viên và công ty con của <strong>{workspace.primary_name}</strong>.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => syncFromClaims.mutate()}
-            disabled={syncFromClaims.isPending}
-            className="gap-2 shrink-0"
-          >
-            {syncFromClaims.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitBranch className="h-3.5 w-3.5" />}
-            Đồng bộ từ tài sản
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setImportOpen(true)}
-            className="gap-2 shrink-0"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Import
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setCreateOpen(true)}
-            className="gap-2 shrink-0"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Thêm chi nhánh
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncFromClaims.mutate()}
+              disabled={syncFromClaims.isPending}
+              className="gap-2 shrink-0"
+            >
+              {syncFromClaims.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitBranch className="h-3.5 w-3.5" />}
+              Đồng bộ từ tài sản
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportOpen(true)}
+              className="gap-2 shrink-0"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Import
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setCreateOpen(true)}
+              className="gap-2 shrink-0"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Thêm chi nhánh
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="branches">
@@ -158,7 +159,9 @@ const OwnerBranchesPage = () => {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="alias">Alias &amp; khớp tài sản</TabsTrigger>
+          <TabsTrigger value="alias">
+            {workspace?.match_scope === "entity" ? "Phạm vi & khớp tài sản" : "Alias & khớp tài sản"}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="branches">
@@ -169,7 +172,8 @@ const OwnerBranchesPage = () => {
             onToggle={handleToggle}
             onDelete={handleDelete}
             isProcessing={updateBranch.isPending || toggleActive.isPending || deleteBranch.isPending}
-            emptyLabel="Chưa có chi nhánh nào. Nhấn 'Đồng bộ từ tài sản' để tự động phát hiện."
+            readOnly={!canManage}
+            emptyLabel={canManage ? "Chưa có chi nhánh nào. Nhấn 'Đồng bộ từ tài sản' để tự động phát hiện." : "Chưa có chi nhánh nào."}
           />
         </TabsContent>
 
@@ -185,13 +189,16 @@ const OwnerBranchesPage = () => {
             onToggle={handleToggle}
             onDelete={handleDelete}
             isProcessing={updateBranch.isPending || toggleActive.isPending || deleteBranch.isPending}
-            emptyLabel="Chưa phát hiện AMC nào. Nhấn 'Đồng bộ từ tài sản' để kiểm tra."
+            readOnly={!canManage}
+            emptyLabel={canManage ? "Chưa phát hiện AMC nào. Nhấn 'Đồng bộ từ tài sản' để kiểm tra." : "Chưa phát hiện AMC nào."}
           />
         </TabsContent>
 
         <TabsContent value="alias">
-          {workspace ? (
-            <WorkspaceAliasPanel workspace={workspace} userId={userId} />
+          {workspace?.match_scope === "entity" ? (
+            <BranchEntityScopePanel workspace={workspace} readOnly={!canManage} />
+          ) : workspace ? (
+            <WorkspaceAliasPanel workspace={workspace} readOnly={!canManage} />
           ) : (
             <div className="text-sm text-muted-foreground py-8 text-center">
               Chưa có workspace tổ chức.
@@ -230,9 +237,11 @@ interface BranchTableProps {
   onDelete: (id: string) => void;
   isProcessing: boolean;
   emptyLabel: string;
+  /** Chỉ còn nút "Xem TS" — không sửa / tắt / xoá. */
+  readOnly?: boolean;
 }
 
-const BranchTable = ({ branches, metrics, onUpdate, onToggle, onDelete, isProcessing, emptyLabel }: BranchTableProps) => {
+const BranchTable = ({ branches, metrics, onUpdate, onToggle, onDelete, isProcessing, emptyLabel, readOnly = false }: BranchTableProps) => {
   const navigate = useNavigate();
   const [editingBranch, setEditingBranch] = useState<WorkspaceBranch | null>(null);
 
@@ -348,28 +357,33 @@ const BranchTable = ({ branches, metrics, onUpdate, onToggle, onDelete, isProces
                           <span className="hidden sm:inline">Xem TS</span>
                         </button>
 
-                        {/* Edit */}
-                        <button
-                          onClick={() => setEditingBranch(branch)}
-                          title="Chỉnh sửa"
-                          className="text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-muted"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                        {!readOnly && (
+                          <>
+                            {/* Edit */}
+                            <button
+                              onClick={() => setEditingBranch(branch)}
+                              title="Chỉnh sửa"
+                              aria-label="Chỉnh sửa"
+                              className="text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-muted"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
 
-                        {/* Toggle active */}
-                        <DeactivatePopover
-                          branch={branch}
-                          onConfirm={() => onToggle(branch)}
-                          isProcessing={isProcessing}
-                        />
+                            {/* Toggle active */}
+                            <DeactivatePopover
+                              branch={branch}
+                              onConfirm={() => onToggle(branch)}
+                              isProcessing={isProcessing}
+                            />
 
-                        {/* Delete */}
-                        <DeletePopover
-                          branch={branch}
-                          onConfirm={() => onDelete(branch.id)}
-                          isProcessing={isProcessing}
-                        />
+                            {/* Delete */}
+                            <DeletePopover
+                              branch={branch}
+                              onConfirm={() => onDelete(branch.id)}
+                              isProcessing={isProcessing}
+                            />
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

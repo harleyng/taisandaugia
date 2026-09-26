@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { CalendarClock, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CalendarClock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SessionStatusBadge } from "@/components/shared/SessionStatusBadge";
 import type { ListingRow } from "@/hooks/useOwnerPortfolioMetrics";
-import { formatPrice } from "@/utils/formatters";
+import { formatMoneyShort } from "@/utils/money";
+import { SectionCard } from "@/components/asset-owner-portal/ui/SectionCard";
+import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
 import { format, parseISO, isValid } from "date-fns";
 import type { AuctionSessionStatus } from "@/components/AuctionCard";
 
@@ -39,24 +40,7 @@ export function UpcomingAuctionsBlock({ listings, loading }: UpcomingAuctionsBlo
     .slice(0, 5);
 
   return (
-    <div className="rounded-2xl border bg-card p-4 space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CalendarClock className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold">Cuộc đấu giá sắp tới</span>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs text-muted-foreground h-7 px-2 gap-1"
-          onClick={() => navigate("/chu-tai-san/tai-san")}
-        >
-          Xem tất cả
-          <ArrowRight className="w-3 h-3" />
-        </Button>
-      </div>
-
+    <SectionCard title="Cuộc đấu giá sắp tới" icon={CalendarClock} viewAllHref="/chu-tai-san/tai-san">
       {/* Body */}
       {loading ? (
         <div className="space-y-2">
@@ -65,9 +49,7 @@ export function UpcomingAuctionsBlock({ listings, loading }: UpcomingAuctionsBlo
           ))}
         </div>
       ) : upcoming.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4 text-center">
-          Không có cuộc đấu giá sắp tới
-        </p>
+        <EmptyState compact icon={CalendarClock} title="Không có cuộc đấu giá sắp tới" />
       ) : (
         <div className="space-y-2">
           {upcoming.map((item) => (
@@ -82,7 +64,7 @@ export function UpcomingAuctionsBlock({ listings, loading }: UpcomingAuctionsBlo
                   <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <CalendarClock className="w-4 h-4" />
+                    <CalendarClock className="w-4 h-4" strokeWidth={1.5} />
                   </div>
                 )}
               </div>
@@ -90,8 +72,8 @@ export function UpcomingAuctionsBlock({ listings, loading }: UpcomingAuctionsBlo
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate leading-tight">{item.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatAuctionTime(item.auctionTime)} · {formatPrice(item.price, "TOTAL")}
+                <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+                  {formatAuctionTime(item.auctionTime)} · {formatMoneyShort(item.price)}
                 </p>
               </div>
 
@@ -109,6 +91,6 @@ export function UpcomingAuctionsBlock({ listings, loading }: UpcomingAuctionsBlo
           ))}
         </div>
       )}
-    </div>
+    </SectionCard>
   );
 }

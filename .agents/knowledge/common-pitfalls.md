@@ -4,6 +4,65 @@
 
 ---
 
+## 2026-09-26 — Dòng tiền (P15a): 4 cái bẫy
+
+- **Đừng ghi `paid_amount` / `paid_at` / `auction_fee` của `owner_asset_outcomes`.** Từ Phase 15a đó là tổng do trigger `owner_asset_outcomes_money` dựng từ sổ `owner_cash_events`; client ghi thẳng ⇒ P0001. Muốn đổi số đã thu: thêm / sửa / xoá một khoản thu chi (hoặc `owner_cash_settle`). Chỉ `payment_status = 'defaulted'` là cờ ghi tay.
+- **Insert sổ thu chi chỉ được gửi đúng các cột có GRANT** (`outcome_id, kind, amount, occurred_on, note`). Kiểu Insert sinh tự động đòi `workspace_id` (NOT NULL, trigger điền) ⇒ ép kiểu `as unknown as TablesInsert<…>` trong hook; gửi thêm `workspace_id` / `created_by` là `permission denied for table`. Dựng payload bằng `toCashEventInsert` / `toCashEventUpdate`.
+- **Radix Dialog làm phần còn lại của trang `aria-hidden`.** Test Playwright bằng `getByRole` sẽ "không thấy" nút phía sau khi hộp thoại còn mở — đóng hộp thoại trước. Và `getByRole('button', { name: 'Ghi thu' })` khớp cả "Ghi thu chi" ⇒ dùng `exact: true`.
+- **Trang cổng cuộn trong `<main>`, không phải document.** `page.screenshot({ fullPage: true })` chỉ ra màn đầu; muốn chụp trọn thì đặt `height:auto; overflow:visible` cho `main` và các tổ tiên trước khi chụp.
+
+## 2026-09-26 — Link chia sẻ báo cáo (P11): 3 cái bẫy
+
+- **`select('*')` trên `owner_report_snapshots` bị từ chối.** `authenticated` chỉ có quyền SELECT theo CỘT, trừ `share_token`, nên `*` sẽ báo `permission denied`. Luôn liệt kê cột (`BASE_COLUMNS` trong `useOwnerPeriodicReports`). Muốn đọc token thì qua RPC `owner_report_share_link`. PostgREST 14 chỉ `RETURNING` các cột được select ⇒ `.insert/.update/.delete(...).select("id")` vẫn chạy.
+- **Trigger BEFORE đảo ngược `ON DELETE SET NULL` = FK treo.** Guard viết `NEW.created_by := OLD.created_by` sẽ âm thầm giữ id của tài khoản đã bị xoá: PostgreSQL không kiểm lại FK khi khoá không đổi. Còn nếu guard `RAISE` với mọi thay đổi (báo cáo đã chốt) thì xoá tài khoản bị chặn luôn. Guard phải cho phép cột FK đổi về NULL.
+- **RPC công khai có tăng bộ đếm thì phải gọi đúng MỘT lần.** Mặc định React Query refetch khi focus / reconnect và retry ⇒ lượt xem bị thổi phồng. Xem các option trong `useSharedOwnerReport`. Và nhớ thêm route có token vào `normalizePath` của `AnalyticsTracker`: `analytics_events.path` do admin đọc, token nằm trong path là lộ link.
+
+## 2026-09-26 — Báo cáo định kỳ (P10): 3 cái bẫy
+
+- **Select đường dẫn JSON làm tsc sập (TS2589).** Ví dụ `.select("…, scope:payload->meta->scope")` báo "Type instantiation is excessively deep". Cách chữa: khai chuỗi select là `string` (không phải literal), tự khai kiểu dòng rồi ép `as unknown as Row[]` — xem `useOwnerReports`. Nhờ vậy danh sách lấy được vài trường tóm tắt mà khỏi tải cả payload.
+- **Quyền CỘT + client gửi thừa cột = `permission denied for table`.** Bảng chỉ GRANT INSERT/UPDATE theo cột (như `owner_report_snapshots`): client gửi thêm bất kỳ cột nào ngoài danh sách (kể cả `created_by: null`) là hỏng cả câu. Thông báo lỗi nhắc tới BẢNG, không nhắc cột ⇒ dễ tưởng là lỗi RLS.
+- **Màu chữ và ô chỉ số trong bản in.** `text-warning` (vàng hổ phách) trên nền trắng không đủ tương phản. Trạng thái bỏ cọc / tồn đọng: dùng icon mang màu cạnh chữ `text-foreground`. Ô `StatTile` có `truncate` ⇒ bản in 4 cột bị cắt chữ; thêm `print:[&_p]:whitespace-normal` vào lưới.
+
+## 2026-09-26 — `sr-only` bên trong vùng cuộn ngang làm cả trang cuộn ngang
+
+`.sr-only` là `position: absolute`. Nếu không tổ tiên nào `relative`, khối chứa của nó là cả trang ⇒ nó **thoát khỏi** `overflow-x-auto` của vùng cuộn và cả `overflow-hidden` của layout. Đường ống (P12) ở 390px: `documentElement.scrollWidth` = 1513, trong khi `main` và `body` vẫn 390. Cách sửa: đặt `relative` cho vùng cuộn (và cho thẻ). Kiểm tràn ngang phải đo `document.documentElement.scrollWidth`, không chỉ `main`.
+
+## 2026-09-26 — Hồ sơ số hoá theo không gian (P4): 6 cái bẫy
+
+- **Policy `TO public` + hàm đã thu hồi quyền của anon = mọi truy vấn đọc của anon đều hỏng.** Postgres kiểm quyền EXECUTE ngay lúc khởi tạo biểu thức, TRƯỚC khi short-circuit. Chỉ một policy storage `TO public` gọi `owner_posting_can` (đã REVOKE anon) là mọi SELECT `storage.objects` của anon báo "permission denied", kể cả biên bản đấu giá công khai. Policy viết lại phải `TO authenticated`, và hàm gọi thẳng trong policy phải giữ EXECUTE cho authenticated.
+- **DDL trên bảng nóng dễ deadlock với truy vấn đang chạy.** Lần áp đầu của `20260926152759` chết giữa chừng: tx của mình giữ `asset_postings`, đợi `asset_owner_org_kyc`; truy vấn của app đi chiều ngược lại. Migration đụng nhiều bảng thì `LOCK TABLE … IN ACCESS EXCLUSIVE MODE` MỌI bảng trong một câu ở đầu file, và chạy với `PGOPTIONS='-c lock_timeout=30s'`. Áp thất bại thì XOÁ dòng `schema_migrations` vừa ghi.
+- **Bộ lọc thư mục gốc = uid là CHỐT chống đọc trộm, không phải tiện ích.** Bỏ `c.owner_user_id = folder[1]` đi là ai có quyền ghi hồ sơ cũng dán được đường dẫn tệp của người khác vào `doc_urls`, rồi đọc qua policy. Luật thay thế: `owner_posting_file_owner_ok` — thư mục gốc phải là người tạo (Cá nhân) hoặc một thành viên của không gian.
+- **`consignment_owner_party(user)` ưu tiên KYC TỔ CHỨC.** Người vừa có KYC cá nhân vừa làm ở ngân hàng sẽ ký hợp đồng cá nhân dưới tên ngân hàng. Bên A phải suy từ hồ sơ: `consignment_posting_owner_party`.
+- **Đổi / xoá chi nhánh không được hạ hồ sơ đã duyệt.** `ON DELETE SET NULL` là một UPDATE ⇒ review guard thấy `NEW.* ≠ OLD.*` ⇒ đẩy về `pending`. Guard nay so sánh `to_jsonb(NEW) - 'branch_id'`. Thêm cột "tổ chức nội bộ" nào khác thì loại cột đó ra khỏi phép so sánh theo cùng cách.
+- **Hook gọi trong `&&` là hook có điều kiện.** `mode === "owner" && usePostingCanWrite()` vi phạm rules-of-hooks. Gọi hook trước, rồi mới `&&`.
+
+## 2026-09-26 — Chi nhánh tự onboard (P13): embed tự tham chiếu + 2 FK tới `asset_owners`
+
+- **Embed công ty mẹ của `asset_owners`** phải viết `parent:parent_owner_id(id, name)`, tức lấy tên cột làm quan hệ, ra đúng một object.
+  - `asset_owners!asset_owners_parent_owner_id_fkey(...)` ⇒ PGRST200.
+  - `asset_owners!parent_owner_id(...)` ⇒ trả mảng **con** (chiều một-nhiều), nên luôn `[]` với chi nhánh.
+  - Chuỗi dùng chung: `REGISTRY_OWNER_SELECT` trong `src/types/asset-owner.ts`.
+- **`asset_owner_org_kyc` giờ có 2 FK tới `asset_owners`** (`linked_asset_owner_id` + `parent_asset_owner_id`). Mọi embed kiểu `asset_owners(...)` từ bảng này phải chỉ đích danh FK (xem mục PGRST201 bên dưới). Không thì trang duyệt KYC admin hiện rỗng mà không báo lỗi.
+- **Chuỗi select ghép bằng `+` làm hỏng suy kiểu** của supabase-js (`GenericStringError[]`). Dù dài, phải viết thành một literal.
+- **Trigger chặn nghiệp vụ trên bảng ghi trực tiếp từ client** (KYC nộp bằng `.update({status})`): PostgREST trả `message` = mã RAISE. Map sang tiếng Việt ở một chỗ (`mapOrgKycError`), đừng để toast chung chung.
+
+## 2026-09-26 — Thành viên không gian chủ tài sản (P3): 5 cái bẫy
+
+- **Trigger "giữ owner cuối" đếm KHÔNG khoá.** Owner A gỡ B và B gỡ A trong cùng thời điểm: mỗi giao dịch vẫn thấy người kia còn active ⇒ cả hai lọt ⇒ không còn owner. RPC ghi thành viên phải `SELECT … FROM asset_owner_workspaces WHERE id = … FOR UPDATE` TRƯỚC khi kiểm quyền. Đây cũng là lý do bỏ policy ghi trực tiếp: đi thẳng PostgREST thì né được khoá.
+- **UPDATE một dòng từng là owner (status `removed`) sẽ bị guard coi là "thu hồi vai trò owner".** Khi người đó chấp nhận lời mời mới, `owner_ws_accept_invite` phải DELETE dòng cũ rồi INSERT dòng mới, chứ không UPDATE.
+- **Cặp nhân bản SQL↔TS:** `owner_ws_can` / `owner_ws_branch_ok` / `owner_ws_claim_write_ok` ↔ `src/lib/ownerWorkspace/roles.ts`. Chi nhánh của một claim được suy từ `asset_owner_id` ở CẢ ba nơi: `owner_ws_claim_write_ok`, `useClaimWriteAccess` và trigger của P6. `roles.test.ts` ghim ma trận quyền.
+- **Node ≥ 22 có `localStorage` riêng** (rỗng khi thiếu `--localstorage-file`) và nó che mất bản của jsdom. Trong test, `window.localStorage` là `undefined`. Tự cắm Storage trong bộ nhớ bằng `Object.defineProperty(window, "localStorage", …)`, xem `selection.test.ts`.
+- **tsconfig không strict ⇒ `!result.ok` KHÔNG thu hẹp union `{ok:true}|{ok:false}`.** Phải viết `result?.ok === false`.
+
+## 2026-09-26 — Biên bản kết quả phiên: xoá TỆP trước, xoá DÒNG sau
+
+Policy của bucket `owner-outcome-evidence` (`owner_outcome_evidence_ok`) đòi bản ghi `owner_asset_outcomes` ở segment 2 **còn tồn tại**, vì đó là cách nó biết tệp thuộc không gian nào và chi nhánh nào. Nếu xoá dòng trước, tệp thành mồ côi: không thành viên nào xoá được nữa, chỉ còn service_role. Chiều ghi cũng ngược lại vì cùng lý do: tạo dòng → tải tệp → gắn `evidence_urls`. Trigger guard từ chối đường dẫn không có thật trong `storage.objects`, nên không thể gắn trước rồi tải sau.
+
+## 2026-09-26 — Trigger "giữ owner cuối" + ON DELETE CASCADE = không xoá được cha
+
+- `asset_owner_workspace_members` có FK CASCADE tới cả `asset_owner_workspaces` và `profiles`. Một trigger BEFORE DELETE ném lỗi khi xoá owner cuối sẽ **chặn luôn việc xoá workspace hoặc xoá user**, vì cascade đi qua đúng trigger đó. `owner_ws_protect_last_owner` cho qua khi dòng cha đã biến mất (`NOT EXISTS` workspace/profile — trong cascade, dòng cha đã xoá là thấy được). Viết trigger bảo vệ kiểu này cho bảng khác thì phải chép cả nhánh đó. `org_protect_last_owner` KHÔNG có nhánh này.
+- **Trigger chạy dưới JWT của người kích hoạt.** Dòng owner đầu tiên sinh trong trigger duyệt KYC mang `auth.uid()` = admin, mà admin không phải owner ⇒ guard "chỉ owner trao owner" phải có ngoại lệ bootstrap. Trong guard, nhớ `COALESCE(điều_kiện, false)`: `IF NOT NULL` không raise, nên có lỗ hổng im lặng.
+
 ## 2026-09-12 — Chốt phiên đấu giá làm lộ 3 lớp bẫy im lặng
 
 - **Union hẹp hơn CHECK của DB = nhãn trống, không phải lỗi biên dịch.** `DepositStatus` thiếu `applied`/`pending_refund` suốt từ `20260913000001`; `DEPOSIT_STATUS_LABELS[x]` trả `undefined` và React render ra ô rỗng. Chỉ lộ ra khi chốt phiên vì đó là lúc hai trạng thái kia sinh ra. Nới CHECK ở migration thì phải nới union NGAY trong cùng lần đó.
@@ -140,6 +199,7 @@ Two live traps:
 Báo cáo admin phải `GROUP BY` trên toàn bộ tin nên không thể suy sau khi đã tổng hợp ⇒ hai đoạn logic buộc phải tồn tại ở cả hai nơi. Không có test nào bắt được lệch — chỉ có comment chéo ở đầu mỗi bên.
 - **Trạng thái phiên**: nhà chính thức TS là `sessionStatusOf()` trong `src/lib/listings/sessionStatus.ts`; bản sao SQL là `public.listing_session_status()` (migration `20260805000003`). `getSessionStatus()` trong `useAuctionListings.tsx` giờ chỉ là delegate — **đừng viết lại logic tại chỗ gọi**.
 - **Rollup slug → nhóm cha**: `PARENT_OF` / `parentOf()` trong `src/lib/reports/listingsReport.ts` ↔ `public.asset_parent_slug()`. `listings.property_type_slug` chứa **hai thế hệ taxonomy** (bộ mới `ASSET_CATEGORIES` + bộ cũ chỉ-BĐS từ `property_types`), và `property_types` **không có** cột parent nên phải hardcode cả hai bộ. Slug lạ rơi vào `khac` — section `byCategoryChild` của RPC tồn tại chính là để lộ slug nào đang rơi vào đó (đã bắt được `kho-xuong`, `dat-nen`). Thêm slug mới ⇒ sửa **cả hai**.
+- **"Đã bán" của cổng chủ tài sản — KHÔNG còn là cặp nhân bản** (2026-09-26, P5): chỉ RPC `owner_asset_outcomes_resolved` quyết định (xem business-rules.md → Giá trúng hợp nhất). TS chỉ đọc `resolvedOutcome` qua `isSoldRow()`, đừng viết lại `status === "SOLD_RENTED" || winPrice` ở chỗ gọi. Bản cũ còn sót ở admin: `listing_auction_bucket()` (dùng bởi `admin_prospect_detail`) vẫn theo luật chỉ-dữ-liệu-cào.
 - **Hợp đồng ký gửi**: `MissingParty` (`src/types/consignment-contract.ts`) ↔ `consignment_missing_parties()`; nút hiện/ẩn trong `src/lib/consignment/contractState.ts` ↔ guard trạng thái trong các RPC `consignment_contract_*` (migration `20260912000004`). Server quyết định — lệch thì nút hiện mà RPC trả `invalid_status`. Tổ chức **không có policy SELECT** trên `consignment_contracts`: `.from("consignment_contracts")` phía portal trả MẢNG RỖNG chứ không báo lỗi — phải đi qua RPC `org_consignment_contract`. Đổi cột trả về của `org_service_requests` lần nữa ⇒ DROP FUNCTION trước.
 - **Ai đang phải làm (badge ký gửi)**: `awaitingSides()` trong `contractState.ts` ↔ `contracts_action` của `org_service_request_counts`; nhãn `postingBadge.ts` ↔ `owner_action` của `owner_consignment_summary` (migration `20260912000007`). Thêm trạng thái / loại việc ⇒ sửa cả SQL lẫn TS. Dự thảo PDF KHÔNG được tự cộng phí — in `terms.service_fee` (xem cặp "Tổng phí báo giá ký gửi" bên dưới).
 - **Tổng phí báo giá ký gửi**: `feeTotalRequired()` trong `src/lib/quotePlan.ts` ↔ `SUM((i->>'amount')::numeric) WHERE NOT optional` trong nhánh `quote` của `org_respond_service_request` (migration `20260911000002`). **Server là bên quyết định** — hàm TS chỉ để hiện tổng ngay khi đang gõ. Lệch nhau thì chủ tài sản chọn theo một con số rồi ký hợp đồng theo con số khác, mà con số server còn đi thẳng vào `opportunities.gross_amount`.
@@ -324,3 +384,20 @@ bị chặn, kể cả từ migration và seed (phải `DISABLE TRIGGER`). Vì t
   UPDATE (cùng bài học với `auction_lot_events.actor_id`).
 - Hoàn bút toán = INSERT một dòng có `reversed_payment_id`; `sale_net_paid` cộng
   dòng đó với **dấu trừ**. Đừng đi tìm cột `amount` âm — CHECK ép `amount > 0`.
+
+## `AFTER UPDATE OF <cột>` KHÔNG bắn khi cột bị đổi trong BEFORE trigger
+
+`UPDATE OF col` xét danh sách `SET` của CÂU LỆNH, không xét giá trị cuối. `guard_asset_posting_review` tự đổi `review_status` approved→pending khi chủ tài sản sửa hồ sơ mà không SET cột đó ⇒ trigger `AFTER UPDATE OF review_status` im lặng và model 3D vẫn công khai. Dùng `AFTER UPDATE ... WHEN (OLD.col IS DISTINCT FROM NEW.col)` (xem `asset_postings_3d_sync_publish`, `20260915000001`).
+
+## Hàm chỉ dành cho webhook phải REVOKE khỏi `authenticated`
+
+Supabase mặc định cấp EXECUTE hàm mới trong `public` cho `anon` + `authenticated`, và PostgREST phơi mọi hàm gọi được. `attach_asset_3d_model` mà quên `REVOKE ALL … FROM PUBLIC, anon, authenticated` ⇒ chủ tài sản tự gắn model bất kỳ vào hồ sơ, bỏ qua đối tác và chữ ký HMAC. Sau migration, kiểm bằng `has_function_privilege('authenticated', '<fn>(…)', 'execute')`.
+
+## Dịch vụ `commission` vô hình với người dùng thường
+`services_public_read` loại `kind='commission'` ⇒ `useServiceCatalog` / `services!inner` trả RỖNG cho mọi dịch vụ thu hộ (hồ sơ tham gia, VR tour). Màn cho người bán/người mua phải đọc gói qua RPC riêng (`public_vr_tour_packages`) hoặc snapshot trên bản ghi. Và ĐỪNG chép `commission_type/value` lên bảng mà khách đọc được (vd. `asset_vr_tour_orders`) — RLS lọc dòng, không che cột; điều khoản chỉ nằm ở `orders` (admin-only).
+
+## Test SQL giả danh user: `request.jwt.claims` sống qua `RESET ROLE`
+`set_config('request.jwt.claims', …, true)` là theo GIAO DỊCH, không theo role. Chạy `UPDATE asset_postings` "với tư cách postgres" sau khi đã giả danh chủ tài sản ⇒ review guard vẫn thấy `auth.uid()` = chủ (không có quyền approve) và NUỐT thay đổi — trông như trigger công khai hỏng. Đặt lại claims sang admin trước mỗi lần ghi quản trị trong script nghiệm thu.
+
+## Radix `Select` gọi `onValueChange("")` khi danh sách lựa chọn đổi
+Select được điều khiển (RHF `Controller`) mà các `SelectItem` đổi theo trường khác, ví dụ "Kỳ cụ thể" đổi theo Tháng/Quý/Năm, thì Radix bắn `onValueChange("")` ngay sau khi setValue giá trị mới. Hậu quả: trường bị xoá trắng, form không tìm ra bản ghi đã có, hiện placeholder "Chọn kỳ". Truyền `onValueChange={(v) => v && field.onChange(v)}` (xem `targets/TargetDialog.tsx`). Test jsdom bắt được lỗi này.

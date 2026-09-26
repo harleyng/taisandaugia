@@ -36,6 +36,7 @@ const FALLBACK_COST: Record<string, number> = {
   report_opp_buyer: 1,
   export_profile_company: 30,
   export_personnel_dossier: 1,
+  scan_3d_owner: 30,
 };
 
 let cache: Promise<Map<string, CatalogVariant>> | null = null;

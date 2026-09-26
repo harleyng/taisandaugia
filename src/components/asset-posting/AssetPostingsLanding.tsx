@@ -7,6 +7,14 @@ import { formatPrice } from "@/utils/formatters";
 import { useMyPostings } from "@/hooks/useAssetPosting";
 import { useOwnerConsignmentSummary } from "@/hooks/useConsignmentContract";
 import { postingBadge } from "@/lib/consignment/postingBadge";
+import { useReady3dPostingIds } from "@/hooks/useAsset3dScans";
+import { Model3dBadge } from "@/components/asset-3d/Model3dBadge";
+import { VrTourBadge } from "@/components/vr-tour/VrTourBadge";
+import { useAttachedVrPostingIds } from "@/hooks/useVrTourOrders";
+import { AuthenticatedBadge } from "@/components/authentication/AuthenticatedBadge";
+import { useAuthenticatedPostingIds } from "@/hooks/useAuthenticationOrders";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
+import { useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
 
 // parent slug → icon component
 const PARENT_ICON = Object.fromEntries(ASSET_CATEGORIES.map((p) => [p.slug, p.icon]));
@@ -31,13 +39,23 @@ interface AssetPostingsLandingProps {
   onResumeDraft: (id: string) => void;
 }
 
-/** Trang "Số hoá tài sản": danh sách hồ sơ đấu giá của tôi + CTA tạo mới. */
+/**
+ * Trang "Số hoá tài sản": hồ sơ của TENANT đang chọn (không gian hoặc Cá nhân) +
+ * CTA tạo mới. Người xem / Cán bộ ngoài phạm vi chỉ xem: không tạo, nháp mở ở
+ * màn chi tiết chứ không mở wizard.
+ */
 export function AssetPostingsLanding({ onCreate, onSelect, onResumeDraft }: AssetPostingsLandingProps) {
   const { data: postings, isLoading } = useMyPostings();
+  const { workspaceId, canCreatePosting, canWritePosting } = useOwnerWorkspace();
+  const { data: branches } = useWorkspaceBranchOptions(workspaceId);
+  const branchLabel = new Map((branches ?? []).map((b) => [b.id, b.label]));
   const { data: summary } = useOwnerConsignmentSummary();
+  const { data: with3d } = useReady3dPostingIds();
+  const { data: withVr } = useAttachedVrPostingIds();
+  const { data: authenticated } = useAuthenticatedPostingIds();
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
@@ -46,10 +64,12 @@ export function AssetPostingsLanding({ onCreate, onSelect, onResumeDraft }: Asse
             Số hóa hồ sơ tài sản và gửi yêu cầu tới tổ chức đấu giá phù hợp.
           </p>
         </div>
-        <Button onClick={onCreate} className="gap-1.5 shrink-0">
-          <Plus className="h-4 w-4" />
-          Số hoá tài sản
-        </Button>
+        {canCreatePosting && (
+          <Button onClick={onCreate} className="gap-1.5 shrink-0">
+            <Plus className="h-4 w-4" />
+            Số hoá tài sản
+          </Button>
+        )}
       </div>
 
       {/* Body */}
@@ -65,13 +85,17 @@ export function AssetPostingsLanding({ onCreate, onSelect, onResumeDraft }: Asse
           <div>
             <p className="font-semibold text-foreground">Chưa có tài sản nào</p>
             <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Bắt đầu số hóa hồ sơ tài sản đầu tiên để nhận gợi ý tổ chức đấu giá phù hợp.
+              {canCreatePosting
+                ? "Bắt đầu số hóa hồ sơ tài sản đầu tiên để nhận gợi ý tổ chức đấu giá phù hợp."
+                : "Không gian này chưa có hồ sơ tài sản nào."}
             </p>
           </div>
-          <Button onClick={onCreate} variant="outline" className="gap-1.5 mt-1">
-            <Plus className="h-4 w-4" />
-            Số hoá tài sản
-          </Button>
+          {canCreatePosting && (
+            <Button onClick={onCreate} variant="outline" className="gap-1.5 mt-1">
+              <Plus className="h-4 w-4" />
+              Số hoá tài sản
+            </Button>
+          )}
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -79,11 +103,13 @@ export function AssetPostingsLanding({ onCreate, onSelect, onResumeDraft }: Asse
             const Icon = PARENT_ICON[p.parent_slug] ?? UploadCloud;
             const location = [p.district, p.province].filter(Boolean).join(", ");
             const isDraft = p.status === "draft";
+            const resumable = isDraft && canWritePosting(p);
+            const branch = p.branch_id ? branchLabel.get(p.branch_id) : null;
             return (
               <button
                 key={p.id}
                 type="button"
-                onClick={() => (isDraft ? onResumeDraft(p.id) : onSelect(p.id))}
+                onClick={() => (resumable ? onResumeDraft(p.id) : onSelect(p.id))}
                 className="w-full text-left flex items-center gap-3.5 rounded-2xl border border-border bg-card p-3.5 hover:border-primary/40 transition-colors"
               >
                 <div className="h-11 w-11 rounded-xl bg-primary/5 flex items-center justify-center shrink-0">
@@ -91,16 +117,24 @@ export function AssetPostingsLanding({ onCreate, onSelect, onResumeDraft }: Asse
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm text-foreground truncate">{p.title}</p>
+                  <p className="flex items-center gap-1.5 font-medium text-sm text-foreground">
+                    <span className="truncate">{p.title}</span>
+                    {with3d?.has(p.id) && <Model3dBadge className="shrink-0 px-1.5 py-0 text-[10px]" />}
+                    {withVr?.has(p.id) && <VrTourBadge className="shrink-0 px-1.5 py-0 text-[10px]" />}
+                    {authenticated?.has(p.id) && <AuthenticatedBadge className="shrink-0 px-1.5 py-0 text-[10px]" />}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {CHILD_LABEL[p.child_slug] ?? p.child_slug}
                     {location ? ` · ${location}` : ""}
+                    {branch ? ` · ${branch}` : ""}
                   </p>
                 </div>
 
                 <div className="hidden sm:block text-right shrink-0">
                   {isDraft ? (
-                    <p className="text-sm font-semibold text-primary">Tiếp tục số hoá</p>
+                    <p className={`text-sm font-semibold ${resumable ? "text-primary" : "text-muted-foreground"}`}>
+                      {resumable ? "Tiếp tục số hoá" : "Bản nháp"}
+                    </p>
                   ) : (
                     <>
                       <p className="text-sm font-semibold text-foreground">

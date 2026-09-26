@@ -12,3 +12,7 @@ project_id = "vewtnkewyawmkpeymdot"
 # cấu hình auth trên remote (site_url, redirect URLs, provider…) về mặc định CLI.
 [auth.email]
 enable_confirmations = false
+
+# Webhook đối tác quét 3D: không có JWT người dùng, xác thực bằng chữ ký HMAC.
+[functions.scan3d-webhook]
+verify_jwt = false

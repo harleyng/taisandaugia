@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePostingCanWrite } from "./postingAccess";
 import { Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ interface SendToOrgsCardProps {
  */
 export function SendToOrgsCard({ posting: p, requests, brokerRequest }: SendToOrgsCardProps) {
   const [choosingOrg, setChoosingOrg] = useState(false);
+  const canWrite = usePostingCanWrite();
 
   // Chặn theo tổ chức ĐÃ GỬI (UNIQUE ở DB, kể cả dòng đã từ chối) nhưng đếm
   // trần theo tổ chức còn đang giữ hồ sơ — nếu không, 5 lời từ chối là hết
@@ -39,6 +41,7 @@ export function SendToOrgsCard({ posting: p, requests, brokerRequest }: SendToOr
   const openBroker = !!brokerRequest && brokerRequest.status !== "cancelled";
   const topUp = requests.length > 0;
 
+  if (!canWrite) return null;
   if (p.status !== "active" || p.review_status !== "approved") return null;
   if (decided || openBroker || activeCount >= MAX_RFQ_ORGS) return null;
 

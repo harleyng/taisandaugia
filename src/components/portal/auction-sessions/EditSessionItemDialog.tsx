@@ -14,10 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
 import { useUpdateSessionItem } from "@/hooks/useAuctionSessions";
+import { useLotAuctionConsultSuggestion } from "@/hooks/useAuctionConsultSuggestions";
 import type { AuctionSessionItem } from "@/types/auction-session";
+import { AuctionConsultSuggestionPanel } from "./AuctionConsultSuggestionPanel";
 
 interface Props {
   item: AuctionSessionItem | null;
+  sessionFormat?: string | null;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -33,8 +36,10 @@ const MONEY_FIELDS = [
 type MoneyKey = (typeof MONEY_FIELDS)[number]["key"];
 
 /** Sửa snapshot của một lô: tên, giá, tiền đặt trước, bước giá, giới hạn người đăng ký. */
-export function EditSessionItemDialog({ item, onOpenChange }: Props) {
+export function EditSessionItemDialog({ item, sessionFormat, onOpenChange }: Props) {
   const update = useUpdateSessionItem();
+  // Gợi ý tư vấn đấu giá (chỉ lô ký gửi có đề xuất đã được chủ tài sản chấp nhận).
+  const suggestion = useLotAuctionConsultSuggestion(item?.session_id, item?.asset_posting_id, !!item);
   const [title, setTitle] = useState("");
   const [money, setMoney] = useState<Record<MoneyKey, string>>({ starting_price: "", deposit_amount: "", bid_step: "" });
   const [maxRegistrants, setMaxRegistrants] = useState("");
@@ -72,13 +77,25 @@ export function EditSessionItemDialog({ item, onOpenChange }: Props) {
 
   return (
     <Dialog open={!!item} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className={suggestion ? "max-h-[90vh] max-w-2xl overflow-y-auto" : "max-w-lg"}>
         <DialogHeader>
           <DialogTitle>Sửa lô {item?.lot_no}</DialogTitle>
           <DialogDescription>Chỉ đổi thông tin hiển thị trong phiên — tài sản nguồn không bị ảnh hưởng.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-1">
+          {suggestion && (
+            <AuctionConsultSuggestionPanel
+              suggestion={suggestion}
+              sessionFormat={sessionFormat}
+              currentValues={{
+                starting_price: toNumber(money.starting_price),
+                deposit_amount: toNumber(money.deposit_amount),
+                bid_step: toNumber(money.bid_step),
+              }}
+              onApply={(field, value) => setMoney((m) => ({ ...m, [field]: String(value) }))}
+            />
+          )}
           <div className="space-y-1.5">
             <Label>
               Tên tài sản <span className="text-destructive">*</span>

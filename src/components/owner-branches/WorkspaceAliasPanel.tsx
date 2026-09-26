@@ -12,7 +12,8 @@ import type { AssetOwnerWorkspace } from "@/types/asset-owner";
 
 interface Props {
   workspace: AssetOwnerWorkspace;
-  userId: string | null;
+  /** Không phải Trưởng đơn vị ⇒ chỉ xem alias / đơn vị đã khai, không sửa, không khớp lại. */
+  readOnly?: boolean;
 }
 
 /** Sửa alias & đơn vị thành viên, rồi khớp lại tài sản.
@@ -20,8 +21,8 @@ interface Props {
  *  Trước đây đây là bước BẮT BUỘC trong onboarding (Tier-2). Nay việc khớp chạy
  *  tự động phía server ngay khi hồ sơ được duyệt, nên màn này chỉ còn là công cụ
  *  tinh chỉnh — dùng khi tổ chức có chi nhánh/AMC mà tên gọi quá khác biệt. */
-export function WorkspaceAliasPanel({ workspace, userId }: Props) {
-  const { updateSeeds, runMatch } = useAssetOwnerWorkspace(userId);
+export function WorkspaceAliasPanel({ workspace, readOnly = false }: Props) {
+  const { updateSeeds, runMatch } = useAssetOwnerWorkspace();
   const primaryName = workspace.primary_name ?? "";
 
   const [aliases, setAliases] = useState<string[]>(workspace.abbreviations ?? []);
@@ -115,38 +116,42 @@ export function WorkspaceAliasPanel({ workspace, userId }: Props) {
           Tên viết tắt / Alias
           {isFetching && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
         </Label>
-        <div className="flex gap-2">
-          <Input
-            value={aliasInput}
-            onChange={(e) => setAliasInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAlias(); } }}
-            placeholder="VietinBank, NH Công thương, CTG, ..."
-            className="flex-1"
-          />
-          <Button type="button" variant="outline" size="icon" onClick={addAlias}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <Input
+              value={aliasInput}
+              onChange={(e) => setAliasInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAlias(); } }}
+              placeholder="VietinBank, NH Công thương, CTG, ..."
+              className="flex-1"
+            />
+            <Button type="button" variant="outline" size="icon" onClick={addAlias}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
         {aliases.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-1">
             {aliases.map((a, i) => (
               <Badge key={`${a}-${i}`} variant="secondary" className="gap-1 pr-1">
                 {a}
-                <button
-                  type="button"
-                  onClick={() => setAliases((p) => p.filter((_, j) => j !== i))}
-                  className="hover:text-destructive"
-                  aria-label={`Xoá alias ${a}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setAliases((p) => p.filter((_, j) => j !== i))}
+                    className="hover:text-destructive"
+                    aria-label={`Xoá alias ${a}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
               </Badge>
             ))}
           </div>
         )}
 
-        {unusedSuggestions.length > 0 && (
+        {!readOnly && unusedSuggestions.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
               <Sparkles className="h-3 w-3 text-primary" /> Gợi ý:
@@ -177,19 +182,23 @@ export function WorkspaceAliasPanel({ workspace, userId }: Props) {
         {candidates.length > 0 ? (
           <>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <button
-                className="text-primary font-semibold hover:underline"
-                onClick={() => setChecked(Object.fromEntries(candidates.map((c) => [c.name, true])))}
-              >
-                Chọn tất cả
-              </button>
-              <span>·</span>
-              <button
-                className="text-primary font-semibold hover:underline"
-                onClick={() => setChecked(Object.fromEntries(candidates.map((c) => [c.name, false])))}
-              >
-                Bỏ chọn
-              </button>
+              {!readOnly && (
+                <>
+                  <button
+                    className="text-primary font-semibold hover:underline"
+                    onClick={() => setChecked(Object.fromEntries(candidates.map((c) => [c.name, true])))}
+                  >
+                    Chọn tất cả
+                  </button>
+                  <span>·</span>
+                  <button
+                    className="text-primary font-semibold hover:underline"
+                    onClick={() => setChecked(Object.fromEntries(candidates.map((c) => [c.name, false])))}
+                  >
+                    Bỏ chọn
+                  </button>
+                </>
+              )}
               <span className="ml-auto">
                 đã chọn <strong>{selectedNames.length}/{candidates.length}</strong> · ~{selectedAssets} tài sản
               </span>
@@ -208,6 +217,7 @@ export function WorkspaceAliasPanel({ workspace, userId }: Props) {
                     type="checkbox"
                     className="w-4 h-4 accent-primary flex-shrink-0"
                     checked={checked[c.name] ?? false}
+                    disabled={readOnly}
                     onChange={(e) =>
                       setChecked((prev) => ({ ...prev, [c.name]: e.target.checked }))
                     }
@@ -236,11 +246,17 @@ export function WorkspaceAliasPanel({ workspace, userId }: Props) {
         )}
       </div>
 
-      <Button onClick={handleMatch} disabled={!primaryName.trim() || isBusy} className="w-full gap-2">
-        {isBusy
-          ? <><Loader2 className="h-4 w-4 animate-spin" /> Đang khớp tài sản...</>
-          : <><Search className="h-4 w-4" /> Lưu &amp; khớp lại tài sản</>}
-      </Button>
+      {readOnly ? (
+        <p className="text-xs text-muted-foreground">
+          Chỉ Trưởng đơn vị mới chỉnh alias và khớp lại tài sản.
+        </p>
+      ) : (
+        <Button onClick={handleMatch} disabled={!primaryName.trim() || isBusy} className="w-full gap-2">
+          {isBusy
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Đang khớp tài sản...</>
+            : <><Search className="h-4 w-4" /> Lưu &amp; khớp lại tài sản</>}
+        </Button>
+      )}
     </Card>
   );
 }

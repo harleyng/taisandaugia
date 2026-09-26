@@ -33,13 +33,17 @@ export function useUrlFilterState<T extends Record<string, string>>(
     values[key] = (valid ? raw : defaults[key]) as T[keyof T & string];
   }
 
-  const setFilter = useCallback(
-    (key: keyof T & string, value: string) => {
+  // Đổi nhiều khóa trong MỘT lần ghi: react-router v6 dựng `prev` từ URL của lần render,
+  // nên gọi setFilter hai lần liên tiếp thì lần sau đè mất lần trước.
+  const setFilters = useCallback(
+    (patch: Partial<Record<keyof T & string, string>>) => {
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
-          if (!value || value === defaultsRef.current[key]) next.delete(key);
-          else next.set(key, value);
+          for (const [key, value] of Object.entries(patch) as [keyof T & string, string][]) {
+            if (!value || value === defaultsRef.current[key]) next.delete(key);
+            else next.set(key, value);
+          }
           return next;
         },
         { replace: true },
@@ -48,5 +52,10 @@ export function useUrlFilterState<T extends Record<string, string>>(
     [setParams],
   );
 
-  return [values, setFilter] as const;
+  const setFilter = useCallback(
+    (key: keyof T & string, value: string) => setFilters({ [key]: value } as Partial<Record<keyof T & string, string>>),
+    [setFilters],
+  );
+
+  return [values, setFilter, setFilters] as const;
 }

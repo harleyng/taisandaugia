@@ -4,6 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { InfoBox } from "@/components/shared/InfoBox";
+import { useSessionAuctionConsultSuggestions } from "@/hooks/useAuctionConsultSuggestions";
+import { formatMismatches } from "@/lib/auctionConsult/suggestion";
+import { AUCTION_FORMAT_LABELS, type AuctionFormat } from "@/types/asset-posting";
 import { formatVnd } from "@/lib/advertising/slug";
 import type { AuctionSessionItem, AuctionSessionWithItems } from "@/types/auction-session";
 import { AddSessionItemDialog } from "./AddSessionItemDialog";
@@ -26,6 +30,9 @@ export function SessionItemsCard({ session, auctionOrgId, readOnly }: Props) {
   const [removing, setRemoving] = useState<AuctionSessionItem | null>(null);
   // Server chặn xoá lô cuối của phiên đã công bố — tắt nút trước để khỏi bấm vào lỗi.
   const lockLastLot = session.status === "published" && items.length <= 1;
+  // Chỉ cảnh báo lệch hình thức so với đề xuất tư vấn — không đổi phiên (BR-CNS-04).
+  const { map: suggestions } = useSessionAuctionConsultSuggestions(session.id, !readOnly);
+  const mismatches = formatMismatches(session.auction_format, items, suggestions);
 
   return (
     <Card className="space-y-4 rounded-2xl p-5">
@@ -43,6 +50,19 @@ export function SessionItemsCard({ session, auctionOrgId, readOnly }: Props) {
           </Button>
         )}
       </div>
+
+      {mismatches.length > 0 && (
+        <InfoBox variant="amber" className="space-y-0.5 text-xs">
+          {mismatches.map((m) => (
+            <p key={m.title}>
+              Đề xuất tư vấn v{m.version} cho “{m.title}” là hình thức{" "}
+              <strong>{AUCTION_FORMAT_LABELS[m.format as AuctionFormat] ?? m.format}</strong>, phiên đang là{" "}
+              <strong>{AUCTION_FORMAT_LABELS[session.auction_format] ?? session.auction_format}</strong> — đổi ở phần thông
+              tin phiên nếu phù hợp.
+            </p>
+          ))}
+        </InfoBox>
+      )}
 
       {items.length === 0 ? (
         <div className="space-y-2 rounded-xl border border-dashed border-border p-8 text-center">
@@ -112,7 +132,11 @@ export function SessionItemsCard({ session, auctionOrgId, readOnly }: Props) {
       {!readOnly && (
         <>
           <AddSessionItemDialog session={session} auctionOrgId={auctionOrgId} open={adding} onOpenChange={setAdding} />
-          <EditSessionItemDialog item={editing} onOpenChange={(open) => !open && setEditing(null)} />
+          <EditSessionItemDialog
+            item={editing}
+            sessionFormat={session.auction_format}
+            onOpenChange={(open) => !open && setEditing(null)}
+          />
           <RemoveSessionItemDialog item={removing} onOpenChange={(open) => !open && setRemoving(null)} />
         </>
       )}

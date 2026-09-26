@@ -12,6 +12,8 @@ export interface PickRow {
   imageUrl: string | null;
   /** Có giá trị ⇒ không chọn được (vd đã có trong phiên). */
   disabledReason: string | null;
+  /** Nhãn phụ, vd "Có đề xuất tư vấn v2". */
+  badge?: string | null;
 }
 
 interface Props {
@@ -84,6 +86,7 @@ export function SourcePickList({ rows, selected, onToggle, loading, error, empty
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{r.title}</p>
+                {r.badge && <p className="text-[11px] font-medium text-primary">{r.badge}</p>}
                 <p className="truncate text-xs text-muted-foreground">{[r.subtitle, r.meta].filter(Boolean).join(" · ")}</p>
               </div>
               {r.disabledReason && <span className="shrink-0 text-xs text-muted-foreground">{r.disabledReason}</span>}

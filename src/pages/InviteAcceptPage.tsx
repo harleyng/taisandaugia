@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AlertCircle, Building2, Loader2, LogOut } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { useAcceptInvite, useInvitePreview } from "@/hooks/useOrgInvites";
 import { DepositCard } from "@/components/company-onboarding/DepositCard";
+import { InviteShell as Shell, InviteIcon as Icon } from "@/components/invites/InviteShell";
 import type { AcceptInviteResult } from "@/types/orgRbac";
 
 /**
@@ -213,38 +214,5 @@ export default function InviteAcceptPage() {
       <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
       <p className="mt-3 text-sm text-muted-foreground">Đang thêm bạn vào {orgName}…</p>
     </Shell>
-  );
-}
-
-// ─── Khung trang ───────────────────────────────────────────────────────────
-function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div
-        className={[
-          "w-full text-center",
-          wide ? "max-w-lg" : "max-w-md rounded-2xl border border-border bg-card p-8",
-        ].join(" ")}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Icon({ tone }: { tone?: "destructive" | "warning" }) {
-  const cls =
-    tone === "destructive"
-      ? "bg-destructive/10 text-destructive"
-      : tone === "warning"
-        ? "bg-warning/10 text-warning"
-        : "bg-muted text-muted-foreground";
-  const Glyph = tone ? AlertCircle : Building2;
-  return (
-    <div
-      className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${cls}`}
-    >
-      <Glyph className="h-6 w-6" />
-    </div>
   );
 }

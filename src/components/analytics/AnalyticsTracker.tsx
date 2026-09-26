@@ -3,10 +3,14 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { setCurrentUserId, trackPageView } from "@/lib/analytics/track";
 
-/** Gộp segment id động về placeholder để "Top page" không bị vỡ vụn theo từng id. */
+/**
+ * Gộp segment id động về placeholder để "Top page" không bị vỡ vụn theo từng id.
+ * "r" = link chia sẻ báo cáo /r/:token — token là mật khẩu của link, không bao giờ
+ * được nằm trong analytics_events (admin đọc được bảng này).
+ */
 function normalizePath(pathname: string): string {
   return pathname.replace(
-    /^\/(listings|auctions|auction-org|asset-owner|tin-tuc|report|nguoi-dung|khach-hang|doi-tac)\/[^/]+.*/,
+    /^\/(listings|auctions|auction-org|asset-owner|tin-tuc|report|nguoi-dung|khach-hang|doi-tac|r)\/[^/]+.*/,
     "/$1/:id",
   );
 }

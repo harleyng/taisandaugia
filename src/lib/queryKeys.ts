@@ -46,14 +46,88 @@ export const qk = {
   // ─── Ký gửi tài sản (chủ tài sản ↔ tổ chức đấu giá) ──────────────────────
   // Giữ NGUYÊN chuỗi đang dùng trước khi gom về đây để cache không tách đôi.
   myPostings: (userId?: string | null) => ["my-postings", userId] as const,
+  /** Danh sách hồ sơ của MỘT tenant ("personal" hoặc workspaceId) — myPostings(userId) là prefix. */
+  myPostingsIn: (userId: string | null | undefined, tenantKey: string | null) =>
+    ["my-postings", userId, tenantKey] as const,
+  /** Hồ sơ + chuỗi ký gửi / phiên / HĐ mua bán cho "Đường ống" (Phase 12) — nằm DƯỚI
+   *  myPostings nên mọi thao tác trên hồ sơ invalidate myPostings(userId) là đủ. */
+  ownerPipelinePostings: (userId: string | null | undefined, tenantKey: string | null) =>
+    ["my-postings", userId, tenantKey, "pipeline"] as const,
   postingDetail: (id?: string | null) => ["posting-detail", id] as const,
   consignment: {
     orgRequests: (auctionOrgId?: string | null) => ["org-service-requests", auctionOrgId] as const,
     orgCounts: (auctionOrgId?: string | null) => ["org-service-request-counts", auctionOrgId] as const,
     orgContract: (requestId?: string | null) => ["org-consignment-contract", requestId] as const,
     postingContracts: (postingId?: string | null) => ["posting-contracts", postingId] as const,
-    ownerKycAddress: (userId?: string | null) => ["owner-kyc-address", userId] as const,
+    /** Địa chỉ Bên A của MỘT hồ sơ (cá nhân ⇒ KYC cá nhân; không gian ⇒ KYC tổ chức). */
+    partyAddress: (postingId?: string | null) => ["posting-party-address", postingId] as const,
     ownerSummary: (userId?: string | null) => ["owner-consignment-summary", userId] as const,
+    ownerSummaryIn: (userId: string | null | undefined, tenantKey: string | null) =>
+      ["owner-consignment-summary", userId, tenantKey] as const,
+  },
+
+  /** Model 3D của hồ sơ số hoá. `all` phủ mọi key con — webhook/duyệt đổi trạng
+   *  thái ở server nên invalidate cả nhánh cho gọn. Lô công khai là prefix riêng. */
+  asset3d: {
+    all: ["asset-3d-scans"] as const,
+    byPosting: (postingId?: string | null) => ["asset-3d-scans", "posting", postingId] as const,
+    /** Theo user vì RLS quyết định tập dòng (chủ: của mình · admin: tất cả). */
+    readyIds: (userId?: string | null) => ["asset-3d-scans", "ready", userId] as const,
+    sessionLots: (sessionId?: string | null) => ["lot-3d-models", sessionId] as const,
+  },
+
+  // ─── Yêu cầu dịch vụ (menu gộp: tư vấn pháp lý/đấu giá, giám định, VR) ─────
+  serviceRequests: {
+    /** Dòng hoa hồng đối tác trong sổ orders — chung cho mọi loại. */
+    commission: (orderId?: string | null) => ["service-requests", "commission", orderId] as const,
+  },
+
+  // ─── VR tour (đơn dịch vụ đối tác theo hồ sơ số hoá) ─────────────────────
+  vrTour: {
+    all: ["vr-tour-orders"] as const,
+    byPosting: (postingId?: string | null) => ["vr-tour-orders", "posting", postingId] as const,
+    detail: (orderId?: string | null) => ["vr-tour-orders", "detail", orderId] as const,
+    /** Theo user vì RLS quyết định tập dòng (chủ: của mình · admin: tất cả). */
+    attachedIds: (userId?: string | null) => ["vr-tour-orders", "attached", userId] as const,
+    adminList: ["vr-tour-orders", "admin-list"] as const,
+    catalog: ["vr-tour-catalog"] as const,
+    sessionLots: (sessionId?: string | null) => ["lot-vr-tours", sessionId] as const,
+  },
+
+  authentication: {
+    all: ["authentication-orders"] as const,
+    byPosting: (postingId?: string | null) => ["authentication-orders", "posting", postingId] as const,
+    detail: (orderId?: string | null) => ["authentication-orders", "detail", orderId] as const,
+    state: (postingId?: string | null) => ["authentication-orders", "state", postingId] as const,
+    /** Theo user vì RLS quyết định tập dòng (chủ: của mình · admin: tất cả). */
+    authenticIds: (userId?: string | null) => ["authentication-orders", "authentic", userId] as const,
+    adminList: ["authentication-orders", "admin-list"] as const,
+    catalog: ["authentication-catalog"] as const,
+    /** Chính sách + cờ hạn chế của CHÍNH người dùng (wizard báo "Bắt buộc"). */
+    rules: (userId?: string | null) => ["authentication-rules", userId] as const,
+    policy: ["authentication-policy"] as const,
+    sellerRestrictions: ["authentication-seller-restrictions"] as const,
+    sessionLots: (sessionId?: string | null) => ["lot-authentications", sessionId] as const,
+  },
+
+  legalConsult: {
+    all: ["legal-consultations"] as const,
+    byPosting: (postingId?: string | null) => ["legal-consultations", "posting", postingId] as const,
+    detail: (id?: string | null) => ["legal-consultations", "detail", id] as const,
+    items: (id?: string | null) => ["legal-consultations", "items", id] as const,
+    adminList: ["legal-consultations", "admin-list"] as const,
+    catalog: ["legal-consult-catalog"] as const,
+  },
+
+  auctionConsult: {
+    all: ["auction-consultations"] as const,
+    byPosting: (postingId?: string | null) => ["auction-consultations", "posting", postingId] as const,
+    detail: (id?: string | null) => ["auction-consultations", "detail", id] as const,
+    proposal: (id?: string | null) => ["auction-consultations", "proposal", id] as const,
+    adminList: ["auction-consultations", "admin-list"] as const,
+    catalog: ["auction-consult-catalog"] as const,
+    // Tiền tố riêng: quyết định của người bán không invalidate được cache của tổ chức (khác trình duyệt).
+    sessionSuggestions: (sessionId?: string | null) => ["auction-consult-suggestions", sessionId] as const,
   },
 
   // ─── Tổ chức (cổng /portal) ──────────────────────────────────────────────
@@ -155,6 +229,9 @@ export const qk = {
     detail: (id?: string | null) => ["sale-contracts", "id", id, "detail"] as const,
     mine: (userId?: string | null) => ["sale-contracts", "mine", userId] as const,
     ownerMine: (userId?: string | null) => ["sale-contracts", "owner", userId] as const,
+    /** Hợp đồng bên bán của MỘT tenant — ownerMine(userId) là prefix. */
+    ownerMineIn: (userId: string | null | undefined, tenantKey: string | null) =>
+      ["sale-contracts", "owner", userId, tenantKey] as const,
     counts: (orgId?: string | null) => ["sale-contracts", "counts", orgId] as const,
   },
 
@@ -234,6 +311,64 @@ export const qk = {
   // ─── Chủ tài sản ─────────────────────────────────────────────────────────
   ownerPortfolioClaims: (workspaceId?: string | null) =>
     ["owner-portfolio-claims", workspaceId] as const,
+  /** RPC owner_asset_outcomes_resolved — mọi thao tác khai/sửa kết quả phải invalidate key này. */
+  ownerAssetOutcomes: (workspaceId?: string | null) =>
+    ["owner-asset-outcomes", workspaceId] as const,
+  /** Các lượt đơn vị đã tự khai cho một tin (bảng owner_asset_outcomes). */
+  ownerOutcomeRounds: (workspaceId?: string | null, listingId?: string | null) =>
+    ["owner-outcome-rounds", workspaceId, listingId] as const,
+  /** "Kết quả phiên" — RPC owner_outcomes_overview (Phase 8). Nằm DƯỚI ownerAssetOutcomes
+   *  nên mọi mutation khai / sửa kết quả invalidate key đó là đủ. */
+  ownerOutcomesOverview: (workspaceId?: string | null) =>
+    ["owner-asset-outcomes", workspaceId, "overview"] as const,
+  /** Các lượt tự khai của MỘT tài sản (assetKey = row_key "l:<listing>" / "t:<title_key>"). */
+  ownerOutcomeHistory: (workspaceId?: string | null, assetKey?: string | null) =>
+    ["owner-asset-outcomes", workspaceId, "history", assetKey] as const,
+  /** "Dòng tiền" — RPC owner_cash_flow (Phase 15a). Nằm DƯỚI ownerAssetOutcomes nên mọi
+   *  thao tác khai kết quả / ghi thu chi đã invalidate key đó là đủ. */
+  ownerCashFlow: (workspaceId?: string | null, includeLinked = true) =>
+    ["owner-asset-outcomes", workspaceId, "cash-flow", includeLinked] as const,
+  /** Số đã thu của các bản ghi tự khai (thẻ "Chờ thu tiền" ở Nhịp đập) — mọi thao tác thu tiền invalidate key này. */
+  ownerOutcomePayments: (workspaceId?: string | null) =>
+    ["owner-outcome-payments", workspaceId] as const,
+  /** Chỉ tiêu của không gian (bảng owner_workspace_targets) — Phase 9. */
+  ownerTargets: (workspaceId?: string | null) => ["owner-targets", workspaceId] as const,
+  /** Danh sách báo cáo định kỳ của không gian (bảng owner_report_snapshots) — Phase 10. */
+  ownerReports: (workspaceId?: string | null) => ["owner-reports", workspaceId] as const,
+  /** MỘT báo cáo, tra theo id (quyền xét theo không gian của chính báo cáo, không theo
+   *  không gian đang chọn) ⇒ không nằm dưới ownerReports: mutation invalidate cả hai. */
+  ownerReport: (reportId?: string | null) => ["owner-report", reportId] as const,
+  /** Token link chia sẻ của MỘT báo cáo (RPC owner_report_share_link, chỉ Trưởng đơn vị) —
+   *  Phase 11. Nằm DƯỚI ownerReport nên invalidate báo cáo là làm mới luôn link. */
+  ownerReportShareLink: (reportId?: string | null) => ["owner-report", reportId, "share-link"] as const,
+  /** Trang công khai /r/:token (RPC get_shared_owner_report — mỗi lần gọi là một lượt xem). */
+  sharedOwnerReport: (token?: string | null) => ["shared-owner-report", token] as const,
+  /** Số liệu SỐNG của bản nháp (RPC owner_build_report_payload). Nằm DƯỚI ownerAssetOutcomes
+   *  nên mọi thao tác khai / sửa kết quả / thu tiền đã invalidate luôn bản xem trước. */
+  ownerReportPreview: (
+    workspaceId?: string | null,
+    periodType?: string | null,
+    periodStart?: string | null,
+    branchId?: string | null,
+  ) => ["owner-asset-outcomes", workspaceId, "report-preview", periodType, periodStart, branchId] as const,
+  /** Không gian chủ tài sản (thành viên, lời mời, claims) — Phase 3. */
+  ownerWorkspace: {
+    /** Các không gian mà người dùng là thành viên đang hoạt động (kèm dòng workspace). */
+    memberships: (userId?: string | null) => ["owner-ws-memberships", userId] as const,
+    /** Người dùng có tenant "Cá nhân" không (KYC cá nhân đã duyệt / còn hồ sơ cá nhân) — Phase 4. */
+    personalTenant: (userId?: string | null) => ["owner-personal-tenant", userId] as const,
+    /** Mọi dữ liệu của MỘT không gian — invalidate key này phủ cả các nhánh dưới. */
+    all: (workspaceId?: string | null) => ["owner-ws", workspaceId] as const,
+    members: (workspaceId?: string | null) => ["owner-ws", workspaceId, "members"] as const,
+    invites: (workspaceId?: string | null) => ["owner-ws", workspaceId, "invites"] as const,
+    claims: (workspaceId?: string | null) => ["owner-ws", workspaceId, "claims"] as const,
+    /** Liên kết trụ sở ↔ chi nhánh của một Trạm (RPC owner_ws_link_overview) — Phase 14. */
+    linkOverview: (workspaceId?: string | null) => ["owner-ws", workspaceId, "link-overview"] as const,
+    /** Số yêu cầu liên kết đang chờ Trạm này trả lời (huy hiệu nav). */
+    linkRequests: (workspaceId?: string | null) => ["owner-ws", workspaceId, "link-requests"] as const,
+    /** So sánh ẩn danh với các chi nhánh cùng hệ thống (RPC owner_ws_benchmark). */
+    benchmark: (workspaceId?: string | null) => ["owner-ws", workspaceId, "benchmark"] as const,
+  },
 
   // ─── CRM ─────────────────────────────────────────────────────────────────
   leads: {

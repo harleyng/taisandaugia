@@ -9,7 +9,10 @@ import { Step2GeneralInfo } from "./steps/Step2GeneralInfo";
 import { Step3LegalStatus } from "./steps/Step3LegalStatus";
 import { Step4AuctionNeeds } from "./steps/Step4AuctionNeeds";
 import { StepReview } from "./steps/StepReview";
+import { useWizardAuthentication } from "./useWizardAuthentication";
+import { AuthenticationOutcomeNotice } from "@/components/authentication/AuthenticationOutcomeNotice";
 import { useAiMediaExtraction } from "@/hooks/useAiMediaExtraction";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import {
   useCreateBrokerRequest,
   useCreatePosting,
@@ -84,13 +87,27 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   const ai = useAiMediaExtraction();
 
   const create = useCreatePosting();
+  // Id hồ sơ đã có trong DB: bản nháp mở lại, HOẶC bản vừa lưu ngầm khi "Thêm 3D"
+  // (model 3D phải gắn vào một dòng asset_postings có thật). Mọi lần lưu sau đó phải
+  // UPDATE dòng này — dùng lại postingId gốc sẽ INSERT ra hồ sơ trùng. Là state
+  // thuần (không suy từ prop) để "Số hoá tài sản khác" xoá được, không ghi đè hồ sơ cũ.
+  const [savedId, setSavedId] = useState<string | null>(postingId);
   const send = useSendServiceRequests();
   const broker = useCreateBrokerRequest();
   const { results: orgResults, isLoading: orgLoading } = useMatchedOrgs(buildMatchCriteria(f));
 
-  const reqs = useMemo(() => requirements(f), [f]);
+  const gd = useWizardAuthentication(f, savedId);
+  const { required: gdRequired, authentic: gdAuthentic } = gd.ctx;
+  // Cán bộ bị giới hạn chi nhánh phải gắn hồ sơ vào chi nhánh trong phạm vi.
+  const { workspaceId, role, branchScope } = useOwnerWorkspace();
+  const branchRequired = !!workspaceId && role === "staff" && branchScope != null;
+  const reqs = useMemo(
+    () => requirements(f, { required: gdRequired, authentic: gdAuthentic }, { branchRequired }),
+    [f, gdRequired, gdAuthentic, branchRequired],
+  );
   const missing = reqs.filter((r) => !r.ok);
-  const stepMissing = missing.filter((m) => m.step === step);
+  // Chứng thư giám định không chặn "Tiếp tục" — chỉ chặn "Hoàn tất" (chờ đối tác vài ngày).
+  const stepMissing = missing.filter((m) => m.step === step && m.key !== "authentication");
   const errs: Record<string, string> = {};
   if (shown[step]) stepMissing.forEach((m) => (errs[m.key] = REQUIREMENT_MSG[m.key] || "Bắt buộc"));
 
@@ -120,7 +137,27 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
       toast.error("Nhập tối thiểu loại tài sản và tên tài sản để lưu nháp.");
       return;
     }
-    create.mutate({ posting: buildPostingPayload(f), status: "draft", postingId: postingId ?? undefined }, { onSuccess: () => exit() });
+    create.mutate({ posting: buildPostingPayload(f), status: "draft", postingId: savedId ?? undefined }, { onSuccess: () => exit() });
+  };
+
+  // Lưu nháp NGẦM, không thoát wizard — cho "Thêm 3D" / "Thêm VR tour". Trả id hồ sơ, null nếu chưa lưu được.
+  const ensureDraft = async (): Promise<string | null> => {
+    const v = form.getValues();
+    if (!v.parentSlug || !v.childSlug || v.title.trim().length < 3) {
+      toast.error("Chọn loại tài sản và nhập tên tài sản (ít nhất 3 ký tự) trước khi thêm 3D / VR tour / giám định / tư vấn.");
+      return null;
+    }
+    try {
+      const { postingId: id } = await create.mutateAsync({
+        posting: buildPostingPayload(v),
+        status: "draft",
+        postingId: savedId ?? undefined,
+      });
+      setSavedId(id);
+      return id;
+    } catch {
+      return null; // useCreatePosting đã toast lỗi
+    }
   };
 
   // Hoàn tất số hoá (status active) → nếu có chọn tổ chức thì gửi yêu cầu báo giá
@@ -140,7 +177,7 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
     };
 
     create.mutate(
-      { posting: buildPostingPayload(f), status: "active", postingId: postingId ?? undefined },
+      { posting: buildPostingPayload(f), status: "active", postingId: savedId ?? undefined },
       {
         onSuccess: ({ postingId }) => {
           const wants = f.wantsAuction === "yes";
@@ -176,6 +213,7 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
 
   const resetWizard = () => {
     form.reset(wizardDefaults);
+    setSavedId(null);
     setShown({});
     setStep(1);
     setSentOrgNames([]);
@@ -276,14 +314,36 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
             </p>
           </div>
 
+          {/* Hồ sơ bị trả về nháp vì kết luận giám định tiêu cực: nháp mở lại ở wizard chứ không
+              ở trang chi tiết, nên lý do phải hiện ngay đây (BR-GD-02). */}
+          {savedId && (
+            <div className="mt-3">
+              <AuthenticationOutcomeNotice postingId={savedId} />
+            </div>
+          )}
+
           <div className="pt-4 pb-4">
             <h1 className="text-[23px] font-bold tracking-tight text-foreground">{s.title}</h1>
           </div>
 
           {step === 1 && <Step1AssetType f={f} up={up} errs={errs} />}
-          {step === 2 && <Step2GeneralInfo f={f} up={up} errs={errs} ai={ai} />}
-          {step === 3 && <Step3LegalStatus f={f} up={up} errs={errs} />}
-          {step === 4 && <Step4AuctionNeeds f={f} up={up} errs={errs} orgResults={orgResults} orgLoading={orgLoading} />}
+          {step === 2 && (
+            <Step2GeneralInfo f={f} up={up} errs={errs} ai={ai} postingId={savedId} ensurePostingId={ensureDraft} />
+          )}
+          {step === 3 && <Step3LegalStatus f={f} up={up} errs={errs} postingId={savedId} ensurePostingId={ensureDraft} />}
+          {step === 4 && (
+            <Step4AuctionNeeds
+              f={f}
+              up={up}
+              errs={errs}
+              orgResults={orgResults}
+              orgLoading={orgLoading}
+              postingId={savedId}
+              ensurePostingId={ensureDraft}
+              gdReasons={gd.reasons}
+              gdLotReason={gd.lotReason}
+            />
+          )}
           {step === 5 && <StepReview f={f} jump={go} missing={missing} chosenOrgNames={chosenOrgNames} />}
         </div>
       </div>

@@ -47,6 +47,16 @@ describe("qk — ghim giá trị key", () => {
     expect(qk.bidding.started(PID)).toEqual(["bidding", PID, "started"]);
   });
 
+  it("giữ nguyên key không gian chủ tài sản", () => {
+    expect(qk.ownerWorkspace.memberships(UID)).toEqual(["owner-ws-memberships", UID]);
+    expect(qk.ownerWorkspace.members(PID)).toEqual(["owner-ws", PID, "members"]);
+    expect(qk.ownerWorkspace.invites(PID)).toEqual(["owner-ws", PID, "invites"]);
+    expect(qk.ownerWorkspace.claims(PID)).toEqual(["owner-ws", PID, "claims"]);
+    expect(qk.ownerWorkspace.linkOverview(PID)).toEqual(["owner-ws", PID, "link-overview"]);
+    expect(qk.ownerWorkspace.linkRequests(PID)).toEqual(["owner-ws", PID, "link-requests"]);
+    expect(qk.ownerWorkspace.benchmark(PID)).toEqual(["owner-ws", PID, "benchmark"]);
+  });
+
   it("chuẩn hoá userId thiếu thành null ở byCustomerUser", () => {
     // Key phải TẤT ĐỊNH: undefined và null cùng nghĩa "chưa gắn tài khoản",
     // nếu để lẫn hai giá trị thì cùng một dữ liệu bị cache thành hai entry.
@@ -55,6 +65,51 @@ describe("qk — ghim giá trị key", () => {
 });
 
 describe("qk — bất biến prefix (chống invalidate câm)", () => {
+  it("invalidate một không gian chủ tài sản phủ thành viên, lời mời và claims của nó", () => {
+    const root = qk.ownerWorkspace.all(PID);
+    for (const child of [
+      qk.ownerWorkspace.members(PID),
+      qk.ownerWorkspace.invites(PID),
+      qk.ownerWorkspace.claims(PID),
+      qk.ownerWorkspace.linkOverview(PID),
+      qk.ownerWorkspace.linkRequests(PID),
+      qk.ownerWorkspace.benchmark(PID),
+    ]) {
+      expect(covers(root, child), JSON.stringify(child)).toBe(true);
+    }
+    // Danh sách thành viên-của-tôi KHÔNG nằm dưới một không gian cụ thể.
+    expect(covers(root, qk.ownerWorkspace.memberships(UID))).toBe(false);
+  });
+
+  it("mọi thao tác trên hồ sơ (invalidate myPostings) làm mới trang Tài sản", () => {
+    expect(qk.ownerPipelinePostings(UID, PID)).toEqual(["my-postings", UID, PID, "pipeline"]);
+    expect(covers(qk.myPostings(UID), qk.ownerPipelinePostings(UID, PID))).toBe(true);
+    expect(covers(qk.myPostingsIn(UID, PID), qk.ownerPipelinePostings(UID, PID))).toBe(true);
+    // Tenant khác không bị làm mới nhầm.
+    expect(covers(qk.myPostingsIn(UID, "personal"), qk.ownerPipelinePostings(UID, PID))).toBe(false);
+  });
+
+  it("khai / sửa kết quả (invalidate ownerAssetOutcomes) làm mới trang Kết quả phiên và lịch sử lượt", () => {
+    expect(qk.ownerAssetOutcomes(PID)).toEqual(["owner-asset-outcomes", PID]);
+    expect(qk.ownerOutcomesOverview(PID)).toEqual(["owner-asset-outcomes", PID, "overview"]);
+    expect(covers(qk.ownerAssetOutcomes(PID), qk.ownerOutcomesOverview(PID))).toBe(true);
+    expect(covers(qk.ownerAssetOutcomes(PID), qk.ownerOutcomeHistory(PID, "t:xe tải"))).toBe(true);
+    expect(covers(qk.ownerAssetOutcomes(PID), qk.ownerOutcomesOverview(UID))).toBe(false);
+    // Phase 15a: "Dòng tiền" nằm dưới prefix mà mọi mutation khai kết quả / ghi thu chi invalidate.
+    expect(covers(qk.ownerAssetOutcomes(PID), qk.ownerCashFlow(PID))).toBe(true);
+    expect(covers(qk.ownerAssetOutcomes(PID), qk.ownerCashFlow(UID))).toBe(false);
+  });
+
+  it("tạo / gia hạn / thu hồi link (invalidate ownerReport) làm mới luôn token của báo cáo đó", () => {
+    expect(qk.ownerReportShareLink(PID)).toEqual(["owner-report", PID, "share-link"]);
+    expect(covers(qk.ownerReport(PID), qk.ownerReportShareLink(PID))).toBe(true);
+    expect(covers(qk.ownerReport(UID), qk.ownerReportShareLink(PID))).toBe(false);
+    // Trang công khai không nằm dưới key nào của cổng — không bị làm mới (= không đếm thêm lượt xem).
+    expect(qk.sharedOwnerReport("tok")).toEqual(["shared-owner-report", "tok"]);
+    expect(covers(qk.ownerReport(PID), qk.sharedOwnerReport("tok"))).toBe(false);
+  });
+
+
   it("invalidate showcase theo provider phủ CẢ bản công khai", () => {
     // Đây là bug đã sửa: trước đây key công khai là
     // ["tool-showcases", "public", providerId] nên admin sửa showcase thì trang
@@ -114,6 +169,10 @@ describe("qk — bất biến prefix (chống invalidate câm)", () => {
       [qk.saleContracts.all, qk.saleContracts.byId(PID)],
       [qk.saleContracts.all, qk.saleContracts.mine(UID)],
       [qk.saleContracts.all, qk.saleContracts.ownerMine(UID)],
+      // Phase 4: key theo tenant nằm dưới key theo người dùng ⇒ invalidate cũ vẫn phủ.
+      [qk.saleContracts.ownerMine(UID), qk.saleContracts.ownerMineIn(UID, "personal")],
+      [qk.myPostings(UID), qk.myPostingsIn(UID, PID)],
+      [qk.consignment.ownerSummary(UID), qk.consignment.ownerSummaryIn(UID, "personal")],
       [qk.saleContracts.all, qk.saleContracts.counts(UID)],
       // id đứng TRƯỚC biến thể nên byId phủ được detail.
       [qk.saleContracts.byId(PID), qk.saleContracts.detail(PID)],

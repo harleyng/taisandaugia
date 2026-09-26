@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -33,13 +34,15 @@ const contactInfo = [
 ];
 
 const Contact = () => {
+  const [params] = useSearchParams();
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "",
     phone: "",
     email: "",
-    subject: "",
+    // ?chu-de=… — lối vào có sẵn chủ đề (vd CTA "Tháp Điều Hành" ở link chia sẻ báo cáo).
+    subject: (params.get("chu-de") ?? "").slice(0, 200),
     message: "",
   });
 

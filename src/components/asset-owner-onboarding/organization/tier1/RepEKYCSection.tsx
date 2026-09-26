@@ -7,6 +7,8 @@ interface Props {
   repIdFrontUploaded: boolean;
   repIdBackUploaded: boolean;
   repSelfieUploaded: boolean;
+  /** Hồ sơ chi nhánh (D3): selfie không bắt buộc. */
+  isBranch?: boolean;
   onUpload: (slot: "rep_id_front" | "rep_id_back" | "rep_selfie", file: File) => Promise<void>;
 }
 
@@ -57,16 +59,18 @@ const PhotoTile = ({
 };
 
 export const RepEKYCSection = ({
-  repIdFrontUploaded, repIdBackUploaded, repSelfieUploaded, onUpload,
+  repIdFrontUploaded, repIdBackUploaded, repSelfieUploaded, isBranch = false, onUpload,
 }: Props) => (
   <Card className="rounded-2xl p-5 space-y-4">
     <div>
       <h3 className="font-semibold text-foreground flex items-center gap-2">
         <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">C</span>
-        eKYC người đại diện
+        {isBranch ? "Giấy tờ tuỳ thân của cán bộ" : "eKYC người đại diện"}
       </h3>
       <p className="text-xs text-muted-foreground mt-0.5">
-        Ảnh CCCD/Hộ chiếu và selfie của người thực hiện ký kết/uỷ quyền.
+        {isBranch
+          ? "Ảnh 2 mặt CCCD/Hộ chiếu của cán bộ được giao. Selfie không bắt buộc với hồ sơ chi nhánh."
+          : "Ảnh CCCD/Hộ chiếu và selfie của người thực hiện ký kết/uỷ quyền."}
       </p>
     </div>
 
@@ -87,7 +91,7 @@ export const RepEKYCSection = ({
       />
       <PhotoTile
         label="Selfie"
-        hint="Chân dung rõ nét"
+        hint={isBranch ? "Không bắt buộc" : "Chân dung rõ nét"}
         icon={UserSquare}
         uploaded={repSelfieUploaded}
         onPick={(f) => onUpload("rep_selfie", f)}

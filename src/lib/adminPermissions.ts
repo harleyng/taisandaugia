@@ -92,6 +92,15 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   // "update" tách khỏi "approve": admin bổ sung được thông tin mà không có
   // quyền kết luận duyệt.
   { module: "tai-san-tu-nguyen", label: "Tài sản tự nguyện", category: "van-hanh", actions: ["view", "update", "approve", "export"] },
+  // Đơn VR tour (bảng asset_vr_tour_orders). Mã nằm trong policy RLS + các RPC admin_*_vr_tour
+  // (20260915000010) — ĐỪNG đổi. Gắn tour vào lô KHÔNG thuộc module này: cần
+  // tai-san-tu-nguyen:approve (công khai nội dung lô là việc của người duyệt tài sản).
+  { module: "don-vr-tour", label: "Đơn VR tour", category: "van-hanh", actions: ["view", "update", "export"] },
+  { module: "don-giam-dinh", label: "Đơn giám định", category: "van-hanh", actions: ["view", "update", "export"] },
+  // Tư vấn pháp lý (asset_legal_consultations). Mã nằm trong policy RLS + các RPC admin_*_legal_consult
+  // (20260915000030) — ĐỪNG đổi. Người có "view" đọc được hồ sơ + checklist của MỌI người bán (BR-CNS-02).
+  { module: "tu-van-phap-ly", label: "Tư vấn pháp lý", category: "van-hanh", actions: ["view", "update", "export"] },
+  { module: "tu-van-dau-gia", label: "Tư vấn đấu giá", category: "van-hanh", actions: ["view", "update", "export"] },
   { module: "dich-vu", label: "Dịch vụ", category: "van-hanh", actions: ["view", "create", "update", "delete"] },
   { module: "cong-viec", label: "Công việc", category: "van-hanh", actions: ["view", "create", "update", "delete", "export"] },
   // Mã "lien-he" GIỮ NGUYÊN: Ticket thay thế hộp thư cũ nên kế thừa quyền đã cấp.

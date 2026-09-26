@@ -45,6 +45,8 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   ads: "Quảng cáo",
   tool_marketplace: "Công cụ đấu giá",
   market_data: "Dữ liệu sàn",
+  asset_brokerage: "Ký gửi tài sản",
+  owner_hq_expansion: "Tín hiệu Tháp Điều Hành",
   other: "Khác",
 };
 
@@ -52,10 +54,20 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
  *  do người nhập. Dùng để tách khỏi lead nhập tay khi lọc. */
 export const MARKET_DATA_SOURCE: LeadSource = "market_data";
 
-/** Nguồn admin được phép tự chọn khi nhập tay. Cố ý loại 'market_data' — nguồn
- *  đó do hệ thống đóng dấu khi đồng bộ, chọn tay sẽ sai dữ liệu. */
+/** Lead do hệ thống tạo khi chi nhánh ngân hàng dùng Trạm Điều Hành (Phase 14:
+ *  ≥ 3 Trạm con cùng công ty mẹ, hoặc link báo cáo được mở ≥ 10 lần). Mỗi công ty
+ *  mẹ tối đa một lead; nguồn + pháp nhân bị DB khoá (trigger leads_system_source_guard). */
+export const HQ_EXPANSION_SOURCE: LeadSource = "owner_hq_expansion";
+
+/** Nguồn do hệ thống đóng dấu: đồng bộ dữ liệu sàn, chốt ký gửi, tín hiệu Tháp Điều Hành. */
+export const SYSTEM_SOURCES: readonly LeadSource[] = [MARKET_DATA_SOURCE, "asset_brokerage", HQ_EXPANSION_SOURCE];
+
+export const isSystemSource = (s: LeadSource): boolean => SYSTEM_SOURCES.includes(s);
+
+/** Nguồn admin được phép tự chọn khi nhập tay. Cố ý loại nguồn hệ thống — chọn tay
+ *  sẽ sai dữ liệu. */
 export const MANUAL_SOURCES = (Object.keys(SOURCE_LABELS) as LeadSource[]).filter(
-  (s) => s !== MARKET_DATA_SOURCE,
+  (s) => !isSystemSource(s),
 );
 
 /** Loại lead dùng chung từ vựng với phân khúc khách hàng (chuyển đổi copy 1:1). */

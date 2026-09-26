@@ -55,7 +55,10 @@ export type TransactionType =
   | "owner_report_view"
   | "unlock_opp_report"
   | "export_profile"
-  | "export_personnel_dossier";
+  | "export_personnel_dossier"
+  // Quét 3D: trừ + hoàn đều ghi ở SERVER (RPC start_asset_3d_scan / fail + hết hạn).
+  | "scan_3d"
+  | "scan_3d_refund";
 
 export const OWNER_REPORT_COST = 4;
 

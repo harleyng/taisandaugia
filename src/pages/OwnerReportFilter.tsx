@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { OwnerNoWorkspaceState } from "@/components/asset-owner-portal/ui/OwnerNoWorkspaceState";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { Loader2, FileBarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,25 +18,9 @@ const OwnerReportFilter = () => {
   const navigate = useNavigate();
   const { session } = useAuthState();
 
-  const [loading, setLoading] = useState(true);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const { workspaceId, isLoading: loading } = useOwnerWorkspace();
   const [filter, setFilter] = useState<PortfolioFilter>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  useEffect(() => {
-    const load = async () => {
-      const { data: { session: s } } = await supabase.auth.getSession();
-      if (!s) { setLoading(false); return; }
-      const { data: ws } = await supabase
-        .from("asset_owner_workspaces")
-        .select("id")
-        .eq("owner_user_id", s.user.id)
-        .maybeSingle();
-      setWorkspaceId(ws?.id ?? null);
-      setLoading(false);
-    };
-    load();
-  }, []);
 
   const { metrics, isLoading: metricsLoading } = useOwnerPortfolioMetrics(workspaceId, {});
   const { charge } = useOwnerReportAccess(workspaceId ?? "");
@@ -86,19 +71,21 @@ const OwnerReportFilter = () => {
 
   if (!workspaceId) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
-        <div className="text-center space-y-4 max-w-sm">
-          <div className="p-3 rounded-xl bg-primary/10 w-fit mx-auto">
-            <FileBarChart className="w-6 h-6 text-primary" />
+      <OwnerNoWorkspaceState icon={FileBarChart}>
+        <div className="p-6 flex items-center justify-center py-24">
+          <div className="text-center space-y-4 max-w-sm">
+            <div className="p-3 rounded-xl bg-primary/10 w-fit mx-auto">
+              <FileBarChart className="w-6 h-6 text-primary" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Bạn chưa có workspace Chủ tài sản.
+            </p>
+            <Button onClick={() => navigate("/tro-thanh-chu-tai-san")}>
+              Bắt đầu KYC
+            </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Bạn chưa có workspace Chủ tài sản.
-          </p>
-          <Button onClick={() => navigate("/tro-thanh-chu-tai-san")}>
-            Bắt đầu KYC
-          </Button>
         </div>
-      </div>
+      </OwnerNoWorkspaceState>
     );
   }
 

@@ -5,6 +5,12 @@ import { vi } from "date-fns/locale";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import { ASSET_POSTING_STATUS_LABELS } from "@/types/asset-posting";
 import { ReviewStatusBadge } from "./ReviewStatusBadge";
+import { Model3dBadge } from "@/components/asset-3d/Model3dBadge";
+import { useReady3dPostingIds } from "@/hooks/useAsset3dScans";
+import { VrTourBadge } from "@/components/vr-tour/VrTourBadge";
+import { useAttachedVrPostingIds } from "@/hooks/useVrTourOrders";
+import { AuthenticatedBadge } from "@/components/authentication/AuthenticatedBadge";
+import { useAuthenticatedPostingIds } from "@/hooks/useAuthenticationOrders";
 import type { AdminAssetPosting } from "@/hooks/useAdminAssetPostings";
 
 const CHILD_LABEL: Record<string, string> = Object.fromEntries(
@@ -17,6 +23,10 @@ interface Props {
 }
 
 export function AssetPostingTable({ rows, onOpen }: Props) {
+  const { data: with3d } = useReady3dPostingIds();
+  const { data: withVr } = useAttachedVrPostingIds();
+  const { data: authenticated } = useAuthenticatedPostingIds();
+
   if (rows.length === 0) {
     return <div className="py-12 text-center text-sm text-muted-foreground">Không có hồ sơ nào</div>;
   }
@@ -39,7 +49,12 @@ export function AssetPostingTable({ rows, onOpen }: Props) {
           {rows.map((row, i) => (
             <tr key={row.id} className={i < rows.length - 1 ? "border-b border-border" : ""}>
               <td className="px-4 py-3">
-                <p className="font-medium text-foreground">{row.title}</p>
+                <p className="flex items-center gap-1.5 font-medium text-foreground">
+                  {row.title}
+                  {with3d?.has(row.id) && <Model3dBadge className="px-1.5 py-0 text-[10px]" />}
+                  {withVr?.has(row.id) && <VrTourBadge className="px-1.5 py-0 text-[10px]" />}
+                  {authenticated?.has(row.id) && <AuthenticatedBadge className="px-1.5 py-0 text-[10px]" />}
+                </p>
                 <p className="text-[11px] text-muted-foreground">
                   {CHILD_LABEL[row.child_slug] ?? row.child_slug}
                 </p>

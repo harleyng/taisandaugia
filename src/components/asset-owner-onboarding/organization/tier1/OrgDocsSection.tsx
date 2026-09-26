@@ -62,6 +62,8 @@ const DocRow = ({ label, hint, required, uploaded, onPick }: DocRowProps) => {
 interface Props {
   establishmentUploaded: boolean;
   authorizationUploaded: boolean;
+  /** Hồ sơ chi nhánh (D3): giấy giao việc / uỷ quyền bắt buộc, quyết định thành lập không. */
+  isBranch?: boolean;
   termsAccepted: boolean;
   onAcceptTerms: (v: boolean) => void;
   onUpload: (slot: "establishment_doc" | "authorization_doc", file: File) => Promise<void>;
@@ -71,32 +73,51 @@ interface Props {
 }
 
 export const OrgDocsSection = ({
-  establishmentUploaded, authorizationUploaded,
+  establishmentUploaded, authorizationUploaded, isBranch = false,
   termsAccepted, onAcceptTerms,
   onUpload, onSubmit, disabled, isSubmitting,
 }: Props) => (
   <Card className="rounded-2xl p-5 space-y-4">
     <h3 className="font-semibold text-foreground flex items-center gap-2">
       <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">D</span>
-      Tài liệu pháp lý tổ chức
+      {isBranch ? "Giấy tờ của chi nhánh" : "Tài liệu pháp lý tổ chức"}
     </h3>
 
-    <div className="space-y-2">
-      <DocRow
-        label="Giấy phép / Quyết định thành lập"
-        hint="Scan bản công chứng. PDF/JPG/PNG, tối đa 10 MB"
-        required
-        uploaded={establishmentUploaded}
-        onPick={(f) => onUpload("establishment_doc", f)}
-      />
-      <DocRow
-        label="Giấy ủy quyền / Quyết định bổ nhiệm"
-        hint="Nếu không phải đại diện pháp luật. PDF/JPG/PNG"
-        required={false}
-        uploaded={authorizationUploaded}
-        onPick={(f) => onUpload("authorization_doc", f)}
-      />
-    </div>
+    {isBranch ? (
+      <div className="space-y-2">
+        <DocRow
+          label="Giấy giao việc / Uỷ quyền của Giám đốc chi nhánh"
+          hint="Ghi rõ họ tên cán bộ được giao. PDF/JPG/PNG, tối đa 10 MB"
+          required
+          uploaded={authorizationUploaded}
+          onPick={(f) => onUpload("authorization_doc", f)}
+        />
+        <DocRow
+          label="Giấy CN đăng ký hoạt động chi nhánh"
+          hint="Không bắt buộc. PDF/JPG/PNG, tối đa 10 MB"
+          required={false}
+          uploaded={establishmentUploaded}
+          onPick={(f) => onUpload("establishment_doc", f)}
+        />
+      </div>
+    ) : (
+      <div className="space-y-2">
+        <DocRow
+          label="Giấy phép / Quyết định thành lập"
+          hint="Scan bản công chứng. PDF/JPG/PNG, tối đa 10 MB"
+          required
+          uploaded={establishmentUploaded}
+          onPick={(f) => onUpload("establishment_doc", f)}
+        />
+        <DocRow
+          label="Giấy ủy quyền / Quyết định bổ nhiệm"
+          hint="Nếu không phải đại diện pháp luật. PDF/JPG/PNG"
+          required={false}
+          uploaded={authorizationUploaded}
+          onPick={(f) => onUpload("authorization_doc", f)}
+        />
+      </div>
+    )}
 
     <div className="flex items-start gap-3 pt-2">
       <Checkbox
@@ -105,7 +126,9 @@ export const OrgDocsSection = ({
         onCheckedChange={(v) => onAcceptTerms(!!v)}
       />
       <Label htmlFor="org_terms" className="font-normal text-sm cursor-pointer leading-relaxed">
-        Tôi xác nhận thông tin tổ chức là chính xác và được ủy quyền thực hiện KYC này. Chấp nhận{" "}
+        {isBranch
+          ? "Tôi xác nhận thông tin chi nhánh là chính xác và được Giám đốc chi nhánh giao việc / uỷ quyền thực hiện đăng ký này. Chấp nhận "
+          : "Tôi xác nhận thông tin tổ chức là chính xác và được ủy quyền thực hiện KYC này. Chấp nhận "}
         <a href="/dieu-khoan-su-dung" target="_blank" className="text-primary hover:underline">
           Điều khoản
         </a>.
@@ -118,7 +141,7 @@ export const OrgDocsSection = ({
       className="w-full gap-2"
     >
       <Send className="h-4 w-4" />
-      {isSubmitting ? "Đang gửi..." : "Nộp hồ sơ tổ chức"}
+      {isSubmitting ? "Đang gửi..." : isBranch ? "Nộp hồ sơ chi nhánh" : "Nộp hồ sơ tổ chức"}
     </Button>
   </Card>
 );

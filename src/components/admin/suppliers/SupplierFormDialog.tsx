@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import { useUpsertSupplier } from "@/hooks/useSuppliers";
 import { groupNumber, parseNumber } from "@/lib/advertising/slug";
-import { AuctionOrgPicker } from "./AuctionOrgPicker";
+import { AuctionOrgPicker } from "@/components/shared/AuctionOrgPicker";
 import type { Supplier, SupplierStatus, SupplierType } from "@/types/supplier";
 import type { CommissionType } from "@/types/orders";
 

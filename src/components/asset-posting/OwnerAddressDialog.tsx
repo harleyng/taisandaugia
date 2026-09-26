@@ -11,21 +11,23 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useUpdateOwnerAddress, type OwnerKycAddress } from "@/hooks/useConsignmentContract";
+import { useUpdateOwnerAddress, type PostingPartyAddress } from "@/hooks/useConsignmentContract";
 
 interface OwnerAddressDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Địa chỉ trên KYC đã duyệt; null khi chưa có KYC đã duyệt. */
-  current: OwnerKycAddress | null;
+  postingId: string;
+  /** Bên A của hồ sơ; null / kind 'unknown' khi chưa có KYC đã duyệt. */
+  current: PostingPartyAddress | null;
 }
 
 /**
  * Bổ sung / sửa địa chỉ trên hồ sơ xác thực chủ tài sản — Bên A của mọi hợp
  * đồng dịch vụ sau này. Lưu vĩnh viễn, không theo từng hợp đồng.
  */
-export function OwnerAddressDialog({ open, onOpenChange, current }: OwnerAddressDialogProps) {
-  const update = useUpdateOwnerAddress();
+export function OwnerAddressDialog({ open, onOpenChange, postingId, current: party }: OwnerAddressDialogProps) {
+  const update = useUpdateOwnerAddress(postingId);
+  const current = party && party.kind !== "unknown" ? party : null;
   const isOrg = current?.kind === "organization";
   const [address, setAddress] = useState("");
   const [ward, setWard] = useState("");
@@ -43,7 +45,7 @@ export function OwnerAddressDialog({ open, onOpenChange, current }: OwnerAddress
   const submit = () => {
     if (!current || !valid) return;
     update.mutate(
-      { kind: current.kind, address, ward: isOrg ? undefined : ward, province },
+      { current, address, ward: isOrg ? undefined : ward, province },
       { onSuccess: () => onOpenChange(false) },
     );
   };

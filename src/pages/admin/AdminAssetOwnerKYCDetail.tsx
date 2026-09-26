@@ -15,6 +15,8 @@ import {
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { ORG_TYPE_LABELS } from "@/types/asset-owner";
+import { mapOrgKycError } from "@/lib/assetOwnerKyc/orgKycValidation";
+import { OrgBranchReviewInfo } from "@/components/admin/asset-owner-kyc/OrgBranchReviewInfo";
 import type { OrgType } from "@/types/asset-owner";
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
@@ -142,7 +144,13 @@ export default function AdminAssetOwnerKYCDetail() {
     } else {
       const { data } = await supabase
         .from("asset_owner_org_kyc")
-        .select("*, profiles!asset_owner_org_kyc_created_by_fkey(name, email), linked_owner:asset_owners(name, address)")
+        // asset_owner_org_kyc có HAI khoá ngoại tới asset_owners (linked + parent, Phase 13)
+        // ⇒ embed phải chỉ đích danh FK, không thì PostgREST trả PGRST201 và trang rỗng.
+        .select(
+          "*, profiles!asset_owner_org_kyc_created_by_fkey(name, email), " +
+          "linked_owner:asset_owners!asset_owner_org_kyc_linked_asset_owner_id_fkey(id, name, address), " +
+          "parent_owner:asset_owners!asset_owner_org_kyc_parent_asset_owner_id_fkey(id, name)",
+        )
         .eq("id", id!)
         .maybeSingle();
       if (data) {
@@ -175,7 +183,8 @@ export default function AdminAssetOwnerKYCDetail() {
       .eq("id", id!);
 
     if (error) {
-      toast.error("Cập nhật thất bại");
+      // Duyệt hồ sơ chi nhánh có thể bị trigger chặn (vd. chi nhánh đã có Trạm).
+      toast.error(mapOrgKycError(error, "Cập nhật thất bại"));
     } else {
       if (isInd) {
         // Update profile role
@@ -259,7 +268,7 @@ export default function AdminAssetOwnerKYCDetail() {
       .from(table as any)
       .update({ status: "pending_review", rejection_reason: null, reviewed_at: null, reviewed_by: null })
       .eq("id", id!);
-    if (error) toast.error("Cập nhật thất bại");
+    if (error) toast.error(mapOrgKycError(error, "Cập nhật thất bại"));
     else { toast.success("Đã chuyển về chờ duyệt"); fetchRecord(); }
     setProcessing(false);
   };
@@ -283,6 +292,7 @@ export default function AdminAssetOwnerKYCDetail() {
   }
 
   const status: string = record.status;
+  const isBranch = !isInd && record.kyc_scope === "branch";
 
   return (
     <>
@@ -304,7 +314,7 @@ export default function AdminAssetOwnerKYCDetail() {
                 <StatusBadge status={status} />
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {isInd ? "Hồ sơ KYC Cá nhân" : "Hồ sơ KYC Tổ chức"} ·{" "}
+                {isInd ? "Hồ sơ KYC Cá nhân" : isBranch ? "Hồ sơ KYC Chi nhánh (rút gọn)" : "Hồ sơ KYC Tổ chức"} ·{" "}
                 Nộp {record.submitted_at ? fmtDate(record.submitted_at) : "chưa nộp"}
               </p>
             </div>
@@ -360,8 +370,18 @@ export default function AdminAssetOwnerKYCDetail() {
               </>
             ) : (
               <>
+                {isBranch && (
+                  <OrgBranchReviewInfo
+                    orgName={record.org_name}
+                    officialEmail={record.official_email}
+                    emailDomain={record.email_domain}
+                    linkedOwner={record.linked_owner ?? null}
+                    parentOwner={record.parent_owner ?? null}
+                  />
+                )}
+
                 {/* Section A: Org info */}
-                <SectionCard letter="A" title="Thông tin tổ chức">
+                <SectionCard letter="A" title={isBranch ? "Thông tin chi nhánh" : "Thông tin tổ chức"}>
                   <InfoRow icon={Building2} label="Loại tổ chức" value={record.org_type ? ORG_TYPE_LABELS[record.org_type as OrgType] : "—"} />
                   <InfoRow icon={Building2} label="Tên tổ chức" value={record.org_name} />
                   {/* Chọn từ danh bạ = tên khớp tuyệt đối với dữ liệu tài sản trên sàn;
@@ -384,7 +404,7 @@ export default function AdminAssetOwnerKYCDetail() {
                   <InfoRow icon={Mail} label="Email công vụ" value={record.official_email} />
                   <InfoRow
                     icon={Building2}
-                    label="Địa chỉ trụ sở"
+                    label={isBranch ? "Địa chỉ chi nhánh" : "Địa chỉ trụ sở"}
                     value={[record.head_office_address, record.head_office_province].filter(Boolean).join(", ") || "—"}
                   />
                   <InfoRow icon={Shield} label="Domain email" value={record.email_domain} />
@@ -398,7 +418,7 @@ export default function AdminAssetOwnerKYCDetail() {
                 </SectionCard>
 
                 {/* Section B: Representative */}
-                <SectionCard letter="B" title="Người đại diện / Được ủy quyền">
+                <SectionCard letter="B" title={isBranch ? "Cán bộ được giao" : "Người đại diện / Được ủy quyền"}>
                   <InfoRow icon={User} label="Họ và tên" value={record.rep_full_name} />
                   <InfoRow icon={User} label="Chức vụ" value={record.rep_title} />
                   <InfoRow icon={CreditCard} label="Loại giấy tờ" value={record.rep_id_type === "cccd" ? "CCCD / CMND" : record.rep_id_type === "passport" ? "Hộ chiếu" : "—"} />
@@ -406,20 +426,31 @@ export default function AdminAssetOwnerKYCDetail() {
                 </SectionCard>
 
                 {/* Section C: Rep eKYC */}
-                <SectionCard letter="C" title="eKYC người đại diện">
+                <SectionCard letter="C" title={isBranch ? "Giấy tờ tuỳ thân của cán bộ" : "eKYC người đại diện"}>
                   <div className="space-y-2">
                     <UploadStatus path={record.rep_id_front_url} label="Mặt trước CCCD người đại diện" onView={viewFile} />
                     <UploadStatus path={record.rep_id_back_url} label="Mặt sau CCCD người đại diện" onView={viewFile} />
-                    <UploadStatus path={record.rep_selfie_url} label="Selfie người đại diện" onView={viewFile} />
+                    <UploadStatus
+                      path={record.rep_selfie_url}
+                      label={isBranch ? "Selfie cán bộ (không bắt buộc)" : "Selfie người đại diện"}
+                      onView={viewFile}
+                    />
                   </div>
                 </SectionCard>
 
                 {/* Section D: Org docs */}
-                <SectionCard letter="D" title="Tài liệu pháp lý tổ chức">
-                  <div className="space-y-2">
-                    <UploadStatus path={record.establishment_doc_url} label="Giấy phép / Quyết định thành lập" onView={viewFile} />
-                    <UploadStatus path={record.authorization_doc_url} label="Giấy ủy quyền / Quyết định bổ nhiệm" onView={viewFile} />
-                  </div>
+                <SectionCard letter="D" title={isBranch ? "Giấy tờ của chi nhánh" : "Tài liệu pháp lý tổ chức"}>
+                  {isBranch ? (
+                    <div className="space-y-2">
+                      <UploadStatus path={record.authorization_doc_url} label="Giấy giao việc / Uỷ quyền của Giám đốc chi nhánh" onView={viewFile} />
+                      <UploadStatus path={record.establishment_doc_url} label="Giấy CN đăng ký hoạt động chi nhánh (không bắt buộc)" onView={viewFile} />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <UploadStatus path={record.establishment_doc_url} label="Giấy phép / Quyết định thành lập" onView={viewFile} />
+                      <UploadStatus path={record.authorization_doc_url} label="Giấy ủy quyền / Quyết định bổ nhiệm" onView={viewFile} />
+                    </div>
+                  )}
                 </SectionCard>
 
                 {/* Section E: Account */}

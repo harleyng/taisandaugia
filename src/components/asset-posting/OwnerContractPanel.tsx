@@ -16,8 +16,9 @@ import {
   useAttachSignedContract,
   useCancelContract,
   useConfirmContract,
-  useOwnerKycAddress,
+  usePostingPartyAddress,
 } from "@/hooks/useConsignmentContract";
+import { usePostingCanWrite } from "./postingAccess";
 import { canAttachSigned, canCancel, canConfirm, isContractOpen } from "@/lib/consignment/contractState";
 import {
   CONTRACT_STATUS_BADGE_CLASS,
@@ -58,7 +59,8 @@ export function OwnerContractPanel({ contract: c, org, postingId, startingPrice 
   const attach = useAttachSignedContract(ctx);
   const confirm = useConfirmContract(ctx);
   const cancel = useCancelContract(ctx);
-  const addressQuery = useOwnerKycAddress();
+  const addressQuery = usePostingPartyAddress(postingId);
+  const canWrite = usePostingCanWrite();
   const [dialog, setDialog] = useState<DialogKind>(null);
 
   const orgName = org?.name ?? "Tổ chức đấu giá";
@@ -102,9 +104,15 @@ export function OwnerContractPanel({ contract: c, org, postingId, startingPrice 
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
               Hồ sơ xác thực chưa có địa chỉ — tổ chức chưa lập được hợp đồng.
             </span>
-            <Button size="sm" variant="outline" onClick={() => setDialog("address")}>
-              Bổ sung địa chỉ
-            </Button>
+            {addressQuery.data?.canEdit ? (
+              <Button size="sm" variant="outline" onClick={() => setDialog("address")}>
+                Bổ sung địa chỉ
+              </Button>
+            ) : (
+              addressQuery.data?.workspaceId && (
+                <span className="text-xs text-muted-foreground">Trưởng đơn vị cần bổ sung địa chỉ trụ sở.</span>
+              )
+            )}
           </div>
         )}
 
@@ -118,7 +126,7 @@ export function OwnerContractPanel({ contract: c, org, postingId, startingPrice 
         <Separator />
         <ContractTermsCard terms={c.terms} startingPrice={startingPrice} />
 
-        {open && (
+        {open && canWrite && (
           <div className="flex flex-wrap gap-2 pt-1">
             {canConfirm(c, "owner") && (
               <Button onClick={() => setDialog("confirm")} className="gap-2">
@@ -168,6 +176,7 @@ export function OwnerContractPanel({ contract: c, org, postingId, startingPrice 
       <OwnerAddressDialog
         open={dialog === "address"}
         onOpenChange={(o) => !o && close()}
+        postingId={postingId}
         current={addressQuery.data ?? null}
       />
     </Card>

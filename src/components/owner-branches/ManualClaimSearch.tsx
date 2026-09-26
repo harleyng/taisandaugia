@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { mapOrgKycError } from "@/lib/assetOwnerKyc/orgKycValidation";
 
 interface SearchResult {
   id: string;
@@ -71,7 +72,8 @@ export const ManualClaimSearch = ({ workspaceId, onClaimed }: Props) => {
       .upsert(toInsert, { onConflict: "workspace_id,listing_id", ignoreDuplicates: true });
 
     if (error) {
-      toast.error("Thêm thất bại");
+      // Trạm của chi nhánh chặn tài sản đứng tên đơn vị khác (claim_outside_branch).
+      toast.error(mapOrgKycError(error, "Thêm thất bại"));
     } else {
       toast.success(`Đã thêm ${toInsert.length} tài sản vào hàng đợi xác nhận`);
       onClaimed();

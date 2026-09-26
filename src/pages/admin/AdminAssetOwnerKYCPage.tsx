@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { User, Building2, RefreshCw, ArrowRight } from "lucide-react";
+import { User, Building2, RefreshCw, ArrowRight, GitBranch } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { ORG_TYPE_LABELS } from "@/types/asset-owner";
@@ -52,6 +52,8 @@ interface OrgRow {
   id: string;
   status: string;
   org_name: string | null;
+  kyc_scope: string;
+  parent_owner: { name: string } | null;
   org_type: string | null;
   submitted_at: string | null;
   profiles: { name: string | null; email: string } | null;
@@ -115,7 +117,8 @@ export default function AdminAssetOwnerKYCPage() {
         .order("submitted_at", { ascending: false }),
       supabase
         .from("asset_owner_org_kyc")
-        .select("id, status, org_name, org_type, submitted_at, profiles!asset_owner_org_kyc_created_by_fkey(name, email)")
+        // 2 khoá ngoại tới asset_owners ⇒ phải chỉ đích danh FK (Phase 13)
+        .select("id, status, org_name, org_type, submitted_at, kyc_scope, profiles!asset_owner_org_kyc_created_by_fkey(name, email), parent_owner:asset_owners!asset_owner_org_kyc_parent_asset_owner_id_fkey(name)")
         .neq("status", "draft")
         .order("submitted_at", { ascending: false }),
     ]);
@@ -261,7 +264,15 @@ export default function AdminAssetOwnerKYCPage() {
               <tbody>
                 {filteredOrg.map((row, i) => (
                   <tr key={row.id} className={i < filteredOrg.length - 1 ? "border-b border-border" : ""}>
-                    <td className="px-4 py-3 font-medium text-foreground">{row.org_name ?? "—"}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {row.org_name ?? "—"}
+                      {row.kyc_scope === "branch" && (
+                        <span className="mt-0.5 flex items-center gap-1 text-[11px] font-normal text-muted-foreground">
+                          <GitBranch className="h-3 w-3 text-primary" strokeWidth={1.5} />
+                          Chi nhánh · «{row.parent_owner?.name ?? "—"}» · hồ sơ rút gọn
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">
                       {row.org_type ? ORG_TYPE_LABELS[row.org_type as OrgType] ?? row.org_type : "—"}
                     </td>

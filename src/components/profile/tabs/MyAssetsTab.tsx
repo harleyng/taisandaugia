@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusScreen } from "@/components/asset-owner-onboarding/StatusScreen";
+import { JoinedWorkspacesCard } from "@/components/asset-owner-portal/members/JoinedWorkspacesCard";
+import { useOwnerWorkspaceMemberships } from "@/hooks/useOwnerWorkspace";
 import type { AssetOwnerKYCStatus, AssetOwnerOrgKYCStatus } from "@/types/asset-owner";
 
 const STATUS_BADGE: Record<AssetOwnerKYCStatus | AssetOwnerOrgKYCStatus, { label: string; className: string; icon: typeof Clock }> = {
@@ -59,20 +61,16 @@ export const MyAssetsTab = ({ userId }: { userId: string | null }) => {
     },
   });
 
-  const { data: workspace } = useQuery({
-    queryKey: ["asset_owner_workspace", userId],
-    enabled: !!userId && orgKyc?.status === "approved",
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("asset_owner_workspaces")
-        .select("id, total_claimed, last_matched_at")
-        .eq("owner_user_id", userId!)
-        .maybeSingle();
-      return data as { id: string; total_claimed: number; last_matched_at: string | null } | null;
-    },
-  });
+  // Không gian theo tư cách thành viên: của chính hồ sơ tổ chức này (thống kê)
+  // + những nơi được mời vào (người được mời không có KYC riêng).
+  const { memberships, isLoading: membershipsLoading } = useOwnerWorkspaceMemberships();
+  const workspace =
+    orgKyc?.status === "approved"
+      ? memberships.find((m) => m.workspace.org_kyc_id === orgKyc.id)?.workspace ?? null
+      : null;
+  const joined = memberships.filter((m) => m.accessVia === "member" && m.workspace.org_kyc_id !== orgKyc?.id);
 
-  const isLoading = !!userId && (indLoading || orgLoading);
+  const isLoading = !!userId && (indLoading || orgLoading || membershipsLoading);
   const hasAny = indKyc || orgKyc;
 
   // AssetOwnerKYCStatus (cá nhân) không có "under_review" — chỉ hồ sơ tổ
@@ -90,6 +88,10 @@ export const MyAssetsTab = ({ userId }: { userId: string | null }) => {
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  if (!hasAny && joined.length > 0) {
+    return <JoinedWorkspacesCard memberships={joined} />;
   }
 
   if (!hasAny) {
@@ -217,6 +219,8 @@ export const MyAssetsTab = ({ userId }: { userId: string | null }) => {
           </Button>
         </div>
       )}
+
+      <JoinedWorkspacesCard memberships={joined} />
 
       {/* Add another type */}
       {indKyc && !orgKyc && (

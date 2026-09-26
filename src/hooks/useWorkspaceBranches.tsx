@@ -118,6 +118,17 @@ export function useWorkspaceBranches(workspaceId: string | null) {
   const syncFromClaims = useMutation({
     mutationFn: async () => {
       if (!workspaceId) throw new Error("no_workspace");
+      // Trạm của chi nhánh (match_scope 'entity', Phase 13): đơn vị duy nhất là
+      // chính chi nhánh. Claim tin ghi tên trụ sở không được biến trụ sở thành
+      // "chi nhánh" của không gian này.
+      const { data: ws, error: wsError } = await supabase
+        .from("asset_owner_workspaces")
+        .select("match_scope, asset_owner_id")
+        .eq("id", workspaceId)
+        .maybeSingle();
+      if (wsError) throw wsError;
+      const onlyOwnerId = ws?.match_scope === "entity" ? ws.asset_owner_id : null;
+
       // Get distinct asset_owner_ids from claims
       const { data: claims, error } = await supabase
         .from("asset_owner_claims")
@@ -132,6 +143,7 @@ export function useWorkspaceBranches(workspaceId: string | null) {
       const toInsert: any[] = [];
       for (const c of claims ?? []) {
         if (!c.asset_owner_id || seen.has(c.asset_owner_id)) continue;
+        if (ws?.match_scope === "entity" && c.asset_owner_id !== onlyOwnerId) continue;
         seen.add(c.asset_owner_id);
         const name: string = (c.asset_owner as any)?.name ?? c.matched_name ?? "";
         toInsert.push({

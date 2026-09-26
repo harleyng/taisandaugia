@@ -81,7 +81,8 @@ export default defineConfig(() => ({
         // pdfmake + font Roboto ~1.8MB, chỉ dùng khi xuất hồ sơ ra PDF ở
         // /portal. PWA lại có scope /broker/, nên precache chúng là bắt mọi
         // người cài app tải thừa 1.8MB. Để runtime tự nạp khi cần.
-        globIgnores: ["**/{pdfmake,vfs_fonts}-*.js"],
+        // model-viewer (three.js ~1MB) cùng lý do: chỉ tải khi mở model 3D.
+        globIgnores: ["**/{pdfmake,vfs_fonts,model-viewer}-*.js"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,

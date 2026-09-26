@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Loader2, Home, CheckCircle2 } from "lucide-react";
+import { Loader2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
@@ -11,11 +11,12 @@ import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { trackFeature } from "@/lib/analytics/track";
 import { useAssetOwnerKYC } from "@/hooks/useAssetOwnerKYC";
 import { useAssetOwnerOrgKYC } from "@/hooks/useAssetOwnerOrgKYC";
-import { useAssetOwnerWorkspace } from "@/hooks/useAssetOwnerWorkspace";
+import { useOwnerWorkspaceMemberships } from "@/hooks/useOwnerWorkspace";
 
 import { BranchSelector } from "@/components/asset-owner-onboarding/BranchSelector";
 import { PreFillBanner } from "@/components/asset-owner-onboarding/PreFillBanner";
 import { StatusScreen } from "@/components/asset-owner-onboarding/StatusScreen";
+import { OrgApprovedCard } from "@/components/asset-owner-onboarding/OrgApprovedCard";
 
 import { PersonalInfoSection } from "@/components/asset-owner-onboarding/individual/PersonalInfoSection";
 import { EKYCSection } from "@/components/asset-owner-onboarding/individual/EKYCSection";
@@ -27,7 +28,11 @@ import { RepEKYCSection } from "@/components/asset-owner-onboarding/organization
 import { OrgDocsSection } from "@/components/asset-owner-onboarding/organization/tier1/OrgDocsSection";
 import { AddressSection } from "@/components/asset-owner-onboarding/AddressSection";
 
-import type { AssetOwnerBranch, IdType, OrgType, RegistryAssetOwner } from "@/types/asset-owner";
+import {
+  EMPTY_ORG_KYC_FORM, validateOrgKycForm, type OrgKycForm,
+} from "@/lib/assetOwnerKyc/orgKycValidation";
+import { REGISTRY_OWNER_SELECT } from "@/types/asset-owner";
+import type { AssetOwnerBranch, IdType, RegistryAssetOwner } from "@/types/asset-owner";
 import type { Json } from "@/integrations/supabase/types";
 
 interface Profile {
@@ -49,6 +54,8 @@ const AssetOwnerOnboarding = () => {
   // Entity danh bạ đang chọn ở ô tên tổ chức — giữ ở page để thẻ đã chọn còn
   // nguyên khi quay lại bản nháp (orgKyc chỉ lưu id).
   const [registryOwner, setRegistryOwner] = useState<RegistryAssetOwner | null>(null);
+  // Công ty mẹ đã khai của hồ sơ chi nhánh (Phase 13) — cùng lý do giữ ở page.
+  const [parentOwner, setParentOwner] = useState<RegistryAssetOwner | null>(null);
 
   useEffect(() => {
     trackFeature("start_owner_kyc");
@@ -65,30 +72,19 @@ const AssetOwnerOnboarding = () => {
     selfie_url: null as string | null,
   });
 
-  // Org KYC local form state
-  const [orgForm, setOrgForm] = useState({
-    org_type: "" as OrgType | "",
-    org_name: "", tax_code: "", official_email: "", email_domain: "",
-    aliases: [] as string[],
-    linked_asset_owner_id: null as string | null,
-    linked_auction_org_id: null as string | null,
-    registry_match_score: null as number | null,
-    rep_full_name: "", rep_title: "",
-    head_office_address: "", head_office_province: "",
-    rep_id_type: "cccd" as IdType, rep_id_number: "",
-    rep_id_front_url: null as string | null,
-    rep_id_back_url: null as string | null,
-    rep_selfie_url: null as string | null,
-    establishment_doc_url: null as string | null,
-    authorization_doc_url: null as string | null,
-  });
+  // Org KYC local form state (luật kiểm ở lib/assetOwnerKyc/orgKycValidation)
+  const [orgForm, setOrgForm] = useState<OrgKycForm>(EMPTY_ORG_KYC_FORM);
+  const isBranchKyc = orgForm.kyc_scope === "branch";
 
   const userId = profile?.id ?? null;
   const { kyc, isLoading: kycLoading, saveDraft, submit, uploadEKYCFile } = useAssetOwnerKYC(userId);
   const { orgKyc, isLoading: orgKycLoading, saveDraft: orgSaveDraft, submit: orgSubmit, uploadDoc } = useAssetOwnerOrgKYC(userId);
   // Chỉ để hiển thị số tài sản đã được khớp tự động sau khi duyệt — mọi thao tác
   // chỉnh alias / khớp lại nay nằm ở portal (/chu-tai-san/chi-nhanh-amc).
-  const { workspace, wsLoading } = useAssetOwnerWorkspace(userId);
+  // Lấy đúng không gian sinh ra từ HỒ SƠ NÀY, không phải không gian đang chọn
+  // (người dùng có thể đồng thời là thành viên được mời của nơi khác).
+  const { memberships, isLoading: wsLoading } = useOwnerWorkspaceMemberships();
+  const workspace = memberships.find((m) => m.workspace.org_kyc_id === orgKyc?.id)?.workspace ?? null;
 
   // Load session + profile
   useEffect(() => {
@@ -165,6 +161,8 @@ const AssetOwnerOnboarding = () => {
     if (!orgKyc) return;
     setOrgForm((prev) => ({
       ...prev,
+      kyc_scope: orgKyc.kyc_scope ?? prev.kyc_scope,
+      parent_asset_owner_id: orgKyc.parent_asset_owner_id,
       org_type: orgKyc.org_type ?? prev.org_type,
       org_name: orgKyc.org_name ?? prev.org_name,
       tax_code: orgKyc.tax_code ?? prev.tax_code,
@@ -195,14 +193,30 @@ const AssetOwnerOnboarding = () => {
     let cancelled = false;
     supabase
       .from("asset_owners")
-      .select("id, name, address, owner_kind, aliases")
+      .select(REGISTRY_OWNER_SELECT)
       .eq("id", ownerId)
       .maybeSingle()
       .then(({ data }) => {
-        if (!cancelled && data) setRegistryOwner(data as RegistryAssetOwner);
+        if (!cancelled && data) setRegistryOwner(data as unknown as RegistryAssetOwner);
       });
     return () => { cancelled = true; };
   }, [orgKyc?.linked_asset_owner_id, registryOwner?.id]);
+
+  // Tương tự cho công ty mẹ của hồ sơ chi nhánh
+  useEffect(() => {
+    const parentId = orgKyc?.parent_asset_owner_id;
+    if (!parentId || parentOwner?.id === parentId) return;
+    let cancelled = false;
+    supabase
+      .from("asset_owners")
+      .select(REGISTRY_OWNER_SELECT)
+      .eq("id", parentId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setParentOwner(data as unknown as RegistryAssetOwner);
+      });
+    return () => { cancelled = true; };
+  }, [orgKyc?.parent_asset_owner_id, parentOwner?.id]);
 
   // Compute pre-fill labels
   const preFillFields = (() => {
@@ -282,51 +296,14 @@ const AssetOwnerOnboarding = () => {
   };
 
   const handleOrgSubmit = async () => {
-    if (!orgForm.org_type) {
-      toast.error("Vui lòng chọn loại tổ chức");
+    const problem = validateOrgKycForm(orgForm);
+    if (problem) {
+      toast.error(problem);
       return;
     }
-    if (orgForm.org_name.trim().length < 3) {
-      toast.error("Vui lòng nhập tên tổ chức đầy đủ");
-      return;
-    }
-    if (orgForm.tax_code.trim().length < 5) {
-      toast.error("Mã số thuế / mã cơ quan chưa hợp lệ");
-      return;
-    }
-    if (!orgForm.official_email.includes("@")) {
-      toast.error("Email công vụ chưa hợp lệ");
-      return;
-    }
-    if (orgForm.head_office_address.trim().length < 5) {
-      toast.error("Vui lòng nhập địa chỉ trụ sở (dùng trong hợp đồng dịch vụ đấu giá)");
-      return;
-    }
-    if (orgForm.rep_full_name.trim().length < 3) {
-      toast.error("Vui lòng nhập họ tên người đại diện");
-      return;
-    }
-    if (!orgForm.rep_title.trim()) {
-      toast.error("Vui lòng nhập chức vụ người đại diện");
-      return;
-    }
-    if (orgForm.rep_id_number.trim().length < 6) {
-      toast.error("Số CCCD / hộ chiếu người đại diện chưa hợp lệ");
-      return;
-    }
-    if (!orgForm.rep_id_front_url || !orgForm.rep_id_back_url) {
-      toast.error("Vui lòng tải lên ảnh CCCD người đại diện (2 mặt)");
-      return;
-    }
-    if (!orgForm.rep_selfie_url) {
-      toast.error("Vui lòng tải lên ảnh selfie người đại diện");
-      return;
-    }
-    if (!orgForm.establishment_doc_url) {
-      toast.error("Vui lòng tải lên giấy phép / quyết định thành lập");
-      return;
-    }
-    const recordId = await orgSaveDraft.mutateAsync({ ...orgForm, org_type: orgForm.org_type || undefined });
+    // Trạm của chi nhánh khớp theo thực thể — alias không dùng, không lưu.
+    const payload = { ...orgForm, org_type: orgForm.org_type || undefined, ...(isBranchKyc ? { aliases: [] } : {}) };
+    const recordId = await orgSaveDraft.mutateAsync(payload);
     await orgSubmit.mutateAsync(recordId);
     navigate("/profile?tab=my-assets");
   };
@@ -457,42 +434,7 @@ const AssetOwnerOnboarding = () => {
                   hồ sơ được duyệt (trigger create_workspace_on_org_approval), nên
                   không còn bước claim chi nhánh thủ công ở đây nữa. */}
               {orgKyc?.status === "approved" && (
-                <>
-                  {wsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <div className="space-y-5">
-                      <div className="rounded-2xl bg-success/10 border border-success/25 p-5 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-5 w-5 text-success" />
-                          <h3 className="font-semibold text-foreground">Tổ chức đã được xác thực</h3>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Hệ thống đã tự nhận diện và gán{" "}
-                          <strong className="text-foreground">
-                            {workspace?.total_claimed ?? 0} tài sản
-                          </strong>{" "}
-                          vào danh mục của bạn dựa trên tên và các alias đã khai. Bạn không cần làm
-                          thêm bước nào.
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Muốn bổ sung alias hoặc đơn vị thành viên để tìm thêm tài sản? Vào mục{" "}
-                          <strong>Chi nhánh</strong> trong cổng Chủ tài sản.
-                        </p>
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          <Button onClick={() => navigate("/chu-tai-san/dashboard")}>
-                            Vào cổng Chủ tài sản
-                          </Button>
-                          <Button variant="outline" onClick={() => navigate("/chu-tai-san/chi-nhanh-amc")}>
-                            Quản lý alias &amp; chi nhánh
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
+                <OrgApprovedCard workspace={workspace} loading={wsLoading} />
               )}
 
               {/* Tier 1 pending/under_review/rejected */}
@@ -514,16 +456,19 @@ const AssetOwnerOnboarding = () => {
                     orgType={orgForm.org_type}
                     orgName={orgForm.org_name}
                     linkedAssetOwner={registryOwner}
+                    kycScope={orgForm.kyc_scope}
+                    parentOwner={parentOwner}
                     taxCode={orgForm.tax_code}
                     officialEmail={orgForm.official_email}
                     aliases={orgForm.aliases}
                     onChange={(f) => setOrgForm((prev) => ({ ...prev, ...f }))}
                     onSelectRegistryOwner={setRegistryOwner}
+                    onSelectParentOwner={setParentOwner}
                   />
 
                   <AddressSection
-                    title="Địa chỉ trụ sở"
-                    addressLabel="Địa chỉ trụ sở"
+                    title={isBranchKyc ? "Địa chỉ chi nhánh" : "Địa chỉ trụ sở"}
+                    addressLabel={isBranchKyc ? "Địa chỉ chi nhánh" : "Địa chỉ trụ sở"}
                     showWard={false}
                     value={{
                       address: orgForm.head_office_address,
@@ -544,6 +489,7 @@ const AssetOwnerOnboarding = () => {
                     repTitle={orgForm.rep_title}
                     repIdType={orgForm.rep_id_type}
                     repIdNumber={orgForm.rep_id_number}
+                    isBranch={isBranchKyc}
                     onChange={(f) => setOrgForm((prev) => ({ ...prev, ...f }))}
                   />
 
@@ -551,12 +497,14 @@ const AssetOwnerOnboarding = () => {
                     repIdFrontUploaded={!!orgForm.rep_id_front_url}
                     repIdBackUploaded={!!orgForm.rep_id_back_url}
                     repSelfieUploaded={!!orgForm.rep_selfie_url}
+                    isBranch={isBranchKyc}
                     onUpload={(slot, file) => handleOrgDocUpload(slot, file)}
                   />
 
                   <OrgDocsSection
                     establishmentUploaded={!!orgForm.establishment_doc_url}
                     authorizationUploaded={!!orgForm.authorization_doc_url}
+                    isBranch={isBranchKyc}
                     termsAccepted={orgTermsAccepted}
                     onAcceptTerms={setOrgTermsAccepted}
                     onUpload={(slot, file) => handleOrgDocUpload(slot, file)}

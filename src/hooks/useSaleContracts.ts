@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { qk } from "@/lib/queryKeys";
 import { assertSaleRpcOk, saleErrorMessage } from "@/lib/saleContracts/errors";
 import {
@@ -124,33 +125,46 @@ export function useMySaleContracts() {
   });
 }
 
-/** Hợp đồng mà người đang đăng nhập là BÊN BÁN (chủ tài sản có tài khoản). */
+/**
+ * Hợp đồng mà TENANT hiện tại là BÊN BÁN (lô ký gửi). Bên bán suy từ hồ sơ số
+ * hoá của hợp đồng ký gửi: không gian ⇒ hồ sơ của không gian; Cá nhân ⇒ hồ sơ cá
+ * nhân của mình. Lọc qua embed !inner — RLS cho thành viên đọc cả ba bảng.
+ */
 export function useOwnerSaleContracts() {
   const { userId } = useAuth();
+  const { workspaceId, isPersonal, tenantKey, isLoading: tenantLoading } = useOwnerWorkspace();
   return useQuery({
-    queryKey: qk.saleContracts.ownerMine(userId),
-    enabled: !!userId,
+    queryKey: qk.saleContracts.ownerMineIn(userId, tenantKey),
+    enabled: !!userId && !tenantLoading && !!tenantKey,
     queryFn: async (): Promise<SaleContract[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("auction_sale_contracts")
-        .select(LIST_SELECT)
-        .eq("seller_user_id", userId!)
-        .order("created_at", { ascending: false });
+        .select(
+          `${LIST_SELECT}, seller_posting:consignment_contracts!auction_sale_contracts_consignment_contract_id_fkey!inner(posting:asset_postings!consignment_contracts_asset_posting_id_fkey!inner(workspace_id))`,
+        )
+        .eq("seller_kind", "owner_user");
+      query = isPersonal
+        ? query.eq("seller_user_id", userId!).is("seller_posting.posting.workspace_id", null)
+        : query.eq("seller_posting.posting.workspace_id", workspaceId!);
+      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as SaleContract[];
     },
   });
 }
 
-/** Việc cần làm phía chủ tài sản — nguồn của huy hiệu trong cổng chủ tài sản. */
+/** Việc cần làm phía chủ tài sản (tenant hiện tại) — nguồn của huy hiệu trong cổng chủ tài sản. */
 export function useOwnerSaleSummary() {
   const { userId } = useAuth();
+  const { workspaceId, tenantKey, isLoading: tenantLoading } = useOwnerWorkspace();
   return useQuery({
-    queryKey: [...qk.saleContracts.ownerMine(userId), "summary"] as const,
-    enabled: !!userId,
+    queryKey: [...qk.saleContracts.ownerMineIn(userId, tenantKey), "summary"] as const,
+    enabled: !!userId && !tenantLoading && !!tenantKey,
     staleTime: 60_000,
     queryFn: async (): Promise<{ rows: OwnerSaleContractRow[]; actionCount: number }> => {
-      const { data, error } = await supabase.rpc("owner_sale_contract_summary");
+      const { data, error } = await supabase.rpc("owner_sale_contract_summary", {
+        p_workspace_id: workspaceId ?? undefined,
+      });
       if (error) throw error;
       const rows = (data ?? []) as unknown as OwnerSaleContractRow[];
       return { rows, actionCount: rows.filter((r) => r.owner_action !== "none").length };

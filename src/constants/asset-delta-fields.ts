@@ -96,10 +96,11 @@ const CRAFT_FIELDS: DeltaFieldDescriptor[] = [
 
 // Cổ vật: nguồn gốc là trường quan trọng nhất — bản khai này là căn cứ để khâu
 // duyệt hồ sơ ở /admin/tai-san loại sớm bảo vật quốc gia / hàng không rõ lai lịch.
+// KHÔNG có ô "Đã có giấy giám định" do người bán tự tích: chứng thư chỉ vào hệ thống
+// qua đơn giám định (BR-GD-01, bước 4 wizard). Giá trị cũ vẫn nằm trong delta_fields.
 const ANTIQUE_FIELDS: DeltaFieldDescriptor[] = [
   ...HERITAGE_BASE_FIELDS,
   { key: "provenance", label: "Nguồn gốc & lai lịch", type: "textarea", required: true },
-  { key: "appraisal", label: "Đã có giấy thẩm định / giám định", type: "boolean" },
 ];
 
 /** Gán cùng một bộ trường cho mọi loại con của một nhóm cha. */

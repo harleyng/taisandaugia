@@ -16,37 +16,23 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-
-interface AuctionOrgRow {
-  id: string;
-  name: string;
-  province: string | null;
-}
+import { useAuctionOrgDirectory } from "@/hooks/useAuctionOrgDirectory";
 
 interface Props {
   value: string | null;
   onChange: (id: string | null) => void;
-}
-
-function useAuctionOrgs() {
-  return useQuery<AuctionOrgRow[]>({
-    queryKey: ["auction-orgs", "picker"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("auction_organizations")
-        .select("id,name,province")
-        .order("name");
-      if (error) throw error;
-      return (data ?? []) as AuctionOrgRow[];
-    },
-    staleTime: 5 * 60_000,
-  });
+  /** Công tắc "Chỉ tổ chức đã có tài khoản" (mặc định BẬT, dùng ở hồ sơ đối tác). Tắt ⇒ luôn toàn danh bạ. */
+  accountedToggle?: boolean;
+  placeholder?: string;
+  disabled?: boolean;
+  id?: string;
 }
 
 /** Tổ chức đã có tài khoản KYC duyệt — dùng lại hàm sẵn có của luồng ký gửi. */
-function useAccountedOrgIds() {
+function useAccountedOrgIds(enabled: boolean) {
   return useQuery<Set<string>>({
     queryKey: ["auction-orgs", "accounted"],
+    enabled,
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).rpc("accounted_auction_org_ids");
@@ -61,17 +47,26 @@ function useAccountedOrgIds() {
 }
 
 /**
- * Chọn tổ chức đấu giá để gắn vào hồ sơ đối tác.
+ * Chọn tổ chức đấu giá trong danh bạ.
  *
- * Mặc định chỉ hiện tổ chức ĐÃ CÓ TÀI KHOẢN duyệt KYC — đó là tập sẽ thực sự
- * nhận được yêu cầu ký gửi. Nhưng KHÔNG khoá cứng: ký hợp đồng với công ty chưa
- * onboard là chuyện bình thường, nên có công tắc mở rộng ra toàn danh bạ.
+ * Hồ sơ đối tác (admin): mặc định chỉ hiện tổ chức ĐÃ CÓ TÀI KHOẢN duyệt KYC — đó
+ * là tập sẽ thực sự nhận được yêu cầu ký gửi. Nhưng KHÔNG khoá cứng: ký hợp đồng
+ * với công ty chưa onboard là chuyện bình thường, nên có công tắc mở rộng ra
+ * toàn danh bạ. Chủ tài sản khai kết quả ngoài sàn tắt công tắc (`accountedToggle={false}`).
  */
-export function AuctionOrgPicker({ value, onChange }: Props) {
+export function AuctionOrgPicker({
+  value,
+  onChange,
+  accountedToggle = true,
+  placeholder = "Chưa gắn tổ chức đấu giá",
+  disabled,
+  id,
+}: Props) {
   const [open, setOpen] = useState(false);
-  const [onlyAccounted, setOnlyAccounted] = useState(true);
-  const { data: orgs, isLoading } = useAuctionOrgs();
-  const { data: accounted } = useAccountedOrgIds();
+  const [toggleOn, setOnlyAccounted] = useState(true);
+  const onlyAccounted = accountedToggle && toggleOn;
+  const { data: orgs, isLoading } = useAuctionOrgDirectory();
+  const { data: accounted } = useAccountedOrgIds(accountedToggle);
 
   const selected = useMemo(
     () => (orgs ?? []).find((o) => o.id === value) ?? null,
@@ -91,13 +86,16 @@ export function AuctionOrgPicker({ value, onChange }: Props) {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            id={id}
+            type="button"
             variant="outline"
             role="combobox"
             aria-expanded={open}
+            disabled={disabled}
             className="w-full justify-between font-normal"
           >
             <span className={cn("truncate", !selected && "text-muted-foreground")}>
-              {selected ? selected.name : "Chưa gắn tổ chức đấu giá"}
+              {selected ? selected.name : placeholder}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -145,17 +143,21 @@ export function AuctionOrgPicker({ value, onChange }: Props) {
       </Popover>
 
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="only-accounted"
-            checked={onlyAccounted}
-            onCheckedChange={setOnlyAccounted}
-          />
-          <Label htmlFor="only-accounted" className="text-xs font-normal text-muted-foreground">
-            Chỉ tổ chức đã có tài khoản
-          </Label>
-        </div>
-        {value && (
+        {accountedToggle ? (
+          <div className="flex items-center gap-2">
+            <Switch
+              id="only-accounted"
+              checked={toggleOn}
+              onCheckedChange={setOnlyAccounted}
+            />
+            <Label htmlFor="only-accounted" className="text-xs font-normal text-muted-foreground">
+              Chỉ tổ chức đã có tài khoản
+            </Label>
+          </div>
+        ) : (
+          <span />
+        )}
+        {value && !disabled && (
           <Button
             type="button"
             variant="ghost"

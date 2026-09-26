@@ -23,6 +23,8 @@ interface QuoteComparisonProps {
   isSelecting: boolean;
   /** Đã chốt xong: khoá nút chọn, chỉ còn xem lại. */
   decided: boolean;
+  /** Người xem / Cán bộ ngoài phạm vi: xem báo giá nhưng không chọn. */
+  readOnly?: boolean;
 }
 
 function QuoteDocLink({ path }: { path: string }) {
@@ -64,6 +66,7 @@ export function QuoteComparison({
   onSelect,
   isSelecting,
   decided,
+  readOnly = false,
 }: QuoteComparisonProps) {
   if (quotes.length === 0) return null;
 
@@ -185,7 +188,7 @@ export function QuoteComparison({
 
             <div className="mt-3 flex items-center justify-between gap-3">
               {q.quote_doc_path ? <QuoteDocLink path={q.quote_doc_path} /> : <span />}
-              {!decided && q.status === "quoted" && (
+              {!decided && !readOnly && q.status === "quoted" && (
                 <Button size="sm" disabled={isSelecting} onClick={() => onSelect(q)}>
                   Chọn tổ chức này
                 </Button>

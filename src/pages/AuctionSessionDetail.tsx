@@ -14,6 +14,9 @@ import { SessionQaLinkCard } from "@/components/case-qa/SessionQaLinkCard";
 import { SessionBiddingEntryCard } from "@/components/auction-sessions/SessionBiddingEntryCard";
 import { SessionContractCard } from "@/components/auction-sessions/SessionContractCard";
 import { usePublicAuctionSession } from "@/hooks/usePublicAuctionSessions";
+import { useSessionLot3dModels } from "@/hooks/useAsset3dScans";
+import { useSessionLotVrTours } from "@/hooks/useVrTourOrders";
+import { useSessionLotAuthentications } from "@/hooks/useAuthenticationOrders";
 import { formatVnd } from "@/lib/advertising/slug";
 
 /** /sessions/:id — chi tiết một phiên đấu giá đã công bố (hoặc đã huỷ). */
@@ -21,6 +24,11 @@ export default function AuctionSessionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: session, isLoading, error } = usePublicAuctionSession(id);
+  // Chỉ model đã được admin duyệt cùng hồ sơ (RPC tự lọc) — nhãn "3D" + nút xem trên lô.
+  const { data: lot3dModels } = useSessionLot3dModels(session ? id : null);
+  // VR tour đã gắn lô sau khi admin duyệt (BR-VR-02) — nhãn "VR" + tab VR.
+  const { data: lotVrTours } = useSessionLotVrTours(session ? id : null);
+  const { data: lotAuthentications } = useSessionLotAuthentications(session ? id : null);
 
   const lots = session?.auction_session_items ?? [];
   const priced = lots.filter((l) => l.starting_price != null);
@@ -112,7 +120,12 @@ export default function AuctionSessionDetail() {
 
                 <section>
                   <h2 className="mb-3 text-lg font-bold text-foreground">Danh sách tài sản ({lots.length})</h2>
-                  <SessionLotList lots={lots} />
+                  <SessionLotList
+                    lots={lots}
+                    models={lot3dModels}
+                    vrTours={lotVrTours}
+                    authentications={lotAuthentications}
+                  />
                 </section>
               </div>
 

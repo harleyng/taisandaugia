@@ -4,6 +4,13 @@ import { vi } from "date-fns/locale";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { AdminAssetPosting } from "@/hooks/useAdminAssetPostings";
+import { PostingModel3dCard } from "@/components/asset-3d/PostingModel3dCard";
+import { PostingVrTourCard } from "@/components/vr-tour/PostingVrTourCard";
+import { PostingAuthenticationSection } from "@/components/authentication/PostingAuthenticationSection";
+import { LotRequirementControl } from "@/components/admin/authentication/LotRequirementControl";
+import { PostingLegalConsultCard } from "@/components/legal-consult/PostingLegalConsultCard";
+import { PostingAuctionConsultCard } from "@/components/auction-consult/PostingAuctionConsultCard";
+import { useHasAdminPermission } from "@/hooks/useAdminPermissions";
 
 // ⚠️ Ba mảng này KHÔNG cùng loại dữ liệu, dù tên cột đều là "*_urls":
 //   image_urls           → public URL thật (bucket asset-media, public)
@@ -44,6 +51,8 @@ export function AssetPostingFilesCard({ posting }: { posting: AdminAssetPosting 
   const extras = posting.doc_urls ?? [];
   const images = posting.image_urls ?? [];
   const videos = posting.video_urls ?? [];
+  const canViewLegal = useHasAdminPermission("tu-van-phap-ly", "view");
+  const canViewAuctionConsult = useHasAdminPermission("tu-van-dau-gia", "view");
   const declaration = posting.ownership_declaration;
 
   return (
@@ -112,6 +121,51 @@ export function AssetPostingFilesCard({ posting }: { posting: AdminAssetPosting 
           </div>
         )}
       </div>
+
+      {/* Model 3D công khai CÙNG lúc duyệt hồ sơ; model về sau khi đã duyệt cần duyệt riêng. */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">Model 3D</h3>
+        <PostingModel3dCard
+          postingId={posting.id}
+          title={posting.title}
+          reviewStatus={posting.review_status}
+          mode="admin"
+        />
+      </div>
+
+      {/* VR tour: link đối tác giao chỉ công khai sau khi duyệt hồ sơ + bấm gắn vào lô (BR-VR-02). */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">VR tour</h3>
+        <PostingVrTourCard
+          postingId={posting.id}
+          title={posting.title}
+          reviewStatus={posting.review_status}
+          mode="admin"
+        />
+      </div>
+
+      {/* Giám định: admin thao tác đơn ở /admin/yeu-cau-dich-vu (thay đối tác); ở đây xem kết luận + đặt bắt buộc cho lô. */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">Giám định</h3>
+        <LotRequirementControl postingId={posting.id} />
+        <PostingAuthenticationSection postingId={posting.id} reviewStatus={posting.review_status} mode="admin" />
+      </div>
+
+      {/* Tư vấn pháp lý: chỉ người có quyền tu-van-phap-ly:view (BR-CNS-02); thao tác ở /admin/yeu-cau-dich-vu. */}
+      {canViewLegal && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-foreground">Tư vấn pháp lý</h3>
+          <PostingLegalConsultCard postingId={posting.id} mode="admin" />
+        </div>
+      )}
+
+      {/* Tư vấn đấu giá: chỉ quyền tu-van-dau-gia:view (RLS); thao tác ở /admin/yeu-cau-dich-vu. */}
+      {canViewAuctionConsult && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-foreground">Tư vấn đấu giá</h3>
+          <PostingAuctionConsultCard postingId={posting.id} mode="admin" showHistory />
+        </div>
+      )}
 
       {videos.length > 0 && (
         <div className="space-y-2">

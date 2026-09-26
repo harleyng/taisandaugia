@@ -8,6 +8,10 @@ import { CheckCircle2, XCircle, Clock, Building2, ArrowRight, ExternalLink, Sear
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/utils/formatters";
 import type { AssetOwnerClaim, ClaimStatus } from "@/types/asset-owner";
+import type { ResolvedAssetOutcome } from "@/lib/ownerOutcomes";
+import { OutcomeResultCell } from "@/components/asset-owner-portal/outcomes/OutcomeResultCell";
+import { AssetIdTag } from "@/components/asset-owner-portal/outcomes/AssetIdTag";
+import { shortAssetId } from "@/lib/ownerAssetId";
 
 // ─── Status config ─────────────────────────────────────────────────────────
 
@@ -63,16 +67,26 @@ function getProvince(claim: AssetOwnerClaim): string {
 interface Props {
   claims: AssetOwnerClaim[];
   roundCountsByListing?: Record<string, number>;
+  /** Kết quả phiên đã hợp nhất nguồn (useOwnerAssetOutcomes). Không truyền ⇒ ẩn cột "Kết quả". */
+  outcomesByListing?: Record<string, ResolvedAssetOutcome>;
   onConfirm: (id: string) => void;
   onReject: (id: string) => void;
   onConfirmAll: () => void;
   isProcessing: boolean;
   initialMatchedName?: string;
+  /** Vai trò trong không gian (useClaimWriteAccess). Không truyền ⇒ được ghi mọi claim. */
+  canWriteClaim?: (claim: AssetOwnerClaim) => boolean;
+  /** Người xem / Cán bộ bị giới hạn chi nhánh ⇒ false, ẩn "Xác nhận tất cả". */
+  canConfirmAll?: boolean;
+  /** Mở dialog "Khai kết quả" (Phase 6). Không truyền ⇒ không có nút. Nút theo canWriteClaim. */
+  onReportOutcome?: (claim: AssetOwnerClaim) => void;
 }
+
+const ALWAYS = () => true;
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export const ClaimsTable = ({ claims, roundCountsByListing = {}, onConfirm, onReject, onConfirmAll, isProcessing, initialMatchedName }: Props) => {
+export const ClaimsTable = ({ claims, roundCountsByListing = {}, outcomesByListing, onConfirm, onReject, onConfirmAll, isProcessing, initialMatchedName, canWriteClaim = ALWAYS, canConfirmAll = true, onReportOutcome }: Props) => {
   const navigate = useNavigate();
 
   const [search, setSearch]                   = useState("");
@@ -121,7 +135,9 @@ export const ClaimsTable = ({ claims, roundCountsByListing = {}, onConfirm, onRe
         const q = search.toLowerCase();
         const inTitle = (c.listing?.title ?? "").toLowerCase().includes(q);
         const inAddr  = JSON.stringify(c.listing?.address ?? "").toLowerCase().includes(q);
-        if (!inTitle && !inAddr) return false;
+        const code    = q.replace(/^m[aã]\s*/, "").replace(/[#\s]/g, "").toUpperCase();
+        const inCode  = !!c.listing_id && code.length >= 4 && shortAssetId(c.listing_id).startsWith(code);
+        if (!inTitle && !inAddr && !inCode) return false;
       }
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (categoryFilter !== "all" && c.listing?.property_type_slug !== categoryFilter) return false;
@@ -171,7 +187,7 @@ export const ClaimsTable = ({ claims, roundCountsByListing = {}, onConfirm, onRe
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Tìm tài sản..."
+            placeholder="Tìm tên, địa chỉ hoặc mã tài sản..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-8 h-9"
@@ -303,16 +319,18 @@ export const ClaimsTable = ({ claims, roundCountsByListing = {}, onConfirm, onRe
           <p className="text-sm text-amber-700">
             <strong>{pendingCount}</strong> tài sản đang chờ xác nhận
           </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-            onClick={onConfirmAll}
-            disabled={isProcessing}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Xác nhận tất cả
-          </Button>
+          {canConfirmAll && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              onClick={onConfirmAll}
+              disabled={isProcessing}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Xác nhận tất cả
+            </Button>
+          )}
         </div>
       )}
 
@@ -329,6 +347,9 @@ export const ClaimsTable = ({ claims, roundCountsByListing = {}, onConfirm, onRe
                 <tr className="border-b border-border bg-muted/40">
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Tài sản</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Giá khởi điểm</th>
+                  {outcomesByListing && (
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">Kết quả</th>
+                  )}
                   <th className="text-center px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Lần ĐG</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Khớp theo</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Trạng thái</th>
@@ -363,11 +384,15 @@ export const ClaimsTable = ({ claims, roundCountsByListing = {}, onConfirm, onRe
                             >
                               {title}
                             </button>
-                            {listing?.property_type_slug && (
-                              <span className="inline-block text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full mt-0.5">
-                                {listing.property_type_slug}
-                              </span>
-                            )}
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                              {/* Mã để ghi vào file Excel nhập kết quả (Kết quả phiên). */}
+                              {claim.listing_id && <AssetIdTag listingId={claim.listing_id} />}
+                              {listing?.property_type_slug && (
+                                <span className="inline-block text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                                  {listing.property_type_slug}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -376,6 +401,13 @@ export const ClaimsTable = ({ claims, roundCountsByListing = {}, onConfirm, onRe
                       <td className="px-4 py-3 text-foreground whitespace-nowrap hidden md:table-cell">
                         {listing?.price ? formatPrice(listing.price, "TOTAL") : "—"}
                       </td>
+
+                      {/* Kết quả hợp nhất + nhãn nguồn */}
+                      {outcomesByListing && (
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <OutcomeResultCell outcome={claim.listing_id ? outcomesByListing[claim.listing_id] : undefined} />
+                        </td>
+                      )}
 
                       {/* Lần ĐG */}
                       <td className="px-4 py-3 text-center hidden sm:table-cell">
@@ -417,30 +449,43 @@ export const ClaimsTable = ({ claims, roundCountsByListing = {}, onConfirm, onRe
 
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">
-                        {claim.status === "pending_confirmation" ? (
-                          <div className="flex gap-1.5 justify-end">
+                        {claim.status === "pending_confirmation" && canWriteClaim(claim) ? (
+                          <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:justify-end">
                             <button
                               onClick={() => onReject(claim.id)}
                               disabled={isProcessing}
-                              className="text-xs px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 font-semibold transition-colors disabled:opacity-50"
+                              className="whitespace-nowrap text-xs px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 font-semibold transition-colors disabled:opacity-50"
                             >
                               Từ chối
                             </button>
                             <button
                               onClick={() => onConfirm(claim.id)}
                               disabled={isProcessing}
-                              className="text-xs px-2.5 py-1 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-semibold transition-colors disabled:opacity-50"
+                              className="whitespace-nowrap text-xs px-2.5 py-1 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-semibold transition-colors disabled:opacity-50"
                             >
                               Xác nhận
                             </button>
                           </div>
                         ) : claim.listing_id ? (
-                          <button
-                            onClick={() => navigate(`/listings/${claim.listing_id}`)}
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-                          >
-                            Xem <ExternalLink className="h-3 w-3" />
-                          </button>
+                          <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+                            {/* Khai kết quả: chỉ tài sản đã thuộc danh mục (claim chờ phải xác nhận trước). */}
+                            {onReportOutcome && claim.status !== "rejected" && canWriteClaim(claim) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 whitespace-nowrap px-2.5 text-xs"
+                                onClick={() => onReportOutcome(claim)}
+                              >
+                                Khai kết quả
+                              </Button>
+                            )}
+                            <button
+                              onClick={() => navigate(`/listings/${claim.listing_id}`)}
+                              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              Xem <ExternalLink className="h-3 w-3" />
+                            </button>
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}

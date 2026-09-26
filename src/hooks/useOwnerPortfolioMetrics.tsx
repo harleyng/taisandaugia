@@ -6,6 +6,12 @@ import { formatPrice } from "@/utils/formatters";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import type { ClaimStatus } from "@/types/asset-owner";
 import { qk } from "@/lib/queryKeys";
+import { useOwnerAssetOutcomes } from "@/hooks/useOwnerAssetOutcomes";
+import {
+  isSoldOutcome,
+  type OutcomeConfidence,
+  type ResolvedOutcomeKind,
+} from "@/lib/ownerOutcomes";
 
 // Flat slug → display name map (parent + children)
 const SLUG_NAME_MAP: Record<string, string> = {};
@@ -57,7 +63,12 @@ export interface ListingRow {
   province: string;
   auctionOrgId: string | null;
   auctionOrgName: string | null;
+  /** Giá trúng đã hợp nhất nguồn (RPC owner_asset_outcomes_resolved) — không còn đọc custom_attributes. */
   winPrice: number | null;
+  resolvedOutcome: ResolvedOutcomeKind | null;
+  /** Nhãn nguồn của winPrice/resolvedOutcome (§A3); null khi chưa nguồn nào nói gì. */
+  confidenceLabel: OutcomeConfidence | null;
+  hasConflict: boolean;
   auctionTime: string | null;
   registrationDeadline: string | null;
   imageUrl: string | null;
@@ -67,6 +78,8 @@ export interface ListingRow {
   matchedName: string | null;
   claimStatus: ClaimStatus;
   confidenceScore: number | null;
+  /** Chủ tài sản (chi nhánh) của claim — để xét quyền ghi theo chi nhánh. */
+  assetOwnerId: string | null;
 }
 
 export interface StatusGroup {
@@ -108,8 +121,13 @@ const STATUS_COLORS: Record<string, string> = {
   "Tồn đọng":   "hsl(25 95% 53%)",
 };
 
+/** "Đã bán" theo kết quả hợp nhất. SOLD_RENTED / giá cào đã là nguồn "Ước tính" ở server. */
+export function isSoldRow(row: Pick<ListingRow, "resolvedOutcome">): boolean {
+  return isSoldOutcome(row.resolvedOutcome);
+}
+
 function classifyListing(row: ListingRow): string {
-  if (row.listingStatus === "SOLD_RENTED" || !!row.winPrice) return "Đã thành";
+  if (isSoldRow(row)) return "Đã thành";
   const ss = row.sessionStatus;
   if (ss === "registration_open" || ss === "upcoming") return "Chờ đấu";
   if (ss === "ongoing") return "Đang đấu";
@@ -151,6 +169,7 @@ interface RawListing {
 interface RawClaim {
   id: string;
   listing_id: string;
+  asset_owner_id: string | null;
   matched_name: string | null;
   status: ClaimStatus;
   confidence_score: number | null;
@@ -172,6 +191,7 @@ export function useOwnerPortfolioMetrics(
         .select(`
           id,
           listing_id,
+          asset_owner_id,
           matched_name,
           status,
           confidence_score,
@@ -212,6 +232,9 @@ export function useOwnerPortfolioMetrics(
     staleTime: 2 * 60_000,
   });
 
+  // Q3: kết quả phiên đã hợp nhất nguồn (sàn / tổ chức tự khai / tin cào)
+  const { byListing: outcomesByListing, isLoading: outcomesLoading } = useOwnerAssetOutcomes(workspaceId);
+
   // Build ListingRow array (with round count)
   const allRows: ListingRow[] = useMemo(() => {
     if (!rawClaims) return [];
@@ -230,6 +253,7 @@ export function useOwnerPortfolioMetrics(
         ? l.auction_organizations[0]
         : l.auction_organizations;
       const history = sessionsByListing[l.id] ?? [];
+      const outcome = outcomesByListing[l.id];
 
       return [{
         id: l.id,
@@ -244,7 +268,10 @@ export function useOwnerPortfolioMetrics(
         province: address.province ?? address.city ?? "",
         auctionOrgId: l.auction_org_id ?? null,
         auctionOrgName: org?.name ?? ca.org_name ?? null,
-        winPrice: ca.win_price ?? ca.winning_price ?? null,
+        winPrice: outcome?.price ?? null,
+        resolvedOutcome: outcome?.outcome ?? null,
+        confidenceLabel: outcome?.confidence ?? null,
+        hasConflict: outcome?.hasConflict ?? false,
         auctionTime: ca.auction_time ?? ca.auction_date ?? null,
         registrationDeadline: ca.registration_deadline ?? ca.document_sale_end ?? null,
         imageUrl: l.image_url ?? null,
@@ -254,9 +281,10 @@ export function useOwnerPortfolioMetrics(
         matchedName: claim.matched_name ?? null,
         claimStatus: claim.status,
         confidenceScore: claim.confidence_score ?? null,
+        assetOwnerId: claim.asset_owner_id ?? null,
       } as ListingRow];
     });
-  }, [rawClaims, sessions]);
+  }, [rawClaims, sessions, outcomesByListing]);
 
   // Apply filter client-side
   const filtered: ListingRow[] = useMemo(() => {
@@ -374,6 +402,6 @@ export function useOwnerPortfolioMetrics(
 
   return {
     metrics,
-    isLoading: claimsLoading || (listingIds.length > 0 && sessionsLoading),
+    isLoading: claimsLoading || outcomesLoading || (listingIds.length > 0 && sessionsLoading),
   };
 }

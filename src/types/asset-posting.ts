@@ -86,7 +86,12 @@ export interface OwnershipDeclaration {
 
 export interface AssetPosting {
   id: string;
+  /** Người tạo — KHÔNG phải cổng quyền với hồ sơ của không gian (Phase 4). */
   user_id: string;
+  /** NULL = hồ sơ Cá nhân; có = hồ sơ của không gian (quyền theo vai trò thành viên). */
+  workspace_id: string | null;
+  /** Chi nhánh trong không gian (workspace_branches.id); NULL = không thuộc chi nhánh nào. */
+  branch_id: string | null;
   parent_slug: string;
   child_slug: string;
   title: string;

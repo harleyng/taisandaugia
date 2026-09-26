@@ -14,9 +14,9 @@ Colors are CSS vars in `H S% L%` form (no `hsl()` wrapper) so Tailwind opacity m
 
 | Token | Tailwind | CSS var (light) | Usage |
 |---|---|---|---|
-| Primary (Navy) | `bg-primary` / `text-primary` | `--primary: 210 90% 30%` | CTAs, stepper, focus rings, active nav, links in prose |
-| Primary hover | `bg-primary-hover` | `--primary-hover: 210 90% 25%` | Hover state of navy CTAs |
-| Primary foreground | `text-primary-foreground` | `--primary-foreground: 0 0% 100%` | Text on navy |
+| Primary (Green) | `bg-primary` / `text-primary` | `--primary: 152 60% 26%` | CTAs, stepper, focus rings, active nav, links in prose |
+| Primary hover | `bg-primary-hover` | `--primary-hover: 152 60% 20%` | Hover state of primary CTAs |
+| Primary foreground | `text-primary-foreground` | `--primary-foreground: 0 0% 100%` | Text on primary |
 | Accent (Amber) | `bg-accent` / `text-accent` | `--accent: 43 96% 56%` | Highlights, credit/price emphasis, badges |
 | Accent foreground | `text-accent-foreground` | `--accent-foreground: 0 0% 100%` | Text on amber |
 | Background | `bg-background` | `--background: 0 0% 100%` | Page background |
@@ -38,13 +38,15 @@ Colors are CSS vars in `H S% L%` form (no `hsl()` wrapper) so Tailwind opacity m
 | Destructive | `bg-destructive` / `text-destructive` | `--destructive: 0 84% 60%` | REJECTED, delete/unlink, errors |
 
 > `success` and `warning` are exposed as flat Tailwind colors (`bg-success`, `text-warning`) in `tailwind.config.ts` — there is no `-foreground` pair for them; use `text-white` on solid fills.
+>
+> `--primary` and `--success` are **both green**. In charts, never put a success-green series next to a primary series — pick a distinct hue for the second series (see the chart note in `CLAUDE.md`). `text-warning` on a light tint is low-contrast for small text: for small warning badges use `bg-warning/15 text-foreground` and keep `text-warning` for icons.
 
 ### Extras (defined but rarely touched)
 
-- Hero gradient: `--hero-gradient-start: 210 90% 30%` → `--hero-gradient-end: 210 80% 40%` (navy sweep on the homepage hero). Applied via inline `linear-gradient(...)` using these vars, not a Tailwind utility.
+- Hero gradient: `--hero-gradient-start: 152 60% 26%` → `--hero-gradient-end: 152 50% 36%` (green sweep on the homepage hero). Applied via inline `linear-gradient(...)` using these vars, not a Tailwind utility.
 - Shadows: `shadow-sm|md|lg|xl` map to `--shadow-*` vars (soft neutral shadows). Prefer these over ad-hoc `shadow-[...]`.
 - Transitions: `--transition-base` (0.2s) / `--transition-smooth` (0.3s), cubic-bezier `(0.4,0,0.2,1)`.
-- Sidebar tokens (`--sidebar-*`) drive the owner-portal chrome (`components/owner-portal/OwnerPortalSidebar.tsx`).
+- Sidebar tokens (`--sidebar-*`, dark green) drive the admin / company-portal / owner-portal nav shells only (e.g. `components/owner-portal/OwnerPortalSidebar.tsx`).
 
 ### The rule
 
@@ -74,7 +76,7 @@ Colors are CSS vars in `H S% L%` form (no `hsl()` wrapper) so Tailwind opacity m
 Single shadcn API (no dual DS API in this project).
 
 ```tsx
-<Button>Primary CTA</Button>                       // variant="default" → bg-primary
+<Button>Primary CTA</Button>                       // variant="default" → bg-primary (green)
 <Button variant="outline" size="sm">Phụ</Button>
 <Button variant="secondary">Trung tính</Button>
 <Button variant="ghost" size="icon"><Icon /></Button>
@@ -106,12 +108,12 @@ This is a repo-wide footgun (also in CLAUDE.md). `asChild`/`Slot` is fine for sh
 - **No generic `StatusBadge` component.** Render status with the shadcn `Badge` (`components/ui/badge.tsx`) — usually `variant="outline"` or `variant="secondary"` — plus a Vietnamese label. Common states:
   - KYC: `PENDING_KYC` → warning tone; `APPROVED` → success; `REJECTED` → destructive.
   - Unlock/access: unlocked → `text-success`; time-limited access nearing expiry → `text-warning`; locked → muted + `LockedBlur`.
-- **Badge** variants: `default` (navy), `secondary`, `destructive`, `outline`. Amber emphasis (credits/price) → add `className="bg-accent text-accent-foreground border-transparent"`.
+- **Badge** variants: `default` (primary green), `secondary`, `destructive`, `outline`. Amber emphasis (credits/price) → add `className="bg-accent text-accent-foreground border-transparent"`.
 - **Alert** (`components/ui/alert.tsx`) supports only `default` | `destructive`. For **warning/info** tones, override className with tokens (never hardcode hex):
   ```tsx
   // warning (e.g. "công ty đã được liên kết")
   <Alert className="border-warning/50 text-warning [&>svg]:text-warning">…</Alert>
-  // info (navy)
+  // info (primary green)
   <Alert className="border-primary/50 text-primary [&>svg]:text-primary">…</Alert>
   ```
 - **Toasts:** `sonner` (`toast.success` / `toast.error`) for async mutation feedback; Vietnamese messages ("Đã mở khóa", "Thanh toán thành công").
@@ -135,7 +137,7 @@ Dialogs are `rounded-2xl`, show cost in credits with the amber accent, and the b
 ## Page Composition Patterns
 
 ### List pages (`/listings`, owner-portal lists)
-1. **Page header** — title + subtitle + primary action (`<Button>` default/navy).
+1. **Page header** — title + subtitle + primary action (`<Button>` default/primary).
 2. **Filters** — search + `Select`/popover filters (shadcn); keep filter state local or in URL.
 3. **Grid/list** — listing cards (`rounded-2xl`, `shadow-md`).
 4. **Empty state** — icon + title + description + suggested action; never a blank area or bare `null`.
@@ -153,6 +155,29 @@ Dialogs are `rounded-2xl`, show cost in credits with the amber accent, and the b
 ### Form pages
 - RHF + Zod; split into `rounded-2xl` card sections (per CLAUDE.md forms pattern).
 - `useNavigate()` for cancel/success — **not** `<Button asChild><Link>`.
+
+---
+
+## Owner portal — "Trạm Điều Hành" (`/chu-tai-san/*`)
+
+The asset-owner portal follows its own design language: calm, few colours, numbers first, one answer per screen. The full spec is **§A8 of [`docs/owner-control-tower-plan.md`](../../docs/owner-control-tower-plan.md)**: L1→L4 hierarchy, type scale, colour meaning, lucide icons at stroke 1.5, layout, copy. The short version:
+
+**Reuse the building blocks** in `src/components/asset-owner-portal/ui/`. Don't make one-off cards.
+
+| Block | Use |
+|---|---|
+| `OwnerPageHeader` | Page title (`text-2xl font-semibold`) + one-line subtitle + at most one primary button |
+| `SectionCard` | The only card: `rounded-2xl border bg-card`, no shadow, icon tile + title + count + "Xem tất cả" |
+| `HeroFigure` | L1 answer figure (`text-4xl tabular-nums`) + optional progress bar |
+| `StatTile` | KPI tile (`text-2xl tabular-nums`, muted unit, one context line, corner badge slot) — grid of 4, 2×2 on mobile |
+| `ActionCard` | To-do row with 1–3 inline buttons; the card itself is not clickable |
+| `EmptyState` | Icon tile + positive short copy + one optional action; `compact` for inside cards |
+| `IconTile` | Shared tinted icon square (`bg-<tone>/10 text-<tone>`, tones: primary/success/warning/destructive/muted) |
+
+- **Status colour goes on the icon or a small badge**, never on the whole card. No `amber-*`/`orange-*`/`red-*` palette classes.
+- **Money:** always `src/utils/money.ts`. `moneyShortParts` / `formatMoneyShort` for tiles and lists ("12.4 tỷ", "850 tr"), `formatMoneyFull` for tables and exports ("12,400,000,000 ₫"). Thousands are grouped with a comma and decimals use a dot, as in `formatVnd`. Never format money inline.
+- **Nav:** `OWNER_NAV_GROUPS` in `components/owner-portal/owner-nav-config.ts`, grouped "Điều hành" / "Tác nghiệp" / "Phân tích" / "Thiết lập". Add a new item only once its route exists.
+- **Charts (Phase 15a, `cash-flow/`):** Recharts with token colours only — totals `primary`, a rise `accent`, a fall `muted-foreground / 0.55`, overdue `warning`, estimates as a hatched `primary` pattern labelled "Ước tính". Never `accent` and `warning` in one chart (same hue family), never `success` beside `primary`. The brand amber/grey fail the dataviz lightness/chroma bands, so every bar carries a direct value label and the chart has an sr-only table (inside a `relative` box).
 
 ---
 

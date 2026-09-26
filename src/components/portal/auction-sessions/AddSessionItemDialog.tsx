@@ -12,10 +12,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAddSessionItems, useSessionSourceListings } from "@/hooks/useAuctionSessions";
 import { useOrgServiceRequests } from "@/hooks/useOrgServiceRequests";
+import { useSessionAuctionConsultSuggestions } from "@/hooks/useAuctionConsultSuggestions";
 import { formatVnd } from "@/lib/advertising/slug";
 import { listingToItemDraft, wonRequestToItemDraft } from "@/lib/auctionSessions/snapshot";
 import type { AuctionSessionWithItems, SessionItemDraft, SessionItemSource } from "@/types/auction-session";
 import { SourcePickList, type PickRow } from "./SourcePickList";
+import { AuctionConsultSuggestionPanel } from "./AuctionConsultSuggestionPanel";
+
+type MoneyOverride = Partial<Pick<SessionItemDraft, "starting_price" | "deposit_amount" | "bid_step">>;
 
 interface Props {
   session: AuctionSessionWithItems;
@@ -37,6 +41,9 @@ export function AddSessionItemDialog({ session, auctionOrgId, open, onOpenChange
   const add = useAddSessionItems();
   const listingsQuery = useSessionSourceListings(auctionOrgId, open);
   const { requests, isLoading: requestsLoading, error: requestsError } = useOrgServiceRequests();
+  // Đề xuất tư vấn đã được chủ tài sản chấp nhận — chỉ đổi giá trị lô khi tổ chức bấm "Áp dụng".
+  const { map: suggestions } = useSessionAuctionConsultSuggestions(session.id, open);
+  const [overrides, setOverrides] = useState<Record<string, MoneyOverride>>({});
 
   const inSession = useMemo(() => {
     const keys = new Set<string>();
@@ -68,34 +75,44 @@ export function AddSessionItemDialog({ session, auctionOrgId, open, onOpenChange
         subtitle: [d.district, d.province].filter(Boolean).join(", ") || null,
         meta: d.starting_price != null ? `Giá khởi điểm ${formatVnd(d.starting_price)}` : "Chưa có giá khởi điểm",
         disabledReason: inSession.has(key) ? "Đã có trong phiên" : null,
+        badge: key.startsWith("posting:") && suggestions.has(key.slice(8)) ? `Có đề xuất tư vấn v${suggestions.get(key.slice(8))!.version}` : null,
       }));
   const listingRows = rowsFor("listing");
   const postingRows = rowsFor("posting");
   const awaitingContract = requests.filter((r) => r.status === "selected" && r.contract_status !== "signed").length;
 
-  const toggle = (key: string) =>
+  const toggle = (key: string) => {
+    const removing = selected.has(key);
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
       return next;
     });
+    // Bỏ chọn ⇒ bỏ luôn giá trị đã áp dụng, chọn lại bắt đầu từ bản chụp gốc.
+    if (removing) setOverrides(({ [key]: _dropped, ...rest }) => rest);
+  };
 
   const close = (nextOpen: boolean) => {
-    if (!nextOpen) setSelected(new Set());
+    if (!nextOpen) {
+      setSelected(new Set());
+      setOverrides({});
+    }
     onOpenChange(nextOpen);
   };
 
   const submit = () => {
     // Thứ tự chọn = thứ tự số lô.
-    const picked = [...selected].map((key) => drafts.get(key)).filter((d): d is SessionItemDraft => !!d);
+    const picked = [...selected]
+      .filter((key) => drafts.has(key))
+      .map((key) => ({ ...drafts.get(key)!, ...overrides[key] }) as SessionItemDraft);
     if (picked.length === 0) return;
     add.mutate({ sessionId: session.id, drafts: picked }, { onSuccess: () => close(false) });
   };
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Thêm tài sản vào phiên</DialogTitle>
           <DialogDescription>
@@ -128,6 +145,24 @@ export function AddSessionItemDialog({ session, auctionOrgId, open, onOpenChange
               error={!!requestsError}
               emptyText="Chưa có tài sản ký gửi nào đã ký hợp đồng dịch vụ với tổ chức của bạn."
             />
+            {[...selected]
+              .filter((key) => key.startsWith("posting:") && suggestions.has(key.slice(8)) && drafts.has(key))
+              .map((key) => {
+                const d = { ...drafts.get(key)!, ...overrides[key] };
+                return (
+                  <div key={key} className="space-y-1 pt-3">
+                    <p className="truncate text-xs font-medium text-foreground">{d.title}</p>
+                    <AuctionConsultSuggestionPanel
+                      compact
+                      suggestion={suggestions.get(key.slice(8))!}
+                      currentValues={{ starting_price: d.starting_price, deposit_amount: d.deposit_amount, bid_step: d.bid_step }}
+                      onApply={(field, value) =>
+                        setOverrides((o) => ({ ...o, [key]: { ...o[key], [field]: value } }))
+                      }
+                    />
+                  </div>
+                );
+              })}
             {awaitingContract > 0 && (
               <p className="pt-2 text-xs text-muted-foreground">
                 {awaitingContract} tài sản đã được chọn nhưng hợp đồng chưa được hai bên xác nhận ký — hoàn tất ở

@@ -1,8 +1,10 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { authenticationGateMessage } from "@/lib/authentication/errors";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { MAX_RFQ_ORGS } from "@/constants/asset-posting-rules";
 import { rankOrgs, type AuctionOrgRow, type MatchCriteria, type OrgMatchResult } from "@/lib/orgMatching";
 import { assertRpcOk } from "@/lib/consignment/errors";
@@ -17,11 +19,20 @@ import type {
 
 type AssetPostingInsert = Database["public"]["Tables"]["asset_postings"]["Insert"];
 
-/** Payload từ wizard — KHÔNG gồm field do hook/DB quản lý. */
+/** Payload từ wizard — KHÔNG gồm field do hook/DB quản lý. `workspace_id` lấy từ
+ *  tenant hiện tại lúc TẠO và bất biến sau đó (trigger asset_postings_owner_guard). */
 export type NewAssetPosting = Omit<
   AssetPostingInsert,
-  "user_id" | "status" | "submitted_at" | "chosen_org_id" | "id" | "created_at" | "updated_at"
+  "user_id" | "workspace_id" | "status" | "submitted_at" | "chosen_org_id" | "id" | "created_at" | "updated_at"
 >;
+
+/** Lỗi quyền của RLS (42501) / sửa 0 dòng (PGRST116) ⇒ câu chữ cho người dùng. */
+function postingWriteError(err: unknown): string | null {
+  const code = (err as { code?: string } | null)?.code;
+  if (code === "42501") return "Bạn không có quyền tạo hồ sơ ở không gian / chi nhánh này.";
+  if (code === "PGRST116") return "Bạn không có quyền sửa hồ sơ này.";
+  return null;
+}
 
 const ORG_SELECT = "id, name, address, created_at, email, logo_url, org_type, phone, province, tax_code";
 
@@ -95,6 +106,9 @@ export interface CreatePostingArgs {
 
 export function useCreatePosting() {
   const { userId } = useAuth();
+  // Tenant hiện tại. Đổi tenant thì layout dựng lại wizard, nên tenant lúc lưu
+  // cũng là tenant lúc mở wizard.
+  const { workspaceId } = useOwnerWorkspace();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -104,11 +118,11 @@ export function useCreatePosting() {
       const submittedAt = status === "active" ? new Date().toISOString() : null;
 
       if (postingId) {
+        // Không lọc user_id: đồng nghiệp cùng không gian sửa được hồ sơ (RLS quyết).
         const { data: updated, error } = await supabase
           .from("asset_postings")
           .update({ ...posting, status, submitted_at: submittedAt })
           .eq("id", postingId)
-          .eq("user_id", userId)
           .select("id")
           .single();
         if (error) throw error;
@@ -120,6 +134,9 @@ export function useCreatePosting() {
         .insert({
           ...posting,
           user_id: userId,
+          workspace_id: workspaceId,
+          // Hồ sơ Cá nhân không có chi nhánh (CHECK asset_postings_branch_needs_workspace).
+          branch_id: workspaceId ? posting.branch_id ?? null : null,
           chosen_org_id: null,
           status,
           submitted_at: submittedAt,
@@ -134,7 +151,12 @@ export function useCreatePosting() {
       toast.success(vars.status === "draft" ? "Đã lưu nháp hồ sơ tài sản." : "Đã số hoá tài sản thành công.");
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Không thể lưu hồ sơ. Vui lòng thử lại.");
+      // Cổng giám định (trigger asset_postings_authentication_gate) trả mã GD_* thô.
+      toast.error(
+        authenticationGateMessage(err) ??
+          postingWriteError(err) ??
+          (err instanceof Error ? err.message : "Không thể lưu hồ sơ. Vui lòng thử lại."),
+      );
     },
   });
 }
@@ -220,24 +242,30 @@ export function useSendServiceRequests() {
   });
 }
 
-// ─── Danh sách hồ sơ tài sản của tôi ─────────────────────────────────────────
+// ─── Danh sách hồ sơ tài sản của TENANT hiện tại ─────────────────────────────
 
+/**
+ * Hồ sơ của tenant đang chọn: không gian ⇒ mọi hồ sơ của không gian (của đồng
+ * nghiệp, kể cả người đã rời); Cá nhân ⇒ hồ sơ cá nhân của chính mình. Lọc tường
+ * minh — admin đọc được mọi hồ sơ qua RLS.
+ */
 export function useMyPostings() {
   const { userId } = useAuth();
+  const { workspaceId, isPersonal, tenantKey, isLoading: tenantLoading } = useOwnerWorkspace();
 
   return useQuery({
-    queryKey: qk.myPostings(userId),
+    queryKey: qk.myPostingsIn(userId, tenantKey),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("asset_postings")
-        .select("*")
-        .eq("user_id", userId!)
-        .order("created_at", { ascending: false });
+      let query = supabase.from("asset_postings").select("*");
+      query = isPersonal
+        ? query.is("workspace_id", null).eq("user_id", userId!)
+        : query.eq("workspace_id", workspaceId!);
+      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       // qua unknown: ownership_declaration/delta_fields là Json ở client sinh tự động.
       return (data ?? []) as unknown as AssetPosting[];
     },
-    enabled: !!userId,
+    enabled: !!userId && !tenantLoading && !!tenantKey,
   });
 }
 
@@ -362,14 +390,16 @@ export function useCancelBrokerRequest() {
 
   return useMutation({
     mutationFn: async ({ brokerRequestId, postingId }: { brokerRequestId: string; postingId: string }) => {
-      const { error } = await supabase
-        .from("asset_broker_requests")
-        .update({ status: "cancelled" })
-        .eq("id", brokerRequestId);
+      // Qua RPC: policy UPDATE trực tiếp cũ cho đổi mọi cột (Phase 4 đã bỏ).
+      const { data, error } = await supabase.rpc("owner_cancel_broker_request", {
+        _request_id: brokerRequestId,
+      });
       if (error) throw error;
+      assertRpcOk(data);
       return { postingId };
     },
     onSuccess: ({ postingId }) => {
+      queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
       queryClient.invalidateQueries({ queryKey: qk.postingDetail(postingId) });
       toast.success("Đã huỷ yêu cầu nhờ sàn chọn giúp.");
     },

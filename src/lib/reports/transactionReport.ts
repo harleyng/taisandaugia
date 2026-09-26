@@ -90,6 +90,7 @@ export const FEATURE_LABELS: Record<string, string> = {
   owner_report_view: "Báo cáo danh mục",
   unlock_opp_report: "Báo cáo cơ hội",
   export_profile: "Xuất hồ sơ dự tuyển",
+  scan_3d: "Quét 3D tài sản",
   subscribe_demand: "Đăng ký nhu cầu",
   // row `purchase` âm = xuất hồ sơ (ghi nhầm type — legacy)
   purchase: "Xuất hồ sơ",
@@ -100,6 +101,7 @@ export const featureLabel = (type: string) => FEATURE_LABELS[type] ?? type;
 // Nhãn cho các dòng CỘNG credit KHÔNG phải mua gói (grant admin, thưởng, top-up debug).
 export const TOPUP_LABELS: Record<string, string> = {
   admin_grant: "Admin tặng",
+  scan_3d_refund: "Hoàn credit quét 3D",
 };
 export const topupLabel = (type: string) => TOPUP_LABELS[type] ?? "Nạp khác";
 

@@ -12,6 +12,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { AdminPermissionRoute } from "@/components/admin/AdminPermissionRoute";
+import { SERVICE_KIND_MODULES } from "@/lib/serviceRequests/kinds";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { PortalPermissionRoute } from "@/components/portal/PortalPermissionRoute";
 import { OwnerPortalLayout } from "@/components/owner-portal/OwnerPortalLayout";
@@ -42,6 +43,11 @@ const AdminKYCDetail = lazy(() => import("./pages/admin/AdminKYCDetail"));
 const AdminAssetOwnerKYCPage = lazy(() => import("./pages/admin/AdminAssetOwnerKYCPage"));
 const AdminAssetPostingsPage = lazy(() => import("./pages/admin/asset-postings/AdminAssetPostingsPage"));
 const AdminAssetPostingDetail = lazy(() => import("./pages/admin/asset-postings/AdminAssetPostingDetail"));
+const AdminServiceRequestsPage = lazy(() => import("./pages/admin/service-requests/AdminServiceRequestsPage"));
+const AdminVrTourOrderDetail = lazy(() => import("./pages/admin/vr-tour/AdminVrTourOrderDetail"));
+const AdminAuthenticationOrderDetail = lazy(() => import("./pages/admin/authentication/AdminAuthenticationOrderDetail"));
+const AdminLegalConsultationDetail = lazy(() => import("./pages/admin/legal-consult/AdminLegalConsultationDetail"));
+const AdminAuctionConsultationDetail = lazy(() => import("./pages/admin/auction-consult/AdminAuctionConsultationDetail"));
 const AdminAssetOwnerKYCDetail = lazy(() => import("./pages/admin/AdminAssetOwnerKYCDetail"));
 const AdminArticlesPage = lazy(() => import("./pages/admin/AdminArticlesPage"));
 const AdminArticleEditor = lazy(() => import("./pages/admin/AdminArticleEditor"));
@@ -115,6 +121,8 @@ const OrgMembersPage = lazy(() => import("./pages/portal/to-chuc/OrgMembersPage"
 const OrgRolesPage = lazy(() => import("./pages/portal/to-chuc/OrgRolesPage"));
 const OrgRoleDetailPage = lazy(() => import("./pages/portal/to-chuc/OrgRoleDetailPage"));
 const InviteAcceptPage = lazy(() => import("./pages/InviteAcceptPage"));
+const OwnerInviteAcceptPage = lazy(() => import("./pages/OwnerInviteAcceptPage"));
+const SharedOwnerReportPage = lazy(() => import("./pages/SharedOwnerReportPage"));
 
 // Secondary public pages — lazy
 const CompanyDetail = lazy(() => import("./pages/CompanyDetail"));
@@ -128,10 +136,18 @@ const OwnerDashboard = lazy(() => import("./pages/OwnerDashboard"));
 const OwnerBranchesPage = lazy(() => import("./pages/OwnerBranchesPage"));
 const OwnerReportPage = lazy(() => import("./pages/OwnerReportPage"));
 const OwnerCreditsPage = lazy(() => import("./pages/chu-tai-san/OwnerCreditsPage"));
+const OwnerMembersPage = lazy(() => import("./pages/chu-tai-san/OwnerMembersPage"));
+const OwnerLinksPage = lazy(() => import("./pages/chu-tai-san/OwnerLinksPage"));
+const OwnerOutcomesPage = lazy(() => import("./pages/chu-tai-san/OwnerOutcomesPage"));
+const OwnerCashFlowPage = lazy(() => import("./pages/chu-tai-san/OwnerCashFlowPage"));
+const OwnerPeriodicReportsPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportsPage"));
+const OwnerPeriodicReportDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportDetailPage"));
+const OwnerPeriodicReportPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportPrintPage"));
 const OwnerSaleContractsPage = lazy(() => import("./pages/chu-tai-san/OwnerSaleContractsPage"));
 const SaleContractPage = lazy(() => import("./pages/SaleContractPage"));
 const AssetPostingWizardPage = lazy(() => import("./pages/AssetPostingWizardPage"));
 const AssetPostingDetailPage = lazy(() => import("./pages/AssetPostingDetailPage"));
+const Scan3dPartnerSimulator = lazy(() => import("./pages/Scan3dPartnerSimulator"));
 const BuyCredits = lazy(() => import("./pages/BuyCredits"));
 const VnpayCheckout = lazy(() => import("./pages/VnpayCheckout"));
 const PaymentResult = lazy(() => import("./pages/PaymentResult"));
@@ -158,6 +174,12 @@ function RedirectApplicationId() {
 // Link cũ /nang-luc/ho-so-nhan-su/:id từng là chi tiết một người. Chi tiết nay
 // nằm ở Hồ sơ năng lực (nơi dữ liệu sống), nên trỏ thẳng về đó thay vì đi vòng
 // qua /nhan-su/:id — màn đó giờ chỉ là danh sách kết xuất.
+// Menu dịch vụ cũ (4 mục riêng) đã gộp vào /admin/yeu-cau-dich-vu — giữ link/bookmark đã phát ra.
+function RedirectServiceRequestId({ kind }: { kind: string }) {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/admin/yeu-cau-dich-vu/${kind}/${id}`} replace />
+}
+
 function RedirectNhanSuId() {
   const { id } = useParams<{ id: string }>()
   return <Navigate to={`/portal/nang-luc/dau-gia-vien/${id}`} replace />
@@ -250,6 +272,10 @@ const App = () => (
 
               {/* Lời mời vào tổ chức — công khai, tự xử lý đăng nhập + kích hoạt */}
               <Route path="/loi-moi/:token" element={<InviteAcceptPage />} />
+              {/* Lời mời vào không gian chủ tài sản — công khai, tự xử lý đăng nhập + kích hoạt */}
+              <Route path="/loi-moi-chu-tai-san/:token" element={<OwnerInviteAcceptPage />} />
+              {/* Báo cáo định kỳ chia sẻ qua link chỉ đọc — công khai, không cần đăng nhập */}
+              <Route path="/r/:token" element={<SharedOwnerReportPage />} />
 
               {/* Redirects: old ho-so-du-tuyen paths → portal */}
               <Route path="/ho-so-du-tuyen" element={<Navigate to="/portal/ho-so-du-tuyen" replace />} />
@@ -260,6 +286,11 @@ const App = () => (
               <Route path="/saved-assets" element={<Navigate to="/profile?tab=saved" replace />} />
               <Route path="/profile" element={<ProtectedRoute />}>
                 <Route index element={<ProfilePage />} />
+              </Route>
+
+              {/* Mô phỏng app đối tác quét 3D (mở từ deeplink "Thêm 3D") — màn đứng riêng */}
+              <Route path="/doi-tac-3d/quet" element={<ProtectedRoute />}>
+                <Route index element={<Scan3dPartnerSimulator />} />
               </Route>
 
               {/* Hợp đồng mua bán của người trúng đấu giá — KHÔNG bao giờ công khai */}
@@ -273,6 +304,10 @@ const App = () => (
                   <Route index element={<Navigate to="/chu-tai-san/dashboard" replace />} />
                   <Route path="dashboard" element={<OwnerDashboard />} />
                   <Route path="tai-san" element={<OwnerAssetsPage />} />
+                  <Route path="ket-qua" element={<OwnerOutcomesPage />} />
+                  <Route path="dong-tien" element={<OwnerCashFlowPage />} />
+                  <Route path="bao-cao-dinh-ky" element={<OwnerPeriodicReportsPage />} />
+                  <Route path="bao-cao-dinh-ky/:id" element={<OwnerPeriodicReportDetailPage />} />
                   {/* Cổng KYC chủ tài sản ở layout: danh sách + chi tiết hồ sơ dùng chung,
                       chuyển qua lại không kiểm lại / nháy loader. */}
                   <Route path="dang-tai-san" element={<OwnerKycGate />}>
@@ -280,13 +315,17 @@ const App = () => (
                     <Route path=":id" element={<AssetPostingDetailPage />} />
                   </Route>
                   <Route path="chi-nhanh-amc" element={<OwnerBranchesPage />} />
+                  <Route path="thanh-vien" element={<OwnerMembersPage />} />
+                  <Route path="lien-ket" element={<OwnerLinksPage />} />
                   <Route path="bao-cao" element={<OwnerReportPage />} />
                   <Route path="credits" element={<OwnerCreditsPage />} />
                   {/* Hợp đồng mua bán: danh sách riêng, chi tiết dùng CHUNG trang
                       với bên mua — vai người xem suy từ can_act chứ không từ route. */}
                   <Route path="hop-dong-mua-ban" element={<OwnerSaleContractsPage />} />
-                  <Route path="hop-dong-mua-ban/:id" element={<SaleContractPage />} />
+                  <Route path="hop-dong-mua-ban/:id" element={<SaleContractPage embedded />} />
                 </Route>
+                {/* Trang in A4 của báo cáo định kỳ — không sidebar / topbar */}
+                <Route path="bao-cao-dinh-ky/:id/in" element={<OwnerPeriodicReportPrintPage />} />
               </Route>
 
               {/* Protected: Company Portal — sidebar layout */}
@@ -550,6 +589,54 @@ const App = () => (
                       </AdminPermissionRoute>
                     }
                   />
+                  <Route
+                    path="yeu-cau-dich-vu"
+                    element={
+                      <AdminPermissionRoute anyOf={SERVICE_KIND_MODULES}>
+                        <AdminServiceRequestsPage />
+                      </AdminPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="yeu-cau-dich-vu/vr-tour/:id"
+                    element={
+                      <AdminPermissionRoute module="don-vr-tour">
+                        <AdminVrTourOrderDetail />
+                      </AdminPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="yeu-cau-dich-vu/giam-dinh/:id"
+                    element={
+                      <AdminPermissionRoute module="don-giam-dinh">
+                        <AdminAuthenticationOrderDetail />
+                      </AdminPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="yeu-cau-dich-vu/tu-van-phap-ly/:id"
+                    element={
+                      <AdminPermissionRoute module="tu-van-phap-ly">
+                        <AdminLegalConsultationDetail />
+                      </AdminPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="yeu-cau-dich-vu/tu-van-dau-gia/:id"
+                    element={
+                      <AdminPermissionRoute module="tu-van-dau-gia">
+                        <AdminAuctionConsultationDetail />
+                      </AdminPermissionRoute>
+                    }
+                  />
+                  <Route path="vr-tour" element={<Navigate to="/admin/yeu-cau-dich-vu?loai=vr-tour" replace />} />
+                  <Route path="vr-tour/:id" element={<RedirectServiceRequestId kind="vr-tour" />} />
+                  <Route path="giam-dinh" element={<Navigate to="/admin/yeu-cau-dich-vu?loai=giam-dinh" replace />} />
+                  <Route path="giam-dinh/:id" element={<RedirectServiceRequestId kind="giam-dinh" />} />
+                  <Route path="tu-van-phap-ly" element={<Navigate to="/admin/yeu-cau-dich-vu?loai=tu-van-phap-ly" replace />} />
+                  <Route path="tu-van-phap-ly/:id" element={<RedirectServiceRequestId kind="tu-van-phap-ly" />} />
+                  <Route path="tu-van-dau-gia" element={<Navigate to="/admin/yeu-cau-dich-vu?loai=tu-van-dau-gia" replace />} />
+                  <Route path="tu-van-dau-gia/:id" element={<RedirectServiceRequestId kind="tu-van-dau-gia" />} />
                   <Route path="tin-tuc" element={<AdminArticlesPage />} />
                   <Route path="tin-tuc/new" element={<AdminArticleEditor />} />
                   <Route path="tin-tuc/danh-muc" element={<AdminCategoriesPage />} />

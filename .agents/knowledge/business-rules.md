@@ -267,6 +267,422 @@ Roles are **per-organization and user-creatable** (`org_roles`, since `202608050
 
 ---
 
+## Thành viên không gian chủ tài sản (`asset_owner_workspace_members`, 2026-09-26)
+
+A workspace (`asset_owner_workspaces`) can have many members (`20260926000001`, Phase 2 of `docs/owner-control-tower-plan.md`). The membership row IS the role assignment. Unlike the auction-org portal, there are **3 fixed roles and no permission matrix**:
+
+| `role` | UI | `owner_ws_can` actions |
+|---|---|---|
+| `owner` | "Trưởng đơn vị" | `read`, `write`, `manage_members`, `manage_workspace`, `send_report` |
+| `staff` | "Cán bộ" | `read`, `write` — writes limited to `branch_scope` via `owner_ws_branch_ok` |
+| `viewer` | "Người xem" | `read` |
+| *(not a member)* | — | `read` only if the caller is an active **owner** of this workspace's linked HQ (`parent_workspace_id`, Phase 14). `owner_ws_role` stays members-only |
+
+The client mirror is `src/lib/ownerWorkspace/roles.ts` (`ownerWsCan`, `canWriteClaim`). It only hides buttons; RLS/RPC decide. Change the SQL matrix ⇒ change the mirror.
+
+- Gate by `owner_ws_can(workspace_id, action)` / `owner_ws_role(workspace_id)` / `owner_ws_branch_ok(workspace_id, branch_id)`, all SECURITY DEFINER, and **only `status='active'` counts**. Non-members get `false`, never NULL.
+- `branch_scope` NULL = whole workspace. `'{}'` is forbidden, and an owner is never scoped (CHECKs). Every element must be a `workspace_branches.id` of the same workspace (guard trigger). A record with `branch_id` NULL is off-limits to scoped staff. Reads stay workspace-wide.
+- Every workspace gets its owner row automatically: `AFTER INSERT` trigger `owner_ws_seed_owner_member`. Never insert it by hand.
+
+**Invariants enforced in the database:**
+- ≥ 1 active owner always, including against service_role: trigger `owner_ws_protect_last_owner`. The only exception is a cascade DELETE, when the workspace or profile is already gone.
+- Only an active owner may grant or revoke `owner`, including status changes on an owner row: trigger `owner_ws_members_guard`. Exceptions:
+  - `auth.uid()` NULL (migration / service_role);
+  - the **bootstrap** insert of the first owner for `owner_user_id`, which runs under the approving admin's JWT.
+- `workspace_id` / `user_id` of a member row are immutable.
+
+**Write matrix (Phase 3, `20260926140447`).** No policy uses `owner_user_id` any more; it only means "creator". A removed creator loses all access.
+
+| Data | Read | Write |
+|---|---|---|
+| `asset_owner_workspaces` | `read` | UPDATE only, `manage_workspace`, and only the columns `primary_name / abbreviations / branch_names` (column GRANT). INSERT only via the KYC-approval trigger. |
+| `workspace_branches` | `read` | `manage_workspace` |
+| `asset_owner_claims` | `read` | `owner_ws_claim_write_ok(workspace_id, asset_owner_id)` = `write` + branch scope. A claim's branch is the `workspace_branches` row of the same workspace with the same `asset_owner_id`; no such row ⇒ unscoped writers only. |
+| `run_workspace_match` | — | `manage_workspace` or ADMIN (`auth.uid()` NULL still passes; not executable by anon) |
+| `asset_owner_workspace_members` | own row, or a **direct** member (`owner_ws_role IS NOT NULL`, Phase 14 — linked HQ does not see branch members; same for `owner_ws_list_members`) | **RPC only** — no direct write policies |
+
+**Invitations** (`asset_owner_workspace_invites`, copy-link only — no email channel):
+- Roles `staff` / `viewer` only. A second owner is made with `owner_ws_update_member` after the person has joined.
+- Valid 7 days. One pending invite per (workspace, email). An expired one is auto-revoked when the same email is invited again.
+- Accept (`owner_ws_accept_invite`) requires:
+  - the email to match **exactly** — `lower(btrim(profiles.email))`, no "continue anyway" (unlike org invites);
+  - `profiles.activated`;
+  - a profile that is not locked;
+  - an inviter who is still an active owner;
+  - branch scope that is still valid — never widened to NULL.
+- A `removed` row is deleted and re-inserted on re-join.
+- Demoting or removing an owner revokes the pending invites they sent.
+- Email confirmation is off, so matching the email does not prove mailbox ownership: **the link is the secret**.
+- RLS: only `manage_members` can SELECT invites (they carry the token). The accept page uses `owner_ws_invite_preview` (anon), which returns no id, token or workspace_id.
+- `owner_ws_update_member` / `owner_ws_remove_member`: `manage_members`, active rows only, never yourself. They lock the workspace row first, because the last-owner trigger counts without locking.
+
+**FE:**
+- `useOwnerWorkspace()` (`src/hooks/useOwnerWorkspace.ts`) is the only way to find the workspace: active memberships of the user plus the stored selection. Since Phase 4 the selection is a **tenant** (`pickTenant`, default order: owner-role workspace → Cá nhân → staff/viewer workspace). On "Cá nhân", `workspaceId` is null, and workspace-only pages render `OwnerNoWorkspaceState`.
+- Pages that need the workspace of a specific KYC (onboarding) match `workspace.org_kyc_id`, not the current selection.
+
+---
+
+## Chi nhánh tự onboard — KYC rút gọn (`kyc_scope = 'branch'`, 2026-09-26)
+
+Phase 13 of `docs/owner-control-tower-plan.md`, migration `20260926145010`. A bank / AMC **branch** gets its own "Trạm Điều Hành" that holds **only that branch's assets**.
+
+**Two workspace kinds** (`asset_owner_workspaces.match_scope`):
+
+| `match_scope` | Created from | Matching (`run_workspace_match`) |
+|---|---|---|
+| `names` | KYC `kyc_scope='organization'` | fuzzy by `primary_name + abbreviations + branch_names` (unchanged) |
+| `entity` | KYC `kyc_scope='branch'` | ONLY listings with `listings.asset_owner_id = workspace.asset_owner_id`, claimed `auto_claimed` / `linked_entity`. Seeds are ignored even if the owner edits them |
+
+- `asset_owner_workspaces.asset_owner_id` = the registry entity the workspace stands for (HQ or branch; NULL when the name was typed). Clients cannot update it or `match_scope` (P3 column GRANT).
+- **One `entity` workspace per branch** (partial unique index). A second officer of the same branch must be invited, not KYC'd: `branch_workspace_exists`.
+- On approval the entity gets one `workspace_branches` row (outcomes / `branch_scope` need it).
+
+**Branch KYC documents (decision D3):**
+- **Required:** official email (well-formed), "Giấy giao việc / Uỷ quyền của Giám đốc chi nhánh" (`authorization_doc_url`), and the officer's name, title, ID number and 2 ID photos.
+- **Optional:** establishment decision / branch registration, selfie, branch tax code.
+- A free-mail domain (gmail…) is **flagged** on the admin screen, never blocked.
+- Client rules: `validateOrgKycForm` in `src/lib/assetOwnerKyc/orgKycValidation.ts`.
+- Server trigger `asset_owner_org_kyc_branch_guard` only enforces what decides data scope: parent present, entity ≠ parent, entity's existing parent = declared parent, typed name ≠ parent name, letter present, email valid, no existing branch workspace. It fires when the status **moves to** `pending_review` (INSERT too). Organisation-scope KYC is untouched.
+
+**Parent / entity resolution:**
+- Picking a registry row that has `parent_owner_id` ⇒ branch mode automatically, with the parent taken from the registry.
+- Otherwise the officer ticks "Đơn vị tôi là chi nhánh" and picks the parent.
+- **Branch not in the registry:** created on approval under the declared parent with `parent_source='confirmed'` (a same normalised-name row is reused). Its id is written back to `linked_asset_owner_id`.
+- An entity with no parent gets the declared parent (`'confirmed'`) on approval. A different existing parent ⇒ `branch_parent_mismatch`.
+
+**Manual claims in an `entity` workspace** (trigger `owner_ws_claims_entity_guard`):
+- Allowed only for listings owned by the branch, by its parent (crawled listings often carry the HQ name), or by nobody. Sibling or unrelated owners ⇒ `claim_outside_branch`.
+- The claim's `asset_owner_id` is forced to the listing's owner. Admin and `auth.uid()` NULL bypass.
+- `syncFromClaims` only syncs the branch itself.
+
+**UI:**
+- Admin list shows "Chi nhánh · «mẹ» · hồ sơ rút gọn". The detail page shows `OrgBranchReviewInfo`: parent, entity + own listing count, free-mail flag.
+- The portal's alias tab becomes `BranchEntityScopePanel` (no alias editor).
+- DB error codes are mapped to Vietnamese by `mapOrgKycError`.
+
+---
+
+## Hồ sơ số hoá theo tenant — `asset_postings.workspace_id` (2026-09-26)
+
+Phase 4 of `docs/owner-control-tower-plan.md` (`20260926152759`). A user of the owner portal has several **tenants**: each active workspace membership, plus **"Cá nhân"** (personal KYC approved, or they still own postings with `workspace_id` NULL). A posting is created in the tenant that is currently selected. Lists, badges and summaries show only that tenant.
+
+| Posting | Read | Write (edit, send RFQ, pick a quote, contract owner side, add-ons, cancel) |
+|---|---|---|
+| `workspace_id` NULL ("Cá nhân") | creator only | creator only |
+| `workspace_id` set | any active member (`owner_ws_can … 'read'`) | `owner` / `staff`, plus `owner_ws_branch_ok(ws, branch_id)` |
+
+- **One gate:** `owner_posting_row_can(ws, branch, user, action)` / `owner_posting_can(posting_id, action)`. Every child table, storage policy and owner RPC goes through it.
+  - `user_id` (and `consignment_contracts.owner_user_id`, `auction_sale_contracts.seller_user_id`) now means only "created by / selected by". It is **never** the access check for a workspace posting.
+  - A creator removed from the workspace loses all access, including as seller on sale contracts.
+- **Client mirror:** `canWritePosting` in `src/lib/ownerWorkspace/roles.ts` (tests in `roles.test.ts`).
+  - `useOwnerWorkspace().canWritePosting(p)` uses the membership of **the posting's own workspace**, not the currently selected tenant.
+  - It only hides buttons, through `PostingAccessContext` (`src/components/asset-posting/postingAccess.ts`).
+- **Branch** (`branch_id`):
+  - A composite FK to `workspace_branches (workspace_id, id)` guarantees the branch belongs to the same workspace. `CHECK`: a personal posting has no branch. Deleting a branch sets it to NULL.
+  - Scoped staff must pick a branch in their scope (wizard `requirements(…, { branchRequired })`). A posting without a branch is off-limits to them.
+- **Immutability:** `user_id` and `workspace_id` cannot change after insert (trigger `asset_postings_owner_guard`, RAISE). There is no tenant-to-tenant move yet.
+- **Owner party (Bên A)** comes from **the posting** (`consignment_posting_owner_party`):
+  - workspace posting → the workspace's approved org KYC;
+  - personal posting → **only** the creator's personal KYC;
+  - neither → `unknown`, which blocks the draft via `party_incomplete`.
+- **Address:**
+  - Address edits: personal → `owner_update_kyc_address('individual')`; workspace → `owner_ws_update_org_address` (`manage_workspace`).
+  - `owner_update_kyc_address('organization')` refuses a KYC that has a workspace unless the caller has `manage_workspace`.
+  - Members read the address through `owner_posting_party_address` (address only, no ID numbers).
+- **Money:** credits for add-ons are charged to the **acting** user's own wallet (D1). Paying a quoted service order (VR / giám định / tư vấn) is **requester-only** (`_settle_*`, `useCheckoutItem`); other members see "Chờ người gửi yêu cầu thanh toán".
+- **Summaries:** `owner_consignment_summary(p_workspace_id)` / `owner_sale_contract_summary(p_workspace_id)`: NULL = personal. Actions (badges) are shown only for rows the caller can write.
+- **Files:**
+  - Members read a colleague's `asset-docs` file only if a posting of their workspace references it (proofs, docs, legal-consult submissions) **and** the file's root folder belongs to a member of that workspace. The org side follows the same rule.
+  - Owners can no longer update or delete `asset-docs` / `asset-media` objects.
+- **Approved org KYC** can no longer be edited or deleted by its creator (the policy blocks UPDATE/DELETE on `status='approved'`). The workspace depends on it.
+- **Backfill rule** (one-off): a user with a personal KYC keeps postings as "Cá nhân" unless a live contract names an organisation party.
+
+---
+
+## Giá trúng hợp nhất — `owner_asset_outcomes_resolved` (2026-09-26)
+
+The owner portal's winning price and "sold / not sold" come from **one** SECURITY DEFINER RPC, `owner_asset_outcomes_resolved(p_workspace_id)` (`20260926134757`, Phase 5 of `docs/owner-control-tower-plan.md` §A3; owner self-reports added in `20260926140659`, Phase 6). It returns one row per claimed listing (`auto_claimed | pending_confirmation | confirmed`). The frontend never merges sources itself: it reads `resolvedOutcome` via `useOwnerAssetOutcomes` and uses `isSoldRow` from the metrics hook.
+
+| Rank | Source | `confidence_label` · UI |
+|:-:|---|---|
+| 1 | Latest lot on the platform for the listing: session `published`/`cancelled`, lot `closed`/`withdrawn`, price = sale contract `price` or else `winning_amount` | `platform` · "Sàn xác nhận" |
+| 2 | Owner self-report (`owner_asset_outcomes`, latest round) that **matches** a non-CRAWLED `org_auction_records` row: same round, same outcome, and for sold both prices within 1% | `reconciled` · "Đã đối chiếu" |
+| 3 | Owner self-report with minutes attached (`evidence_urls` not empty) | `owner_evidence` · "Tự khai · có biên bản" |
+| 4 | Any other owner self-report; `org_auction_records` with `is_successful` set (a row with `source='CRAWLED'` drops to rank 5) | `self_reported` · "Tự khai" |
+| 5 | Crawled listing: parsed `winning_price`/`win_price`, **or** `listings.status='SOLD_RENTED'` (no price) | `estimated` · "Ước tính" |
+
+- **Owner self-reports:** only the **latest round** per listing (highest `round_no`) is a candidate. Older rounds are history, so a round-1 "unsold" with minutes can't outrank a round-2 "sold".
+- **Winner:** the **current round** comes first: candidates dated within 7 days of the listing's newest candidate date, or with no date. Inside it, lowest rank wins, then the newer date, then source order `platform` → `owner_report` → `crawled` → `org_report`. So the owner's own number wins a rank-4 tie on the same date. Outcome, price, date and `payment_status` all come from that one candidate. A lower-ranked source never fills in a missing price.
+- **`has_conflict`:** another candidate from the **same round** (dates ≤ 7 days apart, or a date missing) either has a different outcome, or is also sold with a price more than 1% away. Different rounds are not a conflict.
+- **Dismissed sources (Phase 8, `20260926145216`):** a candidate whose fingerprint `owner_outcome_source_fp(kind, ref_id, outcome, price)` is listed in `conflict_resolution.dismissed` of the unit's **latest** own record is ignored in three places: the "newest date" that defines the current round, the winner pick (it sorts after every non-dismissed candidate of the round), and `has_conflict`.
+  - Platform candidates and the unit's own record can never be dismissed.
+  - If the source changes its outcome or price, the fingerprint changes and the flag comes back.
+  - The same-round/1% rule lives in ONE helper, `owner_outcome_disagrees(...)`. Use it; don't re-implement it.
+  - `sources[]` also carries `fp`, `dismissed`, `in_round` and `disagrees` (relative to the winner). The UI only renders these flags.
+- **Platform `sold` + `payment_status='defaulted'`** (the winner defaulted) is still `sold`.
+- **Never returns** buyer/winner identity, OAR `internal_notes`, or `details`. Non-members get `not_authorized` (42501); `anon` has no EXECUTE.
+- **The signature is frozen.** Change only the body with `CREATE OR REPLACE`. Changing the columns requires `DROP FUNCTION` + re-GRANT.
+- Self-reported data never flows to `/listings` or to the public market report.
+
+### Owner self-reports — `owner_asset_outcomes` (Phase 6)
+
+- **Schema:** exactly §A4 of the plan. `UNIQUE (workspace_id, listing_id, round_no)` for on-platform rows. `outcome='sold'` requires `winning_price`.
+- **Access:** RLS read = `owner_ws_can(ws,'read')`. Insert, update and delete = `owner_ws_can(ws,'write') AND owner_ws_branch_ok(ws, branch_id)`.
+- **Trigger `owner_asset_outcomes_guard`** (BEFORE, SECURITY DEFINER; runs before RLS WITH CHECK):
+  - `reported_by := auth.uid()`, and it is immutable afterwards. `workspace_id` is immutable too.
+  - `listing_id` must be a live claim of the workspace.
+  - `branch_id` is derived from the claim: `workspace_branches.asset_owner_id = claim.asset_owner_id`, the same rule as `owner_ws_claim_write_ok`. Since Phase 8, the separate trigger `owner_asset_outcomes_guard_scope` (it fires after `_guard` by name) **always overwrites** `branch_id` on listing rows, on INSERT or whenever `listing_id`/`branch_id` changes. Before that, a branch-scoped staff member could send their own `branch_id` for another branch's listing and pass RLS.
+  - `auction_org_id` defaults to `listings.auction_org_id`.
+  - Every `evidence_urls` element must be `{workspace_id}/{id}/…` **and** exist in `storage.objects`.
+- **Evidence:**
+  - Private bucket `owner-outcome-evidence` (PDF/JPG/PNG, ≤ 10MB), policies via `owner_outcome_evidence_ok(name, 'read'|'write')`. There is no UPDATE policy.
+  - The column name says URLs but it holds **paths**; open them with `createSignedUrl`.
+  - Write order: insert row → upload → set `evidence_urls`.
+- **`failure_reason`** holds a code for the quick picks (`no_registrants | single_bidder | deposit_forfeited`), or the free text typed for "Khác". Read it back with `unsoldReasonLabel()`.
+- **Client:**
+  - `useReportOwnerOutcome` invalidates `qk.ownerAssetOutcomes` (which also drives the KPI) and `qk.ownerOutcomeRounds`.
+  - The default round is the highest reported round + 1.
+
+### "Kết quả phiên" — `/chu-tai-san/ket-qua` (Phase 8, `20260926145216`)
+
+- **One row per asset that has a result:** RPC `owner_outcomes_overview(p_workspace_id)` (SECURITY DEFINER, `read`).
+  - On-platform rows are the rows of `owner_asset_outcomes_resolved` with a non-NULL outcome. Branch comes from the claim; the starting price is `listings.price` only when `price_unit='TOTAL'`.
+  - Off-platform rows are the **latest round** per `title_key`, where `listing_id IS NULL AND asset_posting_id IS NULL`. Label `owner_evidence`/`self_reported`, never in conflict.
+  - Never joins `asset_postings`: postings have no `workspace_id` before P4, so the DEFINER function would leak titles.
+  - Totals and period filters are computed client-side over these rows (`src/lib/ownerOutcomesOverview.ts`, `src/lib/ownerPeriods.ts`); the frontend still never merges sources. Period = `resolved_date`, inclusive. Undated rows appear only under "Tất cả thời gian".
+- **Off-platform asset identity:** `title_key` is a STORED generated column: lower + NFC + whitespace/NBSP collapsed + trimmed.
+  - Unique index `(workspace_id, title_key, round_no)` for off-platform rows.
+  - Rounds of the same asset must use the same name. "hoà" and "hòa" count as two assets.
+  - `CHECK outcome_title_len` requires 3–300 characters. The guard trims and collapses `asset_title`.
+- **Asset ID shown in lists:** the first 8 hex characters of `listings.id`, upper-cased (`shortAssetId`), shown as "Mã 3F9A12BC" on Tài sản and Kết quả phiên. Listings have no code column; this ID is what the Excel import matches.
+- **Excel import — `owner_import_outcomes(p_workspace_id, p_rows jsonb)`:**
+  - SECURITY INVOKER, so RLS and both guards apply as for manual entry. Requires `write`; at most **500** rows per call.
+  - One savepoint per row; returns `[{idx, ok, id | code, message, constraint}]`, so one bad row never blocks the others.
+  - Forces `source='owner_import'`, no evidence, `share_to_market=false`. Listing rows get NULL title/category/branch.
+  - Client matching (`classifyOutcomeRows` in `src/lib/ownerOutcomeImport.ts`):
+    - A **code that matches nothing is an error**, never an off-platform asset.
+    - With no code, a name that matches exactly one live claim (accent-insensitive) links to it; several matches are an error; no match becomes off-platform.
+    - A row with no result is skipped. An unknown branch, organisation or category is a warning only.
+    - Blank round = 1, so re-importing the same file fails row by row with 23505 instead of duplicating.
+- **Conflict handling — `owner_outcome_resolve_conflict(ws, listing, choice, source_fp)`:** SECURITY INVOKER. It reads sources through the DEFINER RPC and writes only the unit's own record, under RLS. Returns `{ok, reason}`, so callers must check `ok`.
+  - `keep_mine` needs an own record in the current round and no disagreeing platform result (`platform_disagrees`).
+  - `use_source` copies that source's outcome and price, updating the current-round own record or inserting round max+1. A stale fingerprint gives `source_changed`.
+  - Both dismiss every other non-platform source that disagrees with the kept number, in `conflict_resolution {choice, adopted, dismissed[], at, by}`; `at`/`by` are stamped by the server.
+  - Editing `outcome/winning_price/round_no/auction_date` without a new resolution clears it (trigger). Payment updates keep it.
+  - Nothing is sent to the auction organisation.
+- **Edit / delete a round:** edit via the dialog; editing a listing row never changes the listing, starting price or branch. Delete removes the minutes files **first**, because the storage policy needs the row, then the row.
+- **"Thành" counts sold rows including defaulted ones** (shown as "trong đó N người trúng bỏ cọc"). Chỉ tiêu (Phase 9) excludes defaulted rows, so its sold count is lower by that number.
+
+### "Tổng quan" to-dos (Phase 7, formerly "Nhịp đập")
+
+The selection rules are pure, in `src/lib/ownerPulse.ts`. `useOwnerPulse()` feeds both the dashboard blocks and the sidebar badge `owner-outcome-due`.
+
+- **Outcome due ("Chờ khai kết quả"):**
+  - The claim is `auto_claimed | confirmed`. `pending_confirmation` is left to the "Chờ xác nhận" block.
+  - The auction has passed: a timestamp must be earlier than now; a date-only value becomes due from the next day.
+  - There is either no resolved outcome, or the resolved outcome is dated **more than 7 days before** the auction day. That means an earlier round of a re-auction. An outcome with no date counts as covering the round.
+- **Awaiting payment ("Chờ thu tiền"):**
+  - Resolved outcome `sold` with `payment_status ∈ {pending, partial}`.
+  - It can be written **only** when the winning source (`sources[0]`) is `owner_report`. Its `refId` is the `owner_asset_outcomes.id`.
+  - On-platform lots are read-only: their money lives in the sale-contract ledger on the seller side.
+- **Payment writes are cash entries (Phase 15a, see "Dòng tiền" below).** The buttons never write `paid_amount` / `paid_at` any more:
+  - "Đã thu đủ" calls `owner_cash_settle`, which inserts one `payment` entry for exactly winning price − collected (computed on the server under a row lock). "Hoàn tác" deletes that entry.
+  - "Thu một phần" inserts a `payment` entry for the amount received **this time** (≤ what is left; equal settles it).
+  - "Người trúng bỏ cọc" still sets the `defaulted` flag on the outcome and keeps the entries.
+  - Every write invalidates via `invalidateOwnerOutcomes()` (`qk.ownerAssetOutcomes` + `qk.ownerOutcomePayments` + rounds).
+- **Visibility:**
+  - Branch-scoped staff see only their branches' to-dos.
+  - Viewers see the list without buttons.
+  - The badge is shown only when the user has `can('write')`.
+
+
+### Chỉ tiêu — `owner_workspace_targets` (Phase 9)
+
+A target is a recovery amount and/or a sold-asset count for one calendar period, for the whole unit (`branch_id` NULL) or one branch (`20260926145733`).
+
+**Table**
+- `period_type ∈ {month, quarter, year}`. `period_start` must be the first day of its period (CHECK `owt_period_aligned`).
+- At least one of `target_amount` / `target_count` is set, and each one is > 0.
+- One target per `(workspace, branch, period)`: `UNIQUE NULLS NOT DISTINCT`, so the whole-unit target is unique too.
+- A branch's targets are deleted along with the branch (CASCADE).
+
+**Access**
+- Read: `owner_ws_can(ws,'read')`.
+- Write: `owner_ws_can(ws,'manage_members')` exactly as the plan says. Today that is the "Trưởng đơn vị" only, the same as `manage_workspace`.
+- `anon` has no table grant.
+- Guard trigger:
+  - `created_by := auth.uid()`;
+  - `workspace_id` is immutable;
+  - `branch_id` must be a branch of the same workspace.
+
+**"Đã thu" is COMPUTED, never stored.** Its input `paid_amount` is itself a total computed from the cash entries since Phase 15a. The rule is pure, in `src/lib/ownerTargets.ts` (`recoveryOf()` + `recoveryInputsFromOverview()`). Its SQL mirror is `owner_report_recovery()` (Phase 10, periodic reports): **change both together**.
+- **Input rows:** the rows of `owner_outcomes_overview`, the same rows as the "Kết quả phiên" page (Phase 8).
+  - That means every claimed listing (`pending_confirmation` included) plus the latest round of each off-platform asset.
+  - Only `resolved_outcome = 'sold'` counts.
+- **Which period:** the auction date (`resolved_date`), with inclusive bounds. A sold row with no date (crawled `SOLD_RENTED`) belongs to no period.
+- **Which branch:** the overview's `branch_id`, derived from the claim. A branch target counts only that branch's rows. The whole-unit target counts everything, including rows with no branch.
+- **Amount per sold row, cash-strict (user decision, 2026-09-26):**
+
+  | `payment_status` | Counts as "Đã thu" | Bucket |
+  |---|---|---|
+  | `paid` | `paid_amount ?? price` | recorded ("Đã ghi thu") |
+  | `partial` | `paid_amount` | recorded; the rest of the price goes to awaiting |
+  | `pending` | 0 | the whole price goes to awaiting ("Chờ thu") |
+  | `defaulted` | excluded from both amount **and** count | — |
+  | `null` (org/crawled source, no payment tracking) | the price | estimated ("Theo giá trúng") |
+
+  Consequence: the target's sold count = "Kết quả phiên" sold count − defaulted rows.
+- **Progress:**
+  - Days left count today and the period's last day.
+  - Weekly pace = remaining ÷ max(1, daysLeft/7), so the last week carries the whole gap.
+  - Percentages are rounded **down**.
+- **Client:**
+  - `useOwnerTargetProgress()` reads `useOwnerOutcomesOverview` (shared cache) plus `qk.ownerTargets(ws)`.
+  - Outcome/payment mutations already invalidate `qk.ownerAssetOutcomes`, which covers the overview.
+
+### "Tài sản" — lifecycle stages (Phase 12, formerly "Đường ống")
+
+`/chu-tai-san/tai-san` has a Bảng / Giai đoạn toggle (localStorage `owner-assets-view`). The kanban is **read-only** (no drag-and-drop). Rules are pure: `src/lib/ownerPipeline.ts` (stages, thresholds, rules R1–R16), `src/lib/ownerPipelineFacts.ts` (adapters + the posting select). No migration.
+
+- **Who is on the board (current tenant):**
+  - claimed listings `auto_claimed | confirmed` whose listing RLS lets through (`pending_confirmation` is NOT on the board — only a hint linking back to the table);
+  - digitised postings of the tenant (`workspace_id = ws`, or personal `workspace_id IS NULL AND user_id = me`), except `status = 'cancelled'`.
+  - Postings and listings are never linked ⇒ an asset that exists as both shows twice.
+- **Columns (fixed order):** Số hoá → Chọn tổ chức → HĐ dịch vụ → Niêm yết → Phiên → Trúng → HĐ mua bán → Đã thu tiền, plus the failure branch Không thành / Chờ đấu lại.
+- **The current round decides; pre-auction steps only count when there is no round.**
+  - Sold: defaulted ⇒ Không thành; paid or sale contract done ⇒ Đã thu tiền; live sale contract or partial ⇒ HĐ mua bán; otherwise Trúng. Since Phase 15a a single deposit entry already makes the outcome `partial` ⇒ the asset moves to HĐ mua bán (accepted: the deposit normally arrives around contract signing).
+  - Unsold ⇒ Không thành. Postponed / cancelled / withdrawn ⇒ Chờ đấu lại.
+  - Session under way, or over with no result from any source ⇒ Phiên.
+  - Announced: with an earlier round ⇒ Chờ đấu lại (**user decision 2026-09-26, "by next round scheduled"**; also when the earlier round was "sold" — the sale fell through); first round ⇒ Niêm yết.
+  - No round: service contract signed ⇒ HĐ dịch vụ **until a lot is in a published session**; open contract / org chosen without contract (old data) ⇒ HĐ dịch vụ; any quote request or active "nhờ sàn" ⇒ Chọn tổ chức; else Số hoá.
+- **Postings:** lots in `draft` sessions are ignored client-side (org managers/admins can read drafts through other policies). Current round = newest lot by `published_at`, then `starts_at`, then lot `created_at`; the next one is the prior round.
+- **Listings:** an outcome dated > `SAME_ROUND_DAYS` (7) before the listing's auction day belongs to an older round (same rule as the RPC and Nhịp đập).
+- **Days in stage / red:** calendar days since the stage's anchor date; red when **greater than** `PIPELINE_STALE_DAYS` (Số hoá 14, Chọn tổ chức 14, HĐ dịch vụ 21, Niêm yết 45, Phiên 7, Trúng 14, HĐ mua bán 30, Đã thu tiền never, Không thành 30, Chờ đấu lại 60 counted from the failed round).
+- **Data:** one nested PostgREST read of `asset_postings` (requests, brokers, contracts, lots → session / lot state / sale contracts) under `qk.ownerPipelinePostings(userId, tenantKey)` = `["my-postings", …, "pipeline"]`, so every posting mutation that invalidates `qk.myPostings(userId)` refreshes it. Claims and resolved outcomes come from the page's existing queries.
+
+### Báo cáo định kỳ — `owner_report_snapshots` (Phase 10, `20260926172328`)
+
+A periodic report (month / quarter / year, whole unit or one branch) that a unit sends to HQ. It has 6 parts (§A5): target progress, results in the period, money (collected / awaiting / defaulted), stuck assets, next-period plan, officer's notes.
+
+**Lifecycle**
+- `draft`: the numbers are rebuilt on every open by RPC `owner_build_report_payload(ws, period_type, period_start, branch_id)` (STABLE, DEFINER, `read`). Only the period, scope and the two notes (`plan_note` "Kế hoạch kỳ tới", `notes` "Ghi chú của cán bộ") are stored.
+- `final`: RPC `owner_finalize_report(id)` (DEFINER, `send_report`) rebuilds the payload **on the server**, adds `notes` + `people {prepared_by, finalized_by}` (`profiles.name`) + `finalized_at`, and freezes it in `payload`. Returns `{ok:false, reason: not_authenticated | not_found | forbidden | already_final}` — callers use `assertOwnerReportRpcOk`.
+- **A final report is never edited or deleted** (user decision 2026-09-26). A correction is a new report for the same period; both stay in the list. Guard trigger `owner_report_snapshots_guard` blocks any change to a final row (even by postgres), except (a) FK `SET NULL` of `branch_id` / `created_by` / `finalized_by` when a branch or account is deleted (names stay in `payload.meta.scope` / `payload.people`) and (b) the share columns of Phase 11, which only SECURITY DEFINER RPCs can write.
+
+**Access**
+
+| Action | Rule |
+|---|---|
+| Read (list, draft preview, final) | `owner_ws_can(ws,'read')` — viewers included |
+| Create / edit / delete a draft | `write` + `owner_ws_branch_ok(ws, branch_id)` ⇒ scoped staff only for their own branches, never whole-unit |
+| Finalise | `send_report` (Trưởng đơn vị) |
+| Client columns | Column GRANTs: INSERT `(workspace_id, branch_id, period_type, period_start, notes, plan_note)`, UPDATE `(branch_id, period_type, period_start, notes, plan_note)`. `status`, `payload`, `finalized_*`, `created_by` are server-only (`created_by := auth.uid()` in the guard). `anon` has no table or RPC access |
+
+**Payload v1 rules** (the frontend only maps and renders — `src/lib/ownerPeriodicReport.ts`)
+- Source rows = `owner_outcomes_overview` (Phase 8), the same rows as "Kết quả phiên" and Chỉ tiêu. No second source merge. A branch report keeps rows whose overview `branch_id` is that branch.
+- **Period parts** (`targets`, `results`, `money`): `resolved_date` inside the period, both ends inclusive. Undated rows (crawled SOLD_RENTED) belong to no period. Money uses `owner_report_recovery` = `recoveryOf()`; results totals follow `summarizeOutcomes` (sold count includes defaulted; success rate rounded). Target % is rounded down. A whole-unit report lists the unit target and every branch target of the period.
+- **State parts** are computed as of `meta.as_of` (build day, Asia/Ho_Chi_Minh): `money.carry_over` (sold before the period, still pending/partial), `stuck`, `plan`.
+- **Stuck (§A5):** not sold and not withdrawn, and rounds ≥ 3 (max of `listing_price_sessions` count and own max `round_no`) **or** more than 90 days since the first known date = least(first price session, first own `auction_date`, `listings.created_at`) — user decision 2026-09-26. Off-platform assets use their rounds / first `auction_date`. This differs from the dashboard's "Tồn đọng" (≥ 2 rounds, ended), which is unchanged.
+- **Plan:** targets of the next period + auctions from `as_of` to the end of the next period (published platform sessions' `starts_at`, else the listing's `auction_time/auction_date`), one row per asset, sold/withdrawn assets excluded; `stuck_unscheduled` = stuck assets with no future auction.
+- **Never in the payload:** `workspace_id`, listing ids, winner identity, `evidence_urls`. Assets are identified by `asset_code` (8 hex = "Mã") + title.
+- SQL ↔ TS parity was checked on 6 periods/scopes with every payment state (56/56).
+
+**Exports:** Excel (`src/lib/ownerPeriodicReportExcel.ts`, 5 sheets, money as numbers `#,##0`, a source column on every row; drafts are named `…-ban-nhap.xlsx`). PDF = the print route `/chu-tai-san/bao-cao-dinh-ky/:id/in` + the browser's print dialog (A4, `@page` margin boxes "taisandaugia.vn · Trang x / y" in Chrome/Edge ≥ 131, logo at the end).
+
+#### Link chia sẻ `/r/:token` (Phase 11, `20260926181355`)
+
+A read-only public link to a **final** report for HQ. The recipient does not need an account. Page: `src/pages/SharedOwnerReportPage.tsx` (public, lazy, outside `ProtectedRoute`), with a CTA "Tháp Điều Hành" → `/lien-he?chu-de=Tháp Điều Hành`.
+
+| Rule | Detail |
+|---|---|
+| Who manages the link | `send_report` only ("Trưởng đơn vị"): `owner_share_report(id, days)`, `owner_revoke_report_share(id)`, `owner_report_share_link(id)`. Reasons returned: `not_authenticated \| not_found \| forbidden \| not_final \| invalid_days` |
+| **Who sees the token** | **Only "Trưởng đơn vị"** (user decision 2026-09-26). `authenticated` has column-level SELECT on every column **except `share_token`**, so the token is read through `owner_report_share_link`. Other members see `token_expires_at`, `view_count`, `last_viewed_at` only. **Never `select('*')` on this table** |
+| What can be shared | Final reports only (`ors_share_final_only`: a draft has every share column empty) |
+| Lifetime | 1–90 days from now (UI offers 7 / 30 / 90, default 30). Sharing again while the link is active **extends it and keeps the token**. An expired link gets a new token. Revoking clears token, expiry and `shared_*` but keeps `view_count` / `last_viewed_at` |
+| Token | 32 random bytes as base64url, 43 characters (`extensions.gen_random_bytes`), partial UNIQUE index |
+| Public RPC | `get_shared_owner_report(token)`, granted to `anon`, `authenticated`. Unknown, revoked or malformed token → `{ok:false, reason:'not_found'}`; past expiry → `expired` + `expired_at`. Returns only `{payload, expires_at}`: never the id, workspace, status or view count |
+| Filtering | `owner_report_public_payload` = top-level whitelist (`version, meta, targets, results, money, stuck, plan, notes, people, finalized_at`) + recursive removal of keys `id`, `*_id(s)`, `winner*`, `*evidence*` (`owner_report_strip_private`) |
+| View count | +1 per call **unless the caller is a direct member of the workspace** (a linked HQ owner counts — Phase 14). Every counted view checks the HQ-expansion signal (≥ 10 views). The page calls the RPC exactly once (`useSharedOwnerReport`: no retry, no refetch). Views don't touch `updated_at` (the `updated_at` trigger has `WHEN view_count unchanged`). This is a soft signal (P14): repeated anonymous opens still count |
+| Privacy | `<meta name="robots" content="noindex">` on the page. `AnalyticsTracker` records the path as `/r/:id`, never the token |
+
+## Liên kết trụ sở ↔ chi nhánh (Phase 14, `20260926185917`)
+
+**Tree.** `asset_owner_workspaces.parent_workspace_id` (+ `parent_linked_at`), exactly **one level**: a parent has no parent, a child has no children (guard trigger `owner_ws_tree_guard` + a global advisory lock in every link RPC). Columns are server-only (no column GRANT).
+
+**Link lifecycle** (`owner_workspace_link_requests`, history kept, status `pending → accepted | declined | cancelled`, `accepted → unlinked`):
+- **HQ sends**: `owner_ws_request_link(parent_ws, child_ws)` needs `manage_workspace` on the HQ. Eligible when the HQ has an `asset_owner_id` and is not itself a child, and the child workspace's entity has `asset_owners.parent_owner_id = HQ.asset_owner_id` (`inferred` or `confirmed` — consent is what matters). The child must be unlinked with no children.
+- **Branch owner answers**: `owner_ws_respond_link(request, accept)` needs `manage_workspace` on the child. Eligibility is re-checked at accept time. Accepting cancels the child's other pending requests.
+- **Either owner** unlinks at any time (`owner_ws_unlink(child_ws)`). A later directory re-parent does NOT break an accepted link. A change of a workspace's `asset_owner_id` cancels its pending requests.
+- Reasons: `link_forbidden | link_not_found | link_self | link_parent_not_eligible | link_not_a_branch | link_already_linked | link_already_pending | link_child_has_children | link_not_pending | link_not_linked`. Messages are in `src/lib/ownerWorkspace/errors.ts`.
+- Requests table: SELECT only for **direct** members of either side, no write policy. Page `/chu-tai-san/lien-ket`, nav badge = pending requests for the branch owner.
+
+**What a linked HQ sees.** HQ **owners** (not HQ staff/viewers) get `read` on the child through `owner_ws_can`, so they get everything gated by `read`: claims, outcomes + evidence files, targets, report snapshots, postings and their child tables, consignment/sale contracts (including buyer data), posting documents (`owner_asset_doc_readable`), and the resolved/overview/report RPCs.
+- They **never** get: the branch member list, any write/manage/`send_report` action, the link inbox of the branch, or the benchmark.
+- Nothing is visible before the branch accepts.
+- FE: `useOwnerWorkspaceMemberships` appends linked children as `{role:'viewer', accessVia:'hq', memberId:null}`. A direct membership wins over an `hq` entry, and `hq` entries rank last in `pickTenant`. Label "Trụ sở · chỉ xem".
+
+**Anonymous benchmark** (`owner_ws_benchmark(ws)`, direct members only — otherwise HQ could subtract linked children's real numbers from the aggregate and recover unlinked branches):
+- Peers = workspaces whose entity has the same `parent_owner_id`, one per entity, self included. Window = 12 months by `resolved_date`, from `owner_outcomes_overview_core`.
+- Success rate = sold / rows with an outcome (same definition as "Kết quả phiên" and the periodic report, **not** the KPI tile). A peer needs ≥ 3 results.
+- Days to sale = median(`resolved_date − first known date`, clamped at 0) over listing-backed sold assets. The first-known formula is the P10 one — a 3rd copy, change them together. A peer needs ≥ 3 sold.
+- Per metric: < 3 peers with a value ⇒ hidden; 3–4 ⇒ only better/same/worse vs the median (3 values plus their quartiles would reveal each branch); ≥ 5 ⇒ adds p25/p50/p75 (success rate rounded to 5 points, days to 1). Never ids, names, min, max or rank.
+- `owner_asset_outcomes_resolved_core` / `owner_outcomes_overview_core` have no permission check and no client EXECUTE. The public functions are thin wrappers with frozen signatures.
+
+**Sales signal → lead `source='owner_hq_expansion'`** (label "Tín hiệu Tháp Điều Hành"):
+- Fires when ≥ 3 distinct child entities of one parent have a Trạm (triggers on workspace insert/entity change and on `asset_owners.parent_owner_id` change, with an advisory lock per parent), or when one report link reaches ≥ 10 counted views.
+- **At most one lead per parent entity, ever**: partial UNIQUE `(prospect_id) WHERE source='owner_hq_expansion'` + `ON CONFLICT DO NOTHING`. A trigger locks `source` / `prospect_*` of such a lead (and forbids turning another lead into it). CHECK: it must point at an `asset_owners` row.
+- A separate lead is created even if a `market_data` lead exists for the same bank (user decision). Its code is quoted in the note.
+- `lead_type` is `bank` when `owner_kind='bank_credit'`, else `asset_owner`. Failures only raise a WARNING: they never break KYC approval or a public report view.
+- Lead sources `market_data`, `asset_brokerage`, `owner_hq_expansion` are system sources (`SYSTEM_SOURCES` in `src/lib/leads/leadStatus.ts`) and cannot be picked manually.
+
+---
+
+## Dòng tiền — `owner_cash_events` (Phase 15a, `20260926223747`)
+
+Page `/chu-tai-san/dong-tien` ("Điều hành" group, icon Wallet). Money of a self-reported outcome is a list of **dated entries**; the old columns on `owner_asset_outcomes` are **computed totals**.
+
+| `kind` (UI) | Direction | Counts toward "collected" (`paid_amount`) | Allowed on |
+|---|---|---|---|
+| `deposit` "Tiền đặt trước" | in | + | any outcome (a forfeited deposit stays the owner's money) |
+| `payment` "Tiền thanh toán" | in | + | `outcome='sold'` only (checked on insert / kind change; a later sold → other flip is NOT blocked, the ledger flags it "Kết quả đã đổi") |
+| `refund` "Hoàn trả" | out | − | any outcome |
+| `fee` "Phí & chi phí" | out | no (→ `auction_fee`) | any outcome |
+
+**Computed columns** (trigger `owner_asset_outcomes_money`, the ONLY place they are computed; it fires after the `_guard*` triggers):
+- `paid_amount` = max(0, Σdeposit + Σpayment − Σrefund), NULL when there is no non-fee entry; `paid_at` = latest deposit/payment day; `auction_fee` = Σfee.
+- `payment_status`: non-sold ⇒ `pending`; sold ⇒ `defaulted` if that flag is set (the only manual value, sticky until the client writes another value), else `paid` (collected ≥ winning) / `partial` (> 0) / `pending`.
+- A direct client write of `paid_amount` / `paid_at` / `auction_fee` raises P0001 ("Số đã thu được tính từ sổ thu chi…"). Editing the winning price or outcome recomputes the status.
+- Every entry change touches the parent (`owner_cash_events_sync`, DEFINER so RLS cannot silently skip it). The touch never clears `conflict_resolution`.
+- `payment_due_on` (new, writer-editable): due date of the winner's payment; must be ≥ `auction_date` when it is set/changed (checked in the trigger, not a CHECK — 23514 is mapped to "thiếu giá trúng" on this table). NULL ⇒ auction day + 30 (same as the platform's `payment_due_at`).
+
+**Entries table** — no `branch_id` column: the branch always comes from the parent outcome.
+- Read: `owner_ws_can(ws,'read')` (linked HQ owners included). Insert / update / delete: `owner_cash_event_ok(outcome_id,'write')` = `write` + `owner_ws_branch_ok` on the parent.
+- **Editable and deletable** (user decision 2026-09-26, no reversal ledger); `created_by` / `updated_by` / timestamps are stamped by the guard; FK to profiles is `SET NULL` (deleting an account never deletes money records). Deleting an outcome round cascades its entries (the delete dialog warns).
+- Column GRANTs: INSERT `(outcome_id, kind, amount, occurred_on, note)`, UPDATE `(kind, amount, occurred_on, note)`. Build payloads only with `toCashEventInsert` / `toCashEventUpdate` (`src/lib/ownerCashEvent.ts`).
+- `occurred_on` ≤ today (Asia/Ho_Chi_Minh). `amount` > 0, whole VND.
+
+**RPCs**
+- `owner_cash_settle(outcome_id, day?)` — INVOKER; `SELECT … FOR UPDATE` (the outcomes UPDATE policy is the gate) then one `payment` entry for the remainder. `{ok:false, reason: not_authenticated | not_found | not_sold | defaulted | already_paid}`.
+- `owner_cash_flow(ws, include_linked)` — STABLE DEFINER, 42501 without `read`. Units = self + (if asked) children with `parent_workspace_id = ws` that the caller can read. Returns `as_of` (VN today), `units`, `rows` (= `owner_outcomes_overview_core` per unit, trimmed), `events` (asset reference from the entry's OWN outcome row, so older rounds stay visible), `upcoming` (**copy #2** of the P10 "plan" rule, window today…+60 days — change both together).
+  - Names of who recorded an entry only when the caller is a **direct** member of that unit (`owner_ws_role`); a linked HQ never sees branch staff names. Never user ids, winner identity or evidence paths.
+- `owner_outcomes_overview_core` now returns `paid_amount` for listing rows **only when the winning source is the unit's own record** (`sources[0].kind='owner_report'`). Before, a platform result that outranked a tracked own record leaked the own record's cash into Chỉ tiêu / reports.
+
+**Three meanings of "collected" — never mix them**
+1. Hero "Thực nhận trong kỳ" = entries by **cash date** (`occurred_on`) in the period: in − refunds − fees.
+2. Waterfall "Thác tiền các phiên bán trong kỳ" = tracked (`best_kind='owner_report'`), sold, non-defaulted assets whose **auction date** is in the period; collected/awaiting per row via `recoveryOf()` (so it matches Chỉ tiêu restricted to tracked rows); fees = fee entries of those assets across all rounds; missing starting price ⇒ counted as the winning price (footnoted).
+3. Chỉ tiêu / periodic report "Đã thu" = every sold asset by auction date, untracked sources at their price, before fees, defaulted excluded (unchanged).
+- Platform-sold assets are **not tracked** here (banks cannot read the sale-contract ledger of `org_on_behalf` lots): shown as one info line "Sàn theo dõi thanh toán". Sold assets won by org/crawled sources get the CTA "Khai kết quả để theo dõi thu tiền" — only for viewers who can write that asset in their own unit.
+
+**Forecast** (`src/lib/ownerCashFlow.ts`): buckets Quá hạn / ≤ 30 / 31–60 / 61–90 days from `as_of`.
+- Owed = remaining of each tracked sold non-defaulted asset at its due date (`payment_due_on ?? date + 30`).
+- Estimate (hatched, labelled "Ước tính") = upcoming auctions × the unit's 12-month success rate (sold / results, `summarizeOutcomes`), needs ≥ 3 results; cash expected 30 days after the auction; never "overdue".
+
+**Tháp Điều Hành.** `ownerPortalName()` (`src/lib/ownerWorkspace/roles.ts`, hook `useOwnerPortalName`) shows "Tháp Điều Hành" in the sidebar, tab title and error boundary when the selected workspace has a linked child the user reads (HQ owners only), else "Trạm Điều Hành". On Dòng tiền the HQ gets a scope select "Toàn hệ thống / each unit" and a "Theo đơn vị" table; branch rows are read-only.
+
+**Credits:** the page charges nothing. Decision D1 = shared workspace wallet, built in Phase 15d; until then P4 add-ons still use the acting user's wallet.
+
+---
+
 ## RLS — "own rows" convention
 
 Every credit/unlock table (`user_credits`, `credit_transactions`, `user_asset_unlocks`, `user_company_unlocks`, `user_owner_unlocks`, `user_report_unlocks`, `profiles.invoice_info`) carries a single **`"own rows"`** policy:
@@ -437,3 +853,65 @@ Bên nhận tiền mặc định là **tổ chức** (`payee_side = 'org'`).
 **Mẫu hợp đồng `HDMB-MAU-2026-09` CHƯA được rà soát pháp lý** — như `HDDV-MAU`
 và `BBDG-MAU`. Ngoài phạm vi: người trả giá liền kề (Điều 51), huỷ kết quả đấu
 giá (Điều 72), công chứng (chỉ ghi nhận), sổ thanh toán tổ chức→bên bán.
+
+## Model 3D của hồ sơ số hoá (chủ tài sản → trang lô công khai)
+
+Bảng `asset_3d_scans` (`20260915000001`); "lô nháp" = một dòng `asset_postings`, `lot_id` = `asset_postings.id`.
+
+- **Vòng đời phiên quét:** `awaiting_scan → processing → ready`, hoặc `failed` / `expired` (quá `expires_at` = tạo + 24h, đánh dấu lười khi chủ tài sản bấm quét lại). Model mới `ready` đẩy model cũ sang `superseded`. Mỗi hồ sơ tối đa MỘT phiên đang chạy và MỘT model hiện hành (unique partial index).
+- **Giá:** biến thể `scan_3d_owner` (mặc định 30 credit). Trừ ATOMIC trong `start_asset_3d_scan`; bấm lại khi đang có phiên chạy ⇒ trả phiên cũ, KHÔNG trừ thêm. Ledger `scan_3d` (−) / `scan_3d_refund` (+). Hoàn đủ khi đối tác báo lỗi hoặc hết hạn, đúng một lần (`refunded_at`). Model về sau khi đã hoàn ⇒ từ chối (`invalid_status`).
+- **BR-3D-02:** attach/fail/processing từ chối `lot_mismatch` nếu `lot_id` ≠ hồ sơ của phiên quét; idempotent theo `external_job_id` (gửi lại cùng job = no-op, job khác = `job_mismatch`).
+- **BR-3D-01:** `published_at` bật khi `review_status` chuyển sang `approved`, tắt khi rời `approved` (kể cả guard tự đá về pending lúc chủ sửa hồ sơ). Model về sau khi hồ sơ đã duyệt ⇒ ẩn tới khi admin có quyền `tai-san-tu-nguyen:approve` bấm duyệt (`admin_publish_asset_3d_model`).
+- **BR-3D-03:** công khai CHỈ qua RPC `public_session_lot_3d_models(session)` — phiên `published|cancelled`, hồ sơ `approved`, model `ready` + `published_at`. Nhãn "3D" + nút "Xem 3D" (dialog Ảnh/3D) ở `SessionLotList`.
+- **RLS:** chủ tài sản ĐỌC dòng của mình, admin đọc qua quyền view; KHÔNG policy ghi — mọi ghi qua RPC / webhook.
+- **Đối tác:** hiện là giả lập (`partner='mock'`). Deeplink dựng ở `src/lib/scan3d/partner.ts` (điểm nối duy nhất). Webhook thật: `supabase/functions/scan3d-webhook` (HMAC, header `X-Scan3D-Timestamp` / `X-Scan3D-Signature`).
+
+## VR tour của hồ sơ số hoá (dịch vụ đối tác Silver Sea)
+
+Bảng `asset_vr_tour_orders` (`20260915000010`); `lot_id` = `asset_postings.id` như 3D. Đối tác KHÔNG có tài khoản — admin thao tác thay (module `don-vr-tour`, `/admin/yeu-cau-dich-vu/vr-tour/:id`).
+
+- **BR-VR-01 — vòng đời đơn:** `requested` (Chờ báo giá) → `quoted` (Báo giá) → `paid` (Đã thanh toán) → `scheduled` (Đã hẹn) → `delivered` (Đã giao) → `attached` (Đã gắn lô); nhánh `cancelled` (chỉ khi CHƯA trả — hoàn tiền ngoài phạm vi) và `superseded` (tour cũ khi gắn tour chụp lại). Trạng thái không bao giờ lùi. Mỗi hồ sơ tối đa MỘT đơn đang chạy và MỘT tour `attached` (unique partial index). CHECK theo trạng thái ép đủ cột (giá, mã giao dịch, lịch hẹn, link https, dòng hoa hồng).
+- **Báo giá riêng từng đơn:** gói (`vr_tour_basic|standard|factory|collection`) chỉ mang giá "từ"; admin báo giá thật (`admin_quote_vr_tour`, hiệu lực 1–60 ngày, báo lại được khi chưa trả). Thanh toán VNPay mô phỏng `pay_vr_tour_order` → `_settle_vr_tour_order`: idempotent theo `payment_claims`, từ chối `quote_expired` và `quote_changed` (số tiền người bán thấy ≠ `quoted_price`).
+- **BR-VR-03 — hoa hồng:** `admin_deliver_vr_tour` ghi ĐÚNG MỘT dòng `orders` (kind commission, `gross_amount` = giá báo, `amount` = phần sàn do trigger tính, snapshot điều khoản + `contract_id/contract_line_id`) theo hợp đồng hiệu lực TẠI NGÀY GIAO. Không có hợp đồng ⇒ chặn `no_contract_terms` (KHÔNG ghi 0% như hồ sơ tham gia). Gửi lại cùng link = no-op. Tiền giai đoạn paid→delivered chưa vào sổ `orders`; sổ công nợ sàn→đối tác chưa có.
+- **BR-VR-02 — công khai:** gắn vào lô cần `tai-san-tu-nguyen:approve` VÀ hồ sơ `approved` (`posting_not_approved`). Đơn `delivered` KHÔNG tự gắn khi hồ sơ được duyệt. `published_at` của tour đã gắn bám `review_status` (trigger `asset_postings_vr_sync_publish`, WHEN OLD≠NEW) — chủ sửa hồ sơ ⇒ ẩn, duyệt lại ⇒ hiện.
+- **BR-VR-04:** công khai CHỈ qua RPC `public_session_lot_vr_tours(session)`; nhãn "VR" + nút "Xem VR tour" (tab VR trong `Lot3dDialog`) ở `SessionLotList`; nhãn "VR" ở danh sách hồ sơ chủ tài sản + bảng admin.
+- **Bí mật thương mại:** điều khoản hoa hồng KHÔNG nằm trên bảng đơn (chủ đọc được dòng của mình). Gói/đối tác cho người bán đi qua `public_vr_tour_packages` / `public_vr_tour_partners` vì dịch vụ commission bị ẩn khỏi public read.
+- **RLS:** chủ đọc dòng của mình; admin đọc qua `don-vr-tour:view` HOẶC `tai-san-tu-nguyen:view`; KHÔNG policy ghi.
+
+## Giám định tài sản (số hoá, bước 4 wizard)
+
+Bảng `asset_authentication_orders` (`20260915000020`) + cổng (`…0021`); `lot_id` = `asset_postings.id` như 3D/VR. Tên kỹ thuật `authentication` — `pricing_mode='appraisal'` là ĐỊNH GIÁ, khác giám định. Đối tác KHÔNG có tài khoản — admin thao tác thay (module `don-giam-dinh`, `/admin/yeu-cau-dich-vu/giam-dinh/:id`).
+
+- **Vòng đời:** `requested` → `quoted` (báo giá riêng, như VR) → `paid` → `item_pending` (gửi hiện vật: người bán nhập mã vận đơn · tại chỗ: admin hẹn lịch) → `in_review` → `completed`; "từ ảnh" đi thẳng `paid → in_review`. `cancelled` chỉ khi CHƯA trả; `superseded` = kết luận cũ khi giám định lại. Mỗi hồ sơ ≤1 đơn đang chạy, ≤1 đơn `completed`.
+- **BR-GD-01:** chứng thư PDF chỉ vào qua `admin_complete_authentication` (quyền `don-giam-dinh:update`, "thay đối tác"); RPC kiểm object CÓ THẬT trong bucket private `asset-authentication-certs` tại `{posting}/{order}/…`; storage INSERT chỉ quyền đó. Ô tự khai "Đã có giấy thẩm định" đã bỏ khỏi `ANTIQUE_FIELDS`.
+- **Kết luận:** `authentic` | `inconclusive` | `suspected_fake`; tiêu cực bắt buộc `verdict_reason` — thông tin RIÊNG (RLS: chủ + admin), không bao giờ ra RPC công khai.
+- **BR-GD-02:** `suspected_fake` ⇒ hồ sơ về `draft` (mọi nhóm); `inconclusive` ⇒ về `draft` nếu nhóm Cổ vật. Hồ sơ `contracted` / đang trong phiên `published` ⇒ KHÔNG tự rút, trả `needs_manual_withdraw`. Kết luận tiêu cực hiện hành chặn: nộp hồ sơ nhóm Cổ vật (trigger `asset_postings_authentication_gate_*`, lỗi `GD_FAILED_CATEGORY`) và đưa lô Cổ vật vào phiên (trigger riêng `auction_session_items_authentication_gate`).
+- **BR-GD-03:** bắt buộc = `_authentication_required_reasons`: `policy` (bảng 1 dòng `authentication_policy`: bật + nhóm + ngưỡng giá, mặc định Cổ vật ≥ 50,000,000₫) · `seller_restricted` (`seller_authentication_restrictions`) · `lot_flag` (`asset_authentication_requirements`). Chặn chuyển `status → active` và thêm lô vào phiên tới khi có chứng thư `authentic` (lỗi `GD_REQUIRED`). Sửa luật cần `tai-san-tu-nguyen:approve`. Hồ sơ "nhờ định giá" không có giá ⇒ chính sách không áp, admin dùng cờ lô. Wizard nhân bản ở `lib/authentication/requirement.ts` chỉ để báo trước; chứng thư chặn "Hoàn tất" chứ không chặn "Tiếp tục".
+- **Mức xác minh (dẫn xuất, không lưu):** 0 · 1 chủ đã KYC · 2 hồ sơ `approved` · 3 chứng thư xác thực từ ảnh · 4 xác thực qua hiện vật/tại chỗ. SQL `asset_posting_verification_level` ↔ `lib/authentication/verificationLevel.ts`.
+- **Hoa hồng:** 1 dòng `orders` lúc có kết luận (mọi kết luận — dịch vụ đã làm), theo hợp đồng hiệu lực ngày đó; thiếu hợp đồng ⇒ `no_contract_terms`.
+- **Công khai:** chứng thư `authentic` hiển thị khi hồ sơ `approved` (trigger `asset_postings_authentication_sync_publish`, như VR) — KHÔNG cần bước "gắn lô" riêng. Đọc qua `public_session_lot_authentications(session)`; file đọc được bởi anon chỉ khi thuộc lô trong phiên công khai (`authentication_cert_readable`).
+
+
+## Tư vấn pháp lý (số hoá, bước 3 wizard + tab `?tab=phap-ly`)
+
+Bảng `asset_legal_consultations` (một dòng = một LẦN tư vấn) + `asset_legal_consultation_items` (checklist) — `20260915000030`. Đối tác chưa có tài khoản — admin thao tác thay (module `tu-van-phap-ly`, `/admin/yeu-cau-dich-vu/tu-van-phap-ly/:id`).
+
+- **Vòng đời:** `requested` (người bán nộp bản chụp `submitted_doc_paths`, chỉ path `{uid}/…` có thật trong `asset-docs`) → `quoted` (admin gán đối tác có hợp đồng + `expert_name` + giá) → `paid` (VNPay mô phỏng, `?tvpl_order=`) → `in_review` (lưu nháp checklist) → `completed`. `cancelled` chỉ khi chưa trả. Rà soát lại = yêu cầu MỚI; kết quả cũ → `superseded`. Mỗi hồ sơ ≤1 lần đang chạy, ≤1 `completed`.
+- **Checklist:** mục `sufficient | missing | needs_clarification`; hoàn tất đòi mọi mục đã chấm + mục khác Đủ có `required_action` ≥ 5 ký tự + `summary`. Mẫu theo nhóm cấp 1 ở `lib/legalConsult/checklistTemplates.ts` (TS, không master data); `template_key` NULL = chuyên gia thêm. Luật nhân bản `_legal_consult_replace_items` ↔ `lib/legalConsult/checklist.ts`.
+- **BR-CNS-01:** không RPC/trigger nào ghi `asset_postings` — không đổi `status`/`review_status`/mức xác minh, không cổng chặn nộp. UI ghi rõ "mang tính tư vấn".
+- **BR-CNS-02:** SELECT = chủ đơn OR `tu-van-phap-ly:view`; không policy ghi. Người bán chỉ đọc items khi lần tư vấn `completed`/`superseded` (nháp chuyên gia không lộ). Tệp tải thêm ở `{uid}/legal-consult/…` ngoài `ownership_proof_urls`/`doc_urls` ⇒ tổ chức có hợp đồng không đọc được. (`asset_docs_admin_read` vẫn cho mọi ADMIN đọc bucket.)
+- **BR-CNS-03:** `version` gán LÚC HOÀN TẤT (max+1 theo hồ sơ, khoá dòng posting), `completed_at`; checklist bất biến sau hoàn tất (RPC chỉ ghi khi `in_review`).
+- **Hoa hồng:** 1 dòng `orders` lúc hoàn tất theo `resolve_contract_terms`; thiếu hợp đồng ⇒ `no_contract_terms`. Đối tác seed `7e9a0000-…0001`, HĐ `03/2026/HĐHT-TVPL` 20%, giá gói `tvpl_review` 2,000,000₫ là GIỮ CHỖ.
+
+## Tư vấn đấu giá (số hoá, bước 4 wizard + tab `?tab=tu-van-dau-gia`)
+
+Bảng `asset_auction_consultations` (một dòng = một YÊU CẦU = một phiên bản tiềm năng) + `asset_auction_consult_proposals` (1:1, phương án) — `20260915000040`. Đối tác chưa có tài khoản — admin thao tác thay (module `tu-van-dau-gia`, `/admin/yeu-cau-dich-vu/tu-van-dau-gia/:id`).
+
+- **Vòng đời:** `requested` (người bán nêu mục tiêu `fastest|max_price|balanced` + giá mong muốn / giá thấp nhất / tiến độ / hạn chót; server CHỤP hình thức, giá, nhóm, tỉnh của hồ sơ) → `quoted` (admin gán đối tác có HĐ + `expert_name` + giá) → `paid` (VNPay mô phỏng, `?tvdg_order=`) → `in_review` (lưu nháp phương án) → `completed`. `cancelled` chỉ khi chưa trả. Phương án khác = yêu cầu MỚI; bản cũ → `superseded`, vẫn xem được. ≤1 đang chạy, ≤1 `completed` mỗi hồ sơ.
+- **Tham số phương án:** hình thức `truc_tiep|truc_tuyen|ca_hai`, phương thức `ascending|descending|sealed`, giá khởi điểm, giá bảo lưu (tuỳ chọn), bước giá (≤ giá KĐ), thời lượng lô 1–1440 phút (bắt buộc khi có trực tuyến), cọc `percent` (0–100] hoặc `amount` (≤ giá KĐ), lý giải ≥ 5 ký tự, `field_notes` theo khoá cố định. Bảo lưu: trả giá lên ≥ giá KĐ, đặt giá xuống ≤ giá KĐ. Cọc 5–20% chỉ CẢNH BÁO. Luật nhân bản `_auction_consult_write_proposal` ↔ `lib/auctionConsult/proposal.ts` (test đồng bộ reason với migration).
+- **Riêng tư:** mục tiêu / giá mong muốn / giá thấp nhất / ghi chú chỉ người bán + `tu-van-dau-gia:view`. Người bán chỉ đọc proposals khi yêu cầu `completed|superseded` (nháp không lộ).
+- **BR-CNS-04:** không RPC/trigger nào ghi `asset_postings`, `auction_sessions`, `auction_session_items` (nghiệm thu md5 trước/sau). Giá bảo lưu và phương thức khác trả giá lên KHÔNG BAO GIỜ áp dụng được vào lô (bảng công khai; engine chưa hỗ trợ) — `LOT_APPLICABLE_FIELDS` chỉ gồm giá KĐ / tiền đặt trước / bước giá.
+- **BR-CNS-05:** `version` gán LÚC HOÀN TẤT (max+1, khoá dòng posting) + `expert_name`/`partner_name`/`completed_by`; proposal có `finalized_at` ⇒ trigger chặn UPDATE/DELETE.
+- **Quyết định người bán:** `owner_decide_auction_consult` chỉ khi `completed` — `accepted|declined`, đổi được tới khi có bản mới; bản `superseded` đóng băng quyết định lúc đó. Chỉ lưu quyết định cuối (không lịch sử sự kiện).
+- **BR-CNS-06:** tổ chức đọc qua `org_session_auction_consult_suggestions(session)` — chỉ bản `completed` + `accepted` + finalized, cho hồ sơ có request `selected` với `auction_org_id` của phiên + `consignment_contracts.status='signed'` (đúng cổng `auction_session_items_validate`); caller `can_manage_auction_sessions OR can_run_auction`; không quyền ⇒ rỗng. UI: panel "Áp dụng" từng trường ở Sửa lô / Thêm lô (override theo lô, mặc định vẫn là báo giá của tổ chức), cảnh báo lệch hình thức ở bảng lô, gợi ý thời lượng ở Mở lô (mặc định vẫn 30 phút). Giá trị đã áp dụng là bản chụp — người bán đổi quyết định sau không kéo lại.
+- **Hoa hồng:** 1 dòng `orders` lúc hoàn tất theo `resolve_contract_terms`. Đối tác seed `8f2b0000-…0001`, HĐ `04/2026/HĐHT-TVDG` 20%, giá gói `tvdg_plan` 3,000,000₫ là GIỮ CHỖ. Mã đơn prefix `TD`.

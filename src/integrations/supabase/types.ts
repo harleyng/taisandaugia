@@ -519,6 +519,540 @@ export type Database = {
           },
         ]
       }
+      asset_3d_scans: {
+        Row: {
+          asset_posting_id: string
+          created_at: string
+          credit_cost: number
+          credit_transaction_id: string | null
+          error_message: string | null
+          expires_at: string
+          external_job_id: string | null
+          format: string | null
+          id: string
+          model_url: string | null
+          partner: string
+          poster_url: string | null
+          published_at: string | null
+          ready_at: string | null
+          refunded_at: string | null
+          scan_token: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_posting_id: string
+          created_at?: string
+          credit_cost?: number
+          credit_transaction_id?: string | null
+          error_message?: string | null
+          expires_at?: string
+          external_job_id?: string | null
+          format?: string | null
+          id?: string
+          model_url?: string | null
+          partner?: string
+          poster_url?: string | null
+          published_at?: string | null
+          ready_at?: string | null
+          refunded_at?: string | null
+          scan_token: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_posting_id?: string
+          created_at?: string
+          credit_cost?: number
+          credit_transaction_id?: string | null
+          error_message?: string | null
+          expires_at?: string
+          external_job_id?: string | null
+          format?: string | null
+          id?: string
+          model_url?: string | null
+          partner?: string
+          poster_url?: string | null
+          published_at?: string | null
+          ready_at?: string | null
+          refunded_at?: string | null
+          scan_token?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_3d_scans_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_3d_scans_credit_transaction_id_fkey"
+            columns: ["credit_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "credit_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_3d_scans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_auction_consult_proposals: {
+        Row: {
+          auction_format: string | null
+          bid_step: number | null
+          bidding_method: string | null
+          consultation_id: string
+          deposit_mode: string | null
+          deposit_value: number | null
+          field_notes: Json
+          finalized_at: string | null
+          lot_duration_minutes: number | null
+          rationale: string | null
+          reserve_price: number | null
+          starting_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          auction_format?: string | null
+          bid_step?: number | null
+          bidding_method?: string | null
+          consultation_id: string
+          deposit_mode?: string | null
+          deposit_value?: number | null
+          field_notes?: Json
+          finalized_at?: string | null
+          lot_duration_minutes?: number | null
+          rationale?: string | null
+          reserve_price?: number | null
+          starting_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          auction_format?: string | null
+          bid_step?: number | null
+          bidding_method?: string | null
+          consultation_id?: string
+          deposit_mode?: string | null
+          deposit_value?: number | null
+          field_notes?: Json
+          finalized_at?: string | null
+          lot_duration_minutes?: number | null
+          rationale?: string | null
+          reserve_price?: number | null
+          starting_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_auction_consult_proposals_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: true
+            referencedRelation: "asset_auction_consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_auction_consultations: {
+        Row: {
+          asset_posting_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          child_slug: string | null
+          code: string
+          commission_order_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          decided_at: string | null
+          decision_note: string | null
+          desired_timeline: string | null
+          expected_price: number | null
+          expert_name: string | null
+          id: string
+          min_acceptable_price: number | null
+          package_name: string
+          paid_at: string | null
+          parent_slug: string | null
+          partner_name: string | null
+          payment_txn_ref: string | null
+          posting_auction_format: string | null
+          posting_expected_timeline: string | null
+          posting_pricing_mode: string | null
+          posting_starting_price: number | null
+          posting_title: string
+          province: string | null
+          quote_expires_at: string | null
+          quote_note: string | null
+          quoted_at: string | null
+          quoted_by: string | null
+          quoted_price: number | null
+          request_note: string | null
+          review_started_at: string | null
+          sale_deadline: string | null
+          sale_goal: string
+          seller_decision: string
+          service_variant_id: string
+          status: string
+          superseded_at: string | null
+          supplier_id: string | null
+          updated_at: string
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          asset_posting_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          child_slug?: string | null
+          code?: string
+          commission_order_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision_note?: string | null
+          desired_timeline?: string | null
+          expected_price?: number | null
+          expert_name?: string | null
+          id?: string
+          min_acceptable_price?: number | null
+          package_name: string
+          paid_at?: string | null
+          parent_slug?: string | null
+          partner_name?: string | null
+          payment_txn_ref?: string | null
+          posting_auction_format?: string | null
+          posting_expected_timeline?: string | null
+          posting_pricing_mode?: string | null
+          posting_starting_price?: number | null
+          posting_title: string
+          province?: string | null
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          review_started_at?: string | null
+          sale_deadline?: string | null
+          sale_goal: string
+          seller_decision?: string
+          service_variant_id: string
+          status?: string
+          superseded_at?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          asset_posting_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          child_slug?: string | null
+          code?: string
+          commission_order_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision_note?: string | null
+          desired_timeline?: string | null
+          expected_price?: number | null
+          expert_name?: string | null
+          id?: string
+          min_acceptable_price?: number | null
+          package_name?: string
+          paid_at?: string | null
+          parent_slug?: string | null
+          partner_name?: string | null
+          payment_txn_ref?: string | null
+          posting_auction_format?: string | null
+          posting_expected_timeline?: string | null
+          posting_pricing_mode?: string | null
+          posting_starting_price?: number | null
+          posting_title?: string
+          province?: string | null
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          review_started_at?: string | null
+          sale_deadline?: string | null
+          sale_goal?: string
+          seller_decision?: string
+          service_variant_id?: string
+          status?: string
+          superseded_at?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_auction_consultations_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_auction_consultations_commission_order_id_fkey"
+            columns: ["commission_order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_auction_consultations_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_auction_consultations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_auction_consultations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_authentication_orders: {
+        Row: {
+          appointment_at: string | null
+          appointment_note: string | null
+          asset_posting_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          certificate_no: string | null
+          certificate_path: string | null
+          code: string
+          commission_order_id: string | null
+          created_at: string
+          id: string
+          issued_at: string | null
+          issued_by_supplier_id: string | null
+          item_received_at: string | null
+          method: string
+          package_name: string
+          paid_at: string | null
+          partner_name: string
+          payment_txn_ref: string | null
+          posting_reverted_at: string | null
+          posting_title: string
+          preferred_time: string | null
+          published_at: string | null
+          quote_expires_at: string | null
+          quote_note: string | null
+          quoted_at: string | null
+          quoted_by: string | null
+          quoted_price: number | null
+          request_note: string | null
+          review_started_at: string | null
+          service_variant_id: string
+          shipment_tracking: string | null
+          shipped_at: string | null
+          site_address: string | null
+          status: string
+          superseded_at: string | null
+          supplier_id: string
+          updated_at: string
+          uploaded_by: string | null
+          user_id: string
+          verdict: string | null
+          verdict_reason: string | null
+        }
+        Insert: {
+          appointment_at?: string | null
+          appointment_note?: string | null
+          asset_posting_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          certificate_no?: string | null
+          certificate_path?: string | null
+          code?: string
+          commission_order_id?: string | null
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          issued_by_supplier_id?: string | null
+          item_received_at?: string | null
+          method: string
+          package_name: string
+          paid_at?: string | null
+          partner_name: string
+          payment_txn_ref?: string | null
+          posting_reverted_at?: string | null
+          posting_title: string
+          preferred_time?: string | null
+          published_at?: string | null
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          review_started_at?: string | null
+          service_variant_id: string
+          shipment_tracking?: string | null
+          shipped_at?: string | null
+          site_address?: string | null
+          status?: string
+          superseded_at?: string | null
+          supplier_id: string
+          updated_at?: string
+          uploaded_by?: string | null
+          user_id: string
+          verdict?: string | null
+          verdict_reason?: string | null
+        }
+        Update: {
+          appointment_at?: string | null
+          appointment_note?: string | null
+          asset_posting_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          certificate_no?: string | null
+          certificate_path?: string | null
+          code?: string
+          commission_order_id?: string | null
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          issued_by_supplier_id?: string | null
+          item_received_at?: string | null
+          method?: string
+          package_name?: string
+          paid_at?: string | null
+          partner_name?: string
+          payment_txn_ref?: string | null
+          posting_reverted_at?: string | null
+          posting_title?: string
+          preferred_time?: string | null
+          published_at?: string | null
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          review_started_at?: string | null
+          service_variant_id?: string
+          shipment_tracking?: string | null
+          shipped_at?: string | null
+          site_address?: string | null
+          status?: string
+          superseded_at?: string | null
+          supplier_id?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          user_id?: string
+          verdict?: string | null
+          verdict_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_authentication_orders_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_authentication_orders_commission_order_id_fkey"
+            columns: ["commission_order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_authentication_orders_issued_by_supplier_id_fkey"
+            columns: ["issued_by_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_authentication_orders_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_authentication_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_authentication_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_authentication_requirements: {
+        Row: {
+          asset_posting_id: string
+          created_at: string
+          created_by: string | null
+          reason: string
+        }
+        Insert: {
+          asset_posting_id: string
+          created_at?: string
+          created_by?: string | null
+          reason: string
+        }
+        Update: {
+          asset_posting_id?: string
+          created_at?: string
+          created_by?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_authentication_requirements_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: true
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_broker_requests: {
         Row: {
           admin_note: string | null
@@ -580,6 +1114,197 @@ export type Database = {
           },
           {
             foreignKeyName: "asset_broker_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_legal_consultation_items: {
+        Row: {
+          consultation_id: string
+          created_at: string
+          doc_paths: string[]
+          expert_note: string | null
+          id: string
+          label: string
+          required_action: string | null
+          sort_order: number
+          status: string | null
+          template_key: string | null
+        }
+        Insert: {
+          consultation_id: string
+          created_at?: string
+          doc_paths?: string[]
+          expert_note?: string | null
+          id?: string
+          label: string
+          required_action?: string | null
+          sort_order?: number
+          status?: string | null
+          template_key?: string | null
+        }
+        Update: {
+          consultation_id?: string
+          created_at?: string
+          doc_paths?: string[]
+          expert_note?: string | null
+          id?: string
+          label?: string
+          required_action?: string | null
+          sort_order?: number
+          status?: string | null
+          template_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_legal_consultation_items_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "asset_legal_consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_legal_consultations: {
+        Row: {
+          asset_posting_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          code: string
+          commission_order_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          expert_name: string | null
+          id: string
+          package_name: string
+          paid_at: string | null
+          parent_slug: string | null
+          partner_name: string | null
+          payment_txn_ref: string | null
+          posting_title: string
+          quote_expires_at: string | null
+          quote_note: string | null
+          quoted_at: string | null
+          quoted_by: string | null
+          quoted_price: number | null
+          request_note: string | null
+          review_started_at: string | null
+          service_variant_id: string
+          status: string
+          submitted_doc_paths: string[]
+          summary: string | null
+          superseded_at: string | null
+          supplier_id: string | null
+          updated_at: string
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          asset_posting_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code?: string
+          commission_order_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          expert_name?: string | null
+          id?: string
+          package_name: string
+          paid_at?: string | null
+          parent_slug?: string | null
+          partner_name?: string | null
+          payment_txn_ref?: string | null
+          posting_title: string
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          review_started_at?: string | null
+          service_variant_id: string
+          status?: string
+          submitted_doc_paths: string[]
+          summary?: string | null
+          superseded_at?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          asset_posting_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code?: string
+          commission_order_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          expert_name?: string | null
+          id?: string
+          package_name?: string
+          paid_at?: string | null
+          parent_slug?: string | null
+          partner_name?: string | null
+          payment_txn_ref?: string | null
+          posting_title?: string
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          review_started_at?: string | null
+          service_variant_id?: string
+          status?: string
+          submitted_doc_paths?: string[]
+          summary?: string | null
+          superseded_at?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_legal_consultations_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_legal_consultations_commission_order_id_fkey"
+            columns: ["commission_order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_legal_consultations_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_legal_consultations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_legal_consultations_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -800,11 +1525,13 @@ export type Database = {
           head_office_address: string | null
           head_office_province: string | null
           id: string
+          kyc_scope: string
           linked_asset_owner_id: string | null
           linked_auction_org_id: string | null
           official_email: string | null
           org_name: string | null
           org_type: string | null
+          parent_asset_owner_id: string | null
           registry_match_data: Json | null
           registry_match_score: number | null
           rejection_reason: string | null
@@ -833,11 +1560,13 @@ export type Database = {
           head_office_address?: string | null
           head_office_province?: string | null
           id?: string
+          kyc_scope?: string
           linked_asset_owner_id?: string | null
           linked_auction_org_id?: string | null
           official_email?: string | null
           org_name?: string | null
           org_type?: string | null
+          parent_asset_owner_id?: string | null
           registry_match_data?: Json | null
           registry_match_score?: number | null
           rejection_reason?: string | null
@@ -866,11 +1595,13 @@ export type Database = {
           head_office_address?: string | null
           head_office_province?: string | null
           id?: string
+          kyc_scope?: string
           linked_asset_owner_id?: string | null
           linked_auction_org_id?: string | null
           official_email?: string | null
           org_name?: string | null
           org_type?: string | null
+          parent_asset_owner_id?: string | null
           registry_match_data?: Json | null
           registry_match_score?: number | null
           rejection_reason?: string | null
@@ -912,6 +1643,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "asset_owner_org_kyc_parent_asset_owner_id_fkey"
+            columns: ["parent_asset_owner_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owners"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "asset_owner_org_kyc_reviewed_by_fkey"
             columns: ["reviewed_by"]
             isOneToOne: false
@@ -920,44 +1658,191 @@ export type Database = {
           },
         ]
       }
+      asset_owner_workspace_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          branch_scope: string[] | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          revoked_at: string | null
+          role: string
+          token: string
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          branch_scope?: string[] | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          role: string
+          token?: string
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          branch_scope?: string[] | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          role?: string
+          token?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_owner_workspace_invites_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_workspace_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_workspace_invites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_owner_workspace_members: {
+        Row: {
+          branch_scope: string[] | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          branch_scope?: string[] | null
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string | null
+          role: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          branch_scope?: string[] | null
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_owner_workspace_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_workspace_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_owner_workspaces: {
         Row: {
           abbreviations: string[]
+          asset_owner_id: string | null
           branch_names: string[]
           created_at: string
           id: string
           last_matched_at: string | null
+          match_scope: string
           org_kyc_id: string
           owner_user_id: string
+          parent_linked_at: string | null
+          parent_workspace_id: string | null
           primary_name: string
           total_claimed: number
           updated_at: string
         }
         Insert: {
           abbreviations?: string[]
+          asset_owner_id?: string | null
           branch_names?: string[]
           created_at?: string
           id?: string
           last_matched_at?: string | null
+          match_scope?: string
           org_kyc_id: string
           owner_user_id: string
+          parent_linked_at?: string | null
+          parent_workspace_id?: string | null
           primary_name: string
           total_claimed?: number
           updated_at?: string
         }
         Update: {
           abbreviations?: string[]
+          asset_owner_id?: string | null
           branch_names?: string[]
           created_at?: string
           id?: string
           last_matched_at?: string | null
+          match_scope?: string
           org_kyc_id?: string
           owner_user_id?: string
+          parent_linked_at?: string | null
+          parent_workspace_id?: string | null
           primary_name?: string
           total_claimed?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "asset_owner_workspaces_asset_owner_id_fkey"
+            columns: ["asset_owner_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owners"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "asset_owner_workspaces_org_kyc_id_fkey"
             columns: ["org_kyc_id"]
@@ -970,6 +1855,13 @@ export type Database = {
             columns: ["owner_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_workspaces_parent_workspace_id_fkey"
+            columns: ["parent_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1035,6 +1927,7 @@ export type Database = {
         Row: {
           address: string | null
           auction_format: string
+          branch_id: string | null
           child_slug: string
           chosen_org_id: string | null
           commission_pct: number | null
@@ -1069,10 +1962,12 @@ export type Database = {
           user_id: string
           video_urls: string[]
           ward: string | null
+          workspace_id: string | null
         }
         Insert: {
           address?: string | null
           auction_format?: string
+          branch_id?: string | null
           child_slug: string
           chosen_org_id?: string | null
           commission_pct?: number | null
@@ -1107,10 +2002,12 @@ export type Database = {
           user_id: string
           video_urls?: string[]
           ward?: string | null
+          workspace_id?: string | null
         }
         Update: {
           address?: string | null
           auction_format?: string
+          branch_id?: string | null
           child_slug?: string
           chosen_org_id?: string | null
           commission_pct?: number | null
@@ -1145,8 +2042,16 @@ export type Database = {
           user_id?: string
           video_urls?: string[]
           ward?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "asset_postings_branch_fkey"
+            columns: ["workspace_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_branches"
+            referencedColumns: ["workspace_id", "id"]
+          },
           {
             foreignKeyName: "asset_postings_chosen_org_id_fkey"
             columns: ["chosen_org_id"]
@@ -1166,6 +2071,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_postings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1303,6 +2215,162 @@ export type Database = {
           },
           {
             foreignKeyName: "asset_service_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_vr_tour_orders: {
+        Row: {
+          appointment_at: string | null
+          appointment_note: string | null
+          asset_posting_id: string
+          attached_at: string | null
+          attached_by: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          code: string
+          commission_order_id: string | null
+          created_at: string
+          delivered_at: string | null
+          delivered_by: string | null
+          id: string
+          package_name: string
+          paid_at: string | null
+          partner_name: string
+          payment_txn_ref: string | null
+          posting_title: string
+          preferred_time: string | null
+          published_at: string | null
+          quote_expires_at: string | null
+          quote_note: string | null
+          quoted_at: string | null
+          quoted_by: string | null
+          quoted_price: number | null
+          request_note: string | null
+          scheduled_at: string | null
+          scheduled_by: string | null
+          service_variant_id: string
+          site_address: string | null
+          status: string
+          superseded_at: string | null
+          supplier_id: string
+          updated_at: string
+          user_id: string
+          vr_url: string | null
+        }
+        Insert: {
+          appointment_at?: string | null
+          appointment_note?: string | null
+          asset_posting_id: string
+          attached_at?: string | null
+          attached_by?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code?: string
+          commission_order_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivered_by?: string | null
+          id?: string
+          package_name: string
+          paid_at?: string | null
+          partner_name: string
+          payment_txn_ref?: string | null
+          posting_title: string
+          preferred_time?: string | null
+          published_at?: string | null
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          scheduled_at?: string | null
+          scheduled_by?: string | null
+          service_variant_id: string
+          site_address?: string | null
+          status?: string
+          superseded_at?: string | null
+          supplier_id: string
+          updated_at?: string
+          user_id: string
+          vr_url?: string | null
+        }
+        Update: {
+          appointment_at?: string | null
+          appointment_note?: string | null
+          asset_posting_id?: string
+          attached_at?: string | null
+          attached_by?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code?: string
+          commission_order_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivered_by?: string | null
+          id?: string
+          package_name?: string
+          paid_at?: string | null
+          partner_name?: string
+          payment_txn_ref?: string | null
+          posting_title?: string
+          preferred_time?: string | null
+          published_at?: string | null
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          scheduled_at?: string | null
+          scheduled_by?: string | null
+          service_variant_id?: string
+          site_address?: string | null
+          status?: string
+          superseded_at?: string | null
+          supplier_id?: string
+          updated_at?: string
+          user_id?: string
+          vr_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_vr_tour_orders_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_vr_tour_orders_commission_order_id_fkey"
+            columns: ["commission_order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_vr_tour_orders_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_vr_tour_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_vr_tour_orders_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2665,6 +3733,33 @@ export type Database = {
           sort_order?: number
           tagline?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      authentication_policy: {
+        Row: {
+          enabled: boolean
+          id: number
+          min_price: number
+          parent_slugs: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          id?: number
+          min_price?: number
+          parent_slugs?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          id?: number
+          min_price?: number
+          parent_slugs?: string[]
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -6488,6 +7583,318 @@ export type Database = {
           },
         ]
       }
+      owner_asset_outcomes: {
+        Row: {
+          asset_category: string | null
+          asset_posting_id: string | null
+          asset_title: string | null
+          auction_date: string
+          auction_fee: number | null
+          auction_org_id: string | null
+          branch_id: string | null
+          conflict_resolution: Json | null
+          created_at: string
+          evidence_urls: string[]
+          failure_reason: string | null
+          id: string
+          listing_id: string | null
+          outcome: string
+          paid_amount: number | null
+          paid_at: string | null
+          participants: number | null
+          payment_due_on: string | null
+          payment_status: string
+          reported_by: string
+          round_no: number
+          share_to_market: boolean
+          source: string
+          starting_price: number | null
+          title_key: string | null
+          updated_at: string
+          winning_price: number | null
+          workspace_id: string
+        }
+        Insert: {
+          asset_category?: string | null
+          asset_posting_id?: string | null
+          asset_title?: string | null
+          auction_date: string
+          auction_fee?: number | null
+          auction_org_id?: string | null
+          branch_id?: string | null
+          conflict_resolution?: Json | null
+          created_at?: string
+          evidence_urls?: string[]
+          failure_reason?: string | null
+          id?: string
+          listing_id?: string | null
+          outcome: string
+          paid_amount?: number | null
+          paid_at?: string | null
+          participants?: number | null
+          payment_due_on?: string | null
+          payment_status?: string
+          reported_by: string
+          round_no?: number
+          share_to_market?: boolean
+          source?: string
+          starting_price?: number | null
+          title_key?: string | null
+          updated_at?: string
+          winning_price?: number | null
+          workspace_id: string
+        }
+        Update: {
+          asset_category?: string | null
+          asset_posting_id?: string | null
+          asset_title?: string | null
+          auction_date?: string
+          auction_fee?: number | null
+          auction_org_id?: string | null
+          branch_id?: string | null
+          conflict_resolution?: Json | null
+          created_at?: string
+          evidence_urls?: string[]
+          failure_reason?: string | null
+          id?: string
+          listing_id?: string | null
+          outcome?: string
+          paid_amount?: number | null
+          paid_at?: string | null
+          participants?: number | null
+          payment_due_on?: string | null
+          payment_status?: string
+          reported_by?: string
+          round_no?: number
+          share_to_market?: boolean
+          source?: string
+          starting_price?: number | null
+          title_key?: string | null
+          updated_at?: string
+          winning_price?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_asset_outcomes_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_asset_outcomes_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_asset_outcomes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_asset_outcomes_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_asset_outcomes_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_asset_outcomes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_cash_events: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          note: string | null
+          occurred_on: string
+          outcome_id: string
+          updated_at: string
+          updated_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          note?: string | null
+          occurred_on: string
+          outcome_id: string
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          occurred_on?: string
+          outcome_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_cash_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_cash_events_outcome_id_fkey"
+            columns: ["outcome_id"]
+            isOneToOne: false
+            referencedRelation: "owner_asset_outcomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_cash_events_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_cash_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_report_snapshots: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          finalized_at: string | null
+          finalized_by: string | null
+          id: string
+          last_viewed_at: string | null
+          notes: string | null
+          payload: Json | null
+          period_start: string
+          period_type: string
+          plan_note: string | null
+          share_token: string | null
+          shared_at: string | null
+          shared_by: string | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+          view_count: number
+          workspace_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          notes?: string | null
+          payload?: Json | null
+          period_start: string
+          period_type: string
+          plan_note?: string | null
+          share_token?: string | null
+          shared_at?: string | null
+          shared_by?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          view_count?: number
+          workspace_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          notes?: string | null
+          payload?: Json | null
+          period_start?: string
+          period_type?: string
+          plan_note?: string | null
+          share_token?: string | null
+          shared_at?: string | null
+          shared_by?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          view_count?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_report_snapshots_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_report_snapshots_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_report_snapshots_finalized_by_fkey"
+            columns: ["finalized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_report_snapshots_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_report_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_report_views: {
         Row: {
           credits_charged: number
@@ -6519,6 +7926,145 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "owner_report_views_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_workspace_link_requests: {
+        Row: {
+          child_workspace_id: string
+          created_at: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          parent_workspace_id: string
+          requested_by: string | null
+          responded_at: string | null
+          responded_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          child_workspace_id: string
+          created_at?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          parent_workspace_id: string
+          requested_by?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          child_workspace_id?: string
+          created_at?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          parent_workspace_id?: string
+          requested_by?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_workspace_link_requests_child_workspace_id_fkey"
+            columns: ["child_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_workspace_link_requests_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_workspace_link_requests_parent_workspace_id_fkey"
+            columns: ["parent_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_workspace_link_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_workspace_link_requests_responded_by_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_workspace_targets: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          period_start: string
+          period_type: string
+          target_amount: number | null
+          target_count: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_start: string
+          period_type: string
+          target_amount?: number | null
+          target_count?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_start?: string
+          period_type?: string
+          target_amount?: number | null
+          target_count?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_workspace_targets_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_workspace_targets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_workspace_targets_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "asset_owner_workspaces"
@@ -6839,6 +8385,35 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      seller_authentication_restrictions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_authentication_restrictions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_variants: {
         Row: {
@@ -7955,6 +9530,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _asset_3d_expire_stale: {
+        Args: { _posting_id: string }
+        Returns: undefined
+      }
+      _asset_3d_refund: { Args: { _scan_id: string }; Returns: undefined }
+      _auction_consult_service_id: { Args: never; Returns: string }
+      _auction_consult_write_proposal: {
+        Args: {
+          _consultation_id: string
+          _proposal: Json
+          _rationale: string
+          _strict: boolean
+        }
+        Returns: string
+      }
+      _authentication_current_verdict: {
+        Args: { _posting_id: string }
+        Returns: string
+      }
+      _authentication_posting_reasons: {
+        Args: { _p: Database["public"]["Tables"]["asset_postings"]["Row"] }
+        Returns: string[]
+      }
+      _authentication_required_reasons: {
+        Args: {
+          _parent_slug: string
+          _posting_id: string
+          _starting_price: number
+          _user_id: string
+        }
+        Returns: string[]
+      }
+      _authentication_service_id: { Args: never; Returns: string }
       _bidding_ctx: {
         Args: { _lot_id?: string; _reason?: string }
         Returns: undefined
@@ -7962,6 +9570,15 @@ export type Database = {
       _bidding_ctx_clear: { Args: never; Returns: undefined }
       _bidding_rpc_active: { Args: never; Returns: boolean }
       _close_lot: { Args: { _at: string; _lot_id: string }; Returns: boolean }
+      _legal_consult_replace_items: {
+        Args: {
+          _consultation: Database["public"]["Tables"]["asset_legal_consultations"]["Row"]
+          _items: Json
+          _strict: boolean
+        }
+        Returns: string
+      }
+      _legal_consult_service_id: { Args: never; Returns: string }
       _lot_event: {
         Args: {
           _kind: string
@@ -7989,10 +9606,47 @@ export type Database = {
       _sale_reallocate: { Args: { _contract_id: string }; Returns: undefined }
       _sale_rpc_active: { Args: never; Returns: boolean }
       _sale_settle: { Args: { _contract_id: string }; Returns: boolean }
+      _settle_auction_consult: {
+        Args: {
+          _consultation_id: string
+          _expected_amount: number
+          _txn_ref: string
+          _uid: string
+        }
+        Returns: Json
+      }
+      _settle_authentication_order: {
+        Args: {
+          _expected_amount: number
+          _order_id: string
+          _txn_ref: string
+          _uid: string
+        }
+        Returns: Json
+      }
       _settle_bidding_contract: {
         Args: { _contract_id: string; _txn_ref: string; _uid: string }
         Returns: Json
       }
+      _settle_legal_consult: {
+        Args: {
+          _consultation_id: string
+          _expected_amount: number
+          _txn_ref: string
+          _uid: string
+        }
+        Returns: Json
+      }
+      _settle_vr_tour_order: {
+        Args: {
+          _expected_amount: number
+          _order_id: string
+          _txn_ref: string
+          _uid: string
+        }
+        Returns: Json
+      }
+      _vr_tour_service_id: { Args: never; Returns: string }
       accept_org_invite: {
         Args: { _confirm_email_mismatch?: boolean; _token: string }
         Returns: Json
@@ -8000,6 +9654,41 @@ export type Database = {
       accounted_auction_org_ids: { Args: never; Returns: string[] }
       admin_access_report: {
         Args: { _from: string; _granularity?: string; _to: string }
+        Returns: Json
+      }
+      admin_attach_vr_tour: { Args: { _order_id: string }; Returns: Json }
+      admin_cancel_auction_consult: {
+        Args: { _consultation_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_cancel_authentication: {
+        Args: { _order_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_cancel_legal_consult: {
+        Args: { _consultation_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_cancel_vr_tour: {
+        Args: { _order_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_complete_auction_consult: {
+        Args: { _consultation_id: string; _proposal: Json; _rationale: string }
+        Returns: Json
+      }
+      admin_complete_authentication: {
+        Args: {
+          _certificate_no: string
+          _certificate_path: string
+          _order_id: string
+          _reason: string
+          _verdict: string
+        }
+        Returns: Json
+      }
+      admin_complete_legal_consult: {
+        Args: { _consultation_id: string; _items: Json; _summary: string }
         Returns: Json
       }
       admin_convert_lead: {
@@ -8020,6 +9709,10 @@ export type Database = {
         Args: { p_group_id: string }
         Returns: Json
       }
+      admin_deliver_vr_tour: {
+        Args: { _order_id: string; _vr_url: string }
+        Returns: Json
+      }
       admin_dispatch_service_requests: {
         Args: { _message?: string; _orgs: Json; _posting_id: string }
         Returns: Json
@@ -8033,6 +9726,16 @@ export type Database = {
         Returns: boolean
       }
       admin_is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      admin_list_seller_authentication_restrictions: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          name: string
+          reason: string
+          user_id: string
+        }[]
+      }
       admin_listings_report: {
         Args: {
           _from: string
@@ -8113,6 +9816,50 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      admin_publish_asset_3d_model: {
+        Args: { _scan_id: string }
+        Returns: Json
+      }
+      admin_quote_auction_consult: {
+        Args: {
+          _consultation_id: string
+          _expert_name: string
+          _note: string
+          _price: number
+          _supplier_id: string
+          _valid_days?: number
+        }
+        Returns: Json
+      }
+      admin_quote_authentication: {
+        Args: {
+          _note: string
+          _order_id: string
+          _price: number
+          _valid_days?: number
+        }
+        Returns: Json
+      }
+      admin_quote_legal_consult: {
+        Args: {
+          _consultation_id: string
+          _expert_name: string
+          _note: string
+          _price: number
+          _supplier_id: string
+          _valid_days?: number
+        }
+        Returns: Json
+      }
+      admin_quote_vr_tour: {
+        Args: {
+          _note: string
+          _order_id: string
+          _price: number
+          _valid_days?: number
+        }
+        Returns: Json
+      }
       admin_resolve_contract_terms: {
         Args: {
           _at?: string
@@ -8130,6 +9877,30 @@ export type Database = {
           line_id: string
         }[]
       }
+      admin_save_auction_consult_proposal: {
+        Args: { _consultation_id: string; _proposal: Json; _rationale: string }
+        Returns: Json
+      }
+      admin_save_legal_consult_checklist: {
+        Args: { _consultation_id: string; _items: Json }
+        Returns: Json
+      }
+      admin_schedule_authentication: {
+        Args: { _appointment_at: string; _note: string; _order_id: string }
+        Returns: Json
+      }
+      admin_schedule_vr_tour: {
+        Args: { _appointment_at: string; _note: string; _order_id: string }
+        Returns: Json
+      }
+      admin_set_authentication_policy: {
+        Args: { _enabled: boolean; _min_price: number; _parent_slugs: string[] }
+        Returns: Json
+      }
+      admin_set_lot_authentication_requirement: {
+        Args: { _posting_id: string; _reason: string; _required: boolean }
+        Returns: Json
+      }
       admin_set_prospect_group: {
         Args: { p_group_id?: string; p_kind: string; p_unit_ids: string[] }
         Returns: Json
@@ -8145,6 +9916,22 @@ export type Database = {
       admin_set_role_permissions: {
         Args: { _perms: Json; _role_id: string }
         Returns: undefined
+      }
+      admin_set_seller_authentication_restriction: {
+        Args: { _email: string; _reason: string; _restricted: boolean }
+        Returns: Json
+      }
+      admin_start_auction_consult: {
+        Args: { _consultation_id: string }
+        Returns: Json
+      }
+      admin_start_authentication_review: {
+        Args: { _order_id: string }
+        Returns: Json
+      }
+      admin_start_legal_consult: {
+        Args: { _consultation_id: string }
+        Returns: Json
       }
       admin_sync_prospect_leads: { Args: { p_kind?: string }; Returns: Json }
       admin_unwin_opportunity: {
@@ -8185,6 +9972,37 @@ export type Database = {
       asset_posting_selection_locked: {
         Args: { _posting_id: string }
         Returns: boolean
+      }
+      asset_posting_verification_level: {
+        Args: { _posting_id: string }
+        Returns: number
+      }
+      attach_asset_3d_model: {
+        Args: {
+          _format: string
+          _job_id: string
+          _lot_id: string
+          _model_url: string
+          _poster_url: string
+          _scan_id: string
+        }
+        Returns: Json
+      }
+      auction_consult_package: {
+        Args: never
+        Returns: {
+          from_price: number
+          name: string
+          variant_id: string
+          variant_key: string
+        }[]
+      }
+      auction_consult_partners: {
+        Args: never
+        Returns: {
+          name: string
+          supplier_id: string
+        }[]
       }
       auction_deposit_event_visible: {
         Args: { _contract_id: string; _session_id: string }
@@ -8228,6 +10046,10 @@ export type Database = {
       }
       auction_session_is_public: {
         Args: { _session_id: string }
+        Returns: boolean
+      }
+      authentication_cert_readable: {
+        Args: { _name: string }
         Returns: boolean
       }
       can_access_org_capacity: { Args: { _org_id: string }; Returns: boolean }
@@ -8364,6 +10186,10 @@ export type Database = {
         }
         Returns: Json
       }
+      consignment_contract_can_act: {
+        Args: { _contract_id: string; _side: string }
+        Returns: boolean
+      }
       consignment_contract_cancel: {
         Args: { _contract_id: string; _reason: string; _side: string }
         Returns: Json
@@ -8403,6 +10229,10 @@ export type Database = {
         Args: { _name: string; _seg: number }
         Returns: string
       }
+      consignment_posting_owner_party: {
+        Args: { _posting_id: string }
+        Returns: Json
+      }
       consignment_request_terms: {
         Args: {
           _r: Database["public"]["Tables"]["asset_service_requests"]["Row"]
@@ -8423,6 +10253,15 @@ export type Database = {
         Returns: Json
       }
       credit_fallback_service_id: { Args: never; Returns: string }
+      fail_asset_3d_scan: {
+        Args: {
+          _job_id: string
+          _lot_id: string
+          _reason: string
+          _scan_id: string
+        }
+        Returns: Json
+      }
       get_listing_save_counts: {
         Args: { listing_ids: string[] }
         Returns: {
@@ -8431,6 +10270,7 @@ export type Database = {
         }[]
       }
       get_org_invite_preview: { Args: { _token: string }; Returns: Json }
+      get_shared_owner_report: { Args: { p_token: string }; Returns: Json }
       get_user_email: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -8443,6 +10283,22 @@ export type Database = {
       is_org_member: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
+      }
+      legal_consult_package: {
+        Args: never
+        Returns: {
+          from_price: number
+          name: string
+          variant_id: string
+          variant_key: string
+        }[]
+      }
+      legal_consult_partners: {
+        Args: never
+        Returns: {
+          name: string
+          supplier_id: string
+        }[]
       }
       list_tool_showcases: {
         Args: { _provider_id: string }
@@ -8488,6 +10344,19 @@ export type Database = {
           _state: Database["public"]["Tables"]["auction_lot_states"]["Row"]
         }
         Returns: boolean
+      }
+      mark_asset_3d_processing: {
+        Args: { _job_id: string; _lot_id: string; _scan_id: string }
+        Returns: Json
+      }
+      mock_partner_deliver_asset_3d_scan: {
+        Args: {
+          _lot_id: string
+          _outcome: string
+          _scan_id: string
+          _token: string
+        }
+        Returns: Json
       }
       my_case_questions: {
         Args: { _session_id: string }
@@ -8717,6 +10586,29 @@ export type Database = {
           title: string
         }[]
       }
+      org_session_auction_consult_suggestions: {
+        Args: { _session_id: string }
+        Returns: {
+          asset_posting_id: string
+          auction_format: string
+          bid_step: number
+          bidding_method: string
+          code: string
+          completed_at: string
+          consultation_id: string
+          decided_at: string
+          deposit_mode: string
+          deposit_value: number
+          expert_name: string
+          field_notes: Json
+          lot_duration_minutes: number
+          partner_name: string
+          rationale: string
+          reserve_price: number
+          starting_price: number
+          version: number
+        }[]
+      }
       org_session_audience: {
         Args: { _group_ids?: string[]; _session_id: string }
         Returns: {
@@ -8833,8 +10725,86 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      owner_asset_doc_readable: { Args: { _name: string }; Returns: boolean }
+      owner_asset_outcomes_resolved: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          confidence_label: string
+          has_conflict: boolean
+          listing_id: string
+          payment_status: string
+          resolved_date: string
+          resolved_outcome: string
+          resolved_price: number
+          sources: Json
+        }[]
+      }
+      owner_asset_outcomes_resolved_core: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          confidence_label: string
+          has_conflict: boolean
+          listing_id: string
+          payment_status: string
+          resolved_date: string
+          resolved_outcome: string
+          resolved_price: number
+          sources: Json
+        }[]
+      }
+      owner_benchmark_metric: {
+        Args: {
+          p_higher_better: boolean
+          p_self: number
+          p_step: number
+          p_vals: number[]
+        }
+        Returns: Json
+      }
+      owner_branch_find_entity: {
+        Args: { p_linked: string; p_name: string }
+        Returns: string
+      }
+      owner_build_report_payload: {
+        Args: {
+          p_branch_id?: string
+          p_period_start: string
+          p_period_type: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      owner_cancel_auction_consult: {
+        Args: { _consultation_id: string }
+        Returns: Json
+      }
+      owner_cancel_authentication: {
+        Args: { _order_id: string }
+        Returns: Json
+      }
+      owner_cancel_broker_request: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
+      owner_cancel_legal_consult: {
+        Args: { _consultation_id: string }
+        Returns: Json
+      }
+      owner_cancel_vr_tour: { Args: { _order_id: string }; Returns: Json }
+      owner_cash_event_ok: {
+        Args: { p_action: string; p_outcome_id: string }
+        Returns: boolean
+      }
+      owner_cash_flow: {
+        Args: { p_include_linked?: boolean; p_workspace_id: string }
+        Returns: Json
+      }
+      owner_cash_settle: {
+        Args: { p_occurred_on?: string; p_outcome_id: string }
+        Returns: Json
+      }
       owner_consignment_summary: {
-        Args: never
+        Args: { p_workspace_id?: string }
         Returns: {
           contract_id: string
           contract_status: string
@@ -8844,8 +10814,196 @@ export type Database = {
           quoted_count: number
         }[]
       }
+      owner_decide_auction_consult: {
+        Args: { _consultation_id: string; _decision: string; _note: string }
+        Returns: Json
+      }
+      owner_finalize_report: { Args: { p_report_id: string }; Returns: Json }
+      owner_hq_check_branch_signal: {
+        Args: { p_parent_owner_id: string }
+        Returns: undefined
+      }
+      owner_hq_expansion_signal: {
+        Args: { p_detail: string; p_parent_owner_id: string }
+        Returns: string
+      }
+      owner_hq_signal_from_report: {
+        Args: { p_snapshot_id: string }
+        Returns: undefined
+      }
+      owner_import_outcomes: {
+        Args: { p_rows: Json; p_workspace_id: string }
+        Returns: Json
+      }
+      owner_outcome_disagrees: {
+        Args: {
+          d1: string
+          d2: string
+          o1: string
+          o2: string
+          p1: number
+          p2: number
+        }
+        Returns: boolean
+      }
+      owner_outcome_evidence_ok: {
+        Args: { _action: string; _name: string }
+        Returns: boolean
+      }
+      owner_outcome_resolve_conflict: {
+        Args: {
+          p_choice: string
+          p_listing_id: string
+          p_source_fp?: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      owner_outcome_source_fp: {
+        Args: {
+          p_kind: string
+          p_outcome: string
+          p_price: number
+          p_ref_id: string
+        }
+        Returns: string
+      }
+      owner_outcomes_overview: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          asset_category: string
+          asset_title: string
+          auction_org_name: string
+          best_kind: string
+          branch_id: string
+          confidence_label: string
+          has_conflict: boolean
+          listing_id: string
+          own_outcome_id: string
+          own_round_no: number
+          paid_amount: number
+          payment_status: string
+          resolved_date: string
+          resolved_outcome: string
+          resolved_price: number
+          rounds_reported: number
+          row_key: string
+          sources: Json
+          starting_price: number
+          title_key: string
+        }[]
+      }
+      owner_outcomes_overview_core: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          asset_category: string
+          asset_title: string
+          auction_org_name: string
+          best_kind: string
+          branch_id: string
+          confidence_label: string
+          has_conflict: boolean
+          listing_id: string
+          own_outcome_id: string
+          own_round_no: number
+          paid_amount: number
+          payment_status: string
+          resolved_date: string
+          resolved_outcome: string
+          resolved_price: number
+          rounds_reported: number
+          row_key: string
+          sources: Json
+          starting_price: number
+          title_key: string
+        }[]
+      }
+      owner_posting_can: {
+        Args: { p_action: string; p_posting_id: string }
+        Returns: boolean
+      }
+      owner_posting_file_owner_ok: {
+        Args: {
+          p_creator: string
+          p_file_owner: string
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
+      owner_posting_party_address: {
+        Args: { p_posting_id: string }
+        Returns: Json
+      }
+      owner_posting_row_can: {
+        Args: {
+          p_action: string
+          p_branch_id: string
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
+      owner_report_new_share_token: { Args: never; Returns: string }
+      owner_report_public_payload: { Args: { p: Json }; Returns: Json }
+      owner_report_recovery: {
+        Args: {
+          p_paid_amount: number
+          p_payment_status: string
+          p_price: number
+        }
+        Returns: {
+          awaiting: number
+          counted: boolean
+          estimated: number
+          recorded: number
+        }[]
+      }
+      owner_report_share_link: { Args: { p_report_id: string }; Returns: Json }
+      owner_report_strip_private: { Args: { p: Json }; Returns: Json }
+      owner_request_auction_consult: {
+        Args: {
+          _deadline: string
+          _expected_price: number
+          _min_price: number
+          _note: string
+          _posting_id: string
+          _sale_goal: string
+          _timeline: string
+        }
+        Returns: Json
+      }
+      owner_request_authentication: {
+        Args: {
+          _method: string
+          _note: string
+          _posting_id: string
+          _preferred_time: string
+          _site_address: string
+          _supplier_id: string
+        }
+        Returns: Json
+      }
+      owner_request_legal_consult: {
+        Args: { _doc_paths: string[]; _note: string; _posting_id: string }
+        Returns: Json
+      }
+      owner_request_vr_tour: {
+        Args: {
+          _note: string
+          _posting_id: string
+          _preferred_time: string
+          _site_address: string
+          _supplier_id: string
+          _variant_key: string
+        }
+        Returns: Json
+      }
+      owner_revoke_report_share: {
+        Args: { p_report_id: string }
+        Returns: Json
+      }
       owner_sale_contract_summary: {
-        Args: never
+        Args: { p_workspace_id?: string }
         Returns: {
           code: string
           contract_id: string
@@ -8858,6 +11016,14 @@ export type Database = {
         Args: { _request_id: string }
         Returns: Json
       }
+      owner_share_report: {
+        Args: { p_days: number; p_report_id: string }
+        Returns: Json
+      }
+      owner_submit_authentication_shipment: {
+        Args: { _order_id: string; _tracking: string }
+        Returns: Json
+      }
       owner_update_kyc_address: {
         Args: {
           _address: string
@@ -8867,14 +11033,132 @@ export type Database = {
         }
         Returns: Json
       }
+      owner_ws_accept_invite: { Args: { p_token: string }; Returns: Json }
+      owner_ws_benchmark: { Args: { p_workspace_id: string }; Returns: Json }
+      owner_ws_branch_ok: {
+        Args: { p_branch_id: string; p_workspace_id: string }
+        Returns: boolean
+      }
+      owner_ws_can: {
+        Args: { p_action: string; p_workspace_id: string }
+        Returns: boolean
+      }
+      owner_ws_cancel_link_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      owner_ws_claim_write_ok: {
+        Args: { p_asset_owner_id: string; p_workspace_id: string }
+        Returns: boolean
+      }
+      owner_ws_create_invite: {
+        Args: {
+          p_branch_scope?: string[]
+          p_email: string
+          p_role: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      owner_ws_invite_preview: { Args: { p_token: string }; Returns: Json }
+      owner_ws_link_check: {
+        Args: { p_child_ws: string; p_parent_ws: string }
+        Returns: string
+      }
+      owner_ws_link_overview: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
+      owner_ws_list_members: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          branch_scope: string[]
+          email: string
+          full_name: string
+          joined_at: string
+          member_id: string
+          role: string
+          status: string
+          user_id: string
+        }[]
+      }
+      owner_ws_remove_member: { Args: { p_member_id: string }; Returns: Json }
+      owner_ws_request_link: {
+        Args: { p_child_ws: string; p_parent_ws: string }
+        Returns: Json
+      }
+      owner_ws_respond_link: {
+        Args: { p_accept: boolean; p_request_id: string }
+        Returns: Json
+      }
+      owner_ws_revoke_invite: { Args: { p_invite_id: string }; Returns: Json }
+      owner_ws_role: { Args: { p_workspace_id: string }; Returns: string }
+      owner_ws_scope_valid: {
+        Args: { p_scope: string[]; p_workspace_id: string }
+        Returns: boolean
+      }
+      owner_ws_unlink: { Args: { p_child_ws: string }; Returns: Json }
+      owner_ws_update_member: {
+        Args: { p_branch_scope?: string[]; p_member_id: string; p_role: string }
+        Returns: Json
+      }
+      owner_ws_update_org_address: {
+        Args: { _address: string; _province?: string; p_workspace_id: string }
+        Returns: Json
+      }
+      pay_auction_consult: {
+        Args: {
+          _consultation_id: string
+          _expected_amount: number
+          _txn_ref: string
+        }
+        Returns: Json
+      }
+      pay_authentication_order: {
+        Args: { _expected_amount: number; _order_id: string; _txn_ref: string }
+        Returns: Json
+      }
       pay_bidding_contract: {
         Args: { _contract_id: string; _txn_ref: string }
+        Returns: Json
+      }
+      pay_legal_consult: {
+        Args: {
+          _consultation_id: string
+          _expected_amount: number
+          _txn_ref: string
+        }
+        Returns: Json
+      }
+      pay_vr_tour_order: {
+        Args: { _expected_amount: number; _order_id: string; _txn_ref: string }
         Returns: Json
       }
       personnel_folder_org: { Args: { _name: string }; Returns: string }
       place_bid: {
         Args: { _amount: number; _lot_id: string; _nonce: string }
         Returns: Json
+      }
+      posting_authentication_state: {
+        Args: { _posting_id: string }
+        Returns: Json
+      }
+      public_authentication_packages: {
+        Args: never
+        Returns: {
+          from_price: number
+          name: string
+          sort_order: number
+          variant_id: string
+          variant_key: string
+        }[]
+      }
+      public_authentication_partners: {
+        Args: never
+        Returns: {
+          name: string
+          supplier_id: string
+        }[]
       }
       public_org_auctioneers: {
         Args: { _auction_org_id: string }
@@ -8890,6 +11174,51 @@ export type Database = {
           total_auctions: number
           total_winning_value: number
           years_of_experience: number
+        }[]
+      }
+      public_session_lot_3d_models: {
+        Args: { _session_id: string }
+        Returns: {
+          format: string
+          item_id: string
+          model_url: string
+          poster_url: string
+        }[]
+      }
+      public_session_lot_authentications: {
+        Args: { _session_id: string }
+        Returns: {
+          certificate_no: string
+          certificate_path: string
+          issued_at: string
+          item_id: string
+          method: string
+          partner_name: string
+          verification_level: number
+        }[]
+      }
+      public_session_lot_vr_tours: {
+        Args: { _session_id: string }
+        Returns: {
+          item_id: string
+          vr_url: string
+        }[]
+      }
+      public_vr_tour_packages: {
+        Args: never
+        Returns: {
+          from_price: number
+          name: string
+          sort_order: number
+          variant_id: string
+          variant_key: string
+        }[]
+      }
+      public_vr_tour_partners: {
+        Args: never
+        Returns: {
+          name: string
+          supplier_id: string
         }[]
       }
       request_tool_service: {
@@ -9030,6 +11359,14 @@ export type Database = {
         Returns: boolean
       }
       sale_net_paid: { Args: { _contract_id: string }; Returns: number }
+      sale_owner_seller_can: {
+        Args: {
+          p_action: string
+          p_consignment_contract_id: string
+          p_seller_user_id: string
+        }
+        Returns: boolean
+      }
       sale_path_uuid: { Args: { _name: string; _seg: number }; Returns: string }
       sale_seller_snapshot: { Args: { _lot_id: string }; Returns: Json }
       save_vneid_identity: {
@@ -9044,6 +11381,7 @@ export type Database = {
         Returns: undefined
       }
       server_now: { Args: never; Returns: string }
+      start_asset_3d_scan: { Args: { _posting_id: string }; Returns: Json }
       start_bidding_contract: {
         Args: {
           _address: string

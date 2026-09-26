@@ -1,20 +1,22 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useOwnerKycApproved } from "@/hooks/useOwnerKycApproved";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 
 /**
- * Layout route cho khu số hoá tài sản (`/chu-tai-san/dang-tai-san/*`): phải là
- * chủ tài sản đã được duyệt KYC (cá nhân hoặc tổ chức) — cùng cổng với
- * OwnerAssetsPage. Đặt ở layout để danh sách và chi tiết hồ sơ dùng chung.
+ * Layout route cho khu số hoá tài sản (`/chu-tai-san/dang-tai-san/*`): phải có
+ * một TENANT — thành viên của một không gian (kể cả Cán bộ/Người xem được mời, họ
+ * không có KYC riêng) hoặc tenant Cá nhân (KYC cá nhân đã duyệt). Quyền ghi từng
+ * hồ sơ do trang con quyết định. Đặt ở layout để danh sách và chi tiết dùng chung.
  */
 export function OwnerKycGate() {
   const navigate = useNavigate();
-  const { data: approved, isPending } = useOwnerKycApproved();
+  const { workspaceId, isPersonal, isLoading } = useOwnerWorkspace();
+  const approved = !!workspaceId || isPersonal;
 
-  if (isPending) {
+  if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -22,7 +24,7 @@ export function OwnerKycGate() {
 
   if (!approved) {
     return (
-      <div className="p-6 flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24">
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
             <ShieldAlert className="h-8 w-8 text-muted-foreground" />

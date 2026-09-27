@@ -3,12 +3,11 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SaleContractBody } from "@/components/sale-contracts/SaleContractBody";
-import { SaleStageBadge } from "@/components/sale-contracts/SaleStageBadge";
+import { OwnerSaleContractHero } from "@/components/owner-portal/sale-contracts/OwnerSaleContractHero";
 import { useSaleContractDetail } from "@/hooks/useSaleContracts";
 import { OWNER_SALE_CONTRACTS_PATH } from "@/lib/saleContracts/files";
-import { saleOverdueOf } from "@/lib/saleContracts/stage";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
-import type { SaleAssetSnapshot, SaleBuyerParty } from "@/types/auction-sale-contract";
+import type { SaleAssetSnapshot } from "@/types/auction-sale-contract";
 
 const CHILD_LABEL: Record<string, string> = Object.fromEntries(
   ASSET_CATEGORIES.flatMap((p) => p.children.map((ch) => [ch.slug, ch.name])),
@@ -18,7 +17,8 @@ const CHILD_LABEL: Record<string, string> = Object.fromEntries(
  * /chu-tai-san/hop-dong-mua-ban/:id — chi tiết hợp đồng trong cổng chủ tài sản.
  *
  * Cùng RPC + thân trang với bên mua và tổ chức (vai suy từ `can_act`), chỉ khác
- * bố cục: `split` — thẻ thao tác bên trái, tóm tắt / tài sản / các bên bên phải.
+ * bố cục: hero trên cùng, rồi `split` — thẻ thao tác bên trái, tóm tắt / tài sản /
+ * các bên bên phải.
  */
 export default function OwnerSaleContractDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -46,32 +46,16 @@ export default function OwnerSaleContractDetailPage() {
     );
   }
 
-  const { contract } = data;
-  const asset = (contract.asset_snapshot ?? {}) as SaleAssetSnapshot;
-  const buyer = (contract.buyer_party ?? {}) as SaleBuyerParty;
-  const overdue = saleOverdueOf(contract, data.installments).any;
+  const asset = (data.contract.asset_snapshot ?? {}) as SaleAssetSnapshot;
 
   return (
     <div className="space-y-5">
-      <div>
-        <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={back}>
-          <ArrowLeft className="mr-1 h-4 w-4" aria-hidden />
-          Hợp đồng mua bán
-        </Button>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-bold text-foreground">Hợp đồng {contract.code}</h1>
-          <SaleStageBadge stage={data.stage} overdue={overdue} />
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {[
-            asset.title,
-            asset.session_code ? `Phiên ${asset.session_code}` : null,
-            buyer.full_name ? `Bên mua: ${buyer.full_name}` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-      </div>
+      <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={back}>
+        <ArrowLeft className="mr-1 h-4 w-4" aria-hidden />
+        Hợp đồng mua bán
+      </Button>
+
+      <OwnerSaleContractHero detail={data} />
 
       <SaleContractBody
         detail={data}

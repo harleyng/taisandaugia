@@ -8,7 +8,14 @@ const val = (v?: string | number | null) =>
   v === null || v === undefined || String(v).trim() === "" ? DASH : String(v);
 
 /** Bản chiếu tài sản + giá — đóng băng lúc lập hợp đồng, không đọc bảng sống. */
-export function SaleAssetCard({ contract }: { contract: SaleContract }) {
+export function SaleAssetCard({
+  contract,
+  compact = false,
+}: {
+  contract: SaleContract;
+  /** Cột hẹp (bố cục `split`): xếp số tiền một cột, cỡ chữ nhỏ hơn. */
+  compact?: boolean;
+}) {
   const a = (contract.asset_snapshot ?? {}) as SaleAssetSnapshot;
   const payable = Number(contract.price) - Number(contract.deposit_credit);
 
@@ -28,18 +35,18 @@ export function SaleAssetCard({ contract }: { contract: SaleContract }) {
           </p>
         </div>
 
-        <dl className="grid gap-3 sm:grid-cols-3">
+        <dl className={compact ? "grid gap-3" : "grid gap-3 sm:grid-cols-3"}>
           <div>
             <dt className="text-xs text-muted-foreground">Giá trúng đấu giá</dt>
-            <dd className="text-lg font-semibold">{formatVnd(contract.price)}</dd>
+            <dd className={compact ? "font-semibold" : "text-lg font-semibold"}>{formatVnd(contract.price)}</dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">Tiền đặt trước đã chuyển</dt>
-            <dd className="text-lg font-semibold">{formatVnd(contract.deposit_credit)}</dd>
+            <dd className={compact ? "font-semibold" : "text-lg font-semibold"}>{formatVnd(contract.deposit_credit)}</dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">Còn phải thanh toán</dt>
-            <dd className="text-lg font-semibold text-primary">{formatVnd(payable)}</dd>
+            <dd className={compact ? "font-semibold text-primary" : "text-lg font-semibold text-primary"}>{formatVnd(payable)}</dd>
           </div>
         </dl>
 

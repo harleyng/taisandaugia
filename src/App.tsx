@@ -144,6 +144,7 @@ const OwnerPeriodicReportsPage = lazy(() => import("./pages/chu-tai-san/OwnerPer
 const OwnerPeriodicReportDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportDetailPage"));
 const OwnerPeriodicReportPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportPrintPage"));
 const OwnerSaleContractsPage = lazy(() => import("./pages/chu-tai-san/OwnerSaleContractsPage"));
+const OwnerSaleContractDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerSaleContractDetailPage"));
 const SaleContractPage = lazy(() => import("./pages/SaleContractPage"));
 const AssetPostingWizardPage = lazy(() => import("./pages/AssetPostingWizardPage"));
 const AssetPostingDetailPage = lazy(() => import("./pages/AssetPostingDetailPage"));
@@ -319,10 +320,10 @@ const App = () => (
                   <Route path="lien-ket" element={<OwnerLinksPage />} />
                   <Route path="bao-cao" element={<OwnerReportPage />} />
                   <Route path="credits" element={<OwnerCreditsPage />} />
-                  {/* Hợp đồng mua bán: danh sách riêng, chi tiết dùng CHUNG trang
-                      với bên mua — vai người xem suy từ can_act chứ không từ route. */}
+                  {/* Hợp đồng mua bán: danh sách + chi tiết riêng của cổng (bố cục
+                      split), thân trang dùng CHUNG với bên mua — vai suy từ can_act. */}
                   <Route path="hop-dong-mua-ban" element={<OwnerSaleContractsPage />} />
-                  <Route path="hop-dong-mua-ban/:id" element={<SaleContractPage embedded />} />
+                  <Route path="hop-dong-mua-ban/:id" element={<OwnerSaleContractDetailPage />} />
                 </Route>
                 {/* Trang in A4 của báo cáo định kỳ — không sidebar / topbar */}
                 <Route path="bao-cao-dinh-ky/:id/in" element={<OwnerPeriodicReportPrintPage />} />

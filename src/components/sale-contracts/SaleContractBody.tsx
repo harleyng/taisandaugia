@@ -4,6 +4,7 @@ import { SaleDocumentsCard } from "./SaleDocumentsCard";
 import { SaleHandoverCard } from "./SaleHandoverCard";
 import { SalePartiesCard } from "./SalePartiesCard";
 import { SalePaymentsCard } from "./SalePaymentsCard";
+import { SaleSummaryCard } from "./SaleSummaryCard";
 import { SaleTermsCard } from "./SaleTermsCard";
 import { SaleStageStepper } from "./SaleStageStepper";
 import { AttachSignedDialog } from "./AttachSignedDialog";
@@ -52,10 +53,15 @@ type DialogKind =
  * tin đăng, lại còn là bên ký chứng kiến), và server mới là nơi quyết định.
  */
 export function SaleContractBody({
-  detail, categoryLabel,
+  detail, categoryLabel, layout = "stack",
 }: {
   detail: SaleContractDetail;
   categoryLabel?: string | null;
+  /**
+   * `stack` (mặc định): mọi thẻ xếp một cột. `split`: thẻ thao tác ở cột chính,
+   * tóm tắt + tài sản + các bên ở cột phải dính (cổng chủ tài sản).
+   */
+  layout?: "stack" | "split";
 }) {
   const { contract, installments, payments, can_act: canAct } = detail;
   const [dialog, setDialog] = useState<DialogKind>(null);
@@ -84,22 +90,9 @@ export function SaleContractBody({
   const orgSide = sides.find((s) => s === "org");
   const ref = { id: contract.id, organization_id: contract.organization_id };
 
-  return (
-    <div className="space-y-6">
-      <SaleStageStepper stage={detail.stage} cancelReason={contract.cancel_reason} />
-
-      {contract.status !== "cancelled" && contract.status !== "completed" ? (
-        <InfoBox variant={overdue.any ? "amber" : "muted"}>
-          {nextStepText(contract)}
-          {overdue.sign ? " Đã quá hạn ký hợp đồng." : ""}
-          {overdue.payment ? " Có kỳ thanh toán đã quá hạn." : ""}
-          {overdue.handover ? " Đã quá hạn bàn giao." : ""}
-        </InfoBox>
-      ) : null}
-
-      <SaleAssetCard contract={contract} />
-      <SalePartiesCard contract={contract} />
-
+  // Thẻ thao tác — cùng một bộ cho cả hai bố cục, chỉ khác chỗ đặt.
+  const workingCards = (
+    <>
       <SaleDocumentsCard
         contract={contract}
         sides={sides}
@@ -139,6 +132,38 @@ export function SaleContractBody({
           onTitleTransfer={() => setDialog({ kind: "title" })}
         />
       ) : null}
+    </>
+  );
+
+  return (
+    <div className="space-y-6">
+      <SaleStageStepper stage={detail.stage} cancelReason={contract.cancel_reason} />
+
+      {contract.status !== "cancelled" && contract.status !== "completed" ? (
+        <InfoBox variant={overdue.any ? "amber" : "muted"}>
+          {nextStepText(contract)}
+          {overdue.sign ? " Đã quá hạn ký hợp đồng." : ""}
+          {overdue.payment ? " Có kỳ thanh toán đã quá hạn." : ""}
+          {overdue.handover ? " Đã quá hạn bàn giao." : ""}
+        </InfoBox>
+      ) : null}
+
+      {layout === "split" ? (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+          <div className="min-w-0 space-y-6">{workingCards}</div>
+          <aside className="space-y-6">
+            <SaleSummaryCard detail={detail} />
+            <SaleAssetCard contract={contract} compact />
+            <SalePartiesCard contract={contract} compact />
+          </aside>
+        </div>
+      ) : (
+        <>
+          <SaleAssetCard contract={contract} />
+          <SalePartiesCard contract={contract} />
+          {workingCards}
+        </>
+      )}
 
       {/* ── Hộp thoại ─────────────────────────────────────────────────────── */}
       <ShareDraftDialog

@@ -15,19 +15,18 @@ const CHILD_LABEL: Record<string, string> = Object.fromEntries(
 
 /**
  * /hop-dong-mua-ban/:id — trang hợp đồng cho NGƯỜI TRÚNG ĐẤU GIÁ và cho CHỦ
- * TÀI SẢN (khi mở từ cổng chủ tài sản; cùng route, RLS quyết ai thấy gì).
+ * TÀI SẢN mở bằng link trực tiếp (cùng RPC, RLS quyết ai thấy gì).
  *
  * Dùng chung `SaleContractBody` với cổng tổ chức — vai của người xem suy từ
  * `can_act`, nên không có nhánh giao diện riêng cho từng bên.
  *
- * `embedded`: đang nằm trong cổng chủ tài sản — layout đã dựng khung trang
- * (lề + bề rộng), nên trang không bọc thêm `container` của riêng nó.
+ * Trong cổng chủ tài sản, chi tiết là `OwnerSaleContractDetailPage` (bố cục split).
  */
-export default function SaleContractPage({ embedded = false }: { embedded?: boolean }) {
+export default function SaleContractPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, error } = useSaleContractDetail(id ?? null);
-  const frame = embedded ? "" : "container mx-auto px-4";
+  const frame = "container mx-auto px-4";
 
   if (isLoading) {
     return (
@@ -56,7 +55,7 @@ export default function SaleContractPage({ embedded = false }: { embedded?: bool
   const asset = (data.contract.asset_snapshot ?? {}) as SaleAssetSnapshot;
 
   return (
-    <div className={cn(!embedded && "container mx-auto max-w-4xl px-4 py-8")}>
+    <div className="container mx-auto max-w-4xl px-4 py-8">
       <Button
         type="button"
         variant="ghost"

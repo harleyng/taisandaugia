@@ -1,14 +1,20 @@
-import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Loader2, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { SaleStageBadge } from "@/components/sale-contracts/SaleStageBadge";
+import { Input } from "@/components/ui/input";
+import { OwnerSaleContractsTable } from "@/components/owner-portal/sale-contracts/OwnerSaleContractsTable";
 import { useOwnerSaleContracts } from "@/hooks/useSaleContracts";
-import { ownerSaleContractPath } from "@/lib/saleContracts/files";
-import { awaitingSigningSides, canConfirmHandover, saleStageOf } from "@/lib/saleContracts/stage";
-import { formatVnd } from "@/lib/advertising/slug";
-import type { SaleAssetSnapshot, SaleBuyerParty } from "@/types/auction-sale-contract";
+import {
+  OWNER_SALE_TABS, filterOwnerSaleContracts, ownerSaleTabCounts, type OwnerSaleTab,
+} from "@/lib/saleContracts/ownerTabs";
+
+const EMPTY_TEXT: Record<OwnerSaleTab, string> = {
+  action: "Không có hợp đồng nào đang chờ bạn xử lý.",
+  active: "Không có hợp đồng nào đang thực hiện.",
+  completed: "Chưa có hợp đồng nào hoàn tất.",
+  cancelled: "Không có hợp đồng nào bị huỷ.",
+};
 
 /**
  * /chu-tai-san/hop-dong-mua-ban — hợp đồng mà chủ tài sản là BÊN BÁN.
@@ -17,77 +23,84 @@ import type { SaleAssetSnapshot, SaleBuyerParty } from "@/types/auction-sale-con
  * bạ không có tài khoản, tổ chức ký thay nên không có gì để chủ tài sản làm.
  */
 export default function OwnerSaleContractsPage() {
-  const navigate = useNavigate();
   const { data: rows = [], isLoading, error } = useOwnerSaleContracts();
+  const counts = useMemo(() => ownerSaleTabCounts(rows), [rows]);
+  // Chưa chọn tab ⇒ mở "Cần bạn xử lý" nếu có việc, không thì "Đang thực hiện".
+  const [picked, setPicked] = useState<OwnerSaleTab | null>(null);
+  const tab: OwnerSaleTab = picked ?? (counts.action > 0 ? "action" : "active");
+  const [q, setQ] = useState("");
+
+  const visible = useMemo(() => filterOwnerSaleContracts(rows, tab, q), [rows, tab, q]);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Hợp đồng mua bán</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Hợp đồng bán tài sản của bạn cho người trúng đấu giá.
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-bold text-foreground">Hợp đồng mua bán</h1>
+        <p className="text-sm text-muted-foreground">
+          Hợp đồng bán tài sản của bạn cho người trúng đấu giá. Xác nhận bản ký, theo dõi thanh toán và bàn giao
+          ngay tại đây.
         </p>
-      </header>
+      </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+        <Card className="flex items-center justify-center gap-2 rounded-2xl p-10 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          Đang tải…
-        </div>
+          Đang tải hợp đồng…
+        </Card>
       ) : error ? (
         <Card className="rounded-2xl p-10 text-center text-sm text-destructive">
           Không tải được danh sách hợp đồng. Vui lòng thử lại.
         </Card>
       ) : rows.length === 0 ? (
         <Card className="rounded-2xl p-10 text-center text-sm text-muted-foreground">
-          Bạn chưa có hợp đồng mua bán nào. Sau khi tài sản đấu giá thành, tổ chức đấu giá sẽ lập hợp
-          đồng và gửi cho bạn tại đây.
+          Bạn chưa có hợp đồng mua bán nào. Sau khi tài sản đấu giá thành, tổ chức đấu giá sẽ lập hợp đồng và gửi
+          cho bạn tại đây.
         </Card>
       ) : (
-        <div className="space-y-3">
-          {rows.map((c) => {
-            const asset = (c.asset_snapshot ?? {}) as SaleAssetSnapshot;
-            const buyer = (c.buyer_party ?? {}) as SaleBuyerParty;
-            const stage = saleStageOf(c);
-            const needsSign = awaitingSigningSides(c).includes("seller");
-            const needsHandover = canConfirmHandover(c, "seller") && !!c.paid_at;
-            return (
-              <Card key={c.id} className="rounded-2xl p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{c.code}</span>
-                      <SaleStageBadge stage={stage} />
-                      {needsSign ? (
-                        <Badge variant="outline" className="border-accent/40 bg-accent/15">
-                          cần bạn xác nhận bản ký
-                        </Badge>
-                      ) : null}
-                      {needsHandover ? (
-                        <Badge variant="outline" className="border-accent/40 bg-accent/15">
-                          cần xác nhận bàn giao
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 truncate text-sm">{asset.title ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {[
-                        asset.session_code ? `Phiên ${asset.session_code}` : null,
-                        buyer.full_name ? `Bên mua: ${buyer.full_name}` : null,
-                        `Giá ${formatVnd(c.price)}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <Button type="button" size="sm" onClick={() => navigate(ownerSaleContractPath(c.id))}>
-                    Xem hợp đồng
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+        <>
+          <div className="flex flex-wrap gap-2">
+            {OWNER_SALE_TABS.map((t) => (
+              <Button
+                key={t.key}
+                variant={tab === t.key ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPicked(t.key)}
+                className="gap-1.5"
+              >
+                {t.label}
+                {t.key === "action" && counts.action > 0 ? (
+                  <span className="rounded-full bg-accent px-1.5 py-0.5 text-[11px] font-semibold text-accent-foreground">
+                    {counts.action}
+                  </span>
+                ) : (
+                  <span className={tab === t.key ? "opacity-80" : "text-muted-foreground"}>{counts[t.key]}</span>
+                )}
+              </Button>
+            ))}
+          </div>
+
+          <Card className="rounded-2xl">
+            <div className="border-b p-4">
+              <div className="relative max-w-sm">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  aria-label="Tìm hợp đồng"
+                  className="pl-8"
+                  value={q}
+                  placeholder="Mã hợp đồng, tài sản, bên mua…"
+                  onChange={(e) => setQ(e.target.value)}
+                />
+              </div>
+            </div>
+            <OwnerSaleContractsTable
+              rows={visible}
+              emptyText={q ? "Không có hợp đồng nào khớp từ khoá." : EMPTY_TEXT[tab]}
+            />
+          </Card>
+        </>
       )}
     </div>
   );

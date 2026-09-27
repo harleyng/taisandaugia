@@ -29,7 +29,14 @@ function Rows({ rows }: { rows: Array<[string, string]> }) {
  * Hai bên của hợp đồng. Cả hai đều thấy CCCD của nhau — đó là bản chất một hợp
  * đồng giữa họ, và đúng bằng thứ tổ chức đã thấy ở hồ sơ tham gia đấu giá.
  */
-export function SalePartiesCard({ contract }: { contract: SaleContract }) {
+export function SalePartiesCard({
+  contract,
+  compact = false,
+}: {
+  contract: SaleContract;
+  /** Cột hẹp (bố cục `split`): các bên xếp chồng thay vì hai cột. */
+  compact?: boolean;
+}) {
   const buyer = (contract.buyer_party ?? {}) as SaleBuyerParty;
   const seller = (contract.seller_party ?? {}) as SaleSellerParty;
   const org = (contract.org_party ?? {}) as SaleOrgParty;
@@ -59,7 +66,7 @@ export function SalePartiesCard({ contract }: { contract: SaleContract }) {
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Các bên của hợp đồng</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-6 md:grid-cols-2">
+      <CardContent className={compact ? "grid gap-5" : "grid gap-6 md:grid-cols-2"}>
         <section>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold">Bên bán</h3>
@@ -90,7 +97,7 @@ export function SalePartiesCard({ contract }: { contract: SaleContract }) {
         </section>
 
         {contract.org_signs ? (
-          <section className="md:col-span-2">
+          <section className={compact ? undefined : "md:col-span-2"}>
             <h3 className="mb-2 text-sm font-semibold">Tổ chức đấu giá (bên ký thứ ba)</h3>
             <Rows
               rows={[

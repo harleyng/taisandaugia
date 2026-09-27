@@ -11,6 +11,8 @@ interface ReportDocumentProps {
   payload: ReportPayload;
   status: "draft" | "final";
   variant?: ReportVariant;
+  /** Trang chi tiết đã có hero riêng (DetailHero) ⇒ bỏ thẻ "Đã thu" ở đầu tài liệu. */
+  showHero?: boolean;
 }
 
 /**
@@ -18,12 +20,14 @@ interface ReportDocumentProps {
  * in A4 và (Phase 11) link chia sẻ /r/:token. Chỉ hiển thị — mọi số đã tính ở server.
  * L1 (đã thu) → L3 (ô chỉ số) → L4 (bảng chi tiết, kèm nguồn từng dòng).
  */
-export function ReportDocument({ payload, status, variant = "screen" }: ReportDocumentProps) {
+export function ReportDocument({ payload, status, variant = "screen", showHero = true }: ReportDocumentProps) {
   return (
     <div className="space-y-6 print:space-y-4">
-      <div className="break-inside-avoid rounded-2xl border bg-card p-5">
-        <ReportHero payload={payload} />
-      </div>
+      {showHero && (
+        <div className="break-inside-avoid rounded-2xl border bg-card p-5">
+          <ReportHero payload={payload} />
+        </div>
+      )}
       <ReportTargetsSection payload={payload} />
       <ReportResultsSection payload={payload} variant={variant} />
       <ReportMoneySection payload={payload} variant={variant} />

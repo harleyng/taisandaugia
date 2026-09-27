@@ -2,16 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, FileBarChart, FileSpreadsheet, LockKeyhole, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, FileBarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OwnerPageHeader } from "@/components/asset-owner-portal/ui/OwnerPageHeader";
 import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
 import { ReportDocument } from "@/components/asset-owner-portal/periodic-report/ReportDocument";
 import { ReportNotesCard } from "@/components/asset-owner-portal/periodic-report/ReportNotesCard";
 import { FinalizeReportDialog } from "@/components/asset-owner-portal/periodic-report/FinalizeReportDialog";
 import { DeleteReportDialog } from "@/components/asset-owner-portal/periodic-report/DeleteReportDialog";
 import { ReportShareCard } from "@/components/asset-owner-portal/periodic-report/ReportShareCard";
+import { ReportSummaryCard } from "@/components/asset-owner-portal/periodic-report/ReportSummaryCard";
+import { ReportDetailHero } from "@/components/asset-owner-portal/periodic-report/ReportDetailHero";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
 import {
@@ -25,7 +26,6 @@ import { todayIso } from "@/lib/ownerOutcomeReport";
 import { periodEndOf } from "@/lib/ownerTargets";
 import {
   REPORTS_HREF,
-  REPORT_STATUS_LABEL,
   canDraftReport,
   canFinalizeReport,
   formatReportDay,
@@ -40,7 +40,9 @@ import {
 import { downloadReportXlsx } from "@/lib/ownerPeriodicReportExcel";
 
 /**
- * Một báo cáo định kỳ — /chu-tai-san/bao-cao-dinh-ky/:id (Phase 10).
+ * Một báo cáo định kỳ — /chu-tai-san/bao-cao-dinh-ky/:id (Phase 10). Bố cục hai cột như
+ * chi tiết hồ sơ ký gửi: hero (trạng thái, số chính, thao tác) → nội dung báo cáo bên trái,
+ * thông tin / chia sẻ bên phải.
  * Nháp: số liệu tính trực tiếp + ô ghi chú + "Chốt báo cáo" (Trưởng đơn vị).
  * Đã chốt: payload đóng băng, chỉ xem / in / tải Excel / chia sẻ link chỉ đọc cho trụ sở
  * (Phase 11 — chỉ Trưởng đơn vị). Quyền xét theo không gian
@@ -128,96 +130,77 @@ const OwnerPeriodicReportDetailPage = () => {
   };
   const onPrint = () => window.open(`${reportPrintHref(report.id)}?auto=1`, "_blank", "noopener");
 
-  const printButton = (primary: boolean) => (
-    <Button variant={primary ? "default" : "outline"} className="gap-1.5" disabled={!payload} onClick={onPrint}>
-      <Printer className="h-4 w-4" strokeWidth={1.5} />
-      Xuất PDF
-    </Button>
-  );
-
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" size="sm" className="-ml-2 gap-1 text-muted-foreground" onClick={() => navigate(REPORTS_HREF)}>
-        <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+    <div className="space-y-5">
+      <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" onClick={() => navigate(REPORTS_HREF)}>
+        <ArrowLeft className="mr-1 h-4 w-4" aria-hidden />
         Báo cáo định kỳ
       </Button>
 
-      <OwnerPageHeader
+      <ReportDetailHero
+        report={report}
+        payload={payload ?? null}
         title={title}
-        subtitle={[
-          scopeLabel,
-          REPORT_STATUS_LABEL[report.status],
-          report.finalizedAt ? `chốt ngày ${formatReportDay(report.finalizedAt)}` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")}
-        actions={
-          <>
-            {canFinalize && (
-              <Button className="gap-1.5" disabled={!payload} onClick={() => setFinalizeOpen(true)}>
-                <LockKeyhole className="h-4 w-4" strokeWidth={1.5} />
-                Chốt báo cáo
-              </Button>
-            )}
-            {!isDraft && printButton(true)}
-            <Button variant="outline" className="gap-1.5" disabled={!payload} onClick={onExcel}>
-              <FileSpreadsheet className="h-4 w-4" strokeWidth={1.5} />
-              Tải Excel
-            </Button>
-            {isDraft && printButton(false)}
-            {canEdit && (
-              <Button variant="ghost" className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="h-4 w-4" strokeWidth={1.5} />
-                Xoá nháp
-              </Button>
-            )}
-          </>
-        }
+        scopeLabel={scopeLabel}
+        canFinalize={canFinalize}
+        canDelete={canEdit}
+        onFinalize={() => setFinalizeOpen(true)}
+        onPrint={onPrint}
+        onExcel={onExcel}
+        onDelete={() => setDeleteOpen(true)}
       />
 
-      {isDraft && (
-        <p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">Bản nháp</span> — số liệu cập nhật theo thời gian thực
-          {payload?.meta.asOf ? `, tính đến ${formatReportDay(payload.meta.asOf)}` : ""}.{" "}
-          {canFinalize
-            ? "Chốt để đóng băng số liệu và gửi trụ sở."
-            : "Trưởng đơn vị sẽ xem lại và chốt để gửi trụ sở."}
-        </p>
-      )}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+        <div className="min-w-0 space-y-5">
+          {isDraft && (
+            <p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Bản nháp</span> — số liệu cập nhật theo thời gian thực
+              {payload?.meta.asOf ? `, tính đến ${formatReportDay(payload.meta.asOf)}` : ""}.{" "}
+              {canFinalize
+                ? "Chốt để đóng băng số liệu và gửi trụ sở."
+                : "Trưởng đơn vị sẽ xem lại và chốt để gửi trụ sở."}
+            </p>
+          )}
 
-      {!isDraft && <ReportShareCard report={report} canShare={canFinalizeReport(scope)} />}
+          {isDraft && (
+            <ReportNotesCard
+              form={form}
+              onSave={() => void onSaveNotes()}
+              saving={saveNotes.isPending}
+              canEdit={canEdit}
+              primary={!canFinalize}
+            />
+          )}
 
-      {isDraft && (
-        <ReportNotesCard
-          form={form}
-          onSave={() => void onSaveNotes()}
-          saving={saveNotes.isPending}
-          canEdit={canEdit}
-          primary={!canFinalize}
-        />
-      )}
-
-      {payloadLoading ? (
-        <div className="space-y-6">
-          <Skeleton className="h-32 w-full rounded-2xl" />
-          <Skeleton className="h-64 w-full rounded-2xl" />
+          {payloadLoading ? (
+            <div className="space-y-5">
+              <Skeleton className="h-32 w-full rounded-2xl" />
+              <Skeleton className="h-64 w-full rounded-2xl" />
+            </div>
+          ) : payloadError || !payload ? (
+            <EmptyState
+              icon={FileBarChart}
+              tone="destructive"
+              title="Chưa dựng được số liệu báo cáo."
+              action={
+                isDraft ? (
+                  <Button variant="outline" onClick={() => void refetch()}>
+                    Thử lại
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
+            <ReportDocument payload={payload} status={report.status} showHero={false} />
+          )}
         </div>
-      ) : payloadError || !payload ? (
-        <EmptyState
-          icon={FileBarChart}
-          tone="destructive"
-          title="Chưa dựng được số liệu báo cáo."
-          action={
-            isDraft ? (
-              <Button variant="outline" onClick={() => void refetch()}>
-                Thử lại
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : (
-        <ReportDocument payload={payload} status={report.status} />
-      )}
+
+        {/* Cột phải: thông tin + chia sẻ. Mobile xếp sau nội dung báo cáo. */}
+        <aside className="space-y-5 lg:sticky lg:top-4">
+          <ReportSummaryCard report={report} payload={payload ?? null} scopeLabel={scopeLabel} />
+          {!isDraft && <ReportShareCard report={report} canShare={canFinalizeReport(scope)} />}
+        </aside>
+      </div>
 
       <FinalizeReportDialog
         open={finalizeOpen}

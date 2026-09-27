@@ -4,6 +4,7 @@ import { OWNER_NAV_GROUPS, type OwnerCountBadgeKind } from './owner-nav-config'
 import { useOwnerConsignmentSummary } from '@/hooks/useConsignmentContract'
 import { useOwnerSaleSummary } from '@/hooks/useSaleContracts'
 import { useOwnerPulse } from '@/hooks/useOwnerPulse'
+import { usePendingClaimCount } from '@/hooks/useAssetOwnerWorkspace'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
 import { usePendingLinkRequestCount } from '@/hooks/useOwnerWorkspaceLinks'
 import { useOwnerPortalName } from '@/hooks/useOwnerPortalName'
@@ -23,6 +24,8 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
   const portalName = useOwnerPortalName()
   // Liên kết: yêu cầu của trụ sở chờ Trưởng đơn vị chi nhánh trả lời (Phase 14).
   const { data: linkRequestCount = 0 } = usePendingLinkRequestCount(workspaceId, can('manage_workspace'))
+  // Tài sản: tin sàn tìm thấy chờ xác nhận (tab "Sàn tìm thấy").
+  const { data: foundClaimCount = 0 } = usePendingClaimCount(workspaceId)
 
   // Số hồ sơ đang chờ chủ tài sản làm gì đó (chọn báo giá, bổ sung địa chỉ,
   // xác nhận hợp đồng). Luật nằm ở RPC owner_consignment_summary.
@@ -36,14 +39,18 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
           ? outcomeDueBadge
           : kind === 'owner-link-requests'
             ? linkRequestCount
-            : 0
+            : kind === 'owner-found-claims'
+              ? foundClaimCount
+              : 0
 
   const badgeLabel = (kind: OwnerCountBadgeKind | undefined, count: number) =>
     kind === 'owner-outcome-due'
       ? `${count} phiên chờ khai kết quả`
       : kind === 'owner-link-requests'
         ? `${count} yêu cầu liên kết chờ bạn trả lời`
-        : `${count} hồ sơ cần bạn xử lý`
+        : kind === 'owner-found-claims'
+          ? `${count} tin sàn tìm thấy chờ bạn xác nhận`
+          : `${count} hồ sơ cần bạn xử lý`
 
   return (
     <aside className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">

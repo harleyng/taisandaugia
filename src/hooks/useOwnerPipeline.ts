@@ -21,11 +21,10 @@ interface UseOwnerPipelineInput {
 }
 
 /**
- * "Đường ống" của tenant hiện tại (Phase 12): tin đã nhận của không gian + hồ sơ
- * số hoá của tenant, mỗi tài sản đúng một cột. Chỉ gọi khi đang ở chế độ Giai đoạn
- * — lượt đọc hồ sơ kèm chuỗi ký gửi / phiên / HĐ mua bán không cần cho dạng Bảng.
+ * Hồ sơ số hoá của tenant hiện tại kèm chuỗi ký gửi / phiên / HĐ mua bán, trong
+ * MỘT lượt đọc. Dùng chung cho bảng Tài sản và chế độ Giai đoạn (cùng query key).
  */
-export function useOwnerPipeline({ claims, outcomesByListing, loading }: UseOwnerPipelineInput) {
+export function useOwnerPipelinePostings() {
   const { userId, workspaceId, isPersonal, tenantKey, isLoading: tenantLoading } = useOwnerWorkspace();
 
   const postings = useQuery({
@@ -44,6 +43,16 @@ export function useOwnerPipeline({ claims, outcomesByListing, loading }: UseOwne
     },
   });
 
+  return { ...postings, isLoading: tenantLoading || postings.isLoading };
+}
+
+/**
+ * "Đường ống" của tenant hiện tại (Phase 12): tin đã nhận của không gian + hồ sơ
+ * số hoá của tenant, mỗi tài sản đúng một cột.
+ */
+export function useOwnerPipeline({ claims, outcomesByListing, loading }: UseOwnerPipelineInput) {
+  const postings = useOwnerPipelinePostings();
+
   const postingRows = postings.data;
   const collected = useMemo(() => {
     const now = new Date();
@@ -58,7 +67,7 @@ export function useOwnerPipeline({ claims, outcomesByListing, loading }: UseOwne
 
   return {
     ...collected,
-    isLoading: loading || tenantLoading || postings.isLoading,
+    isLoading: loading || postings.isLoading,
     postingsError: postings.isError,
     refetchPostings: postings.refetch,
   };

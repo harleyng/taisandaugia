@@ -155,3 +155,24 @@ export function useAssetOwnerWorkspace() {
     confirmClaim, rejectClaim, confirmAllPending,
   };
 }
+
+/**
+ * Số tin sàn tìm thấy đang chờ xác nhận — huy hiệu mục "Tài sản" trên sidebar.
+ * Key nằm dưới key claims nên mọi lần xác nhận / từ chối (invalidateClaims) đều làm mới.
+ */
+export function usePendingClaimCount(workspaceId: string | null) {
+  return useQuery({
+    queryKey: [...qk.ownerWorkspace.claims(workspaceId), "pending-count"],
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("asset_owner_claims")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId!)
+        .eq("status", "pending_confirmation");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}

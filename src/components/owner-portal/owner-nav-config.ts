@@ -20,6 +20,7 @@ export type OwnerCountBadgeKind =
   | 'owner-sale'
   | 'owner-outcome-due'
   | 'owner-link-requests'
+  | 'owner-found-claims'
 
 export interface OwnerNavItem {
   label: string
@@ -49,7 +50,12 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
         href: '/chu-tai-san/dashboard',
         countBadge: 'owner-outcome-due',
       },
-      { label: 'Tài sản', icon: KanbanSquare, href: '/chu-tai-san/tai-san' },
+      {
+        label: 'Tài sản',
+        icon: KanbanSquare,
+        href: '/chu-tai-san/tai-san',
+        countBadge: 'owner-found-claims',
+      },
       { label: 'Kết quả phiên', icon: Gavel, href: '/chu-tai-san/ket-qua' },
       { label: 'Dòng tiền', icon: Wallet, href: '/chu-tai-san/dong-tien' },
       { label: 'Báo cáo định kỳ', icon: FileBarChart, href: '/chu-tai-san/bao-cao-dinh-ky' },

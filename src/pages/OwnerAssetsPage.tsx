@@ -3,19 +3,19 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, PackageOpen } from "lucide-react";
+import { Loader2, PackageOpen, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useAssetOwnerWorkspace } from "@/hooks/useAssetOwnerWorkspace";
 import { useClaimWriteAccess, useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useOwnerAssetOutcomes } from "@/hooks/useOwnerAssetOutcomes";
 import { useStoredChoice } from "@/hooks/useStoredChoice";
-import { ClaimsTable } from "@/components/asset-owner-management/ClaimsTable";
-import { ReportOutcomeDialog } from "@/components/asset-owner-portal/outcomes/ReportOutcomeDialog";
+import { useOwnerAssets } from "@/hooks/useOwnerAssets";
+import { OwnerAssetsBoard } from "@/components/asset-owner-portal/assets/OwnerAssetsBoard";
 import { OwnerPageHeader } from "@/components/asset-owner-portal/ui/OwnerPageHeader";
 import { AssetViewToggle } from "@/components/asset-owner-portal/pipeline/AssetViewToggle";
 import { PipelineView } from "@/components/asset-owner-portal/pipeline/PipelineView";
 import { OWNER_ASSETS_VIEWS, OWNER_ASSETS_VIEW_KEY } from "@/components/asset-owner-portal/pipeline/assetsView";
-import { claimToReportTarget, type ReportOutcomeTarget } from "@/lib/ownerOutcomeReport";
 
 interface UserKYCStatus {
   userId: string;
@@ -43,15 +43,17 @@ const OwnerAssetsPage = () => {
     roundCountsByListing,
     confirmClaim, rejectClaim, confirmAllPending,
   } = useAssetOwnerWorkspace();
-  const { canWriteClaim, canConfirmAll } = useClaimWriteAccess();
-  const { isPersonal } = useOwnerWorkspace();
+  const { canConfirmAll } = useClaimWriteAccess();
+  const { isPersonal, canCreatePosting } = useOwnerWorkspace();
   const { byListing: outcomesByListing, isLoading: outcomesLoading } = useOwnerAssetOutcomes(workspace?.id);
   // Bảng / Giai đoạn — tiện ích theo trình duyệt (Phase 12).
   const [view, setView] = useStoredChoice(OWNER_ASSETS_VIEW_KEY, OWNER_ASSETS_VIEWS, "table");
-
-  // "Khai kết quả": giữ target khi đóng để dialog không trống chữ lúc đang tắt dần.
-  const [reportTarget, setReportTarget] = useState<ReportOutcomeTarget | null>(null);
-  const [reportOpen, setReportOpen] = useState(false);
+  const assets = useOwnerAssets({
+    claims,
+    roundCountsByListing,
+    outcomesByListing,
+    loading: claimsLoading || outcomesLoading,
+  });
 
   useEffect(() => {
     if (!userId) return;
@@ -127,7 +129,6 @@ const OwnerAssetsPage = () => {
   }
 
   const isOrgApproved = kycStatus.orgApproved;
-  const isLoadingData = claimsLoading;
   // Đường ống cần một tenant: không gian (tin đã nhận + hồ sơ) hoặc Cá nhân (hồ sơ).
   const hasBoard = !!workspace || isPersonal;
 
@@ -135,12 +136,23 @@ const OwnerAssetsPage = () => {
     <div className="space-y-6">
       <OwnerPageHeader
         title="Tài sản"
-        subtitle={
-          isPersonal
-            ? "Hồ sơ số hoá của bạn — từ số hoá tới thu tiền."
-            : "Tài sản của đơn vị — từ số hoá tới thu tiền."
+        subtitle="Mỗi tài sản một dòng — đang ở giai đoạn nào và ai cần làm gì tiếp theo."
+        actions={
+          hasBoard && (
+            <>
+              <AssetViewToggle view={view} onChange={setView} />
+              <Button variant="outline" onClick={() => navigate("/listings")}>
+                Tìm tài sản trên sàn
+              </Button>
+              {canCreatePosting && (
+                <Button onClick={() => navigate("/chu-tai-san/dang-tai-san")}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Số hoá tài sản
+                </Button>
+              )}
+            </>
+          )
         }
-        actions={hasBoard && <AssetViewToggle view={view} onChange={setView} />}
       />
 
       {hasBoard && view === "kanban" ? (
@@ -150,56 +162,40 @@ const OwnerAssetsPage = () => {
           loading={claimsLoading || outcomesLoading}
           onShowTable={() => setView("table")}
         />
-      ) : isLoadingData ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : workspace || isOrgApproved ? (
-        workspace ? (
-          <>
-            <ClaimsTable
-              claims={claims}
-              roundCountsByListing={roundCountsByListing}
-              outcomesByListing={outcomesByListing}
-              onConfirm={(id) => confirmClaim.mutate(id)}
-              onReject={(id) => rejectClaim.mutate({ claimId: id })}
-              onConfirmAll={() => confirmAllPending.mutate()}
-              isProcessing={confirmClaim.isPending || rejectClaim.isPending || confirmAllPending.isPending}
-              initialMatchedName={initialMatchedName}
-              canWriteClaim={canWriteClaim}
-              canConfirmAll={canConfirmAll}
-              onReportOutcome={(claim) => {
-                const target = claimToReportTarget(claim);
-                if (!target) return;
-                setReportTarget(target);
-                setReportOpen(true);
-              }}
-            />
-            <ReportOutcomeDialog
-              open={reportOpen}
-              onOpenChange={setReportOpen}
-              workspaceId={workspace.id}
-              target={reportTarget}
-            />
-          </>
-        ) : (
-          <div className="flex items-center justify-center py-24">
-            <div className="text-center space-y-4 max-w-sm">
-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
-                <PackageOpen className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">Chưa có tài sản nào</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Hoàn thành bước claim tài sản để tài sản xuất hiện ở đây.
-                </p>
-              </div>
-              <Button onClick={() => navigate("/tro-thanh-chu-tai-san")}>
-                Tiếp tục claim tài sản
-              </Button>
+      ) : hasBoard ? (
+        <OwnerAssetsBoard
+          rows={assets.rows}
+          claimRows={assets.claimRows}
+          loading={assets.isLoading}
+          postingsError={assets.postingsError}
+          onRetryPostings={() => assets.refetchPostings()}
+          workspaceId={workspace?.id ?? null}
+          onConfirmClaim={(id) => confirmClaim.mutate(id, { onSuccess: () => toast.success("Đã đưa vào danh mục") })}
+          onRejectClaim={(id) => rejectClaim.mutate({ claimId: id }, { onSuccess: () => toast.success("Đã ẩn tin") })}
+          onConfirmAllClaims={() => confirmAllPending.mutate()}
+          claimBusy={confirmClaim.isPending || rejectClaim.isPending || confirmAllPending.isPending}
+          canConfirmAll={canConfirmAll}
+          canCreatePosting={canCreatePosting}
+          initialBranch={initialMatchedName}
+        />
+      ) : isOrgApproved ? (
+        /* KYC tổ chức đã duyệt nhưng chưa có không gian */
+        <div className="flex items-center justify-center py-24">
+          <div className="text-center space-y-4 max-w-sm">
+            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
+              <PackageOpen className="h-8 w-8 text-muted-foreground" />
             </div>
+            <div>
+              <p className="font-semibold text-foreground">Chưa có tài sản nào</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Hoàn thành bước claim tài sản để tài sản xuất hiện ở đây.
+              </p>
+            </div>
+            <Button onClick={() => navigate("/tro-thanh-chu-tai-san")}>
+              Tiếp tục claim tài sản
+            </Button>
           </div>
-        )
+        </div>
       ) : (
         /* Individual approved */
         <div className="space-y-5">

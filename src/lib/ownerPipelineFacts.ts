@@ -36,6 +36,8 @@ import type { SaleContractStatus } from "@/types/auction-sale-contract";
  */
 export const PIPELINE_POSTING_SELECT: string = `
   id, title, status, review_status, starting_price, chosen_org_id, created_at, updated_at,
+  user_id, workspace_id, branch_id, province, child_slug,
+  chosen_org:auction_organizations!asset_postings_chosen_org_id_fkey(name),
   requests:asset_service_requests(status, created_at, updated_at, reopened_at),
   brokers:asset_broker_requests(status, created_at),
   contracts:consignment_contracts(status, created_at, signed_at, cancelled_at),
@@ -101,6 +103,14 @@ export interface PipelinePostingRow {
   chosen_org_id: string | null;
   created_at: string;
   updated_at: string;
+  // Chỉ trang Tài sản dùng (khu vực, chi nhánh, loại, tổ chức, quyền ghi) — tuỳ chọn
+  // để các test dựng dòng bằng tay không phải khai đủ.
+  user_id?: string;
+  workspace_id?: string | null;
+  branch_id?: string | null;
+  province?: string | null;
+  child_slug?: string | null;
+  chosen_org?: { name: string } | null;
   requests: {
     status: ServiceRequestStatus;
     created_at: string;

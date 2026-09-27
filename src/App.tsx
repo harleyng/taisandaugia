@@ -162,6 +162,7 @@ const OwnerTargetFormPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetFo
 const OwnerPeriodicReportsPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportsPage"));
 const OwnerPeriodicReportDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportDetailPage"));
 const OwnerPeriodicReportPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportPrintPage"));
+const OwnerPostingPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerPostingPrintPage"));
 const OwnerSaleContractDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerSaleContractDetailPage"));
 const OwnerContractsPage = lazy(() => import("./pages/chu-tai-san/OwnerContractsPage"));
 const OwnerConsignmentContractPage = lazy(() => import("./pages/chu-tai-san/OwnerConsignmentContractPage"));
@@ -373,6 +374,8 @@ const App = () => (
                 </Route>
                 {/* Trang in A4 của báo cáo định kỳ — không sidebar / topbar */}
                 <Route path="bao-cao-dinh-ky/:id/in" element={<OwnerPeriodicReportPrintPage />} />
+                {/* Trang in / lưu PDF hồ sơ số hoá — không sidebar / topbar */}
+                <Route path="dang-tai-san/:id/in" element={<OwnerPostingPrintPage />} />
               </Route>
 
               {/* Protected: Company Portal — sidebar layout */}

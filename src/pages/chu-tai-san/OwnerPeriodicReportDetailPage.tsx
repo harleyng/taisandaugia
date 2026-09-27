@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, FileBarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
-import { ReportDocument } from "@/components/asset-owner-portal/periodic-report/ReportDocument";
-import { ReportNotesCard } from "@/components/asset-owner-portal/periodic-report/ReportNotesCard";
 import { FinalizeReportDialog } from "@/components/asset-owner-portal/periodic-report/FinalizeReportDialog";
 import { DeleteReportDialog } from "@/components/asset-owner-portal/periodic-report/DeleteReportDialog";
 import { ReportShareCard } from "@/components/asset-owner-portal/periodic-report/ReportShareCard";
-import { ReportSummaryCard } from "@/components/asset-owner-portal/periodic-report/ReportSummaryCard";
-import { ReportDetailHero } from "@/components/asset-owner-portal/periodic-report/ReportDetailHero";
+import { ReportDetailHeader } from "@/components/asset-owner-portal/periodic-report/ReportDetailHeader";
+import { ReportConclusionHero } from "@/components/asset-owner-portal/periodic-report/ReportConclusionHero";
+import { ReportKpiCards, type PreviousFigures } from "@/components/asset-owner-portal/periodic-report/ReportKpiCards";
+import { ReportAttentionCard } from "@/components/asset-owner-portal/periodic-report/ReportAttentionCard";
+import { ReportBranchTable } from "@/components/asset-owner-portal/periodic-report/ReportBranchTable";
+import { ReportInsightCard } from "@/components/asset-owner-portal/periodic-report/ReportInsightCard";
+import { ReportDetailsSection } from "@/components/asset-owner-portal/periodic-report/ReportDetailsSection";
+import { ReportDraftPanel, ReportFinalPanel } from "@/components/asset-owner-portal/periodic-report/ReportSendPanel";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
 import {
@@ -20,16 +24,16 @@ import {
   useFinalizeReport,
   useOwnerReport,
   useOwnerReportPayload,
+  useOwnerReports,
   useSaveReportNotes,
 } from "@/hooks/useOwnerPeriodicReports";
 import { todayIso } from "@/lib/ownerOutcomeReport";
-import { periodEndOf } from "@/lib/ownerTargets";
+import { periodEndOf, periodLabel, shiftPeriod } from "@/lib/ownerTargets";
 import {
   REPORTS_HREF,
   canDraftReport,
   canFinalizeReport,
   canShareReport,
-  formatReportDay,
   isPeriodOver,
   reportFileName,
   reportNotesSchema,
@@ -38,15 +42,15 @@ import {
   reportTitle,
   type ReportNotesForm,
 } from "@/lib/ownerPeriodicReport";
+import { reportDueDate, reportRangeLabel } from "@/lib/ownerReportDigest";
 import { downloadReportXlsx } from "@/lib/ownerPeriodicReportExcel";
 
 /**
- * Một báo cáo định kỳ — /chu-tai-san/bao-cao-dinh-ky/:id (Phase 10). Bố cục hai cột như
- * chi tiết hồ sơ ký gửi: hero (trạng thái, số chính, thao tác) → nội dung báo cáo bên trái,
- * thông tin / chia sẻ bên phải.
- * Nháp: số liệu tính trực tiếp + ô ghi chú + "Chốt báo cáo" (Trưởng đơn vị).
- * Đã chốt: payload đóng băng, chỉ xem / in / tải Excel / chia sẻ link chỉ đọc cho trụ sở
- * (Phase 11 — chỉ Trưởng đơn vị). Quyền xét theo không gian
+ * Một báo cáo định kỳ — /chu-tai-san/bao-cao-dinh-ky/:id (Phase 10; design "Bao Cao Dinh
+ * Ky Chu Tai San"). Trái: kết luận kỳ → 3 số chính → cần lưu ý → theo chi nhánh →
+ * nhận định & đề xuất → chi tiết số liệu (thu gọn). Phải: "Để chốt báo cáo" (nháp) hoặc
+ * "Đã chốt" + chia sẻ với trụ sở.
+ * Nháp: số liệu tính trực tiếp; đã chốt: payload đóng băng. Quyền xét theo không gian
  * CỦA BÁO CÁO (không theo không gian đang chọn) — link có thể mở từ nơi khác.
  */
 const OwnerPeriodicReportDetailPage = () => {
@@ -56,12 +60,14 @@ const OwnerPeriodicReportDetailPage = () => {
   const { data: report, isLoading: reportLoading, isError: reportError } = useOwnerReport(id);
   const { payload, isLoading: payloadLoading, isError: payloadError, refetch } = useOwnerReportPayload(report);
   const { data: branchOptions = [] } = useWorkspaceBranchOptions(report?.workspaceId ?? null);
+  const { reports: siblings } = useOwnerReports(report?.workspaceId);
 
   const membership = report ? memberships.find((m) => m.workspaceId === report.workspaceId) : undefined;
   const access = membership?.access ?? null;
   const isDraft = report?.status === "draft";
   const canEdit = !!report && isDraft && canDraftReport(access, report.branchId);
   const canFinalize = !!report && isDraft && canFinalizeReport(access, report.branchId);
+  const canShare = !!report && canShareReport(access, report.branchId);
 
   const form = useForm<ReportNotesForm>({
     resolver: zodResolver(reportNotesSchema),
@@ -72,18 +78,20 @@ const OwnerPeriodicReportDetailPage = () => {
     // Chỉ nạp lại khi bản ghi đổi thật (lưu xong) — không đè chữ đang gõ khi refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report?.id, report?.updatedAt]);
+  const insight = useWatch({ control: form.control, name: "notes" }) ?? "";
 
   const saveNotes = useSaveReportNotes(report);
   const finalize = useFinalizeReport(report);
   const del = useDeleteReportDraft(report);
   const [finalizeOpen, setFinalizeOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [shareAfterFinalize, setShareAfterFinalize] = useState(false);
 
   if (wsLoading || reportLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-9 w-72" />
-        <Skeleton className="h-32 w-full rounded-2xl" />
+        <Skeleton className="h-48 w-full rounded-2xl" />
         <Skeleton className="h-96 w-full rounded-2xl" />
       </div>
     );
@@ -109,8 +117,29 @@ const OwnerPeriodicReportDetailPage = () => {
     : report.branchId
       ? branchOptions.find((b) => b.id === report.branchId)?.label ?? "Chi nhánh"
       : "Toàn đơn vị";
+  const subtitle = [
+    reportRangeLabel(report.periodType, report.periodStart),
+    scopeLabel,
+    !report.branchId && branchOptions.length ? `${branchOptions.length} chi nhánh` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const today = todayIso();
   const periodOpen = !isPeriodOver(report.periodType, report.periodStart, today);
+  const dueDate = reportDueDate(report.periodType, report.periodStart);
+
+  // Kỳ liền trước, cùng loại kỳ + phạm vi, đã chốt — để so sánh 3 số chính.
+  const prevStart = shiftPeriod(report.periodType, report.periodStart, -1);
+  const prev = siblings.find(
+    (r) =>
+      r.status === "final" &&
+      r.periodType === report.periodType &&
+      r.periodStart === prevStart &&
+      r.branchId === report.branchId,
+  );
+  const previous: PreviousFigures | null = prev
+    ? { label: periodLabel(prev.periodType, prev.periodStart), soldValue: prev.soldValue, collected: prev.collected }
+    : null;
 
   const onSaveNotes = form.handleSubmit((values) => saveNotes.mutate(values));
   const onFinalize = async () => {
@@ -122,7 +151,12 @@ const OwnerPeriodicReportDetailPage = () => {
         return; // toast đã báo ở onError
       }
     }
-    finalize.mutate(undefined, { onSuccess: () => setFinalizeOpen(false) });
+    finalize.mutate(undefined, {
+      onSuccess: () => {
+        setFinalizeOpen(false);
+        setShareAfterFinalize(canShare);
+      },
+    });
   };
   const onExcel = () => {
     if (!payload) return;
@@ -132,52 +166,31 @@ const OwnerPeriodicReportDetailPage = () => {
   const onPrint = () => window.open(`${reportPrintHref(report.id)}?auto=1`, "_blank", "noopener");
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" onClick={() => navigate(REPORTS_HREF)}>
         <ArrowLeft className="mr-1 h-4 w-4" aria-hidden />
         Báo cáo định kỳ
       </Button>
 
-      <ReportDetailHero
-        report={report}
-        payload={payload ?? null}
+      <ReportDetailHeader
         title={title}
-        scopeLabel={scopeLabel}
-        canFinalize={canFinalize}
+        status={report.status}
+        subtitle={subtitle}
+        ready={!!payload}
         canDelete={canEdit}
-        onFinalize={() => setFinalizeOpen(true)}
         onPrint={onPrint}
         onExcel={onExcel}
         onDelete={() => setDeleteOpen(true)}
       />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-        <div className="min-w-0 space-y-5">
-          {isDraft && (
-            <p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Bản nháp</span> — số liệu cập nhật theo thời gian thực
-              {payload?.meta.asOf ? `, tính đến ${formatReportDay(payload.meta.asOf)}` : ""}.{" "}
-              {canFinalize
-                ? "Chốt để đóng băng số liệu và gửi trụ sở."
-                : "Trưởng đơn vị sẽ xem lại và chốt để gửi trụ sở."}
-            </p>
-          )}
-
-          {isDraft && (
-            <ReportNotesCard
-              form={form}
-              onSave={() => void onSaveNotes()}
-              saving={saveNotes.isPending}
-              canEdit={canEdit}
-              primary={!canFinalize}
-            />
-          )}
-
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-3">
           {payloadLoading ? (
-            <div className="space-y-5">
-              <Skeleton className="h-32 w-full rounded-2xl" />
-              <Skeleton className="h-64 w-full rounded-2xl" />
-            </div>
+            <>
+              <Skeleton className="h-48 w-full rounded-2xl" />
+              <Skeleton className="h-24 w-full rounded-2xl" />
+              <Skeleton className="h-48 w-full rounded-2xl" />
+            </>
           ) : payloadError || !payload ? (
             <EmptyState
               icon={FileBarChart}
@@ -192,14 +205,57 @@ const OwnerPeriodicReportDetailPage = () => {
               }
             />
           ) : (
-            <ReportDocument payload={payload} status={report.status} showHero={false} />
+            <>
+              <ReportConclusionHero payload={payload} />
+              <ReportKpiCards payload={payload} previous={previous} />
+              <ReportAttentionCard payload={payload} />
+              <ReportBranchTable payload={payload} />
+            </>
           )}
+
+          <ReportInsightCard
+            form={form}
+            canEdit={canEdit}
+            onSave={() => void onSaveNotes()}
+            saving={saveNotes.isPending}
+            readOnly={
+              isDraft || !payload
+                ? { notes: report.notes, planNote: report.planNote }
+                : { notes: payload.notes.officer, planNote: payload.notes.plan }
+            }
+          />
+
+          {payload && <ReportDetailsSection payload={payload} status={report.status} />}
         </div>
 
-        {/* Cột phải: thông tin + chia sẻ. Mobile xếp sau nội dung báo cáo. */}
-        <aside className="space-y-5 lg:sticky lg:top-4">
-          <ReportSummaryCard report={report} payload={payload ?? null} scopeLabel={scopeLabel} />
-          {!isDraft && <ReportShareCard report={report} canShare={canShareReport(access, report.branchId)} />}
+        {/* Cột phải — mobile nằm trên nội dung (như design). */}
+        <aside className="order-first flex flex-col gap-3 lg:sticky lg:top-4 lg:order-none">
+          {isDraft ? (
+            <ReportDraftPanel
+              asOf={payload?.meta.asOf ?? null}
+              hasInsight={!!insight.trim()}
+              dueDate={dueDate}
+              overdue={today > dueDate}
+              action={
+                canFinalize
+                  ? {
+                      label: canShare ? "Chốt & chia sẻ" : "Chốt báo cáo",
+                      disabled: !payload,
+                      onClick: () => setFinalizeOpen(true),
+                    }
+                  : null
+              }
+            />
+          ) : (
+            <>
+              <ReportFinalPanel
+                finalizedAt={report.finalizedAt}
+                finalizedBy={payload?.people.finalizedBy ?? null}
+                preparedBy={payload?.people.preparedBy ?? null}
+              />
+              <ReportShareCard report={report} canShare={canShare} openOnMount={shareAfterFinalize} />
+            </>
+          )}
         </aside>
       </div>
 

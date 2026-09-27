@@ -13,6 +13,8 @@ interface ReportDocumentProps {
   variant?: ReportVariant;
   /** Trang chi tiết đã có hero riêng (DetailHero) ⇒ bỏ thẻ "Đã thu" ở đầu tài liệu. */
   showHero?: boolean;
+  /** Trang chi tiết đã có thẻ "Nhận định & đề xuất" riêng ⇒ bỏ phần ghi chú. */
+  showNotes?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface ReportDocumentProps {
  * in A4 và (Phase 11) link chia sẻ /r/:token. Chỉ hiển thị — mọi số đã tính ở server.
  * L1 (đã thu) → L3 (ô chỉ số) → L4 (bảng chi tiết, kèm nguồn từng dòng).
  */
-export function ReportDocument({ payload, status, variant = "screen", showHero = true }: ReportDocumentProps) {
+export function ReportDocument({ payload, status, variant = "screen", showHero = true, showNotes = true }: ReportDocumentProps) {
   return (
     <div className="space-y-6 print:space-y-4">
       {showHero && (
@@ -33,7 +35,7 @@ export function ReportDocument({ payload, status, variant = "screen", showHero =
       <ReportMoneySection payload={payload} variant={variant} />
       <ReportStuckSection payload={payload} variant={variant} />
       <ReportPlanSection payload={payload} variant={variant} />
-      <ReportNotesSection payload={payload} status={status} />
+      {showNotes && <ReportNotesSection payload={payload} status={status} />}
     </div>
   );
 }

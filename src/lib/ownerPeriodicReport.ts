@@ -34,7 +34,7 @@ export const REPORT_STATUSES = ["draft", "final"] as const;
 export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
 export const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
-  draft: "Nháp",
+  draft: "Chờ chốt",
   final: "Đã chốt",
 };
 
@@ -547,6 +547,11 @@ export function mapReportPayload(raw: unknown): ReportPayload | null {
   };
 }
 
+/** Chỉ tiêu tiền của ĐÚNG phạm vi báo cáo: cả đơn vị ⇒ dòng "unit", chi nhánh ⇒ dòng của chi nhánh. */
+export function primaryReportTarget(targets: readonly ReportTarget[], scope: ReportScopeKind): ReportTarget | null {
+  return targets.find((t) => t.scope === scope && t.targetAmount !== null) ?? null;
+}
+
 /** Dòng danh sách: bản ghi (không kèm payload) + vài trường đóng băng của báo cáo đã chốt. */
 export interface OwnerReportListItem extends OwnerReport {
   /** Phạm vi lúc chốt — vẫn đúng khi chi nhánh bị xoá sau đó. */
@@ -555,6 +560,10 @@ export interface OwnerReportListItem extends OwnerReport {
   /** "Đã thu" và số tài sản đấu thành của kỳ, lúc chốt. */
   collected: number | null;
   soldCount: number | null;
+  /** Tổng giá trúng của kỳ, lúc chốt. */
+  soldValue: number | null;
+  /** % chỉ tiêu tiền của đúng phạm vi báo cáo; null khi không đặt chỉ tiêu. */
+  targetPct: number | null;
 }
 
 type ReportListRowInput = ReportRowInput & {
@@ -562,6 +571,8 @@ type ReportListRowInput = ReportRowInput & {
   people?: unknown;
   collected?: unknown;
   sold_count?: unknown;
+  sold_value?: unknown;
+  targets?: unknown;
 };
 
 export function mapReportListRow(row: ReportListRowInput): OwnerReportListItem | null {
@@ -575,6 +586,8 @@ export function mapReportListRow(row: ReportListRowInput): OwnerReportListItem |
     frozenPreparedBy: final ? str(obj(row.people).prepared_by) : null,
     collected: final ? num(row.collected) : null,
     soldCount: final ? num(row.sold_count) : null,
+    soldValue: final ? num(row.sold_value) : null,
+    targetPct: final ? primaryReportTarget(arr(row.targets).map(mapTarget), scopeKind(scope.kind))?.amountPct ?? null : null,
   };
 }
 

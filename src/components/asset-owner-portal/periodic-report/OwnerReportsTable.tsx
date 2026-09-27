@@ -1,129 +1,87 @@
+import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Printer } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
 import { formatMoneyShort } from "@/utils/money";
-import { TARGET_PERIOD_LABEL } from "@/lib/ownerTargets";
-import {
-  REPORT_STATUS_LABEL,
-  formatReportDay,
-  reportHref,
-  reportPrintHref,
-  reportTitle,
-  type OwnerReportListItem,
-} from "@/lib/ownerPeriodicReport";
-import { shareListLabel } from "@/lib/ownerReportShare";
+import { formatReportDay, reportHref, reportTitle, type OwnerReportListItem } from "@/lib/ownerPeriodicReport";
+import { reportDueDate, reportRangeLabel, type ReportFigures } from "@/lib/ownerReportDigest";
+import { ReportStatusChip } from "./ReportStatusChip";
 
 interface OwnerReportsTableProps {
   rows: OwnerReportListItem[];
-  emptyText: string;
-  /** Phạm vi đã tra tên (bản nháp theo chi nhánh hiện tại, đã chốt theo phạm vi đóng băng). */
+  /** Số chính của từng báo cáo: đã chốt ⇒ đóng băng, nháp ⇒ tính trực tiếp (undefined khi đang tải). */
+  figuresOf: (r: OwnerReportListItem) => ReportFigures | undefined;
+  /** Phạm vi đã tra tên — chỉ hiện khi báo cáo theo chi nhánh. */
   scopeOf: (r: OwnerReportListItem) => string;
-  preparedBy: (r: OwnerReportListItem) => string;
+  today: string;
 }
 
-const STATUS_BADGE: Record<OwnerReportListItem["status"], string> = {
-  draft: "bg-warning/10 text-warning",
-  final: "bg-success/10 text-success",
-};
+const Num = ({ children }: { children: ReactNode }) => (
+  <td className="px-2.5 py-3 text-right tabular-nums">{children}</td>
+);
 
 /**
- * Bảng báo cáo định kỳ — cùng kiểu với bảng hợp đồng mua bán của cổng chủ tài
- * sản. Cả dòng bấm được; ô tên báo cáo là nút thật để dùng được bằng bàn phím.
+ * Bảng báo cáo định kỳ (design "Bao Cao Dinh Ky"): Kỳ · Giá trúng · Đạt chỉ tiêu ·
+ * Đã thu · Trạng thái. Cả dòng bấm được; tên kỳ là nút thật cho bàn phím.
  */
-export function OwnerReportsTable({ rows, emptyText, scopeOf, preparedBy }: OwnerReportsTableProps) {
+export function OwnerReportsTable({ rows, figuresOf, scopeOf, today }: OwnerReportsTableProps) {
   const navigate = useNavigate();
-
-  if (rows.length === 0) {
-    return <p className="px-4 py-12 text-center text-sm text-muted-foreground">{emptyText}</p>;
-  }
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[56rem] text-sm">
+      <table className="w-full min-w-[40rem] text-[13.5px]">
         <thead>
-          <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="px-4 py-3 font-medium">Báo cáo</th>
-            <th className="px-4 py-3 font-medium">Loại kỳ</th>
-            <th className="px-4 py-3 font-medium">Người lập</th>
-            <th className="px-4 py-3 font-medium">Trạng thái</th>
-            <th className="px-4 py-3 font-medium">Ngày chốt</th>
-            <th className="px-4 py-3 text-right font-medium">Đã thu</th>
-            <th className="px-4 py-3 font-medium">Chia sẻ</th>
-            <th className="w-20 px-2 py-3" aria-hidden />
+          <tr className="border-b text-left text-xs text-muted-foreground">
+            <th className="whitespace-nowrap pb-2 pr-2.5 pt-3 font-medium">Kỳ báo cáo</th>
+            <th className="whitespace-nowrap px-2.5 pb-2 pt-3 text-right font-medium">Giá trúng</th>
+            <th className="whitespace-nowrap px-2.5 pb-2 pt-3 text-right font-medium">Đạt chỉ tiêu</th>
+            <th className="whitespace-nowrap px-2.5 pb-2 pt-3 text-right font-medium">Đã thu</th>
+            <th className="whitespace-nowrap px-2.5 pb-2 pt-3 font-medium">Trạng thái</th>
+            <th className="w-6 pb-2 pt-3" aria-hidden />
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => {
             const open = () => navigate(reportHref(r.id));
-            const share = r.status === "final" ? shareListLabel(r.share) : null;
+            const f = figuresOf(r);
+            const due = reportDueDate(r.periodType, r.periodStart);
+            const range = reportRangeLabel(r.periodType, r.periodStart);
             return (
               <tr
                 key={r.id}
                 onClick={open}
                 className="cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/40"
               >
-                <td className="px-4 py-3">
+                <td className="py-3 pr-2.5">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       open();
                     }}
-                    className="rounded-sm text-left font-medium text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="rounded-sm text-left font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    {reportTitle(r.periodType, r.periodStart)}
+                    {reportTitle(r.periodType, r.periodStart).replace(/^Báo cáo /, "").replace(/^./, (c) => c.toUpperCase())}
                   </button>
-                  <div className="max-w-[18rem] truncate text-xs text-muted-foreground">{scopeOf(r)}</div>
+                  <div className="text-[12.5px] tabular-nums text-muted-foreground">
+                    {range}
+                    {r.branchId && ` · ${scopeOf(r)}`}
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{TARGET_PERIOD_LABEL[r.periodType]}</td>
-                <td className="px-4 py-3">
-                  <div className="max-w-[11rem] truncate">{preparedBy(r)}</div>
-                  <div className="text-xs text-muted-foreground">Lập {formatReportDay(r.createdAt)}</div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={cn("inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium", STATUS_BADGE[r.status])}>
-                    {REPORT_STATUS_LABEL[r.status]}
+                <Num>
+                  <span className="font-semibold">{f ? formatMoneyShort(f.soldValue) : "—"}</span>
+                </Num>
+                <Num>{f && f.targetPct !== null ? `${f.targetPct}%` : "—"}</Num>
+                <Num>{f ? formatMoneyShort(f.collected) : "—"}</Num>
+                <td className="px-2.5 py-3">
+                  <ReportStatusChip status={r.status} />
+                  <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
+                    {r.status === "draft"
+                      ? `${today > due ? "Quá hạn" : "Hạn"} ${formatReportDay(due)}`
+                      : `Chốt ${formatReportDay(r.finalizedAt)}`}
                   </span>
                 </td>
-                <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                  {r.finalizedAt ? formatReportDay(r.finalizedAt) : "—"}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="font-medium tabular-nums">
-                    {r.collected !== null ? formatMoneyShort(r.collected) : "—"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {r.soldCount !== null ? `${r.soldCount} tài sản đấu thành` : r.status === "draft" ? "Số liệu trực tiếp" : ""}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">
-                  {share ?? (r.status === "final" ? "Chưa chia sẻ" : "—")}
-                </td>
-                <td className="px-2 py-3">
-                  <div className="flex items-center justify-end gap-1">
-                    {r.status === "final" && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            aria-label="In / lưu PDF"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(`${reportPrintHref(r.id)}?auto=1`, "_blank", "noopener");
-                            }}
-                          >
-                            <Printer className="h-4 w-4" strokeWidth={1.5} />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>In / lưu PDF</TooltipContent>
-                      </Tooltip>
-                    )}
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/50" aria-hidden />
-                  </div>
+                <td className="py-3 text-right text-muted-foreground">
+                  <ChevronRight className="ml-auto h-4 w-4" aria-hidden />
                 </td>
               </tr>
             );

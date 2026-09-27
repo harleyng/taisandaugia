@@ -12,3 +12,6 @@ export const WIZARD_POSTING_PARAM = "ho-so";
 
 export const ownerPostingWizardPath = (postingId: string) =>
   `${OWNER_POSTINGS_PATH}?${WIZARD_POSTING_PARAM}=${encodeURIComponent(postingId)}`;
+
+/** Trang in / lưu PDF của một hồ sơ (ngoài layout cổng). */
+export const ownerPostingPrintPath = (postingId: string) => `${OWNER_POSTINGS_PATH}/${encodeURIComponent(postingId)}/in`;

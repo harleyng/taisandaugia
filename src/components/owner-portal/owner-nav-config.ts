@@ -26,6 +26,7 @@ export type OwnerCountBadgeKind =
   | 'owner-link-requests'
   | 'owner-found-claims'
   | 'owner-awaiting-payment'
+  | 'owner-report-drafts'
 
 export interface OwnerNavItem {
   label: string
@@ -112,7 +113,13 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
     items: [
       { label: 'Phân tích danh mục', icon: BarChart2, href: '/chu-tai-san/bao-cao', module: 'phan-tich' },
       { label: 'Dòng tiền', icon: Wallet, href: '/chu-tai-san/dong-tien', module: 'dong-tien' },
-      { label: 'Báo cáo định kỳ', icon: FileBarChart, href: '/chu-tai-san/bao-cao-dinh-ky', module: 'bao-cao-dinh-ky' },
+      {
+        label: 'Báo cáo định kỳ',
+        icon: FileBarChart,
+        href: '/chu-tai-san/bao-cao-dinh-ky',
+        module: 'bao-cao-dinh-ky',
+        countBadge: 'owner-report-drafts',
+      },
     ],
   },
   {

@@ -17,6 +17,8 @@ interface ReportShareCardProps {
   report: OwnerReport;
   /** 'send_report' — chỉ Trưởng đơn vị thấy link và tạo / gia hạn / thu hồi được. */
   canShare: boolean;
+  /** Vừa "Chốt & chia sẻ" ⇒ mở luôn hộp tạo link. */
+  openOnMount?: boolean;
 }
 
 /**
@@ -24,12 +26,12 @@ interface ReportShareCardProps {
  * Trưởng đơn vị: tạo / sao chép / gia hạn / thu hồi. Thành viên khác: chỉ thấy trạng thái
  * (server không trả token cho họ).
  */
-export function ReportShareCard({ report, canShare }: ReportShareCardProps) {
+export function ReportShareCard({ report, canShare, openOnMount = false }: ReportShareCardProps) {
   const state = reportShareState(report.share);
   const link = useReportShareLink(report, canShare && state === "active");
   const share = useShareReport(report);
   const revoke = useRevokeReportShare(report);
-  const [shareOpen, setShareOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(() => openOnMount && canShare && state !== "active");
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { qk } from "@/lib/queryKeys";
@@ -31,7 +31,7 @@ const BASE_COLUMNS =
 // Danh sách không tải cả payload (có thể vài trăm KB/báo cáo năm) — chỉ vài trường tóm tắt.
 // Kiểu `string` (không phải literal): bộ phân tích select của postgrest-js không chịu
 // nổi đường dẫn JSON (TS2589) ⇒ tự khai kiểu dòng ở ListRow.
-const LIST_COLUMNS: string = `${BASE_COLUMNS}, scope:payload->meta->scope, people:payload->people, collected:payload->money->collected, sold_count:payload->money->sold_count`;
+const LIST_COLUMNS: string = `${BASE_COLUMNS}, scope:payload->meta->scope, people:payload->people, collected:payload->money->collected, sold_count:payload->money->sold_count, sold_value:payload->results->totals->sold_value, targets:payload->targets`;
 
 type ListRow = Parameters<typeof mapReportListRow>[0];
 
@@ -85,22 +85,29 @@ export function useOwnerReport(reportId: string | null | undefined) {
  * Đã chốt ⇒ payload đóng băng. Nháp ⇒ tính trực tiếp mỗi lần mở (staleTime 0) và
  * ghép ghi chú đang lưu — key nằm dưới ownerAssetOutcomes nên sửa kết quả là tự tính lại.
  */
+type PreviewKey = Pick<OwnerReport, "workspaceId" | "periodType" | "periodStart" | "branchId">;
+
+const previewKey = (r: PreviewKey | null | undefined) =>
+  qk.ownerReportPreview(r?.workspaceId, r?.periodType, r?.periodStart, r?.branchId);
+
+async function fetchReportPreview(r: PreviewKey): Promise<ReportPayload | null> {
+  const { data, error } = await supabase.rpc("owner_build_report_payload", {
+    p_workspace_id: r.workspaceId,
+    p_period_type: r.periodType,
+    p_period_start: r.periodStart,
+    p_branch_id: r.branchId ?? undefined,
+  });
+  if (error) throw error;
+  return mapReportPayload(data);
+}
+
 export function useOwnerReportPayload(report: OwnerReport | null | undefined) {
   const isDraft = report?.status === "draft";
   const preview = useQuery({
-    queryKey: qk.ownerReportPreview(report?.workspaceId, report?.periodType, report?.periodStart, report?.branchId),
+    queryKey: previewKey(report),
     enabled: !!report && isDraft,
     staleTime: 0,
-    queryFn: async (): Promise<ReportPayload | null> => {
-      const { data, error } = await supabase.rpc("owner_build_report_payload", {
-        p_workspace_id: report!.workspaceId,
-        p_period_type: report!.periodType,
-        p_period_start: report!.periodStart,
-        p_branch_id: report!.branchId ?? undefined,
-      });
-      if (error) throw error;
-      return mapReportPayload(data);
-    },
+    queryFn: () => fetchReportPreview(report!),
   });
 
   const payload = useMemo<ReportPayload | null>(() => {
@@ -115,6 +122,48 @@ export function useOwnerReportPayload(report: OwnerReport | null | undefined) {
     isError: isDraft && preview.isError,
     refetch: preview.refetch,
   };
+}
+
+/**
+ * Số liệu SỐNG của các bản nháp trong danh sách (bản nháp chưa có payload trong bảng).
+ * Cùng key với trang chi tiết ⇒ mở chi tiết không tính lại. Trả Map id → payload.
+ */
+export function useDraftReportPreviews(reports: readonly OwnerReportListItem[]) {
+  const drafts = reports.filter((r) => r.status === "draft");
+  const results = useQueries({
+    queries: drafts.map((r) => ({
+      queryKey: previewKey(r),
+      staleTime: 60_000,
+      queryFn: () => fetchReportPreview(r),
+    })),
+  });
+  const map = new Map<string, ReportPayload>();
+  drafts.forEach((r, i) => {
+    const data = results[i]?.data;
+    if (data) map.set(r.id, data);
+  });
+  return map;
+}
+
+/**
+ * Số bản nháp chờ chốt — huy hiệu mục "Báo cáo định kỳ" trên sidebar. Key nằm dưới
+ * ownerReports nên tạo / chốt / xoá nháp đều làm mới. RLS tự giới hạn theo chi nhánh.
+ */
+export function useReportDraftCount(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: [...qk.ownerReports(workspaceId), "draft-count"],
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("owner_report_snapshots")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId!)
+        .eq("status", "draft");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 }
 
 function useInvalidateReports() {

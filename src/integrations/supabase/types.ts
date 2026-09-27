@@ -11202,6 +11202,10 @@ export type Database = {
         Args: { p_rows: Json; p_workspace_id: string }
         Returns: Json
       }
+      owner_import_postings: {
+        Args: { p_rows: Json; p_workspace_id: string }
+        Returns: Json
+      }
       owner_outcome_disagrees: {
         Args: {
           d1: string

@@ -116,15 +116,24 @@ describe("report rows", () => {
       people: { prepared_by: "Nguyễn Văn A" },
       collected: 12400000000,
       sold_count: 3,
+      sold_value: 15400000000,
+      targets: [
+        { scope: "unit", target_amount: 90000000000, amount_pct: 20 },
+        { scope: "branch", branch_name: "CN Hà Nội", target_amount: 20000000000, amount_pct: 62 },
+      ],
     };
     const final = mapReportListRow({ ...ROW, ...extra })!;
     expect(final.frozenScope).toEqual({ kind: "branch", branchName: "CN Hà Nội" });
     expect(final.frozenPreparedBy).toBe("Nguyễn Văn A");
     expect(final.collected).toBe(12400000000);
+    expect(final.soldValue).toBe(15400000000);
+    // Báo cáo chi nhánh ⇒ % của dòng chỉ tiêu chi nhánh, không phải cả đơn vị.
+    expect(final.targetPct).toBe(62);
 
     const draft = mapReportListRow({ ...ROW, ...extra, status: "draft" })!;
     expect(draft.frozenScope).toBeNull();
     expect(draft.collected).toBeNull();
+    expect(draft.targetPct).toBeNull();
   });
 });
 

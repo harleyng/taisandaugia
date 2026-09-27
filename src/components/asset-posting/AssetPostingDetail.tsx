@@ -13,6 +13,7 @@ import { ownerPostingWizardPath } from "@/lib/asset-posting/paths";
 import { PostingAccessProvider } from "./postingAccess";
 import { postingCompletionPct } from "./wizardSchema";
 import { PostingDetailHeader } from "./detail/PostingDetailHeader";
+import { ExportPostingPdfButton } from "./detail/ExportPostingPdfButton";
 import { PostingFlowStrip } from "./detail/PostingFlowStrip";
 import { PostingOverviewTab } from "./detail/PostingOverviewTab";
 import { PostingLegalTab } from "./detail/PostingLegalTab";
@@ -118,6 +119,7 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
           branch={branch}
           onEdit={canWrite && EDITABLE.includes(status.stage) ? openWizard : undefined}
           onOpenConsignment={HAS_CONSIGNMENT.includes(status.stage) ? openConsignment : undefined}
+          actions={<ExportPostingPdfButton postingId={posting.id} />}
         >
           <PostingFlowStrip
             status={status}

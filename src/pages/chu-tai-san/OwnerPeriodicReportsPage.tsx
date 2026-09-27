@@ -1,18 +1,19 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileBarChart, Loader2, Plus, Search } from "lucide-react";
+import { FileBarChart, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OwnerNoWorkspaceState } from "@/components/asset-owner-portal/ui/OwnerNoWorkspaceState";
 import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
 import { ActionCard } from "@/components/asset-owner-portal/ui/ActionCard";
+import { OwnerPageHeader } from "@/components/asset-owner-portal/ui/OwnerPageHeader";
 import { CreateReportDialog } from "@/components/asset-owner-portal/periodic-report/CreateReportDialog";
 import { OwnerReportsTable } from "@/components/asset-owner-portal/periodic-report/OwnerReportsTable";
+import { ReportDueCard } from "@/components/asset-owner-portal/periodic-report/ReportDueCard";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
-import { useOwnerReports } from "@/hooks/useOwnerPeriodicReports";
-import { useOwnerWorkspaceMembers, useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
+import { useDraftReportPreviews, useOwnerReports } from "@/hooks/useOwnerPeriodicReports";
+import { useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
 import { todayIso } from "@/lib/ownerOutcomeReport";
 import { periodLabel } from "@/lib/ownerTargets";
 import {
@@ -21,28 +22,22 @@ import {
   reportScopeLabel,
   type OwnerReportListItem,
 } from "@/lib/ownerPeriodicReport";
-import { OWNER_REPORT_TABS, filterOwnerReports, ownerReportTabCounts, type OwnerReportTab } from "@/lib/ownerReportTabs";
-
-const EMPTY_TEXT: Record<OwnerReportTab, string> = {
-  draft: "Không có bản nháp nào chờ chốt.",
-  final: "Chưa có báo cáo nào được chốt.",
-  all: "Chưa có báo cáo nào.",
-};
+import { reportDueDate, reportFigures, type ReportFigures } from "@/lib/ownerReportDigest";
 
 // ActionCard vốn nằm TRONG thẻ (có viền); ở đây nó nằm thẳng trên nền xám ⇒ làm thẻ trang.
 const PAGE_LEVEL_CARD = "border-0 bg-card shadow-card";
 
 /**
- * "Báo cáo định kỳ" — /chu-tai-san/bao-cao-dinh-ky (docs/owner-control-tower-plan.md Phase 10).
- * Cùng kiểu với "Hợp đồng mua bán": nhắc việc (tháng trước chưa báo cáo) → tab có số đếm
- * → ô tìm + bảng. Bấm dòng mở chi tiết.
+ * "Báo cáo định kỳ" — /chu-tai-san/bao-cao-dinh-ky (Phase 10; design "Bao Cao Dinh Ky Chu
+ * Tai San"): thẻ nhắc bản nháp chờ chốt (hoặc tháng trước chưa có báo cáo) → một bảng
+ * mọi kỳ, mới nhất trước. Bấm dòng mở chi tiết.
  */
 const OwnerPeriodicReportsPage = () => {
   const navigate = useNavigate();
   const { workspaceId, workspace, isScoped, branchScope, can, isLoading: wsLoading } = useOwnerWorkspace();
   const { reports, isLoading, isError, refetch } = useOwnerReports(workspaceId);
   const { data: branchOptions = [] } = useWorkspaceBranchOptions(workspaceId);
-  const { data: members = [] } = useOwnerWorkspaceMembers(workspaceId);
+  const previews = useDraftReportPreviews(reports);
   const [createOpen, setCreateOpen] = useState(false);
 
   // Người bị giới hạn chi nhánh chỉ lập báo cáo cho chi nhánh của mình (RLS cũng chặn).
@@ -50,24 +45,24 @@ const OwnerPeriodicReportsPage = () => {
   const canCreate = can("bao-cao-dinh-ky", "create") && (!allowedBranchIds || allowedBranchIds.length > 0);
 
   const branchNames = useMemo(() => new Map(branchOptions.map((b) => [b.id, b.label])), [branchOptions]);
-  const memberNames = useMemo(() => new Map(members.map((m) => [m.userId, m.fullName || m.email])), [members]);
   const scopeOf = (r: OwnerReportListItem) =>
     r.frozenScope
       ? reportScopeLabel(r.frozenScope)
       : r.branchId
         ? branchNames.get(r.branchId) ?? "Chi nhánh"
         : "Toàn đơn vị";
-  const preparedBy = (r: OwnerReportListItem) =>
-    (r.createdBy && memberNames.get(r.createdBy)) || r.frozenPreparedBy || "—";
-
-  const counts = useMemo(() => ownerReportTabCounts(reports), [reports]);
-  // Chưa chọn tab ⇒ mở "Nháp chờ chốt" nếu có nháp, không thì "Đã chốt".
-  const [picked, setPicked] = useState<OwnerReportTab | null>(null);
-  const tab: OwnerReportTab = picked ?? (counts.draft > 0 ? "draft" : "final");
-  const [q, setQ] = useState("");
-  const visible = filterOwnerReports(reports, tab, q, (r) => `${scopeOf(r)} ${preparedBy(r)}`);
+  const figuresOf = (r: OwnerReportListItem): ReportFigures | undefined => {
+    if (r.status === "draft") {
+      const p = previews.get(r.id);
+      return p ? reportFigures(p) : undefined;
+    }
+    return { soldValue: r.soldValue ?? 0, collected: r.collected ?? 0, targetPct: r.targetPct };
+  };
 
   const today = useMemo(() => todayIso(), []);
+  // Bản nháp kỳ sớm nhất (danh sách xếp kỳ mới trước) — việc cần làm trước tiên.
+  const dueDraft = [...reports].reverse().find((r) => r.status === "draft");
+  const dueDate = dueDraft ? reportDueDate(dueDraft.periodType, dueDraft.periodStart) : null;
   const prevMonth = previousPeriodStart("month", today);
   const prevMonthDone = reports.some(
     (r) =>
@@ -103,20 +98,18 @@ const OwnerPeriodicReportsPage = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Báo cáo định kỳ</h1>
-          <p className="text-sm text-muted-foreground">
-            Tổng hợp kết quả phiên, tiền thu, tồn đọng và kế hoạch theo tháng / quý / năm để gửi trụ sở.
-          </p>
-        </div>
-        {canCreate && (
-          <Button className="shrink-0 gap-1.5" onClick={openCreate}>
-            <Plus className="h-4 w-4" strokeWidth={1.5} />
-            Tạo báo cáo
-          </Button>
-        )}
-      </div>
+      <OwnerPageHeader
+        title="Báo cáo định kỳ"
+        subtitle="Hệ thống tự tổng hợp số liệu mỗi kỳ. Bạn chỉ cần rà soát, thêm nhận định rồi chốt để gửi trụ sở."
+        actions={
+          canCreate && (
+            <Button variant="outline" className="gap-1.5" onClick={openCreate}>
+              <Plus className="h-4 w-4" strokeWidth={1.5} />
+              Tạo báo cáo
+            </Button>
+          )
+        }
+      />
 
       {isLoading ? (
         <Card className="flex items-center justify-center gap-2 rounded-2xl p-10 text-sm text-muted-foreground">
@@ -132,74 +125,41 @@ const OwnerPeriodicReportsPage = () => {
         </Card>
       ) : (
         <>
-          {canCreate && !prevMonthDone && (
-            <ActionCard
-              icon={FileBarChart}
-              tone="warning"
-              className={PAGE_LEVEL_CARD}
-              title={`${periodLabel("month", prevMonth).replace(/^./, (c) => c.toUpperCase())} chưa có báo cáo đã chốt`}
-              meta="Hệ thống tự tổng hợp số liệu tháng vừa qua — bạn chỉ cần thêm ghi chú rồi chốt để gửi trụ sở."
-              actions={
-                <Button size="sm" variant="outline" onClick={openCreate}>
-                  Tạo báo cáo
-                </Button>
-              }
+          {dueDraft && dueDate ? (
+            <ReportDueCard
+              report={dueDraft}
+              dueDate={dueDate}
+              overdue={today > dueDate}
+              onOpen={() => navigate(reportHref(dueDraft.id))}
             />
-          )}
-
-          {reports.length === 0 ? (
-            <Card className="rounded-2xl p-10 text-center text-sm text-muted-foreground">
-              Chưa có báo cáo nào. Báo cáo đã chốt được đóng băng số liệu — sửa kết quả phiên sau đó không làm đổi
-              báo cáo.
-            </Card>
           ) : (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {OWNER_REPORT_TABS.map((t) => (
-                  <Button
-                    key={t.key}
-                    variant={tab === t.key ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setPicked(t.key)}
-                    className="gap-1.5"
-                  >
-                    {t.label}
-                    {t.key === "draft" && counts.draft > 0 ? (
-                      <span className="rounded-full bg-accent px-1.5 py-0.5 text-[11px] font-semibold text-accent-foreground">
-                        {counts.draft}
-                      </span>
-                    ) : (
-                      <span className={tab === t.key ? "opacity-80" : "text-muted-foreground"}>{counts[t.key]}</span>
-                    )}
+            canCreate &&
+            !prevMonthDone && (
+              <ActionCard
+                icon={FileBarChart}
+                tone="warning"
+                className={PAGE_LEVEL_CARD}
+                title={`${periodLabel("month", prevMonth).replace(/^./, (c) => c.toUpperCase())} chưa có báo cáo đã chốt`}
+                meta="Hệ thống tự tổng hợp số liệu tháng vừa qua — bạn chỉ cần thêm nhận định rồi chốt để gửi trụ sở."
+                actions={
+                  <Button size="sm" variant="outline" onClick={openCreate}>
+                    Tạo báo cáo
                   </Button>
-                ))}
-              </div>
-
-              <Card className="rounded-2xl">
-                <div className="border-b p-4">
-                  <div className="relative max-w-sm">
-                    <Search
-                      className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                      aria-hidden
-                    />
-                    <Input
-                      aria-label="Tìm báo cáo"
-                      className="pl-8"
-                      value={q}
-                      placeholder="Kỳ báo cáo, chi nhánh, người lập…"
-                      onChange={(e) => setQ(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <OwnerReportsTable
-                  rows={visible}
-                  scopeOf={scopeOf}
-                  preparedBy={preparedBy}
-                  emptyText={q ? "Không có báo cáo nào khớp từ khoá." : EMPTY_TEXT[tab]}
-                />
-              </Card>
-            </>
+                }
+              />
+            )
           )}
+
+          <Card className="rounded-2xl border-0 px-[18px] py-1.5 shadow-card">
+            {reports.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                Chưa có báo cáo nào. Báo cáo đã chốt được đóng băng số liệu — sửa kết quả phiên sau đó không làm đổi
+                báo cáo.
+              </p>
+            ) : (
+              <OwnerReportsTable rows={reports} figuresOf={figuresOf} scopeOf={scopeOf} today={today} />
+            )}
+          </Card>
         </>
       )}
 

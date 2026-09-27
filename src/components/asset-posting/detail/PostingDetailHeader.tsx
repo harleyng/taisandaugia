@@ -26,12 +26,14 @@ interface PostingDetailHeaderProps {
   onEdit?: () => void;
   /** Có ⇒ menu ⋯ có mục mở trang ký gửi. */
   onOpenConsignment?: () => void;
+  /** Nút thao tác đặt trước "Chỉnh sửa" (vd. Xuất PDF). */
+  actions?: ReactNode;
   /** Dải tiến trình (PostingFlowStrip) nằm ở đáy thẻ. */
   children: ReactNode;
 }
 
 /** Đầu trang chi tiết hồ sơ: ảnh chính, loại, tên, vài dữ kiện nhận dạng + dải tiến trình. */
-export function PostingDetailHeader({ posting: p, branch, onEdit, onOpenConsignment, children }: PostingDetailHeaderProps) {
+export function PostingDetailHeader({ posting: p, branch, onEdit, onOpenConsignment, actions, children }: PostingDetailHeaderProps) {
   const location = [p.address, p.ward, p.district, p.province].filter(Boolean).join(", ");
   const code = p.code;
 
@@ -85,6 +87,7 @@ export function PostingDetailHeader({ posting: p, branch, onEdit, onOpenConsignm
         </div>
 
         <div className="flex shrink-0 gap-2">
+          {actions}
           {onEdit && (
             <Button variant="outline" size="sm" className="gap-1.5" onClick={onEdit}>
               <Pencil className="h-3.5 w-3.5" />

@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Loader2, Plus, UploadCloud } from "lucide-react";
+import { useMemo, useState } from "react";
+import { FileSpreadsheet, Loader2, Plus, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OwnerPageHeader } from "@/components/asset-owner-portal/ui/OwnerPageHeader";
 import { OwnerFilterBar } from "@/components/asset-owner-portal/ui/OwnerFilterBar";
@@ -16,6 +16,7 @@ import { useUrlFilterState } from "@/hooks/useUrlFilterState";
 import { stripViDiacritics } from "@/lib/normalizeVi";
 import { DIGITIZE_FILTERS, matchesDigitizeFilter, type DigitizeFilter } from "@/lib/asset-posting/digitizeStatus";
 import { DigitizeTable } from "./digitize/DigitizeTable";
+import { PostingImportDialog } from "./digitize/PostingImportDialog";
 
 const FILTER_KEYS = DIGITIZE_FILTERS.map((f) => f.key);
 
@@ -32,7 +33,8 @@ interface AssetPostingsLandingProps {
 export function AssetPostingsLanding({ onCreate, hrefOf }: AssetPostingsLandingProps) {
   const { rows, isLoading, error } = useOwnerDigitizedPostings();
   const { workspaceId, canCreatePosting } = useOwnerWorkspace();
-  const { data: branches } = useWorkspaceBranchOptions(workspaceId);
+  const { data: branches, isLoading: branchesLoading } = useWorkspaceBranchOptions(workspaceId);
+  const [importOpen, setImportOpen] = useState(false);
   const { data: with3d } = useReady3dPostingIds();
   const { data: withVr } = useAttachedVrPostingIds();
   const { data: authenticated } = useAuthenticatedPostingIds();
@@ -57,11 +59,22 @@ export function AssetPostingsLanding({ onCreate, hrefOf }: AssetPostingsLandingP
   );
   const visible = searched.filter((r) => matchesDigitizeFilter(nhom, r.status));
 
+  const existing = useMemo(
+    () => rows.map((r) => ({ title: r.posting.title, province: r.posting.province, code: r.posting.code })),
+    [rows],
+  );
+
   const createButton = canCreatePosting ? (
-    <Button onClick={onCreate} className="gap-1.5">
-      <Plus className="h-4 w-4" />
-      Số hoá tài sản
-    </Button>
+    <div className="flex flex-wrap gap-2">
+      <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+        <FileSpreadsheet className="h-4 w-4" />
+        Nhập từ Excel
+      </Button>
+      <Button onClick={onCreate} className="gap-1.5">
+        <Plus className="h-4 w-4" />
+        Số hoá tài sản
+      </Button>
+    </div>
   ) : null;
 
   return (
@@ -128,6 +141,16 @@ export function AssetPostingsLanding({ onCreate, hrefOf }: AssetPostingsLandingP
             emptyText={needle ? "Không có hồ sơ nào khớp từ khoá." : "Không có hồ sơ nào trong mục này."}
           />
         </div>
+      )}
+
+      {canCreatePosting && (
+        <PostingImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          branches={branches ?? []}
+          existing={existing}
+          loading={!!workspaceId && branchesLoading}
+        />
       )}
     </div>
   );

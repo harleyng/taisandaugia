@@ -1,8 +1,8 @@
 import { Checkbox } from "@/components/ui/checkbox";
 
 /**
- * Trình sửa ma trận quyền dùng chung cho MỌI hệ RBAC (admin cấp nền tảng và
- * tổ chức đấu giá). Component thuần controlled: danh mục quyền được truyền vào
+ * Trình sửa ma trận quyền dùng chung cho MỌI hệ RBAC (admin cấp nền tảng, tổ
+ * chức đấu giá, Trạm Điều Hành chủ tài sản). Component thuần controlled: danh mục quyền được truyền vào
  * qua props thay vì import cứng, nên hai hệ có tập action khác nhau vẫn dùng
  * chung được.
  */
@@ -11,6 +11,10 @@ export interface MatrixModuleDef<A extends string> {
   module: string;
   label: string;
   actions: A[];
+  /** Nhãn riêng của module, đè nhãn chung `actionLabels` (vd. "Khai & sửa"). */
+  actionLabels?: Partial<Record<A, string>>;
+  /** Một dòng giải thích dưới tên module. */
+  hint?: string;
 }
 
 export interface MatrixCategoryDef<A extends string> {
@@ -112,7 +116,10 @@ export function PermissionMatrixEditor<A extends string>({
                     disabled={disabled}
                     onCheckedChange={(c) => toggleModule(def, c === true)}
                   />
-                  <span className="text-sm font-medium text-foreground">{def.label}</span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground">{def.label}</span>
+                    {def.hint && <span className="block max-w-[260px] text-xs text-muted-foreground">{def.hint}</span>}
+                  </span>
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {def.actions.map((action) => {
@@ -131,7 +138,7 @@ export function PermissionMatrixEditor<A extends string>({
                           disabled ? "opacity-60 cursor-not-allowed" : "",
                         ].join(" ")}
                       >
-                        {actionLabels[action]}
+                        {def.actionLabels?.[action] ?? actionLabels[action]}
                       </button>
                     );
                   })}

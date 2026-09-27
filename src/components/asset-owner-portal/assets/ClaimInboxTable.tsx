@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { formatMoneyShort } from "@/utils/money";
 import { formatDayMonth } from "@/lib/ownerPulse";
 import type { OwnerClaimRow } from "@/lib/ownerAssets";
+import { PostingThumb } from "@/components/asset-posting/digitize/PostingThumb";
 import { Stacked, TD, TH } from "./AssetRowsTable";
 
 interface ClaimInboxTableProps {
@@ -29,12 +30,17 @@ export function ClaimInboxTable({ rows, onConfirm, onReject, disabled }: ClaimIn
       </thead>
       <tbody>
         {rows.map((c) => (
-          <tr key={c.id} className="last:[&>td]:border-b-0">
+          <tr key={c.id}>
             <td className={TD}>
-              <span className="block max-w-[320px] truncate text-sm font-medium">{c.title}</span>
-              <small className="block whitespace-nowrap text-[12.5px] text-muted-foreground">
-                Tin trên sàn{c.category && ` · ${c.category}`}
-              </small>
+              <div className="flex items-center gap-3">
+                <PostingThumb src={c.thumbnail} parentSlug={c.parentSlug} className="h-11 w-14 rounded-[7px]" />
+                <div className="min-w-0">
+                  <span className="block max-w-[320px] truncate text-sm font-medium">{c.title}</span>
+                  <small className="block whitespace-nowrap text-[12.5px] text-muted-foreground">
+                    Tin trên sàn{c.category && ` · ${c.category}`}
+                  </small>
+                </div>
+              </div>
             </td>
             <td className={TD}>
               <Stacked main={c.province ?? "—"} sub={c.branch} />

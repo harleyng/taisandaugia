@@ -110,7 +110,7 @@ describe("đường dẫn trang", () => {
   it("ba cổng vào khác nhau cho cùng một hợp đồng", () => {
     expect(saleContractPath(CT)).toBe(`/hop-dong-mua-ban/${CT}`);
     expect(portalSaleContractPath(CT)).toBe(`/portal/hop-dong-mua-ban/${CT}`);
-    expect(ownerSaleContractPath(CT)).toBe(`/chu-tai-san/hop-dong-mua-ban/${CT}`);
+    expect(ownerSaleContractPath(CT)).toBe(`/chu-tai-san/hop-dong/mua-ban/${CT}`);
   });
 
   it("đường dẫn con nằm dưới đường dẫn danh sách", () => {

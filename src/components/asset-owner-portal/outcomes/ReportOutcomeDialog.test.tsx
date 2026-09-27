@@ -60,9 +60,9 @@ describe("ReportOutcomeDialog", () => {
   it("prefills the next round and the starting price, and submits a sold report", async () => {
     reportedRounds = [1];
     renderDialog();
-    expect(await screen.findByLabelText("Lượt đấu")).toHaveValue("2");
+    expect(await screen.findByLabelText(/^Lượt đấu/)).toHaveValue("2");
     expect(screen.getByText("Đã khai 1 lượt")).toBeInTheDocument();
-    expect(screen.getByLabelText("Giá trúng (₫)")).toHaveValue("5,000,000,000");
+    expect(screen.getByLabelText(/^Giá trúng \(₫\)/)).toHaveValue("5,000,000,000");
     expect(screen.getByText("Giá khởi điểm 5,000,000,000 ₫")).toBeInTheDocument();
 
     save();
@@ -89,7 +89,7 @@ describe("ReportOutcomeDialog", () => {
   it("opens on a preselected 'Hoãn-Huỷ' with the postponed sub-choice", async () => {
     renderDialog("void");
     expect(await screen.findByRole("radio", { name: "Hoãn" })).toHaveAttribute("data-state", "on");
-    expect(screen.queryByLabelText("Giá trúng (₫)")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Giá trúng \(₫\)/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "Huỷ" }));
     save();
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
@@ -100,14 +100,14 @@ describe("ReportOutcomeDialog", () => {
     const off: OffPlatformOutcomeTarget = { kind: "offplatform" };
     render(<ReportOutcomeDialog open onOpenChange={() => {}} workspaceId="w1" target={off} branches={[{ id: "b1", label: "Chi nhánh A" }]} />);
     expect(await screen.findByRole("heading", { name: "Khai tài sản ngoài sàn" })).toBeInTheDocument();
-    expect(await screen.findByLabelText("Lượt đấu")).toHaveValue("1");
+    expect(await screen.findByLabelText(/^Lượt đấu/)).toHaveValue("1");
 
     save();
     expect(await screen.findByText("Nhập tên tài sản (ít nhất 3 ký tự)")).toBeInTheDocument();
     expect(saveMutate).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText("Tên tài sản"), { target: { value: "Xe tải Hino 2019" } });
-    fireEvent.change(screen.getByLabelText("Giá trúng (₫)"), { target: { value: "900000000" } });
+    fireEvent.change(screen.getByLabelText(/^Tên tài sản/), { target: { value: "Xe tải Hino 2019" } });
+    fireEvent.change(screen.getByLabelText(/^Giá trúng \(₫\)/), { target: { value: "900000000" } });
     save();
     await waitFor(() => expect(saveMutate).toHaveBeenCalledTimes(1));
     const [input] = saveMutate.mock.calls[0];
@@ -130,7 +130,7 @@ describe("ReportOutcomeDialog", () => {
       />,
     );
     expect(await screen.findByRole("heading", { name: "Khai lượt tiếp theo" })).toBeInTheDocument();
-    expect(await screen.findByLabelText("Lượt đấu")).toHaveValue("3");
+    expect(await screen.findByLabelText(/^Lượt đấu/)).toHaveValue("3");
     fireEvent.click(screen.getByRole("radio", { name: "Không ai đăng ký" }));
     save();
     expect(await screen.findByText("Chọn chi nhánh trong phạm vi của bạn")).toBeInTheDocument();
@@ -153,8 +153,8 @@ describe("ReportOutcomeDialog", () => {
     } as unknown as OwnerOutcomeRecord;
     render(<ReportOutcomeDialog open onOpenChange={() => {}} workspaceId="w1" target={target} record={record} />);
     expect(await screen.findByRole("heading", { name: "Sửa lượt 2" })).toBeInTheDocument();
-    expect(await screen.findByLabelText("Lượt đấu")).toHaveValue("2");
-    expect(screen.getByLabelText("Giá trúng (₫)")).toHaveValue("6,000,000,000");
+    expect(await screen.findByLabelText(/^Lượt đấu/)).toHaveValue("2");
+    expect(screen.getByLabelText(/^Giá trúng \(₫\)/)).toHaveValue("6,000,000,000");
     expect(screen.getByText("Đã có biên bản — chọn tệp mới nếu muốn thay.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
     await waitFor(() => expect(saveMutate).toHaveBeenCalledTimes(1));

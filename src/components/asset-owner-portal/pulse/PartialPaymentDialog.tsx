@@ -91,7 +91,9 @@ export function PartialPaymentDialog({ workspaceId, target, onClose }: PartialPa
 
         <form id="owner-partial-payment" className="grid gap-3 sm:grid-cols-2" onSubmit={submit} noValidate>
           <div className="space-y-1.5">
-            <Label htmlFor="pp-amount">Số thu lần này (₫)</Label>
+            <Label htmlFor="pp-amount">
+              Số thu lần này (₫) <span className="text-destructive">*</span>
+            </Label>
             <Controller
               control={form.control}
               name="amount"
@@ -113,7 +115,9 @@ export function PartialPaymentDialog({ workspaceId, target, onClose }: PartialPa
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pp-date">Ngày thu</Label>
+            <Label htmlFor="pp-date">
+              Ngày thu <span className="text-destructive">*</span>
+            </Label>
             <Input id="pp-date" type="date" max={today} disabled={busy} {...form.register("paidAt")} />
             <OutcomeFieldError msg={errors.paidAt?.message} />
           </div>

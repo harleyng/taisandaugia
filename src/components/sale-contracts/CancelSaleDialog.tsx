@@ -66,7 +66,9 @@ export function CancelSaleDialog({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Lý do huỷ</Label>
+            <Label>
+              Lý do huỷ <span className="text-destructive">*</span>
+            </Label>
             <RadioGroup value={kind} onValueChange={(v) => setKind(v as SaleCancelKind)}>
               {kinds.map((k) => (
                 <label key={k} className="flex items-start gap-2 text-sm">
@@ -82,7 +84,9 @@ export function CancelSaleDialog({
           </InfoBox>
 
           <div className="space-y-1.5">
-            <Label htmlFor="sale-cancel-reason">Diễn giải</Label>
+            <Label htmlFor="sale-cancel-reason">
+              Diễn giải <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="sale-cancel-reason"
               rows={3}

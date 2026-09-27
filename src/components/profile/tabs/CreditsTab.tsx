@@ -402,7 +402,7 @@ export const CreditsTab = ({
                       {wantInvoice && (
                         <div className="space-y-3 rounded-lg bg-muted/40 p-3">
                           <div className="space-y-1.5">
-                            <Label htmlFor="inv-company" className="text-xs">Tên công ty *</Label>
+                            <Label htmlFor="inv-company" className="text-xs">Tên công ty <span className="text-destructive">*</span></Label>
                             <Input
                               id="inv-company"
                               value={invoice.companyName}
@@ -415,7 +415,7 @@ export const CreditsTab = ({
                             )}
                           </div>
                           <div className="space-y-1.5">
-                            <Label htmlFor="inv-tax" className="text-xs">Mã số thuế *</Label>
+                            <Label htmlFor="inv-tax" className="text-xs">Mã số thuế <span className="text-destructive">*</span></Label>
                             <Input
                               id="inv-tax"
                               value={invoice.taxCode}
@@ -428,7 +428,7 @@ export const CreditsTab = ({
                             )}
                           </div>
                           <div className="space-y-1.5">
-                            <Label htmlFor="inv-address" className="text-xs">Địa chỉ *</Label>
+                            <Label htmlFor="inv-address" className="text-xs">Địa chỉ <span className="text-destructive">*</span></Label>
                             <Textarea
                               id="inv-address"
                               value={invoice.address}
@@ -442,7 +442,7 @@ export const CreditsTab = ({
                             )}
                           </div>
                           <div className="space-y-1.5">
-                            <Label htmlFor="inv-email" className="text-xs">Email nhận hóa đơn *</Label>
+                            <Label htmlFor="inv-email" className="text-xs">Email nhận hóa đơn <span className="text-destructive">*</span></Label>
                             <Input
                               id="inv-email"
                               type="email"

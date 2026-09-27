@@ -21,7 +21,7 @@ export function CashFlowInfoNotes({
   if (!platform.count && !untracked.count) return null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border bg-muted/40 p-4 text-sm sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-2 rounded-2xl bg-card p-4 text-sm shadow-card sm:flex-row sm:items-center">
       <Info className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden="true" />
       <div className="min-w-0 flex-1 space-y-0.5 text-muted-foreground">
         {platform.count > 0 && (

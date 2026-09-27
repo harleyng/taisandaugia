@@ -51,7 +51,7 @@ export function PaymentDueDialog({ workspaceId, row, onClose }: PaymentDueDialog
     <Dialog open={!!row} onOpenChange={(v) => !v && !busy && onClose()}>
       <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
-          <DialogTitle>Đặt hạn thanh toán</DialogTitle>
+          <DialogTitle>Đổi hạn thu</DialogTitle>
           <DialogDescription className="space-y-0.5">
             <span className="line-clamp-2 block text-foreground">{row?.title}</span>
             {row?.date && <span className="block tabular-nums">Phiên ngày {formatDayFull(row.date)}</span>}
@@ -66,7 +66,9 @@ export function PaymentDueDialog({ workspaceId, row, onClose }: PaymentDueDialog
             save(value);
           }}
         >
-          <Label htmlFor="pd-date">Hạn nộp đủ tiền</Label>
+          <Label htmlFor="pd-date">
+            Hạn nộp đủ tiền <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="pd-date"
             type="date"

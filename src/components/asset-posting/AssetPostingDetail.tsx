@@ -1,21 +1,37 @@
-import { useSearchParams } from "react-router-dom";
-import { AlertCircle, ArrowLeft, Clock, FileSignature, Info, Lightbulb, Loader2, Scale } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { ChevronRight, Loader2 } from "lucide-react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { OwnerTabsList, OwnerTabsTrigger } from "@/components/asset-owner-portal/ui/OwnerTabs";
 import { AuthenticationOutcomeNotice } from "@/components/authentication/AuthenticationOutcomeNotice";
-import { AssetPostingHero } from "./AssetPostingHero";
-import { PostingInfoTab } from "./tabs/PostingInfoTab";
-import { PostingQuotesTab } from "./tabs/PostingQuotesTab";
-import { PostingLegalConsultTab } from "./tabs/PostingLegalConsultTab";
-import { PostingAuctionConsultTab } from "./tabs/PostingAuctionConsultTab";
-import { useCancelBrokerRequest, usePostingDetail } from "@/hooks/useAssetPosting";
-import { usePostingContracts } from "@/hooks/useConsignmentContract";
+import { usePostingDetail } from "@/hooks/useAssetPosting";
+import { useOwnerConsignmentSummary, usePostingContracts } from "@/hooks/useConsignmentContract";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
+import { useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
+import { ownerConsignmentPath } from "@/lib/consignment/ownerConsignment";
+import { digitizeStatusOf, type DigitizeStage } from "@/lib/asset-posting/digitizeStatus";
+import { ownerPostingWizardPath } from "@/lib/asset-posting/paths";
 import { PostingAccessProvider } from "./postingAccess";
+import { postingCompletionPct } from "./wizardSchema";
+import { PostingDetailHeader } from "./detail/PostingDetailHeader";
+import { PostingFlowStrip } from "./detail/PostingFlowStrip";
+import { PostingOverviewTab } from "./detail/PostingOverviewTab";
+import { PostingLegalTab } from "./detail/PostingLegalTab";
+import { useLegalPendingCount } from "./detail/useLegalPendingCount";
+import { PostingAuctionTab } from "./detail/PostingAuctionTab";
 
-type PostingTab = "thong-tin" | "phap-ly" | "tu-van-dau-gia" | "bao-gia";
+type PostingTab = "thong-tin" | "phap-ly" | "tu-van-dau-gia";
 
-const TABS: PostingTab[] = ["thong-tin", "phap-ly", "tu-van-dau-gia", "bao-gia"];
+const TABS: { value: PostingTab; label: string }[] = [
+  { value: "thong-tin", label: "Thông tin tài sản" },
+  { value: "phap-ly", label: "Tư vấn pháp lý" },
+  { value: "tu-van-dau-gia", label: "Tư vấn đấu giá" },
+];
+
+/** Còn sửa được bằng wizard: trước khi gửi cho bất kỳ tổ chức nào (sửa sau đó là đổi nội dung đã được báo giá). */
+const EDITABLE: readonly DigitizeStage[] = ["draft", "review", "rejected", "ready"];
+
+/** Có trang ký gửi để mở (menu ⋯). */
+const HAS_CONSIGNMENT: readonly DigitizeStage[] = ["ready", "quoting", "resend", "choose", "contract", "signed"];
 
 interface AssetPostingDetailProps {
   postingId: string;
@@ -23,21 +39,28 @@ interface AssetPostingDetailProps {
 }
 
 /**
- * Màn chi tiết một hồ sơ tài sản đấu giá: hero tóm tắt + các tab.
+ * Chi tiết một hồ sơ số hoá (thiết kế "So Hoa Tai San - Danh sach & Chi tiet"): đầu
+ * trang + dải tiến trình 4 bước với MỘT việc tiếp theo, rồi 3 tab.
  *
- * Tab nằm trên `?tab=` chứ không phải state: chủ tài sản gửi link tab báo giá
- * cho người khác (hoặc tự bookmark khi đang chờ tổ chức phản hồi) và tải lại
- * trang phải về đúng chỗ đang xem.
+ * Báo giá và hợp đồng dịch vụ nằm ở menu "Ký gửi đấu giá" — nút ở dải tiến trình dẫn
+ * sang; link cũ `?tab=bao-gia` chuyển thẳng tới đó. Tab nằm trên `?tab=` để gửi link
+ * một tab và tải lại trang đều về đúng chỗ.
  */
 export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProps) {
+  const navigate = useNavigate();
   const { data, isLoading } = usePostingDetail(postingId);
-  const cancelBroker = useCancelBrokerRequest();
-  const { data: contracts } = usePostingContracts(postingId);
-  const { canWritePosting } = useOwnerWorkspace();
+  const { data: contracts = [] } = usePostingContracts(postingId);
+  const { data: summary } = useOwnerConsignmentSummary();
+  const { postingAccess } = useOwnerWorkspace();
+  const posting = data?.posting ?? null;
+  const { data: branches } = useWorkspaceBranchOptions(posting?.branch_id ? posting.workspace_id : null);
+  const legalPending = useLegalPendingCount(postingId);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const param = searchParams.get("tab") as PostingTab | null;
-  const tab: PostingTab = param && TABS.includes(param) ? param : "thong-tin";
+  const param = searchParams.get("tab");
+  const tab: PostingTab = TABS.some((t) => t.value === param) ? (param as PostingTab) : "thong-tin";
+
+  if (param === "bao-gia") return <Navigate to={ownerConsignmentPath(postingId)} replace />;
 
   if (isLoading) {
     return (
@@ -47,77 +70,74 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
     );
   }
 
-  const backLink = (
-    <button
-      type="button"
-      onClick={onBack}
-      className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-    >
-      <ArrowLeft className="h-4 w-4" /> Danh sách tài sản
-    </button>
+  const crumbs = (
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+      <button type="button" onClick={onBack} className="shrink-0 text-foreground/70 hover:text-foreground hover:underline">
+        Số hoá tài sản
+      </button>
+      <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span className="truncate font-medium text-foreground" aria-current="page">
+        {posting?.title ?? "Không tìm thấy"}
+      </span>
+    </nav>
   );
 
-  if (!data) {
+  if (!data || !posting) {
     return (
-      <div className="space-y-5">
-        {backLink}
+      <div className="space-y-4">
+        {crumbs}
         <p className="text-sm text-muted-foreground">Không tìm thấy hồ sơ tài sản.</p>
       </div>
     );
   }
 
-  const { posting: p, org, requests, brokerRequest } = data;
-  const quoteCount = requests.filter((r) => r.status === "quoted" || r.status === "selected").length;
+  const { requests, brokerRequest, org } = data;
   // Theo vai trò ở CHÍNH không gian của hồ sơ — không theo tenant đang chọn.
-  const canWrite = canWritePosting(p);
+  const access = postingAccess(posting);
+  const canWrite = access.edit;
+  const status = digitizeStatusOf({
+    postingStatus: posting.status,
+    reviewStatus: posting.review_status,
+    requestStatuses: requests.map((r) => r.status),
+    brokerStatus: brokerRequest?.status ?? null,
+    contractStatuses: contracts.map((c) => c.status),
+    ownerAction: summary?.byPosting[posting.id]?.owner_action ?? null,
+  });
+  const locked = posting.status === "cancelled" || posting.status === "contracted" || status.stage === "signed";
+  const branch = posting.branch_id ? (branches?.find((b) => b.id === posting.branch_id)?.label ?? null) : null;
+  const openWizard = () => navigate(ownerPostingWizardPath(posting.id));
+  const openConsignment = () => navigate(ownerConsignmentPath(posting.id));
 
   return (
-    <PostingAccessProvider value={canWrite}>
-      <div className="space-y-5">
-        {backLink}
+    <PostingAccessProvider value={access}>
+      <div className="space-y-4">
+        {crumbs}
 
-        <AssetPostingHero
-          posting={p}
-          sentCount={requests.length}
-          quoteCount={quoteCount}
-          hasSignedContract={!!contracts?.some((c) => c.status === "signed")}
-        />
+        <PostingDetailHeader
+          posting={posting}
+          branch={branch}
+          onEdit={canWrite && EDITABLE.includes(status.stage) ? openWizard : undefined}
+          onOpenConsignment={HAS_CONSIGNMENT.includes(status.stage) ? openConsignment : undefined}
+        >
+          <PostingFlowStrip
+            status={status}
+            canWrite={canWrite}
+            onOpenWizard={openWizard}
+            onOpenConsignment={openConsignment}
+            facts={{
+              pct: postingCompletionPct(posting),
+              sentCount: requests.length,
+              quotedCount: requests.filter((r) => r.status === "quoted" || r.status === "selected").length,
+              pendingCount: requests.filter((r) => r.status === "sent" || r.status === "seen").length,
+              orgName: org?.name ?? null,
+              contractStatus: contracts.find((c) => c.status !== "cancelled")?.status ?? null,
+              rejectionReason: posting.rejection_reason,
+              personal: !posting.workspace_id,
+            }}
+          />
+        </PostingDetailHeader>
 
-        {/* Hai cảnh báo dưới đây đứng NGOÀI tab: chúng nói về cả hồ sơ (một cái
-            chặn luồng báo giá, một cái đòi sửa lại phần thông tin) nên giấu vào
-            một tab là chắc chắn có người không thấy. */}
-        {p.status === "active" && requests.length === 0 && p.review_status === "pending" && (
-          <Card className="border-warning/30 bg-warning/5">
-            <CardContent className="flex items-start gap-3 pt-5">
-              <Clock className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">Hồ sơ đang chờ duyệt</p>
-                <p className="text-sm text-muted-foreground">
-                  Quản trị viên đang xem xét hồ sơ tài sản của bạn. Sau khi được duyệt, bạn có thể gửi
-                  hồ sơ cho tổ chức đấu giá.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Bị từ chối: hiện lý do để chủ tài sản sửa rồi lưu lại (lưu lại sẽ được duyệt lại). */}
-        {p.review_status === "rejected" && (
-          <Card className="border-destructive/30 bg-destructive/5">
-            <CardContent className="flex items-start gap-3 pt-5">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">Hồ sơ chưa được duyệt</p>
-                {p.rejection_reason && <p className="text-sm text-foreground">{p.rejection_reason}</p>}
-                <p className="text-sm text-muted-foreground">
-                  Vui lòng cập nhật hồ sơ theo góp ý trên. Hồ sơ sẽ được xem xét lại sau khi bạn lưu.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <AuthenticationOutcomeNotice postingId={p.id} />
+        <AuthenticationOutcomeNotice postingId={posting.id} />
 
         <Tabs
           value={tab}
@@ -133,54 +153,29 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
               { replace: true },
             )
           }
+          className="pt-2"
         >
-          <TabsList className="h-auto flex-wrap justify-start">
-            <TabsTrigger value="thong-tin" className="gap-1.5">
-              <Info className="h-4 w-4" />
-              Thông tin
-            </TabsTrigger>
-            <TabsTrigger value="phap-ly" className="gap-1.5">
-              <Scale className="h-4 w-4" />
-              Tư vấn pháp lý
-            </TabsTrigger>
-            <TabsTrigger value="tu-van-dau-gia" className="gap-1.5">
-              <Lightbulb className="h-4 w-4" />
-              Tư vấn đấu giá
-            </TabsTrigger>
-            <TabsTrigger value="bao-gia" className="gap-1.5">
-              <FileSignature className="h-4 w-4" />
-              Báo giá
-              {quoteCount > 0 && (
-                <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                  {quoteCount}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          <OwnerTabsList aria-label="Nội dung hồ sơ" className="mb-[18px]">
+            {TABS.map((t) => (
+              <OwnerTabsTrigger
+                key={t.value}
+                value={t.value}
+                count={t.value === "phap-ly" && legalPending > 0 ? legalPending : undefined}
+                attention={t.value === "phap-ly"}
+              >
+                {t.label}
+              </OwnerTabsTrigger>
+            ))}
+          </OwnerTabsList>
 
-          <TabsContent value="thong-tin" className="mt-4">
-            <PostingInfoTab posting={p} />
+          <TabsContent value="thong-tin" className="mt-0">
+            <PostingOverviewTab posting={posting} locked={locked} />
           </TabsContent>
-
-          <TabsContent value="phap-ly" className="mt-4">
-            <PostingLegalConsultTab posting={p} />
+          <TabsContent value="phap-ly" className="mt-0">
+            <PostingLegalTab posting={posting} locked={locked} />
           </TabsContent>
-
-          <TabsContent value="tu-van-dau-gia" className="mt-4">
-            <PostingAuctionConsultTab posting={p} />
-          </TabsContent>
-
-          <TabsContent value="bao-gia" className="mt-4">
-            <PostingQuotesTab
-              posting={p}
-              requests={requests}
-              brokerRequest={brokerRequest}
-              org={org}
-              onCancelBroker={() =>
-                brokerRequest && cancelBroker.mutate({ brokerRequestId: brokerRequest.id, postingId: p.id })
-              }
-              isCancelling={cancelBroker.isPending}
-            />
+          <TabsContent value="tu-van-dau-gia" className="mt-0">
+            <PostingAuctionTab posting={posting} locked={locked} />
           </TabsContent>
         </Tabs>
       </div>

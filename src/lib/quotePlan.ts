@@ -1,6 +1,6 @@
 // Phương án tổ chức đấu giá & chi phí theo khoản mục — logic dùng chung cho
 // CẢ HAI phía: form nhập của tổ chức (/portal/yeu-cau-ky-gui) và màn đọc/so
-// sánh của chủ tài sản (QuoteComparison).
+// sánh của chủ tài sản (QuoteCompareCard).
 //
 // Một nguồn duy nhất là cố ý: hai bên phải nhìn thấy đúng cùng một con số, nếu
 // không chủ tài sản sẽ chọn theo tổng này rồi ký hợp đồng theo tổng kia.

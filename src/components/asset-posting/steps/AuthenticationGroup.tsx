@@ -20,7 +20,7 @@ export function AuthenticationGroup({ postingId, ensurePostingId, reasons, lotRe
   return (
     <Group
       icon={<BadgeCheck className="h-4 w-4" />}
-      title={required ? "Giám định" : "Giám định (tuỳ chọn)"}
+      title="Giám định"
       desc={
         isAntique
           ? "Cổ vật có chứng thư của đơn vị giám định độc lập được gắn huy hiệu “Đã giám định” và người mua trả giá cao hơn"

@@ -1,7 +1,6 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { AssetPostingDetail } from "@/components/asset-posting/AssetPostingDetail";
-
-const LIST_PATH = "/chu-tai-san/dang-tai-san";
+import { OWNER_POSTINGS_PATH } from "@/lib/asset-posting/paths";
 
 /**
  * Chi tiết một hồ sơ số hoá — route riêng để báo giá / hợp đồng có đường link
@@ -11,9 +10,9 @@ const AssetPostingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  if (!id) return <Navigate to={LIST_PATH} replace />;
+  if (!id) return <Navigate to={OWNER_POSTINGS_PATH} replace />;
 
-  return <AssetPostingDetail key={id} postingId={id} onBack={() => navigate(LIST_PATH)} />;
+  return <AssetPostingDetail key={id} postingId={id} onBack={() => navigate(OWNER_POSTINGS_PATH)} />;
 };
 
 export default AssetPostingDetailPage;

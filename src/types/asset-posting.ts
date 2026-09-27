@@ -86,6 +86,8 @@ export interface OwnershipDeclaration {
 
 export interface AssetPosting {
   id: string;
+  /** Mã hồ sơ "HS-0001" — cấp theo thứ tự tạo, bất biến (trigger, mig 20260927140000). */
+  code: string;
   /** Người tạo — KHÔNG phải cổng quyền với hồ sơ của không gian (Phase 4). */
   user_id: string;
   /** NULL = hồ sơ Cá nhân; có = hồ sơ của không gian (quyền theo vai trò thành viên). */
@@ -157,6 +159,10 @@ export interface AssetServiceRequest {
   /** Chi phí theo khoản mục; tổng khoản bắt buộc = quote_service_fee. */
   quote_fee_items: QuoteFeeItem[] | null;
   quoted_at: string | null;
+  /** Báo giá có hiệu lực đến hết ngày này (yyyy-MM-dd); null = báo giá cũ chưa có trường này. */
+  quote_valid_until: string | null;
+  /** Hạn tổ chức phản hồi (yyyy-MM-dd) — 7 ngày kể từ khi gửi. */
+  respond_by: string;
   /** Yêu cầu được chốt đã đóng dòng này thành not_selected (để mở lại khi huỷ hợp đồng). */
   closed_by_request_id: string | null;
   status_before_close: "sent" | "seen" | "quoted" | null;
@@ -175,8 +181,11 @@ export interface AssetBrokerRequest {
   note: string | null;
   /** Ghi chú nội bộ của admin — KHÔNG hiển thị cho chủ tài sản. */
   admin_note: string | null;
+  /** Chuyên viên sàn — gán khi admin gửi hồ sơ đi; chủ tài sản đọc tên qua RPC owner_broker_assignee. */
   assigned_admin_id: string | null;
   selected_request_id: string | null;
+  /** Ngày sàn dự kiến có báo giá đầu tiên (yyyy-MM-dd) — mặc định 5 ngày làm việc, admin sửa được. */
+  expected_quote_by: string | null;
   created_at: string;
   updated_at: string;
 }

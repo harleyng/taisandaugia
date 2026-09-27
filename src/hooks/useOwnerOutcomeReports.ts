@@ -13,6 +13,7 @@ import {
 } from "@/lib/ownerOutcomeReport";
 import { OUTCOME_PAYMENT_STATUSES, type OutcomePaymentStatus } from "@/lib/ownerOutcomes";
 import { paymentErrorMessage, type OutcomePaymentStatusPatch } from "@/lib/ownerOutcomePayment";
+import { assertCashRpcOk } from "@/lib/ownerCashEvent";
 import { invalidateOwnerOutcomes } from "@/hooks/useOwnerOutcomeEdit";
 
 /** Các lượt đơn vị đã khai cho một tin — để điền sẵn "lượt tiếp theo". */
@@ -138,8 +139,9 @@ interface UpdatePaymentInput {
 
 /**
  * Đổi CỜ thu tiền của một bản ghi tự khai ("Người trúng bỏ cọc"). Số đã thu không
- * ghi ở đây nữa — đi qua sổ thu chi (useOwnerCashFlow.ts, Phase 15a). RLS lọc dòng
- * không có quyền mà không báo lỗi ⇒ đọc lại id để biết có thật sự ghi được không.
+ * ghi ở đây nữa — đi qua sổ thu chi (useOwnerCashFlow.ts, Phase 15a). Qua RPC
+ * owner_cash_set_defaulted: cờ này là quyền Thu tiền (thu-tien:update), không phải
+ * quyền sửa kết quả phiên.
  */
 export function useUpdateOutcomePayment(workspaceId: string | null | undefined) {
   const queryClient = useQueryClient();
@@ -147,14 +149,12 @@ export function useUpdateOutcomePayment(workspaceId: string | null | undefined) 
   return useMutation({
     mutationFn: async ({ outcomeId, patch }: UpdatePaymentInput) => {
       if (!workspaceId) throw new Error("no_workspace");
-      const { data, error } = await supabase
-        .from("owner_asset_outcomes")
-        .update(patch)
-        .eq("id", outcomeId)
-        .eq("workspace_id", workspaceId)
-        .select("id");
+      const { data, error } = await supabase.rpc("owner_cash_set_defaulted", {
+        p_outcome_id: outcomeId,
+        p_defaulted: patch.payment_status === "defaulted",
+      });
       if (error) throw error;
-      if (!data?.length) throw { code: "42501" };
+      assertCashRpcOk(data);
     },
     onSuccess: (_data, { successMessage }) => toast.success(successMessage),
     onError: (err) => toast.error(paymentErrorMessage(err)),

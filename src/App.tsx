@@ -76,6 +76,19 @@ const AdminAuctionToolsPage = lazy(() => import("./pages/admin/auction-tools/Adm
 const AdminLegalDocsPage = lazy(() => import("./pages/admin/legal/AdminLegalDocsPage"));
 const AdminLegalEditor = lazy(() => import("./pages/admin/legal/AdminLegalEditor"));
 const AdminLegalDetail = lazy(() => import("./pages/admin/legal/AdminLegalDetail"));
+const AdminContractsPage = lazy(() => import("./pages/admin/contracts/AdminContractsPage"));
+const AdminConsignmentContractPage = lazy(() =>
+  import("./pages/admin/contracts/AdminContractDetailPages").then((m) => ({ default: m.AdminConsignmentContractPage })),
+);
+const AdminSaleContractPage = lazy(() =>
+  import("./pages/admin/contracts/AdminContractDetailPages").then((m) => ({ default: m.AdminSaleContractPage })),
+);
+const AdminServiceContractPage = lazy(() =>
+  import("./pages/admin/contracts/AdminContractDetailPages").then((m) => ({ default: m.AdminServiceContractPage })),
+);
+const AdminContractTemplatesPage = lazy(() => import("./pages/admin/contract-templates/AdminContractTemplatesPage"));
+const AdminContractTemplateEditor = lazy(() => import("./pages/admin/contract-templates/AdminContractTemplateEditor"));
+const AdminContractTemplateDetail = lazy(() => import("./pages/admin/contract-templates/AdminContractTemplateDetail"));
 const TransactionReportPage = lazy(() => import("./pages/admin/reports/TransactionReportPage"));
 const RevenueReportPage = lazy(() => import("./pages/admin/reports/RevenueReportPage"));
 const AccessAnalyticsReportPage = lazy(() => import("./pages/admin/reports/AccessAnalyticsReportPage"));
@@ -137,14 +150,24 @@ const OwnerBranchesPage = lazy(() => import("./pages/OwnerBranchesPage"));
 const OwnerReportPage = lazy(() => import("./pages/OwnerReportPage"));
 const OwnerCreditsPage = lazy(() => import("./pages/chu-tai-san/OwnerCreditsPage"));
 const OwnerMembersPage = lazy(() => import("./pages/chu-tai-san/OwnerMembersPage"));
+const OwnerRolesPage = lazy(() => import("./pages/chu-tai-san/OwnerRolesPage"));
+const OwnerRoleDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerRoleDetailPage"));
 const OwnerLinksPage = lazy(() => import("./pages/chu-tai-san/OwnerLinksPage"));
 const OwnerOutcomesPage = lazy(() => import("./pages/chu-tai-san/OwnerOutcomesPage"));
 const OwnerCashFlowPage = lazy(() => import("./pages/chu-tai-san/OwnerCashFlowPage"));
+const OwnerCollectionsPage = lazy(() => import("./pages/chu-tai-san/OwnerCollectionsPage"));
+const OwnerTargetsPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetsPage"));
+const OwnerTargetDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetDetailPage"));
+const OwnerTargetFormPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetFormPage"));
 const OwnerPeriodicReportsPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportsPage"));
 const OwnerPeriodicReportDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportDetailPage"));
 const OwnerPeriodicReportPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportPrintPage"));
-const OwnerSaleContractsPage = lazy(() => import("./pages/chu-tai-san/OwnerSaleContractsPage"));
 const OwnerSaleContractDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerSaleContractDetailPage"));
+const OwnerContractsPage = lazy(() => import("./pages/chu-tai-san/OwnerContractsPage"));
+const OwnerConsignmentContractPage = lazy(() => import("./pages/chu-tai-san/OwnerConsignmentContractPage"));
+const OwnerServiceContractPage = lazy(() => import("./pages/chu-tai-san/OwnerServiceContractPage"));
+const OwnerConsignmentsPage = lazy(() => import("./pages/chu-tai-san/OwnerConsignmentsPage"));
+const OwnerConsignmentDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerConsignmentDetailPage"));
 const SaleContractPage = lazy(() => import("./pages/SaleContractPage"));
 const AssetPostingWizardPage = lazy(() => import("./pages/AssetPostingWizardPage"));
 const AssetPostingDetailPage = lazy(() => import("./pages/AssetPostingDetailPage"));
@@ -179,6 +202,12 @@ function RedirectApplicationId() {
 function RedirectServiceRequestId({ kind }: { kind: string }) {
   const { id } = useParams<{ id: string }>()
   return <Navigate to={`/admin/yeu-cau-dich-vu/${kind}/${id}`} replace />
+}
+
+// Menu "Hợp đồng mua bán" của chủ tài sản đã gộp vào "Hợp đồng" — giữ link đã phát ra.
+function RedirectOwnerSaleContractId() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/chu-tai-san/hop-dong/mua-ban/${id}`} replace />
 }
 
 function RedirectNhanSuId() {
@@ -307,6 +336,11 @@ const App = () => (
                   <Route path="tai-san" element={<OwnerAssetsPage />} />
                   <Route path="ket-qua" element={<OwnerOutcomesPage />} />
                   <Route path="dong-tien" element={<OwnerCashFlowPage />} />
+                  <Route path="thu-tien" element={<OwnerCollectionsPage />} />
+                  <Route path="chi-tieu" element={<OwnerTargetsPage />} />
+                  <Route path="chi-tieu/moi" element={<OwnerTargetFormPage />} />
+                  <Route path="chi-tieu/:id" element={<OwnerTargetDetailPage />} />
+                  <Route path="chi-tieu/:id/sua" element={<OwnerTargetFormPage />} />
                   <Route path="bao-cao-dinh-ky" element={<OwnerPeriodicReportsPage />} />
                   <Route path="bao-cao-dinh-ky/:id" element={<OwnerPeriodicReportDetailPage />} />
                   {/* Cổng KYC chủ tài sản ở layout: danh sách + chi tiết hồ sơ dùng chung,
@@ -315,15 +349,27 @@ const App = () => (
                     <Route index element={<AssetPostingWizardPage />} />
                     <Route path=":id" element={<AssetPostingDetailPage />} />
                   </Route>
+                  {/* Ký gửi đấu giá: theo dõi gửi tổ chức / báo giá / hợp đồng dịch vụ.
+                      :id là id HỒ SƠ — cùng cổng KYC với khu số hoá. */}
+                  <Route path="ky-gui-dau-gia" element={<OwnerKycGate />}>
+                    <Route index element={<OwnerConsignmentsPage />} />
+                    <Route path=":id" element={<OwnerConsignmentDetailPage />} />
+                  </Route>
                   <Route path="chi-nhanh-amc" element={<OwnerBranchesPage />} />
                   <Route path="thanh-vien" element={<OwnerMembersPage />} />
+                  <Route path="vai-tro" element={<OwnerRolesPage />} />
+                  <Route path="vai-tro/:id" element={<OwnerRoleDetailPage />} />
                   <Route path="lien-ket" element={<OwnerLinksPage />} />
                   <Route path="bao-cao" element={<OwnerReportPage />} />
                   <Route path="credits" element={<OwnerCreditsPage />} />
-                  {/* Hợp đồng mua bán: danh sách + chi tiết riêng của cổng (bố cục
-                      split), thân trang dùng CHUNG với bên mua — vai suy từ can_act. */}
-                  <Route path="hop-dong-mua-ban" element={<OwnerSaleContractsPage />} />
-                  <Route path="hop-dong-mua-ban/:id" element={<OwnerSaleContractDetailPage />} />
+                  {/* Hợp đồng: ký gửi (với tổ chức) · mua bán (với người trúng — chi tiết
+                      dùng CHUNG trang với bên mua, vai suy từ can_act) · dịch vụ (với sàn). */}
+                  <Route path="hop-dong" element={<OwnerContractsPage />} />
+                  <Route path="hop-dong/ky-gui/:id" element={<OwnerConsignmentContractPage />} />
+                  <Route path="hop-dong/mua-ban/:id" element={<OwnerSaleContractDetailPage />} />
+                  <Route path="hop-dong/dich-vu/:id" element={<OwnerServiceContractPage />} />
+                  <Route path="hop-dong-mua-ban" element={<Navigate to="/chu-tai-san/hop-dong?loai=mua-ban" replace />} />
+                  <Route path="hop-dong-mua-ban/:id" element={<RedirectOwnerSaleContractId />} />
                 </Route>
                 {/* Trang in A4 của báo cáo định kỳ — không sidebar / topbar */}
                 <Route path="bao-cao-dinh-ky/:id/in" element={<OwnerPeriodicReportPrintPage />} />
@@ -665,6 +711,14 @@ const App = () => (
                   <Route path="don-hang" element={<AdminPermissionRoute module="don-hang"><AdminOrdersPage /></AdminPermissionRoute>} />
                   <Route path="doi-tac-tren-san" element={<AdminPartnersPage />} />
                   <Route path="hien-thi-tren-san" element={<Navigate to="/admin/doi-tac-tren-san" replace />} />
+                  {/* Pháp lý & Đấu giá — hợp đồng (chỉ đọc) + mẫu hợp đồng có phiên bản */}
+                  <Route path="hop-dong" element={<AdminPermissionRoute module="hop-dong"><AdminContractsPage /></AdminPermissionRoute>} />
+                  <Route path="hop-dong/ky-gui/:id" element={<AdminPermissionRoute module="hop-dong"><AdminConsignmentContractPage /></AdminPermissionRoute>} />
+                  <Route path="hop-dong/mua-ban/:id" element={<AdminPermissionRoute module="hop-dong"><AdminSaleContractPage /></AdminPermissionRoute>} />
+                  <Route path="hop-dong/dich-vu/:id" element={<AdminPermissionRoute module="hop-dong"><AdminServiceContractPage /></AdminPermissionRoute>} />
+                  <Route path="mau-hop-dong" element={<AdminPermissionRoute module="mau-hop-dong"><AdminContractTemplatesPage /></AdminPermissionRoute>} />
+                  <Route path="mau-hop-dong/tao" element={<AdminPermissionRoute module="mau-hop-dong" action="create"><AdminContractTemplateEditor /></AdminPermissionRoute>} />
+                  <Route path="mau-hop-dong/:id" element={<AdminPermissionRoute module="mau-hop-dong"><AdminContractTemplateDetail /></AdminPermissionRoute>} />
                   <Route path="phap-ly" element={<AdminPermissionRoute module="phap-ly"><AdminLegalDocsPage /></AdminPermissionRoute>} />
                   <Route path="phap-ly/tao" element={<AdminPermissionRoute module="phap-ly" action="create"><AdminLegalEditor /></AdminPermissionRoute>} />
                   <Route path="phap-ly/:id" element={<AdminPermissionRoute module="phap-ly"><AdminLegalDetail /></AdminPermissionRoute>} />

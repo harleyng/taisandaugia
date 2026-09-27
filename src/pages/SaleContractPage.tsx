@@ -21,12 +21,24 @@ const CHILD_LABEL: Record<string, string> = Object.fromEntries(
  * `can_act`, nên không có nhánh giao diện riêng cho từng bên.
  *
  * Trong cổng chủ tài sản, chi tiết là `OwnerSaleContractDetailPage` (bố cục split).
+ *
+ * `embedded`: đang nằm trong khung trang của cổng khác (admin) — layout đã dựng
+ * lề + bề rộng, nên trang không bọc thêm `container` của riêng nó.
  */
-export default function SaleContractPage() {
+export default function SaleContractPage({
+  embedded = false,
+  backPath = "/profile?tab=auction-contracts",
+  backLabel = "Về hồ sơ đấu giá của tôi",
+}: {
+  embedded?: boolean;
+  /** Nút thoát khi không tìm thấy hợp đồng — admin trỏ về danh sách của admin. */
+  backPath?: string;
+  backLabel?: string;
+}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, error } = useSaleContractDetail(id ?? null);
-  const frame = "container mx-auto px-4";
+  const frame = embedded ? "" : "container mx-auto px-4";
 
   if (isLoading) {
     return (
@@ -44,8 +56,8 @@ export default function SaleContractPage() {
           <p className="text-sm text-muted-foreground">
             Không tìm thấy hợp đồng này, hoặc bạn không có quyền xem.
           </p>
-          <Button type="button" variant="outline" className="mt-4" onClick={() => navigate("/profile?tab=auction-contracts")}>
-            Về hồ sơ đấu giá của tôi
+          <Button type="button" variant="outline" className="mt-4" onClick={() => navigate(backPath)}>
+            {backLabel}
           </Button>
         </Card>
       </div>
@@ -55,7 +67,7 @@ export default function SaleContractPage() {
   const asset = (data.contract.asset_snapshot ?? {}) as SaleAssetSnapshot;
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
+    <div className={cn(!embedded && "container mx-auto max-w-4xl px-4 py-8")}>
       <Button
         type="button"
         variant="ghost"

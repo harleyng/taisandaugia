@@ -46,7 +46,9 @@ export function ReversePaymentDialog({
           </InfoBox>
 
           <div className="space-y-1.5">
-            <Label htmlFor="sale-reverse-reason">Lý do</Label>
+            <Label htmlFor="sale-reverse-reason">
+              Lý do <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="sale-reverse-reason"
               rows={3}

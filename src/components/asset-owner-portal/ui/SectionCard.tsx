@@ -20,7 +20,8 @@ interface SectionCardProps {
   className?: string;
 }
 
-/** Thẻ nội dung duy nhất của Trạm Điều Hành: viền mảnh, không đổ bóng, tiêu đề có ô icon. */
+/** Thẻ nội dung duy nhất của Trạm Điều Hành: nền trắng, không viền, đổ bóng nhẹ trên nền xám; tiêu đề có ô icon.
+ *  Bản in không in bóng ⇒ trả lại viền mảnh. */
 export function SectionCard({
   title,
   icon,
@@ -37,7 +38,7 @@ export function SectionCard({
   return (
     <section
       aria-labelledby={headingId}
-      className={cn("space-y-4 rounded-2xl border bg-card p-4 sm:p-5", className)}
+      className={cn("space-y-4 rounded-2xl bg-card p-4 shadow-card sm:p-5 print:border print:shadow-none", className)}
     >
       <header className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">

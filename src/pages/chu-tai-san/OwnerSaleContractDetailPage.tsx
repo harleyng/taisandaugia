@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { SaleContractBody } from "@/components/sale-contracts/SaleContractBody";
 import { OwnerSaleContractHero } from "@/components/owner-portal/sale-contracts/OwnerSaleContractHero";
 import { useSaleContractDetail } from "@/hooks/useSaleContracts";
-import { OWNER_SALE_CONTRACTS_PATH } from "@/lib/saleContracts/files";
+import { ownerContractsPath } from "@/lib/contracts/paths";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import type { SaleAssetSnapshot } from "@/types/auction-sale-contract";
 
@@ -14,7 +14,7 @@ const CHILD_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 /**
- * /chu-tai-san/hop-dong-mua-ban/:id — chi tiết hợp đồng trong cổng chủ tài sản.
+ * /chu-tai-san/hop-dong/mua-ban/:id — chi tiết hợp đồng trong cổng chủ tài sản.
  *
  * Cùng RPC + thân trang với bên mua và tổ chức (vai suy từ `can_act`), chỉ khác
  * bố cục: hero trên cùng, rồi `split` — thẻ thao tác bên trái, tóm tắt / tài sản /
@@ -24,7 +24,7 @@ export default function OwnerSaleContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, error } = useSaleContractDetail(id ?? null);
-  const back = () => navigate(OWNER_SALE_CONTRACTS_PATH);
+  const back = () => navigate(ownerContractsPath("mua-ban"));
 
   if (isLoading) {
     return (

@@ -108,7 +108,9 @@ export function EditTermsDialog({
         <div className="space-y-5">
           <section className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <Label>Lịch thanh toán</Label>
+              <Label>
+                Lịch thanh toán <span className="text-destructive">*</span>
+              </Label>
               <div className="flex gap-1">
                 {[1, 2, 3].map((n) => (
                   <Button key={n} type="button" variant="ghost" size="sm" disabled={isPending} onClick={() => splitInto(n)}>
@@ -176,7 +178,9 @@ export function EditTermsDialog({
 
           <section className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="sale-payee">Bên nhận tiền</Label>
+              <Label htmlFor="sale-payee">
+                Bên nhận tiền <span className="text-destructive">*</span>
+              </Label>
               <Select value={payeeSide} onValueChange={(v) => setPayeeSide(v as SalePayeeSide)} disabled={isPending}>
                 <SelectTrigger id="sale-payee">
                   <SelectValue />

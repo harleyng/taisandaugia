@@ -144,7 +144,7 @@ Dialogs are `rounded-2xl`, show cost in credits with the amber accent, and the b
 
 ### Detail pages (`/listings/:id`, `/auction-org/:id`, `/asset-owner/:id`)
 1. **Hero / header** — title, badges, metadata, primary action.
-2. **Tabs** (shadcn `Tabs`) for content sections.
+2. **Tabs** (shadcn `Tabs`) for content sections — in the owner portal, styled via `OwnerTabsList`/`OwnerTabsTrigger` (see below).
 3. **Gated blocks** wrapped in `LockedBlur` until unlocked; unlock CTA opens the matching paywall dialog.
 
 ### Wizard / multi-step flows (KYC `M2KYC`, asset-posting wizard)
@@ -167,13 +167,20 @@ The asset-owner portal follows its own design language: calm, few colours, numbe
 | Block | Use |
 |---|---|
 | `OwnerPageHeader` | Page title (`text-2xl font-semibold`) + one-line subtitle + at most one primary button |
-| `SectionCard` | The only card: `rounded-2xl border bg-card`, no shadow, icon tile + title + count + "Xem tất cả" |
+| `SectionCard` | The only card: `rounded-2xl bg-card shadow-card`, **no border** (hairline back in print), icon tile + title + count + "Xem tất cả" |
 | `HeroFigure` | L1 answer figure (`text-4xl tabular-nums`) + optional progress bar |
 | `StatTile` | KPI tile (`text-2xl tabular-nums`, muted unit, one context line, corner badge slot) — grid of 4, 2×2 on mobile |
 | `ActionCard` | To-do row with 1–3 inline buttons; the card itself is not clickable |
 | `EmptyState` | Icon tile + positive short copy + one optional action; `compact` for inside cards |
 | `IconTile` | Shared tinted icon square (`bg-<tone>/10 text-<tone>`, tones: primary/success/warning/destructive/muted) |
+| `OwnerTabs` | THE tab style: underline + count chip (`attention` = amber count). `OwnerTabBar` for filter tabs; `OwnerTabsList` + `OwnerTabsTrigger` inside shadcn `Tabs` when there are panels |
+| `OwnerSearchInput` | THE search box (search icon, h-9, `bg-card`; default `sm:w-64`, pass `className` for width) |
+| `OwnerFilterSelect` | THE filter dropdown: muted label + bold value ("Kỳ", "Đơn vị", "Chi nhánh"), h-9 |
+| `OwnerFilterBar` | Toolbar row: tabs left (full row below `xl`), search/filters right |
 
+- **One style for tabs / search / filters (2026-09-27, user rule):** every `/chu-tai-san/*` screen uses the four components above — never shadcn `TabsList` styling, pill chips, `ToggleGroup` filters or a hand-rolled search. Tab counts ignore the search box. The hairline under the tabs is an inset `box-shadow`, not a border (`overflow-x-auto` clips a `-mb-px` underline); a list inside a card with its own full-bleed line passes `shadow-none`. Exceptions: view-mode switches (`AssetViewToggle`) and inputs inside dialogs/forms.
+- **Surfaces:** the page is grey (`<main className="owner-canvas … bg-muted">` in `OwnerPortalLayout`); anything sitting directly on it is a white card with **no border + `shadow-card`** (`--shadow-card` in `index.css`). Blocks nested inside a card keep their `border` hairline. Shared components (asset-posting, consignment, sale-contracts…) are flattened by the scoped `.owner-canvas` rule in `index.css` — top-level `.bg-card.border` loses its border and gets the shadow, except semantic borders (`border-primary/success/warning/destructive`, dashed); page-level skeletons turn white. An `ActionCard` or other `bg-background`/`bg-muted` block placed directly on the page needs `border-0 bg-card shadow-card` itself (the rule only matches `bg-card`).
+- **Form labels (2026-09-27, user rule):** every REQUIRED field — incl. preselected radios/selects, and the shared dialogs the portal opens (sale-contracts, consignment, service orders, `CreditsTab`) — gets `<span className="text-destructive">*</span>` after the label (wizard atoms: `req`). Required = the form blocks submit when empty (zod / `canSubmit` / server RPC); a conditional rule gets a conditional `*` (`{cond && <span className="text-destructive"> *</span>}`). Optional fields get **no hint — never "(tuỳ chọn)"**. "Tuỳ chọn" meaning something else stays (optional fee line in a quote / contract PDF, "Custom" date range). Tests query these labels by anchored regex (`/^Giá trúng \(₫\)/`) — the `*` is part of the label text.
 - **Status colour goes on the icon or a small badge**, never on the whole card. No `amber-*`/`orange-*`/`red-*` palette classes.
 - **Money:** always `src/utils/money.ts`. `moneyShortParts` / `formatMoneyShort` for tiles and lists ("12.4 tỷ", "850 tr"), `formatMoneyFull` for tables and exports ("12,400,000,000 ₫"). Thousands are grouped with a comma and decimals use a dot, as in `formatVnd`. Never format money inline.
 - **Nav:** `OWNER_NAV_GROUPS` in `components/owner-portal/owner-nav-config.ts`, grouped "Điều hành" / "Tác nghiệp" / "Phân tích" / "Thiết lập". Add a new item only once its route exists.

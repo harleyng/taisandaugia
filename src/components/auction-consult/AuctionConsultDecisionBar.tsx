@@ -69,7 +69,7 @@ export function AuctionConsultDecisionBar({ row, mode }: { row: AuctionConsultat
             rows={2}
             maxLength={1000}
             value={note}
-            placeholder="Ghi chú (tuỳ chọn) — VD: dùng giá và bước giá, cọc để tổ chức đề xuất lại"
+            placeholder="Ghi chú — VD: dùng giá và bước giá, cọc để tổ chức đề xuất lại"
             onChange={(e) => setNote(e.target.value)}
           />
           <div className="flex flex-wrap gap-2">

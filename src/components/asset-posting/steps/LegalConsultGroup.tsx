@@ -17,7 +17,7 @@ export function LegalConsultGroup({ postingId, ensurePostingId, docPaths }: Lega
   return (
     <Group
       icon={<Scale className="h-4 w-4" />}
-      title="Tư vấn pháp lý (tuỳ chọn)"
+      title="Tư vấn pháp lý"
       desc="Chuyên gia rà soát giấy tờ và chỉ ra mục nào còn thiếu trước khi bạn đưa tài sản ra đấu giá"
     >
       <PostingLegalConsultCard

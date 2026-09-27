@@ -488,7 +488,7 @@ const GUIDE: (string | number)[][] = [
   ["Cột", "Cách điền"],
   ["Mã tài sản", "Mã 8 ký tự hiện dưới tên tài sản ở trang Tài sản / Kết quả phiên. Để trống nếu là tài sản ngoài sàn."],
   ["Tên tài sản *", "Bắt buộc khi không có mã. Tài sản ngoài sàn được nhận diện theo tên — ghi giống nhau giữa các lượt."],
-  ["Loại tài sản", "Tuỳ chọn, ví dụ: Đất ở, Nhà phố, Căn hộ, Ô tô, Xe tải, Máy móc."],
+  ["Loại tài sản", "Ví dụ: Đất ở, Nhà phố, Căn hộ, Ô tô, Xe tải, Máy móc."],
   ["Chi nhánh", "Tên chi nhánh như ở trang Chi nhánh. Tài sản trên sàn tự lấy chi nhánh theo danh mục."],
   ["Tổ chức đấu giá", "Tên tổ chức trong danh bạ; không tìm thấy thì để trống."],
   ["Lượt", "Số lượt đấu (1, 2, 3…). Để trống = 1."],

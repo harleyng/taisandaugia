@@ -72,6 +72,11 @@ export interface OrgServiceRequest {
   has_mortgage: boolean | null;
   is_seized: boolean | null;
   right_to_sell: boolean;
+  /** Hạn phản hồi (yyyy-MM-dd) — 7 ngày kể từ khi chủ tài sản gửi. */
+  respond_by: string;
+  quote_valid_until: string | null;
+  /** Mã hồ sơ HS-xxxx. */
+  posting_code: string;
 }
 
 /**
@@ -91,6 +96,8 @@ export interface ServiceQuoteInput {
   fee_items?: QuoteFeeItem[];
   note?: string;
   doc_path?: string;
+  /** Hiệu lực báo giá (yyyy-MM-dd) — form bắt buộc; server không bắt (bản cũ không gửi). */
+  valid_until?: string;
 }
 
 // ─── Nhãn hiển thị ───────────────────────────────────────────────────────────

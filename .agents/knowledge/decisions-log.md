@@ -5,6 +5,119 @@
 
 ---
 
+## 2026-09-27 — Vai trò tuỳ chỉnh Trạm Điều Hành (module × thao tác, DB chặn ghi)
+
+**Context:** Người dùng muốn trang quản lý vai trò cho cổng chủ tài sản như admin; trước đó 3 vai trò cố định + `owner_ws_can` CASE cứng (§A2 "upgrade when needed"). Người dùng chốt: ma trận module × thao tác, DB chặn GHI theo module, chống leo quyền theo tập con, Tác nghiệp tách 3 module.
+**Decision:**
+- `owner_ws_roles` + `owner_ws_role_permissions` theo Trạm (mẫu `org_roles`; membership = assignment qua `role_id`, FK SET NULL). Seed OWNER (hệ thống) / STAFF (= đúng quyền `staff` cũ) / VIEWER; self-check parity 0 khác biệt.
+- `owner_ws_has(ws,module,action)` / `owner_ws_has_in(…,branch)` thay mọi kiểm quyền ghi (~40 điểm, sinh từ `pg_get_functiondef` live). `owner_ws_can` chỉ còn `'read'`; action cũ RAISE `0A000` để code sót lỗi rõ. `owner_ws_role` trả code vai trò.
+- Đọc KHÔNG đổi; "Xem" chỉ ẩn menu + cổng `OwnerPermissionGate` trong layout (bảng đường dẫn → module, không bọc từng route vì App.tsx nóng).
+- `owner_cash_settle` → DEFINER; RPC `owner_cash_set_due` / `_set_defaulted` để Thu tiền không cần quyền sửa Kết quả phiên.
+- Bỏ cột `role` 3 bước: A `20260927170000` + B `20260927170100` ĐÃ ÁP (psql); C ở `supabase/pending/owner_ws_drop_legacy_role.sql`.
+**Consequences:** Áp C sau khi frontend lên production (bản cũ đọc `role`, gọi overload `p_role`). Migration mới của cổng chủ tài sản phải dùng `owner_ws_has*` / `owner_posting_can(id,module,action)`. Phase 15c/15d dùng module mới thay `manage_workspace`/`write`.
+
+## 2026-09-27 — Chỉ tiêu: dựng lại theo design (danh sách · chi tiết · trang đặt/sửa)
+
+**Context:** Claude Design "Chi Tieu - Danh sach & Chi tiet" (project 979d4c55) thay accordion + dialog bằng thẻ-dòng, trang chi tiết mới và form đầy đủ; người dùng đòi "exactly as design", duyệt kế hoạch.
+**Decision:**
+- Danh sách: `OwnerTabBar` 3 trạng thái + lọc Phạm vi / Loại kỳ (`?tab=&scope=&ky=`, theo luật một kiểu tab/lọc); thẻ-dòng = ô kỳ + tên + phạm vi + x/y tiêu chí + thanh có vạch thời gian; tab Đang thực hiện chia "Kỳ đang diễn ra" / "Sắp tới".
+- Chi tiết: **người dùng chốt** thẻ HERO trắng như Số hoá / Ký gửi (ô kỳ + tên + meta + nút sửa, dải Tiến độ chung | Thời gian ở đáy thẻ — không để thông tin nằm thẳng trên nền xám); thẻ tiêu chí gọn, lưới cố định 4 cột (2 tiêu chí không kéo giãn hết hàng); "Số liệu cấu thành" 5 dòng/trang + thanh chia tiền.
+- Đặt / sửa = TRANG `/chi-tieu/moi`, `/chi-tieu/:id/sua` (bỏ `TargetDialog`, bỏ `?dat=1`). Trùng kỳ + phạm vi ⇒ cảnh báo + khoá lưu (KHÔNG tự chuyển sang sửa chỉ tiêu kia). Mở sẵn ở kỳ + phạm vi trống đầu tiên. Gợi ý "Kỳ trước".
+- Chỉ dựng phần design HIỂN THỊ: bỏ khối kết luận, cột thời gian, pips, chú giải, ghi chú dưới bảng (prototype tính nhưng không render).
+- Màu không token: ô quý + nhãn "Đang thực hiện" = sắc trung tính foreground; chậm tiến độ = warning; "Chưa thu" = chữ thường + chấm warning.
+**Consequences:** Không migration. Lib hiển thị `src/lib/ownerTargetView.ts` (+test). Thanh chia tiền dùng chung `overview/recoverySegments.ts` với `RecoveryBar`. Nếu cần lại ghi chú "không tính N tài sản bỏ cọc" thì thêm vào `TargetContributionCard`.
+
+## 2026-09-27 — Menu "Hợp đồng" (3 loại) + hợp đồng dịch vụ thật + mẫu hợp đồng ở admin
+
+**Context:** Cổng chủ tài sản chỉ có "Hợp đồng mua bán"; hợp đồng ký gửi nằm lẫn trong trang Ký gửi; 4 dịch vụ trả tiền (VR, giám định, TVPL, TVĐG) không có văn bản hợp đồng; admin không xem được hợp đồng nào và mẫu điều khoản là hằng số TS chưa rà soát pháp lý.
+**Decision:**
+- **Người dùng chốt:** menu "Hợp đồng" quản lý ký gửi / mua bán / dịch vụ; hợp đồng dịch vụ là HỢP ĐỒNG THẬT — đồng ý trước khi trả, lưu bản chụp + phiên bản mẫu; admin XEM mọi hợp đồng + QUẢN LÝ MẪU; admin nhóm nav mới "Pháp lý & Đấu giá" (chuyển "Văn bản pháp lý" vào đây).
+- Tự quyết: mã `HDCU` (HDDV đã là hợp đồng dịch vụ đấu giá); cổng trả tiền = trigger theo `paid_at` (không chép lại 4 `_settle_*`), UX gate ở `useCheckoutItem`; Bên A chưa KYC vẫn đồng ý được (thêm `signatory`); Bên B = khối `provider_*` trong mẫu (repo chưa có pháp nhân sàn ⇒ seed `[CẦN NHẬP]`); mẫu = câu chữ theo slot, cấu trúc ở builder, fallback hằng số từng slot; ngày hiệu lực mẫu theo giờ VN, không lùi ngày; admin chỉ đọc hợp đồng (không can thiệp), danh sách qua RPC vì quyền đọc bảng đơn đi theo module từng dịch vụ.
+- Hợp đồng ký gửi RỜI trang Ký gửi sang `/chu-tai-san/hop-dong/ky-gui/:contractId` (phối hợp phiên f0); badge tách: `confirm_contract`/`add_address` ⇒ "Hợp đồng", còn lại ⇒ "Ký gửi".
+**Consequences:** mig `20260927150001` (contract_templates) + `20260927150002` (service_contracts + RPC) ĐÃ ÁP (psql, ghi schema_migrations). Trigger cổng trả tiền ở `supabase/pending/service_contract_payment_gate.sql` — CHƯA ÁP, chờ FE lên production. Sequence HDCU đã bị nghiệm thu tiêu 1 số (bản đầu tiên thật là HDCU000002). Mẫu dịch vụ cần admin điền Bên B trước khi chạy thật. Luật ở `business-rules.md` §Menu "Hợp đồng", §HDCU, §Mẫu hợp đồng.
+
+## 2026-09-27 — Ký gửi đấu giá: dựng lại theo design + dữ liệu thật cho mọi ô
+
+**Context:** Claude Design "Ky Gui Dau Gia - Danh sach & Chi tiet" (bảng + chi tiết theo giai đoạn); vài ô của design (mã HS, hạn phản hồi, hiệu lực báo giá, ngày dự kiến, chuyên viên, thành tích tổ chức) chưa có dữ liệu.
+**Decision:**
+- **Người dùng chốt:** bỏ dải "hồ sơ đang chờ bạn"; "Cần bạn xử lý" + badge gồm cả Chưa gửi / Cần gửi thêm (RPC `send_orgs`/`add_orgs`, mig `20260927180000`); nhờ sàn mở cả khi mọi tổ chức từ chối; các ô thiếu phải CÓ dữ liệu thật (mig `20260927140000`): hạn phản hồi 7 ngày, hiệu lực báo giá bắt buộc +30 ngày.
+- Tự quyết: giữ "Gửi thêm tổ chức" khi đang chờ/đã có báo giá (design không vẽ) + "Chi tiết phương án" (QuoteDetails) trong bảng so sánh; màu "việc của bạn" = chấm warning + chữ thường (tương phản); tiền theo `formatMoneyShort`. Không thêm "phương thức trả giá lên" (không có dữ liệu).
+- UI mới ở `src/components/consignment/owner/**`; xoá ConsignmentPanel/SendToOrgsCard/QuoteComparison/AcceptQuoteDialog.
+**Consequences:** Hợp đồng dịch vụ KHÔNG ở trang Ký gửi — nút "Xem hợp đồng" mở `/chu-tai-san/hop-dong/ky-gui/:contractId` (menu Hợp đồng, phiên khác); `CONSIGNMENT_OWNER_ACTIONS` chỉ còn choose_quote/add_orgs/send_orgs. Quyền ký gửi đọc qua `usePostingCanConsign()` (chờ tách ky-gui của RBAC). `owner_consignment_summary` sửa phải dựa bản LIVE (RBAC 20260927170100).
+
+## 2026-09-27 — Cổng chủ tài sản: dấu * đỏ cho trường bắt buộc, bỏ "(tuỳ chọn)"
+
+**Context:** Form ở `/chu-tai-san/*` lẫn lộn: phần lớn không đánh dấu trường bắt buộc, 26 chỗ ghi "(tuỳ chọn)" (có cả helper `OptionalMark`); người dùng đòi thống nhất.
+**Decision:**
+- Mọi trường bắt buộc có `<span className="text-destructive">*</span>` sau nhãn — xác định từ zod / `canSubmit` / RPC, gồm cả radio/select chọn sẵn; luật có điều kiện ⇒ `*` có điều kiện. Không ghi "(tuỳ chọn)" ở đâu nữa; `OptionalMark` đã xoá.
+- **Người dùng chốt:** áp luôn cho dialog dùng chung (hợp đồng mua bán — cả phía người mua + `/portal`, hợp đồng ký gửi, `CreditsTab`); giữ "Tuỳ chọn" khác nghĩa (khoản phí tuỳ chọn trong báo giá / PDF hợp đồng, lọc ngày "Tuỳ chọn...").
+**Consequences:** Rule ở `design-system.md` § Owner portal. Test tìm nhãn bằng regex neo đầu. Ô mã vận đơn giám định có nhãn thật. `ShareDraftDialog` không `*` (tệp đến từ "Tạo dự thảo" HOẶC tải lên).
+
+---
+
+## 2026-09-27 — Một kiểu tab / tìm / lọc cho cả Trạm + thiết kế lại "Số hoá tài sản"
+
+**Context:** Cổng chủ tài sản có 4 kiểu tab, 3 kiểu ô tìm, 3 kiểu lọc; người dùng đòi "chỉ 1 style" khi port design "So Hoa Tai San - Danh sach & Chi tiet".
+**Decision:**
+- **Người dùng chốt:** tab gạch chân + số đếm (kiểu design Số hoá); áp cho MỌI màn `/chu-tai-san/*`. Bộ dùng chung ở `asset-owner-portal/ui/`: `OwnerTabs` (`OwnerTabBar` lọc; `OwnerTabsList`/`OwnerTabsTrigger` trong `Tabs` khi có panel), `OwnerSearchInput`, `OwnerFilterSelect`, `OwnerFilterBar`. Số đếm tab bỏ qua ô tìm.
+- Số hoá: trạng thái GỘP `digitizeStatusOf` (`lib/asset-posting/digitizeStatus.ts`) = status + review_status + `consignmentStageOf` + `owner_action` → 1 nhãn / 1 người phải làm / 1 bước trên 4 bước. Chi tiết: dải tiến trình + MỘT nút thay `ConsignmentOverviewCard` và 2 banner duyệt; 3D/VR/Giám định mở thẻ đầy đủ trong dialog.
+- **Người dùng chốt:** "Chỉnh sửa" chỉ trước khi gửi tổ chức (nháp / chờ duyệt / cần sửa / sẵn sàng); wizard cho hồ sơ đã lưu mở qua `?ho-so=<id>`, thoát về chi tiết.
+**Consequences:** Ngoại lệ không đổi: `AssetViewToggle` (đổi chế độ xem), ô trong dialog/form. Mã hồ sơ = `asset_postings.code` ("HS-0001", mig `20260927140000` của phiên Ký gửi) — tìm kiếm + đầu trang chi tiết. Kỳ ở Tổng quan từ toggle thành select.
+
+---
+
+## 2026-09-27 — Kết quả phiên: một thẻ sổ có tab (theo design)
+
+**Context:** /chu-tai-san/ket-qua có 5 khối (chờ khai, hero, thẻ lệch số liệu, 4 ô thống kê, bảng + 6 bộ lọc). Design "Ket Qua Phien Chu Tai San.html" (Claude Design) gộp thành một thẻ sổ.
+**Decision:**
+- Tab Cần xử lý (lệch số liệu + phiên chưa khai, xử lý ngay tại chỗ) / Tất cả / Thành / Không thành / Hoãn–Huỷ; tóm tắt "Đã bán · Tỷ lệ thành" bên phải; bảng 8 dòng/trang; bấm dòng mở ngăn chi tiết "Nguồn của con số". Luật chọn nút xử lý lệch chuyển vào `conflictView` (lib thuần, `ownerOutcomesLedger.ts`).
+- **Người dùng chốt:** giữ tính năng ngoài design (nút "Khai tài sản ngoài sàn", các lượt đã khai sửa/xoá/khai tiếp — gập trong ngăn); 3 nút Thành/Không thành/Hoãn–Huỷ trong hộp đều MỞ DIALOG chọn sẵn (không lưu 1 chạm, vì cần lý do / loại hoãn-huỷ-rút); thời gian ĐÚNG 5 lựa chọn của design (7 ngày/tuần/tháng/6 tháng/năm nay, mặc định 6 tháng) — kết quả cũ hơn đầu năm nay không xem được trên trang này.
+- Bỏ lọc Nguồn + "Chỉ số liệu lệch" (lệch vào tab Cần xử lý). Địa chỉ lấy từ `listings.address` qua `ListingRow.addressLine`; tài sản ngoài sàn hiện "—".
+**Consequences:** `OutcomeDueBlock`, `OutcomeConflictSheet`, `OutcomeConflictCards`, `OutcomeTotals`, `OutcomeFilters`, `OutcomesTable`, `OutcomeSourceCard` đã xoá. Huy hiệu menu "Kết quả phiên" của design = chưa khai + lệch; menu hiện chỉ đếm chưa khai (menu do phiên khác làm — chưa đổi).
+
+## 2026-09-27 — Chỉ tiêu nhiều tiêu chí + trang chi tiết
+
+**Context:** Chỉ tiêu chỉ có 2 mục tiêu cố định (tiền, số tài sản) và không có chi tiết; người dùng muốn đặt nhiều tiêu chí, xem được số liệu cộng lại thành chỉ tiêu, danh sách chỉ còn tên + tiến độ.
+**Decision:**
+- Bảng con `owner_workspace_target_criteria` + cột `name` (mig `20260927124605`); 4 loại: tiền thu hồi, tổng giá trúng, số tài sản đấu thành, số tài sản đưa ra đấu giá (**người dùng chọn**). Ghi qua RPC `owner_save_target` (INVOKER, một giao dịch).
+- **Người dùng chốt:** vẫn 1 chỉ tiêu / kỳ + phạm vi; danh sách = tên + MỘT thanh tiến độ chung (trung bình, mỗi tiêu chí tối đa 100%); tên tự sinh điền sẵn.
+- Trang `/chu-tai-san/chi-tieu/:id`: thẻ từng tiêu chí + bảng "Số liệu cấu thành" (tổng = số thực tế, cùng `contributionOf`).
+- Báo cáo định kỳ chỉ đọc 2 tiêu chí cũ (vá CTE `tg`, payload giữ cấu trúc; parity 24 tổ hợp).
+**Consequences:** **Rollout 2 bước (người dùng chốt):** `target_amount`/`target_count` còn giữ vì production đang chạy code cũ — SAU KHI deploy phải DROP 2 cột (đừng tạo file migration sớm). Loại tiêu chí mới chưa vào Báo cáo định kỳ/Tổng quan. `TargetProgressSummary`/`TargetProgressStats` đã xoá.
+
+## 2026-09-27 — Tách "Dòng tiền" thành Thu tiền (tác nghiệp) + Dòng tiền (báo cáo)
+
+**Context:** Trang Dòng tiền trộn việc hằng ngày (quá hạn, ghi thu, đặt hạn) với báo cáo theo kỳ, và hero theo NGÀY TIỀN VỀ lệch nghĩa với thác tiền theo NGÀY PHIÊN. Design "Dong Tien Chu Tai San.html" (Claude Design) tách hai màn.
+**Decision:**
+- `/chu-tai-san/thu-tien` (Tác nghiệp): tính đến hôm nay, 3 nhóm hạn = bộ lọc, tab Còn phải thu / Đã ghi, huy hiệu quá hạn. **Người dùng chốt:** "Người trúng bỏ cọc" vào menu ⋯ của từng dòng — KHÔNG đặt `AwaitingPaymentBlock` ở đây; Tổng quan "Chờ thu tiền" dẫn tới trang này.
+- `/chu-tai-san/dong-tien` (Phân tích): **người dùng chốt** mọi số = tài sản BÁN trong kỳ (Đã thu + Còn phải thu = Giá trúng) dù số mẫu của design trộn "còn phải thu tới hôm nay"; bỏ hero theo ngày tiền về (`periodCashTotals`, `unitBreakdown` xoá). Thác 5 bậc, bỏ giá khởi điểm (theo design). **Người dùng giữ** Dự báo tiền về ở cuối dù design bỏ. Thêm Xuất Excel.
+- Thác vẽ bằng HTML thay Recharts (số in sẵn, thanh aria-hidden). Không migration.
+**Consequences:** Hai trang dùng chung 1 RPC `owner_cash_flow` (cùng cache với huy hiệu sidebar). HQ nhiều đơn vị chưa kiểm được trên trình duyệt (tài khoản demo đều là staff/viewer) — chỉ có unit test.
+
+## 2026-09-27 — Tổng quan chủ tài sản: 4 khối, việc cần làm chỉ là lối vào
+
+**Context:** Tổng quan có 9 khối ngang hàng (chỉ tiêu, KPI, so sánh chi nhánh, chờ khai, chờ thu, lịch, chờ xác nhận, tồn đọng…); bộ lọc chỉ nằm trong khối Chỉ tiêu. Bản thiết kế "Tổng Quan Chủ Tài Sản" (Claude Design) gộp còn 4 khối.
+**Decision:** **Người dùng chốt:** Chỉ tiêu doanh thu → Phân tích danh mục (giá trúng lũy kế theo tuần + 4 KPI so với cùng kỳ năm trước) → Việc cần làm + Lịch 7 ngày. Bộ lọc Đơn vị + Kỳ lên đầu trang. Việc cần làm BỎ nút thao tác (đi ngược §A8.1.4 "actions next to the information" — riêng trang này): mỗi dòng chỉ dẫn tới trang làm việc; dòng mô tả chỉ tên tài sản chờ lâu nhất (người dùng bỏ "Lâu nhất X ngày"). Vì "Người trúng bỏ cọc" / "Đã thu đủ" không có ở trang nào khác ⇒ `OutcomeDueBlock` dời lên đầu Kết quả phiên; thao tác thu tiền (kể cả bỏ cọc) nằm ở trang "Thu tiền" `/chu-tai-san/thu-tien` (phiên khác dựng cùng ngày), dòng "Chờ thu tiền" dẫn tới đó; `BenchmarkBlock` dời sang Phân tích danh mục. KPI theo kỳ: so với CÙNG KHOẢNG NGÀY năm trước (kỳ này mới đi một phần); tỷ lệ thành công chênh điểm %; "Đang tồn đọng" so với cùng NGÀY năm trước (ước tính từ lịch sử phiên, tăng = xấu).
+**Consequences:** Không migration. Xoá `DashboardKpiRow`, `PendingConfirmationsBlock`, `StuckAssetsBlock`, `UpcomingAuctionsBlock`, `TargetProgressBlock` (+test). Khối Chỉ tiêu doanh thu đã khớp file thiết kế (đọc được qua DesignSync sau `/design-login`); màu map về token có sẵn (nền = primary phủ trên success, sọc chờ thu = accent, số lớn = primary-hover) vì CLAUDE.md cấm thêm màu. Các khối còn lại vẫn dựng từ đặc tả chữ, chưa rà theo file thiết kế.
+
+## 2026-09-27 — Cổng chủ tài sản: nền xám, thẻ không viền mà đổ bóng
+
+**Context:** §A8 cũ: nền trắng, thẻ `rounded-2xl border`, không bóng. **Người dùng chốt** theo bản thiết kế "Tổng Quan Chủ Tài Sản" (Claude Design): mọi trang cổng chủ tài sản nền xám, thẻ không viền mà có bóng. Nhiều khối trong cổng (số hoá, ký gửi, HĐ mua bán, tư vấn…) dùng chung với cổng khác nên không sửa từng component được.
+**Decision:** `<main>` của `OwnerPortalLayout` = `owner-canvas bg-muted`; token mới `--shadow-card` (+ `shadow-card` trong Tailwind). Khối riêng của Trạm (`SectionCard`, `StatTile`, 2 `ActionCard` ở Báo cáo định kỳ, `CashFlowInfoNotes`) đổi thẳng class. Phần dùng chung: luật CSS thuần `.owner-canvas .bg-card.border:not(.bg-card *)` trong `index.css` — bỏ viền + đổ bóng cho thẻ nằm thẳng trên nền; giữ viền mang nghĩa (primary/success/warning/destructive, nét đứt) và viền hover; skeleton trên nền đổi sang màu thẻ. Không `@apply` trong luật này (Tailwind báo circular vì selector chứa `.bg-card`).
+**Consequences:** Cổng khác không đổi. Khối mới đặt thẳng trên nền phải là `bg-card` (thiếu nền ⇒ lộ xám; `bg-background`/`bg-muted` không được luật bắt). Thẻ lồng trong thẻ giữ viền. Bản in thêm `print:border` vì bóng không in.
+
+## 2026-09-27 — Cổng chủ tài sản: bỏ top bar, credit + hồ sơ xuống chân sidebar
+
+**Context:** Top bar desktop chỉ còn breadcrumb (trùng tiêu đề `OwnerPageHeader` của từng trang) + số dư credit + avatar; sidebar lại có riêng nút "Quay lại Marketplace".
+**Decision:** **Người dùng chốt:** bỏ hẳn top bar desktop. Chân sidebar = dòng credit (số dư, mở `/chu-tai-san/credits`) + hồ sơ (tên, vai trò); menu hồ sơ chứa Quay lại Marketplace / Mua thêm credit / Đăng xuất. Mobile giữ thanh mảnh `OwnerPortalMobileBar` (nút menu + tên cổng). Tab title chuyển sang `OwnerPortalLayout` + `owner-page-titles.ts`. Cổng tổ chức `/portal` giữ nguyên.
+**Consequences:** Không còn breadcrumb "cha › con" — trang chi tiết tự lo nút quay lại. Route owner mới thêm tên tab ở `owner-page-titles.ts`.
+
+## 2026-09-27 — Tách menu "Ký gửi đấu giá" khỏi "Số hoá tài sản"
+
+**Context:** "Số hoá tài sản" ôm cả việc tìm tổ chức đấu giá: tab Báo giá trong chi tiết hồ sơ chứa gửi tổ chức, nhờ sàn, so sánh/chốt báo giá, hợp đồng dịch vụ; số đếm trên menu "Số hoá tài sản" lại chỉ đếm việc ký gửi (chọn báo giá, bổ sung địa chỉ, xác nhận hợp đồng). Chi nhánh nhiều hồ sơ phải mở từng hồ sơ để biết báo giá nào đang chờ. Bảng Giai đoạn vốn đã coi Số hoá / Chọn tổ chức / HĐ dịch vụ là ba cột khác nhau.
+**Decision:** **Người dùng chốt:** menu mới tên "Ký gửi đấu giá" (`/chu-tai-san/ky-gui-dau-gia`, nhóm Tác nghiệp, giữa Số hoá và HĐ mua bán). Luồng TẠO vẫn liền một màn (wizard số hoá kết thúc bằng gửi tổ chức / nhờ sàn), không bắt chuyển menu. Màn CHI TIẾT tách: hồ sơ số hoá chỉ giữ thẻ tóm tắt; chi tiết đầy đủ ở trang ký gửi. Chỉ đổi giao diện — không migration, dữ liệu ký gửi vốn đã tách khỏi `asset_postings`.
+**Consequences:** Badge `owner-consignment` chuyển sang menu mới. `?tab=bao-gia` cũ redirect. Thẻ Giai đoạn cột Chọn tổ chức / HĐ dịch vụ mở trang ký gửi. Màn hoàn tất wizard có nút "Theo dõi báo giá". Chưa làm: số đếm riêng cho "Số hoá tài sản" (vd. hồ sơ bị trả về); Sổ tay Chủ tài sản + `docs/owner-guide/capture.mjs` chưa chụp trang mới.
+
 ## 2026-09-27 — Cổng chủ tài sản: bỏ nhãn "Nhịp đập" / "Đường ống"
 
 **Context:** P1 đổi "Tổng quan" → "Nhịp đập" và "Tài sản" → "Đường ống" — dịch từng chữ "Pulse" / "Pipeline"; người dùng thấy vô lý ("đường ống" là ống nước).

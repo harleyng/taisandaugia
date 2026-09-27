@@ -2,26 +2,33 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { qk } from "@/lib/queryKeys";
 import { todayIso } from "@/lib/ownerOutcomeReport";
 import {
   computeTargetProgress,
   currentTargets,
+  groupTargetsByStatus,
   mapTargetRow,
-  recoveryInputsFromOverview,
   targetErrorMessage,
-  toTargetWrite,
+  targetInputsFromOverview,
   type OwnerTarget,
-  type TargetForm,
+  type TargetGroups,
   type TargetProgress,
+  type TargetSaveArgs,
 } from "@/lib/ownerTargets";
+import type { OutcomeOverviewRow } from "@/lib/ownerOutcomesOverview";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useOwnerOutcomesOverview } from "@/hooks/useOwnerOutcomesOverview";
-import { useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
+import { useWorkspaceBranchOptions, type WorkspaceBranchOption } from "@/hooks/useOwnerWorkspaceMembers";
 
 const NO_TARGETS: OwnerTarget[] = [];
+const NO_BRANCHES: WorkspaceBranchOption[] = [];
+const NO_IDS: string[] = [];
 
-/** Mọi chỉ tiêu của không gian (cả kỳ cũ lẫn kỳ sắp tới) — ít dòng, tải một lần. */
+type SaveTargetRpcArgs = Database["public"]["Functions"]["owner_save_target"]["Args"];
+
+/** Mọi chỉ tiêu của không gian (cả kỳ cũ lẫn kỳ sắp tới) kèm tiêu chí — ít dòng, tải một lần. */
 export function useOwnerTargets(workspaceId: string | null | undefined) {
   const query = useQuery({
     queryKey: qk.ownerTargets(workspaceId),
@@ -30,7 +37,7 @@ export function useOwnerTargets(workspaceId: string | null | undefined) {
     queryFn: async (): Promise<OwnerTarget[]> => {
       const { data, error } = await supabase
         .from("owner_workspace_targets")
-        .select("*")
+        .select("*, criteria:owner_workspace_target_criteria(metric, goal, sort_order)")
         .eq("workspace_id", workspaceId!)
         .order("period_start", { ascending: false });
       if (error) throw error;
@@ -40,37 +47,30 @@ export function useOwnerTargets(workspaceId: string | null | undefined) {
       });
     },
   });
-  return { targets: query.data ?? NO_TARGETS, isLoading: query.isLoading };
-}
-
-interface SaveTargetInput {
-  /** Có ⇒ sửa chỉ tiêu này; không ⇒ tạo mới. */
-  id: string | null;
-  form: TargetForm;
+  return {
+    targets: query.data ?? NO_TARGETS,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+  };
 }
 
 /**
- * Tạo / sửa chỉ tiêu. RLS lọc dòng không có quyền mà không báo lỗi ⇒ đọc lại
- * id để biết có thật sự ghi được không (chỉ Trưởng đơn vị ghi được).
+ * Tạo / sửa chỉ tiêu + thay toàn bộ tiêu chí trong MỘT giao dịch (RPC owner_save_target,
+ * SECURITY INVOKER ⇒ RLS là cổng; server tự báo 42501 khi không ghi được). Trả id chỉ tiêu.
  */
 export function useSaveOwnerTarget(workspaceId: string | null | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, form }: SaveTargetInput) => {
+    mutationFn: async (args: TargetSaveArgs): Promise<string> => {
       if (!workspaceId) throw new Error("no_workspace");
-      const payload = toTargetWrite(form, workspaceId);
-      const { data, error } = id
-        ? await supabase
-            .from("owner_workspace_targets")
-            .update(payload)
-            .eq("id", id)
-            .eq("workspace_id", workspaceId)
-            .select("id")
-        : await supabase.from("owner_workspace_targets").insert(payload).select("id");
+      // Kiểu sinh tự động coi mọi tham số là bắt buộc & khác null; server nhận NULL.
+      const { data, error } = await supabase.rpc("owner_save_target", args as SaveTargetRpcArgs);
       if (error) throw error;
-      if (!data?.length) throw { code: "42501" };
+      if (!data) throw { code: "42501" };
+      return data;
     },
-    onSuccess: (_data, { id }) => toast.success(id ? "Đã cập nhật chỉ tiêu" : "Đã đặt chỉ tiêu"),
+    onSuccess: (_id, args) => toast.success(args.p_target_id ? "Đã cập nhật chỉ tiêu" : "Đã đặt chỉ tiêu"),
     onError: (err) => toast.error(targetErrorMessage(err)),
     onSettled: () => queryClient.invalidateQueries({ queryKey: qk.ownerTargets(workspaceId) }),
   });
@@ -97,31 +97,89 @@ export function useDeleteOwnerTarget(workspaceId: string | null | undefined) {
 }
 
 /**
- * Chỉ tiêu + tiến độ của kỳ đang diễn ra cho "Nhịp đập". Số đã thu dựng từ CÙNG
- * các dòng của trang "Kết quả phiên" (useOwnerOutcomesOverview, chung cache) ⇒
- * cùng kỳ thì số tài sản đấu thành của hai màn khớp nhau.
+ * Chỉ tiêu + đầu vào "đã thu" dùng chung cho Tổng quan và trang "Chỉ tiêu". Số đã
+ * thu dựng từ CÙNG các dòng của trang "Kết quả phiên" (useOwnerOutcomesOverview,
+ * chung cache) ⇒ cùng kỳ thì số tài sản đấu thành của các màn khớp nhau.
  */
-export function useOwnerTargetProgress() {
-  const { workspaceId, role, branchScope, can } = useOwnerWorkspace();
-  const { targets, isLoading: targetsLoading } = useOwnerTargets(workspaceId);
-  const { rows, isLoading: rowsLoading } = useOwnerOutcomesOverview(workspaceId);
-  const { data: branches = [], isLoading: branchesLoading } = useWorkspaceBranchOptions(workspaceId);
+function useTargetSources() {
+  const { workspaceId, isScoped, branchScope, can } = useOwnerWorkspace();
+  const targetsQuery = useOwnerTargets(workspaceId);
+  const rowsQuery = useOwnerOutcomesOverview(workspaceId);
+  const branchesQuery = useWorkspaceBranchOptions(workspaceId);
 
-  const inputs = useMemo(() => recoveryInputsFromOverview(rows), [rows]);
-  const today = todayIso();
+  const inputs = useMemo(() => targetInputsFromOverview(rowsQuery.rows), [rowsQuery.rows]);
+
+  return {
+    workspaceId,
+    targets: targetsQuery.targets,
+    rows: rowsQuery.rows,
+    inputs,
+    today: todayIso(),
+    branches: branchesQuery.data ?? NO_BRANCHES,
+    /** Người bị giới hạn chi nhánh mở sẵn chỉ tiêu của chi nhánh mình (nếu có). */
+    preferredBranchIds: isScoped ? branchScope ?? NO_IDS : NO_IDS,
+    /** Mở được hộp thoại "Đặt chỉ tiêu" (tạo mới hoặc sửa) — chi-tieu:create|update. */
+    canManage: can("chi-tieu", "create") || can("chi-tieu", "update"),
+    canUpdate: can("chi-tieu", "update"),
+    canDelete: can("chi-tieu", "delete"),
+    isLoading: targetsQuery.isLoading || rowsQuery.isLoading || branchesQuery.isLoading,
+    isError: targetsQuery.isError || rowsQuery.isError || branchesQuery.isError,
+    refetch: () => {
+      void targetsQuery.refetch();
+      void rowsQuery.refetch();
+      void branchesQuery.refetch();
+    },
+  };
+}
+
+/** Tiến độ các chỉ tiêu của kỳ đang diễn ra — khối chỉ xem trên Tổng quan. */
+export function useOwnerTargetProgress() {
+  const { workspaceId, targets, inputs, today, branches, preferredBranchIds, canManage, isLoading } =
+    useTargetSources();
   const progress = useMemo<TargetProgress[]>(
     () => currentTargets(targets, today).map((t) => computeTargetProgress(t, inputs, today)),
     [targets, inputs, today],
   );
+  return { workspaceId, progress, branches, preferredBranchIds, canManage, isLoading };
+}
 
-  return {
-    workspaceId,
-    targets,
-    progress,
-    branches,
-    /** Cán bộ bị giới hạn chi nhánh mở khối ở chi nhánh của mình (nếu có chỉ tiêu). */
-    preferredBranchIds: role === "staff" ? branchScope ?? [] : [],
-    canManage: can("manage_members"),
-    isLoading: targetsLoading || rowsLoading || branchesLoading,
-  };
+/** Mọi chỉ tiêu kèm tiến độ, chia đang thực hiện · đã hoàn thành · không hoàn thành — trang "Chỉ tiêu". */
+export function useOwnerTargetsBoard() {
+  const { targets, inputs, today, ...rest } = useTargetSources();
+  const groups = useMemo<TargetGroups>(
+    () => groupTargetsByStatus(targets.map((t) => computeTargetProgress(t, inputs, today)), today),
+    [targets, inputs, today],
+  );
+  return { ...rest, targets, groups, today };
+}
+
+const NO_ROWS_BY_KEY = new Map<string, OutcomeOverviewRow>();
+
+/**
+ * Một chỉ tiêu (trang chi tiết): tiến độ từng tiêu chí + các dòng Kết quả phiên để dựng
+ * bảng số liệu cấu thành. `progress` null ⇒ không có chỉ tiêu này trong không gian
+ * đang chọn (đã xoá, sai id, hoặc đổi sang không gian khác).
+ */
+export function useOwnerTargetDetail(id: string | undefined) {
+  const { targets, inputs, rows, today, ...rest } = useTargetSources();
+  const target = useMemo(() => targets.find((t) => t.id === id) ?? null, [targets, id]);
+  const progress = useMemo(
+    () => (target ? computeTargetProgress(target, inputs, today) : null),
+    [target, inputs, today],
+  );
+  const rowsByKey = useMemo(
+    () => (rows.length ? new Map(rows.map((r) => [r.rowKey, r])) : NO_ROWS_BY_KEY),
+    [rows],
+  );
+  return { ...rest, targets, inputs, rowsByKey, progress, today };
+}
+
+/**
+ * Trang đặt / sửa chỉ tiêu: mọi chỉ tiêu (để báo trùng kỳ + phạm vi) + đầu vào "đã thu"
+ * (gợi ý số kỳ trước). `id` trống ⇒ đặt mới, `target` luôn null.
+ */
+export function useOwnerTargetEditor(id: string | undefined) {
+  const { targets, ...rest } = useTargetSources();
+  const target = useMemo(() => (id ? targets.find((t) => t.id === id) ?? null : null), [targets, id]);
+  return { ...rest, targets, target };
 }

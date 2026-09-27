@@ -6,6 +6,8 @@ import { useAuthenticationOrder } from "@/hooks/useAuthenticationOrders";
 import { useLegalConsultation } from "@/hooks/useLegalConsultations";
 import { ownerLegalConsultPath } from "@/lib/legalConsult/paths";
 import { useAuctionConsultation } from "@/hooks/useAuctionConsultations";
+import { currentServiceContract, useOrderServiceContracts } from "@/hooks/useServiceContracts";
+import type { ServiceKindKey } from "@/lib/serviceRequests/kinds";
 import { ownerAuctionConsultPath } from "@/lib/auctionConsult/paths";
 import { isQuoteExpired } from "@/lib/vrTour/status";
 import { ownerPostingPath } from "@/lib/vrTour/paths";
@@ -55,12 +57,29 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   // đơn (RLS theo hồ sơ), nhưng chỉ NGƯỜI GỬI yêu cầu thanh toán — _settle_* kiểm
   // user_id, trả trước rồi mới bị từ chối là mất tiền.
   const { userId } = useAuth();
+  // Hợp đồng cung ứng dịch vụ (HDCU): phải ĐỒNG Ý báo giá hiện hành trước khi trả —
+  // chưa đồng ý (mở link thẳng / báo giá vừa đổi) ⇒ không có gì để trả, quay về thẻ đơn.
+  const scKind: ServiceKindKey | null = tvdgId
+    ? "tu-van-dau-gia"
+    : tvplId
+      ? "tu-van-phap-ly"
+      : gdOrderId
+        ? "giam-dinh"
+        : vrOrderId
+          ? "vr-tour"
+          : null;
+  const serviceContracts = useOrderServiceContracts(scKind, tvdgId || tvplId || gdOrderId || vrOrderId || null);
+  const notAccepted = (o: { quoted_at: string | null; quoted_price: number | string | null }) =>
+    !currentServiceContract(serviceContracts.data, {
+      quoted_at: o.quoted_at,
+      quoted_price: o.quoted_price == null ? null : Number(o.quoted_price),
+    });
 
   if (tvdgId) {
     const o = tvdg.data;
     const back = params.get("return") || (o ? ownerAuctionConsultPath(o.asset_posting_id) : "/chu-tai-san/dang-tai-san");
-    if (tvdg.isLoading) return { loading: true, item: null, fallbackPath: back };
-    if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId) {
+    if (tvdg.isLoading || serviceContracts.isLoading) return { loading: true, item: null, fallbackPath: back };
+    if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId || notAccepted(o)) {
       return { loading: false, item: null, fallbackPath: back };
     }
     return {
@@ -78,8 +97,8 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   if (tvplId) {
     const o = tvpl.data;
     const back = params.get("return") || (o ? ownerLegalConsultPath(o.asset_posting_id) : "/chu-tai-san/dang-tai-san");
-    if (tvpl.isLoading) return { loading: true, item: null, fallbackPath: back };
-    if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId) {
+    if (tvpl.isLoading || serviceContracts.isLoading) return { loading: true, item: null, fallbackPath: back };
+    if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId || notAccepted(o)) {
       return { loading: false, item: null, fallbackPath: back };
     }
     return {
@@ -97,8 +116,8 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   if (gdOrderId) {
     const o = gdOrder.data;
     const back = params.get("return") || (o ? ownerPostingPath(o.asset_posting_id) : "/chu-tai-san/dang-tai-san");
-    if (gdOrder.isLoading) return { loading: true, item: null, fallbackPath: back };
-    if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId) {
+    if (gdOrder.isLoading || serviceContracts.isLoading) return { loading: true, item: null, fallbackPath: back };
+    if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId || notAccepted(o)) {
       return { loading: false, item: null, fallbackPath: back };
     }
     return {
@@ -116,9 +135,9 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   if (vrOrderId) {
     const o = vrOrder.data;
     const back = params.get("return") || (o ? ownerPostingPath(o.asset_posting_id) : "/chu-tai-san/dang-tai-san");
-    if (vrOrder.isLoading) return { loading: true, item: null, fallbackPath: back };
+    if (vrOrder.isLoading || serviceContracts.isLoading) return { loading: true, item: null, fallbackPath: back };
     // Chưa báo giá / đã trả / hết hạn / không phải của mình (RLS trả null) ⇒ không có gì để trả.
-    if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId) {
+    if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId || notAccepted(o)) {
       return { loading: false, item: null, fallbackPath: back };
     }
     return {

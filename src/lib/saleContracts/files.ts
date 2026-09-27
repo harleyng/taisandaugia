@@ -72,7 +72,8 @@ export const saleContractPath = (id: string): string => `/hop-dong-mua-ban/${id}
 /** Trang hợp đồng phía TỔ CHỨC. */
 export const portalSaleContractPath = (id: string): string => `/portal/hop-dong-mua-ban/${id}`;
 export const PORTAL_SALE_CONTRACTS_PATH = "/portal/hop-dong-mua-ban";
-/** Danh sách hợp đồng trong cổng CHỦ TÀI SẢN. */
-export const OWNER_SALE_CONTRACTS_PATH = "/chu-tai-san/hop-dong-mua-ban";
+/** Hợp đồng mua bán trong menu "Hợp đồng" của cổng CHỦ TÀI SẢN (route cũ
+ *  /chu-tai-san/hop-dong-mua-ban chuyển hướng về đây). */
+export const OWNER_SALE_CONTRACTS_PATH = "/chu-tai-san/hop-dong/mua-ban";
 export const ownerSaleContractPath = (id: string): string =>
   `${OWNER_SALE_CONTRACTS_PATH}/${id}`;

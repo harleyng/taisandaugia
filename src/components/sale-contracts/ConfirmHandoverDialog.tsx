@@ -47,7 +47,7 @@ export function ConfirmHandoverDialog({
         </DialogHeader>
 
         <div className="space-y-1.5">
-          <Label htmlFor="sale-handover-doc">Biên bản bàn giao (tuỳ chọn)</Label>
+          <Label htmlFor="sale-handover-doc">Biên bản bàn giao</Label>
           <Input
             id="sale-handover-doc"
             type="file"

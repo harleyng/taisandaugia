@@ -1,14 +1,18 @@
-// "Dòng tiền" — /chu-tai-san/dong-tien (docs/owner-control-tower-plan.md Phase 15a).
+// Thu tiền + Dòng tiền (docs/owner-control-tower-plan.md Phase 15a, tách hai trang 2026-09-27):
+//   - "Thu tiền"  /chu-tai-san/thu-tien  — tác nghiệp, TÍNH ĐẾN HÔM NAY: khoản còn phải thu
+//     theo hạn + sổ đã ghi. Không có kỳ.
+//   - "Dòng tiền" /chu-tai-san/dong-tien — báo cáo THEO KỲ: mọi con số (hero, thác tiền, theo
+//     đơn vị) chỉ tính các tài sản BÁN trong kỳ (theo ngày phiên) ⇒ Đã thu + Còn phải thu = Giá trúng.
+//     Riêng "Dự báo tiền về" vẫn tính từ hôm nay (người dùng giữ lại dù design bỏ).
 //
 // Đọc MỘT payload của RPC owner_cash_flow: các đơn vị (Trạm + các Trạm con nếu là
 // trụ sở), các dòng "Kết quả phiên", sổ thu chi và phiên sắp tới. Server đã gộp
 // nguồn; module này chỉ cộng tổng / dựng biểu đồ (thuần, không React).
 //
-// Ba nghĩa của "đã thu" — đừng lẫn:
-//   1. Thực nhận trong kỳ  = tiền về − tiền ra theo NGÀY TIỀN VỀ (occurred_on).
-//   2. Thác tiền của kỳ    = các phiên BÁN trong kỳ (theo ngày phiên), số đã thu tới hôm nay,
-//                            chỉ tài sản đơn vị tự theo dõi tiền; tính bằng recoveryOf() như Chỉ tiêu.
-//   3. Chỉ tiêu "Đã thu"   = mọi tài sản bán trong kỳ (kể cả nguồn không theo dõi tiền), trước phí.
+// Hai nghĩa của "đã thu" — đừng lẫn:
+//   1. Dòng tiền của kỳ  = các phiên BÁN trong kỳ, số đã thu tới hôm nay, chỉ tài sản đơn vị
+//                          tự theo dõi tiền; tính bằng recoveryOf() như Chỉ tiêu.
+//   2. Chỉ tiêu "Đã thu" = mọi tài sản bán trong kỳ (kể cả nguồn không theo dõi tiền), trước phí.
 
 import {
   OUTCOME_CONFIDENCES,
@@ -25,6 +29,7 @@ import { inPeriod, periodRange, PERIOD_LAST_12M, type DateRange } from "@/lib/ow
 import { dayDiff } from "@/lib/ownerPulse";
 import { recoveryOf } from "@/lib/ownerTargets";
 import { CASH_KIND_SIGN, isCashKind, type CashKind } from "@/lib/ownerCashEvent";
+import { stripViDiacritics } from "@/lib/normalizeVi";
 
 /** Hạn thanh toán mặc định khi cán bộ chưa đặt — như payment_due_at của phiên trên sàn. */
 export const DEFAULT_PAYMENT_TERM_DAYS = 30;
@@ -251,32 +256,14 @@ const unitKey = (unitId: string, rowKey: string) => `${unitId}|${rowKey}`;
 export const isTracked = (row: Pick<CashRow, "bestKind" | "ownOutcomeId">) =>
   row.bestKind === "owner_report" && row.ownOutcomeId !== null;
 
-// ─── 1. Tiền trong kỳ (theo ngày tiền về) ────────────────────────────────────
+/** Hạn thanh toán: cán bộ đặt, không thì ngày phiên + 30; null khi tài sản không có ngày phiên. */
+const paymentDueOf = (r: CashRow): string | null =>
+  r.paymentDueOn ?? (r.date ? addDays(r.date, DEFAULT_PAYMENT_TERM_DAYS) : null);
 
-export interface PeriodCashTotals {
-  /** Tiền đặt trước + tiền thanh toán. */
-  inflow: number;
-  refunds: number;
-  fees: number;
-  /** Thực nhận = tiền về − hoàn trả − phí. */
-  net: number;
-  count: number;
-}
+const recoveryOfRow = (r: CashRow) =>
+  recoveryOf({ day: r.date, branchId: r.branchId, price: r.price, paymentStatus: r.paymentStatus, paidAmount: r.paidAmount });
 
-export function periodCashTotals(events: CashEvent[], range: DateRange | null): PeriodCashTotals {
-  const t: PeriodCashTotals = { inflow: 0, refunds: 0, fees: 0, net: 0, count: 0 };
-  for (const e of events) {
-    if (!inPeriod(e.occurredOn, range)) continue;
-    t.count += 1;
-    if (e.kind === "deposit" || e.kind === "payment") t.inflow += e.amount;
-    else if (e.kind === "refund") t.refunds += e.amount;
-    else t.fees += e.amount;
-    t.net += CASH_KIND_SIGN[e.kind] * e.amount;
-  }
-  return t;
-}
-
-// ─── 2. Thác tiền của các phiên bán trong kỳ ─────────────────────────────────
+// ─── 1. Thác tiền của các phiên bán trong kỳ ─────────────────────────────────
 
 export interface WaterfallTotals {
   /** Tài sản trong thác (tự theo dõi tiền, đã bán, không bỏ cọc). */
@@ -327,7 +314,7 @@ export function cohortWaterfall(rows: CashRow[], events: CashEvent[], range: Dat
       bucket.value += price;
       continue;
     }
-    const parts = recoveryOf({ day: r.date, branchId: r.branchId, price: r.price, paymentStatus: r.paymentStatus, paidAmount: r.paidAmount });
+    const parts = recoveryOfRow(r);
     if (!parts.counted) {
       w.notes.defaulted += 1;
       continue;
@@ -351,29 +338,22 @@ export function cohortWaterfall(rows: CashRow[], events: CashEvent[], range: Dat
   return w;
 }
 
-export type WaterfallStepKind = "total" | "up" | "down";
+export type WaterfallStepKind = "total" | "down";
 
 export interface WaterfallStep {
-  key: "starting" | "premium" | "winning" | "awaiting" | "recorded" | "fees" | "net";
+  key: "winning" | "awaiting" | "recorded" | "fees" | "net";
   label: string;
   kind: WaterfallStepKind;
-  /** Đoạn [thấp, cao] của cột (Recharts vẽ cột nổi từ mảng hai số). */
+  /** Đoạn [thấp, cao] của thanh nổi. */
   range: [number, number];
   /** Giá trị hiển thị (âm với bước giảm). */
   value: number;
 }
 
+/** "Từ giá trúng đến thực nhận" (design 2026-09-27): bỏ bậc giá khởi điểm / chênh lệch trả giá. */
 export function waterfallSteps(w: WaterfallTotals): WaterfallStep[] {
   const span = (a: number, b: number): [number, number] => [Math.min(a, b), Math.max(a, b)];
   return [
-    { key: "starting", label: "Giá khởi điểm", kind: "total", range: span(0, w.starting), value: w.starting },
-    {
-      key: "premium",
-      label: "Chênh lệch trả giá",
-      kind: w.premium >= 0 ? "up" : "down",
-      range: span(w.starting, w.winning),
-      value: w.premium,
-    },
     { key: "winning", label: "Giá trúng", kind: "total", range: span(0, w.winning), value: w.winning },
     { key: "awaiting", label: "Chưa thu", kind: "down", range: span(w.recorded, w.winning), value: -w.awaiting },
     { key: "recorded", label: "Đã thu", kind: "total", range: span(0, w.recorded), value: w.recorded },
@@ -382,7 +362,11 @@ export function waterfallSteps(w: WaterfallTotals): WaterfallStep[] {
   ];
 }
 
-// ─── 3. Khoản phải thu (tính tới hôm nay) ────────────────────────────────────
+/** Tỷ lệ thu = đã thu / giá trúng của các phiên bán trong kỳ; null khi chưa có giá trúng. */
+export const recoveryRate = (w: Pick<WaterfallTotals, "recorded" | "winning">): number | null =>
+  w.winning > 0 ? w.recorded / w.winning : null;
+
+// ─── 2. Khoản phải thu (tính tới hôm nay) ────────────────────────────────────
 
 export interface Receivable {
   row: CashRow;
@@ -399,9 +383,9 @@ export function receivables(rows: CashRow[], asOf: string): Receivable[] {
   const list: Receivable[] = [];
   for (const r of rows) {
     if (r.outcome !== "sold" || !isTracked(r)) continue;
-    const parts = recoveryOf({ day: r.date, branchId: r.branchId, price: r.price, paymentStatus: r.paymentStatus, paidAmount: r.paidAmount });
+    const parts = recoveryOfRow(r);
     if (!parts.counted || parts.awaiting <= 0) continue;
-    const dueOn = r.paymentDueOn ?? (r.date ? addDays(r.date, DEFAULT_PAYMENT_TERM_DAYS) : null);
+    const dueOn = paymentDueOf(r);
     list.push({
       row: r,
       remaining: parts.awaiting,
@@ -416,6 +400,60 @@ export function receivables(rows: CashRow[], asOf: string): Receivable[] {
       (a.dueOn ?? "9999").localeCompare(b.dueOn ?? "9999") ||
       a.row.title.localeCompare(b.row.title, "vi"),
   );
+}
+
+// ─── 3. Thu tiền: ba nhóm theo hạn ───────────────────────────────────────────
+
+/** "Đến hạn trong 7 ngày" gồm cả hạn hôm nay (0) tới hết ngày thứ 7. */
+export const DUE_SOON_DAYS = 7;
+
+export const COLLECTION_BUCKETS = ["overdue", "soon", "later"] as const;
+export type CollectionBucketKey = (typeof COLLECTION_BUCKETS)[number];
+
+export const COLLECTION_BUCKET_LABEL: Record<CollectionBucketKey, string> = {
+  overdue: "Quá hạn",
+  soon: `Đến hạn trong ${DUE_SOON_DAYS} ngày`,
+  later: "Còn hạn",
+};
+
+/** Số ngày tới hạn (âm = đã trễ, 0 = hôm nay); null khi chưa có hạn. */
+export const daysUntilDue = (r: Receivable, asOf: string): number | null => (r.dueOn ? dayDiff(asOf, r.dueOn) : null);
+
+/** Khoản chưa có hạn (tài sản không có ngày phiên) xếp vào "Còn hạn". */
+export function collectionBucketOf(r: Receivable, asOf: string): CollectionBucketKey {
+  if (r.daysOverdue > 0) return "overdue";
+  const d = daysUntilDue(r, asOf);
+  return d !== null && d <= DUE_SOON_DAYS ? "soon" : "later";
+}
+
+export interface CollectionBucket {
+  key: CollectionBucketKey;
+  label: string;
+  count: number;
+  amount: number;
+}
+
+export function collectionBuckets(recv: Receivable[], asOf: string): CollectionBucket[] {
+  const buckets = COLLECTION_BUCKETS.map((key) => ({ key, label: COLLECTION_BUCKET_LABEL[key], count: 0, amount: 0 }));
+  for (const r of recv) {
+    const b = buckets.find((x) => x.key === collectionBucketOf(r, asOf))!;
+    b.count += 1;
+    b.amount += r.remaining;
+  }
+  return buckets;
+}
+
+/**
+ * Quyền ghi của người xem trên một dòng (đơn vị của mình + phạm vi chi nhánh), theo
+ * thao tác của module Thu tiền: ghi khoản thu (mặc định) / sửa (kể cả hạn, bỏ cọc) / xoá.
+ */
+export type CanWriteRow = (unitId: string, branchId: string | null, action?: "create" | "update" | "delete") => boolean;
+
+/** Khoản quá hạn mà người xem ghi thu được (dòng chi nhánh của trụ sở chỉ xem). */
+export function writableOverdueCount(data: CashFlowData, canWrite: CanWriteRow): number {
+  return receivables(data.rows, data.asOf).filter(
+    (r) => r.daysOverdue > 0 && r.row.ownOutcomeId !== null && canWrite(r.row.unitId, r.row.branchId),
+  ).length;
 }
 
 // ─── 4. Ước tính từ phiên sắp tới ────────────────────────────────────────────
@@ -542,72 +580,127 @@ export function cashForecast(recv: Receivable[], estimate: EstimateLayer, asOf: 
   return f;
 }
 
-// ─── 6. Theo đơn vị (trụ sở, toàn hệ thống) ──────────────────────────────────
+// ─── 6. Dòng tiền: từng tài sản bán trong kỳ + theo đơn vị ───────────────────
 
-export interface UnitCashSummary {
-  unit: CashUnit;
-  period: PeriodCashTotals;
-  owed: number;
-  overdue: number;
-  overdueCount: number;
+/** Một tài sản bán trong kỳ mà đơn vị tự theo dõi tiền — dòng của file Excel. */
+export interface CohortAsset {
+  row: CashRow;
+  /** Người trúng bỏ cọc ⇒ không tính vào thác tiền. */
+  defaulted: boolean;
+  /** Đã thu tới hôm nay (không vượt giá trúng). */
+  recorded: number;
+  awaiting: number;
+  dueOn: string | null;
+  daysOverdue: number;
 }
 
-export function unitBreakdown(data: CashFlowData, range: DateRange | null): UnitCashSummary[] {
-  const recv = receivables(data.rows, data.asOf);
+/** Cùng tập tài sản với cohortWaterfall (kể cả bỏ cọc, để báo cáo liệt kê đủ). */
+export function cohortAssets(rows: CashRow[], range: DateRange | null, asOf: string): CohortAsset[] {
+  const out: CohortAsset[] = [];
+  for (const r of rows) {
+    if (r.outcome !== "sold" || !isTracked(r) || !inPeriod(r.date, range)) continue;
+    const parts = recoveryOfRow(r);
+    const price = r.price !== null && r.price > 0 ? r.price : 0;
+    const dueOn = paymentDueOf(r);
+    const awaiting = parts.counted ? parts.awaiting : 0;
+    out.push({
+      row: r,
+      defaulted: !parts.counted,
+      recorded: Math.min(parts.recorded, price),
+      awaiting,
+      dueOn,
+      daysOverdue: awaiting > 0 && dueOn ? Math.max(0, dayDiff(dueOn, asOf)) : 0,
+    });
+  }
+  return out.sort(
+    (a, b) => (b.row.date ?? "").localeCompare(a.row.date ?? "") || a.row.title.localeCompare(b.row.title, "vi"),
+  );
+}
+
+export interface UnitRecovery {
+  unit: CashUnit;
+  totals: WaterfallTotals;
+  /** Phần "Còn phải thu" đã quá hạn. */
+  overdue: number;
+  overdueCount: number;
+  rate: number | null;
+}
+
+/** Bảng "Theo đơn vị" của trụ sở — cùng tập tài sản bán trong kỳ với hero và thác tiền. */
+export function unitRecovery(data: CashFlowData, range: DateRange | null): UnitRecovery[] {
+  const late = cohortAssets(data.rows, range, data.asOf).filter((a) => a.daysOverdue > 0);
   return data.units.map((unit) => {
-    const mine = recv.filter((r) => r.row.unitId === unit.id);
-    const overdue = mine.filter((r) => r.daysOverdue > 0);
+    const totals = cohortWaterfall(
+      data.rows.filter((r) => r.unitId === unit.id),
+      data.events.filter((e) => e.unitId === unit.id),
+      range,
+    );
+    const mine = late.filter((a) => a.row.unitId === unit.id);
     return {
       unit,
-      period: periodCashTotals(
-        data.events.filter((e) => e.unitId === unit.id),
-        range,
-      ),
-      owed: mine.reduce((s, r) => s + r.remaining, 0),
-      overdue: overdue.reduce((s, r) => s + r.remaining, 0),
-      overdueCount: overdue.length,
+      totals,
+      overdue: mine.reduce((s, a) => s + a.awaiting, 0),
+      overdueCount: mine.length,
+      rate: recoveryRate(totals),
     };
   });
 }
 
 // ─── Dựng trọn một màn ───────────────────────────────────────────────────────
 
-export interface CashFlowView {
+/** Trang "Thu tiền" — tính đến hôm nay, không có kỳ. */
+export interface CollectionsView {
   asOf: string;
-  range: DateRange | null;
-  period: PeriodCashTotals;
-  waterfall: WaterfallTotals;
-  steps: WaterfallStep[];
   receivables: Receivable[];
-  overdue: Receivable[];
-  owedTotal: number;
-  estimate: EstimateLayer;
-  forecast: Forecast;
-  /** Dự kiến về trong 30 ngày tới (phải thu có hạn trong 30 ngày + ước tính). */
-  next30: number;
-  units: UnitCashSummary[];
+  buckets: CollectionBucket[];
+  /** Mọi khoản đã ghi, mới nhất trước (ngày tiền về, rồi lần sửa). */
+  ledger: CashEvent[];
 }
 
-export function buildCashFlowView(data: CashFlowData, periodId: string): CashFlowView {
+export function buildCollectionsView(data: CashFlowData): CollectionsView {
+  const recv = receivables(data.rows, data.asOf);
+  return {
+    asOf: data.asOf,
+    receivables: recv,
+    buckets: collectionBuckets(recv, data.asOf),
+    ledger: [...data.events].sort(
+      (a, b) => b.occurredOn.localeCompare(a.occurredOn) || (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""),
+    ),
+  };
+}
+
+/** Ô "Tìm tài sản…": theo tên (bỏ dấu) hoặc mã tài sản. */
+export function matchesAssetQuery(item: { title: string; assetCode: string | null }, query: string): boolean {
+  const q = stripViDiacritics(query);
+  if (!q) return true;
+  return stripViDiacritics(item.title).includes(q) || (item.assetCode ?? "").toLowerCase().includes(q);
+}
+
+/** Trang "Dòng tiền" — báo cáo theo kỳ (dự báo vẫn tính từ hôm nay). */
+export interface CashReportView {
+  asOf: string;
+  range: DateRange | null;
+  waterfall: WaterfallTotals;
+  steps: WaterfallStep[];
+  rate: number | null;
+  units: UnitRecovery[];
+  estimate: EstimateLayer;
+  forecast: Forecast;
+}
+
+export function buildCashReportView(data: CashFlowData, periodId: string): CashReportView {
   const range = periodRange(periodId, data.asOf);
   const waterfall = cohortWaterfall(data.rows, data.events, range);
-  const recv = receivables(data.rows, data.asOf);
   const estimate = estimateLayer(data.upcoming, unitSuccessRates(data.rows, data.units, data.asOf));
-  const forecast = cashForecast(recv, estimate, data.asOf);
-  const d30 = forecast.buckets.find((b) => b.key === "d30")!;
   return {
     asOf: data.asOf,
     range,
-    period: periodCashTotals(data.events, range),
     waterfall,
     steps: waterfallSteps(waterfall),
-    receivables: recv,
-    overdue: recv.filter((r) => r.daysOverdue > 0),
-    owedTotal: recv.reduce((s, r) => s + r.remaining, 0),
+    rate: recoveryRate(waterfall),
+    units: unitRecovery(data, range),
     estimate,
-    forecast,
-    next30: d30.owed + d30.estimate,
-    units: unitBreakdown(data, range),
+    forecast: cashForecast(receivables(data.rows, data.asOf), estimate, data.asOf),
   };
 }
 

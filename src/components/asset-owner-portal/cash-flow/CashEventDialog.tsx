@@ -135,7 +135,9 @@ export function CashEventDialog({ workspaceId, data, target, canWrite, onClose }
         <form id="owner-cash-event" className="space-y-4" onSubmit={submit} noValidate>
           {!locked && (
             <div className="space-y-1.5">
-              <Label htmlFor="ce-asset">Tài sản</Label>
+              <Label htmlFor="ce-asset">
+                Tài sản <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={outcomeId ?? undefined}
                 onValueChange={(v) => {
@@ -161,7 +163,9 @@ export function CashEventDialog({ workspaceId, data, target, canWrite, onClose }
           )}
 
           <div className="space-y-1.5">
-            <Label>Loại khoản</Label>
+            <Label>
+              Loại khoản <span className="text-destructive">*</span>
+            </Label>
             <Controller
               control={form.control}
               name="kind"
@@ -191,7 +195,9 @@ export function CashEventDialog({ workspaceId, data, target, canWrite, onClose }
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="ce-amount">Số tiền (₫)</Label>
+              <Label htmlFor="ce-amount">
+                Số tiền (₫) <span className="text-destructive">*</span>
+              </Label>
               <Controller
                 control={form.control}
                 name="amount"
@@ -209,14 +215,17 @@ export function CashEventDialog({ workspaceId, data, target, canWrite, onClose }
               <OutcomeFieldError msg={errors.amount?.message} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ce-date">{kind === "fee" || kind === "refund" ? "Ngày chi" : "Ngày tiền về"}</Label>
+              <Label htmlFor="ce-date">
+                {kind === "fee" || kind === "refund" ? "Ngày chi" : "Ngày tiền về"}{" "}
+                <span className="text-destructive">*</span>
+              </Label>
               <Input id="ce-date" type="date" max={data.asOf} disabled={busy} {...form.register("occurredOn")} />
               <OutcomeFieldError msg={errors.occurredOn?.message} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="ce-note">Ghi chú (tuỳ chọn)</Label>
+            <Label htmlFor="ce-note">Ghi chú</Label>
             <Textarea id="ce-note" rows={2} maxLength={500} disabled={busy} {...form.register("note")} />
             <OutcomeFieldError msg={errors.note?.message} />
           </div>

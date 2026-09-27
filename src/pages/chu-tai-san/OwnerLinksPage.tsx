@@ -22,7 +22,7 @@ const OwnerLinksPage = () => {
   const navigate = useNavigate();
   const { workspaceId, workspace, accessVia, can, isLoading: wsLoading } = useOwnerWorkspace();
   const viaHq = accessVia === "hq";
-  const canManage = can("manage_workspace");
+  const canManage = can("lien-ket", "update");
   const overviewQ = useOwnerLinkOverview(workspaceId, !viaHq);
   const [unlinkTarget, setUnlinkTarget] = useState<UnlinkTarget | null>(null);
 

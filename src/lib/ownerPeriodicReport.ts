@@ -24,7 +24,7 @@ import {
   shiftPeriod,
   type TargetPeriodType,
 } from "@/lib/ownerTargets";
-import { ownerWsBranchOk, ownerWsCan, type OwnerWsScope } from "@/lib/ownerWorkspace/roles";
+import { ownerCanIn, type OwnerWsAccessCtx } from "@/lib/ownerWorkspace/roles";
 
 // ─── Bản ghi báo cáo ─────────────────────────────────────────────────────────
 
@@ -623,13 +623,27 @@ export function reportFileName(payload: ReportPayload, ext: string): string {
 
 // ─── Quyền (bản sao RLS — chỉ để ẩn nút) ─────────────────────────────────────
 
-/** Lập / sửa / xoá nháp: 'write' + phạm vi chi nhánh (owner_ws_branch_ok; cả đơn vị = branchId null). */
-export function canDraftReport(scope: OwnerWsScope, branchId: string | null): boolean {
-  return ownerWsCan(scope.role, "write") && ownerWsBranchOk(scope, branchId);
+type ReportAccess = OwnerWsAccessCtx | null | undefined;
+
+/**
+ * Lập / sửa / xoá nháp: bao-cao-dinh-ky:create|update|delete + phạm vi chi nhánh của
+ * báo cáo (owner_ws_has_in; cả đơn vị = branchId null ⇒ chỉ người không bị giới hạn).
+ */
+export function canDraftReport(
+  access: ReportAccess,
+  branchId: string | null,
+  action: "create" | "update" | "delete" = "update",
+): boolean {
+  return ownerCanIn(access, "bao-cao-dinh-ky", action, branchId);
 }
 
-/** Chốt báo cáo: 'send_report' (Trưởng đơn vị). */
-export const canFinalizeReport = (scope: OwnerWsScope) => ownerWsCan(scope.role, "send_report");
+/** Chốt báo cáo: bao-cao-dinh-ky:finalize + phạm vi chi nhánh (owner_finalize_report). */
+export const canFinalizeReport = (access: ReportAccess, branchId: string | null) =>
+  ownerCanIn(access, "bao-cao-dinh-ky", "finalize", branchId);
+
+/** Tạo / thu hồi link chia sẻ: bao-cao-dinh-ky:share + phạm vi chi nhánh (owner_share_report). */
+export const canShareReport = (access: ReportAccess, branchId: string | null) =>
+  ownerCanIn(access, "bao-cao-dinh-ky", "share", branchId);
 
 // ─── Form ────────────────────────────────────────────────────────────────────
 

@@ -17,6 +17,7 @@ export const CONSIGNMENT_REASON_MESSAGES: Record<string, string> = {
   posting_already_selected:
     "Chủ tài sản đã chốt tổ chức khác cho hồ sơ này — không gửi báo giá được nữa.",
   request_closed: "Yêu cầu đã kết thúc, không thao tác thêm được.",
+  quote_validity_past: "Hiệu lực báo giá phải từ hôm nay trở đi.",
 
   // Hợp đồng dịch vụ
   no_contract: "Chưa có hợp đồng cho yêu cầu này.",

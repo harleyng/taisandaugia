@@ -231,6 +231,8 @@ export function useSendServiceRequests() {
     onSuccess: ({ postingId, sent, skipped }) => {
       queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
       queryClient.invalidateQueries({ queryKey: qk.postingDetail(postingId) });
+      // owner_action send_orgs / add_orgs đổi ngay khi gửi / nhờ sàn / huỷ nhờ sàn.
+      queryClient.invalidateQueries({ queryKey: qk.consignment.ownerSummary(userId) });
       toast.success(
         `Đã gửi yêu cầu báo giá tới ${sent} tổ chức đấu giá.` +
           (skipped > 0 ? ` ${skipped} tổ chức đã nhận yêu cầu từ trước.` : ""),
@@ -376,6 +378,8 @@ export function useCreateBrokerRequest() {
     onSuccess: ({ postingId }) => {
       queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
       queryClient.invalidateQueries({ queryKey: qk.postingDetail(postingId) });
+      // owner_action send_orgs / add_orgs đổi ngay khi gửi / nhờ sàn / huỷ nhờ sàn.
+      queryClient.invalidateQueries({ queryKey: qk.consignment.ownerSummary(userId) });
       toast.success("Đã gửi yêu cầu. Sàn sẽ tìm tổ chức đấu giá phù hợp cho bạn.");
     },
     onError: (err) => {
@@ -401,6 +405,8 @@ export function useCancelBrokerRequest() {
     onSuccess: ({ postingId }) => {
       queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
       queryClient.invalidateQueries({ queryKey: qk.postingDetail(postingId) });
+      // owner_action send_orgs / add_orgs đổi ngay khi gửi / nhờ sàn / huỷ nhờ sàn.
+      queryClient.invalidateQueries({ queryKey: qk.consignment.ownerSummary(userId) });
       toast.success("Đã huỷ yêu cầu nhờ sàn chọn giúp.");
     },
     onError: (err) => {

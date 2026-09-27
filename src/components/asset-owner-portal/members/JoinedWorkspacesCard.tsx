@@ -3,7 +3,7 @@ import { ArrowRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconTile } from "@/components/asset-owner-portal/ui/IconTile";
 import { useOwnerWorkspace, type OwnerWorkspaceMembership } from "@/hooks/useOwnerWorkspace";
-import { OWNER_WS_ROLE_LABEL } from "@/lib/ownerWorkspace/roles";
+import { ownerWsAccessLabel } from "@/lib/ownerWorkspace/roles";
 
 interface Props {
   memberships: OwnerWorkspaceMembership[];
@@ -35,7 +35,7 @@ export function JoinedWorkspacesCard({ memberships }: Props) {
           <li key={m.workspaceId} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground">{m.workspace.primary_name}</p>
-              <p className="text-xs text-muted-foreground">{OWNER_WS_ROLE_LABEL[m.role]}</p>
+              <p className="text-xs text-muted-foreground">{ownerWsAccessLabel(m.roleName, m.accessVia)}</p>
             </div>
             <Button size="sm" variant="outline" className="h-8 shrink-0 gap-1 text-xs" onClick={() => open(m.workspaceId)}>
               Vào Trạm Điều Hành

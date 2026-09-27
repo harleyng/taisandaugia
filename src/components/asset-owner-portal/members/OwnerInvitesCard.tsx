@@ -12,7 +12,6 @@ import {
 } from "@/hooks/useOwnerWorkspaceMembers";
 import { ownerWsErrorMessage } from "@/lib/ownerWorkspace/errors";
 import { ownerInviteLink } from "@/lib/ownerWorkspace/inviteLink";
-import { OWNER_WS_ROLE_LABEL } from "@/lib/ownerWorkspace/roles";
 import { scopeLabel } from "./scopeLabel";
 
 interface Props {
@@ -57,7 +56,7 @@ export function OwnerInvitesCard({ workspaceId, invites, isLoading, isError, onR
     try {
       const res = await reinvite.mutateAsync({
         email: invite.email,
-        role: invite.role,
+        roleId: invite.roleId ?? "",
         branchScope: invite.branchScope,
       });
       await copyLink(res.token, "Đã tạo liên kết mới và sao chép");
@@ -67,9 +66,11 @@ export function OwnerInvitesCard({ workspaceId, invites, isLoading, isError, onR
   };
 
   const busy = revoke.isPending || reinvite.isPending;
+  // Khớp badge của tab "Lời mời": lời mời hết hạn vẫn liệt kê để "Mời lại" nhưng không đếm là đang chờ.
+  const pendingCount = invites.filter((inv) => !inv.isExpired).length;
 
   return (
-    <SectionCard title="Lời mời đang chờ" icon={MailPlus} count={invites.length}>
+    <SectionCard title="Lời mời đang chờ" icon={MailPlus} count={pendingCount}>
       {isLoading ? (
         <div className="space-y-2">
           <Skeleton className="h-12 w-full rounded-xl" />
@@ -96,7 +97,7 @@ export function OwnerInvitesCard({ workspaceId, invites, isLoading, isError, onR
               <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                 <p className="truncate font-medium text-foreground">{inv.email}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {OWNER_WS_ROLE_LABEL[inv.role]} · {scopeLabel(inv.role, inv.branchScope, branchNames).text}
+                  {inv.roleName} · {scopeLabel(false, inv.branchScope, branchNames).text}
                 </p>
               </div>
               {inv.isExpired ? (

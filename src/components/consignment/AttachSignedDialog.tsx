@@ -81,7 +81,9 @@ export function AttachSignedDialog({
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="signed-file">Tệp hợp đồng đã ký (PDF/JPG/PNG, ≤ 10MB)</Label>
+            <Label htmlFor="signed-file">
+              Tệp hợp đồng đã ký (PDF/JPG/PNG, ≤ 10MB) <span className="text-destructive">*</span>
+            </Label>
             {file ? (
               <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
                 <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -107,7 +109,9 @@ export function AttachSignedDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="signed-date">Ngày ký</Label>
+              <Label htmlFor="signed-date">
+                Ngày ký <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="signed-date"
                 type="date"

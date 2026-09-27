@@ -20,11 +20,13 @@ export interface ContractPdfInput {
   /** Nhãn loại tài sản tra sẵn — không kéo ASSET_CATEGORIES (lucide) vào renderer. */
   categoryLabel: string | null
   generatedAt: Date
+  /** Mẫu đang áp dụng (contract_templates). Thiếu slot nào ⇒ hằng số trong clauses.ts. */
+  template?: { version: string; clauses: unknown } | null
 }
 
 export function buildContractPdfInput(
   detail: OrgContractDetail,
-  opts: { categoryLabel?: string | null; now?: Date } = {},
+  opts: { categoryLabel?: string | null; now?: Date; template?: ContractPdfInput['template'] } = {},
 ): ContractPdfInput {
   const { contract, owner_party, asset } = detail
   if (!owner_party || !asset || !contract.org_party) {
@@ -39,6 +41,7 @@ export function buildContractPdfInput(
     terms: contract.terms,
     categoryLabel: opts.categoryLabel ?? null,
     generatedAt: opts.now ?? new Date(),
+    template: opts.template ?? null,
   }
 }
 

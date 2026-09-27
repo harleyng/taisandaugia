@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   PERIOD_ALL,
   PERIOD_LAST_12M,
+  RECENT_PERIODS,
   inPeriod,
   ownerPeriodGroups,
   ownerPeriodIds,
@@ -62,5 +63,28 @@ describe("labels", () => {
     expect(ownerPeriodLabel("q-2026-3")).toBe("Quý 3/2026");
     expect(ownerPeriodPhrase("m-2026-09")).toBe("trong tháng 09/2026");
     expect(ownerPeriodPhrase(PERIOD_ALL)).toBe("từ trước tới nay");
+  });
+});
+
+describe("recent periods (Kết quả phiên)", () => {
+  it("counts back from today and always ends today", () => {
+    // 27/09/2026 là Chủ nhật ⇒ tuần bắt đầu thứ Hai 21/09.
+    expect(periodRange("7d", "2026-09-27")).toEqual({ from: "2026-09-21", to: "2026-09-27" });
+    expect(periodRange("week", "2026-09-27")).toEqual({ from: "2026-09-21", to: "2026-09-27" });
+    expect(periodRange("week", "2026-09-21")).toEqual({ from: "2026-09-21", to: "2026-09-21" });
+    expect(periodRange("month", "2026-09-27")).toEqual({ from: "2026-09-01", to: "2026-09-27" });
+    expect(periodRange("6m", "2026-09-27")).toEqual({ from: "2026-03-27", to: "2026-09-27" });
+    expect(periodRange("year", "2026-09-27")).toEqual({ from: "2026-01-01", to: "2026-09-27" });
+  });
+
+  it("clamps six months back to the end of a shorter month and crosses the year", () => {
+    expect(periodRange("6m", "2026-08-31")).toEqual({ from: "2026-02-28", to: "2026-08-31" });
+    expect(periodRange("6m", "2026-02-15")).toEqual({ from: "2025-08-15", to: "2026-02-15" });
+    expect(periodRange("7d", "2026-01-03")).toEqual({ from: "2025-12-28", to: "2026-01-03" });
+  });
+
+  it("names them like the design", () => {
+    expect(RECENT_PERIODS.map(ownerPeriodLabel)).toEqual(["7 ngày qua", "Tuần này", "Tháng này", "6 tháng qua", "Năm nay"]);
+    expect(ownerPeriodPhrase("6m")).toBe("trong 6 tháng qua");
   });
 });

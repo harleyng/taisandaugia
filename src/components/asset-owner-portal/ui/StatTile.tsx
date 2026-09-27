@@ -20,7 +20,7 @@ interface StatTileProps {
 /** Ô chỉ số tầng L3: nhãn mờ, số lớn — xếp lưới 4 cột desktop, 2×2 mobile. */
 export function StatTile({ label, value, unit, context, icon, tone = "primary", badge, className }: StatTileProps) {
   return (
-    <div className={cn("min-w-0 rounded-2xl border bg-card p-4 sm:p-5", className)}>
+    <div className={cn("min-w-0 rounded-2xl bg-card p-4 shadow-card sm:p-5 print:border print:shadow-none", className)}>
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 text-xs text-muted-foreground">{label}</p>
         {(badge || icon) && (

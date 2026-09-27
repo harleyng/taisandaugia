@@ -4,14 +4,15 @@ import { usePostingCanWrite } from "@/components/asset-posting/postingAccess";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { CalendarClock, CreditCard, ExternalLink, Eye, EyeOff, Loader2, Rotate3d, ShieldCheck, X } from "lucide-react";
+import { CalendarClock, ExternalLink, Eye, EyeOff, Loader2, Rotate3d, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHasAdminPermission } from "@/hooks/useAdminPermissions";
 import { useCancelVrTour, usePostingVrOrders } from "@/hooks/useVrTourOrders";
 import { useAttachVrTour } from "@/hooks/useAdminVrTourOrders";
 import { formatVnd } from "@/lib/advertising/slug";
 import { isQuoteExpired, summarizeVrOrders } from "@/lib/vrTour/status";
-import { ADMIN_VR_TOUR_PATH, vrTourCheckoutPath } from "@/lib/vrTour/paths";
+import { ADMIN_VR_TOUR_PATH } from "@/lib/vrTour/paths";
+import { ServiceContractPayButton } from "@/components/service-contracts/ServiceContractPayButton";
 import type { VrTourOrder } from "@/types/vrTour";
 import { AddVrTourDialog } from "./AddVrTourDialog";
 import { VrTourStatusStepper } from "./VrTourStatusStepper";
@@ -166,9 +167,7 @@ function ActiveOrder({
 
       <div className="flex flex-wrap gap-2">
         {owner && order.status === "quoted" && !expired && (isRequester ? (
-          <Button size="sm" onClick={() => navigate(vrTourCheckoutPath(order.id, order.asset_posting_id))}>
-            <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Thanh toán {formatVnd(order.quoted_price)}
-          </Button>
+          <ServiceContractPayButton kind="vr-tour" orderId={order.id} price={order.quoted_price} />
         ) : (
           <p className="text-xs text-muted-foreground">Chờ người gửi yêu cầu thanh toán.</p>
         ))}

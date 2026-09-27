@@ -14,7 +14,7 @@ import {
 import { AuctionOrgPicker } from "@/components/shared/AuctionOrgPicker";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import type { ReportOutcomeForm } from "@/lib/ownerOutcomeReport";
-import { OptionalMark, OutcomeFieldError } from "./OutcomeFieldError";
+import { OutcomeFieldError } from "./OutcomeFieldError";
 
 const NONE = "__none__";
 
@@ -39,7 +39,9 @@ export function OffPlatformAssetFields({ branches, branchScope, disabled }: OffP
   return (
     <div className="space-y-4 rounded-xl border border-border bg-muted/40 p-4">
       <div className="space-y-1.5">
-        <Label htmlFor="oc-title">Tên tài sản</Label>
+        <Label htmlFor="oc-title">
+          Tên tài sản <span className="text-destructive">*</span>
+        </Label>
         <Input
           id="oc-title"
           placeholder="VD: QSDĐ thửa 123, tờ bản đồ 45, xã An Phú"
@@ -55,10 +57,7 @@ export function OffPlatformAssetFields({ branches, branchScope, disabled }: OffP
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="oc-category">
-            Loại tài sản
-            <OptionalMark />
-          </Label>
+          <Label htmlFor="oc-category">Loại tài sản</Label>
           <Controller
             control={control}
             name="assetCategory"
@@ -94,7 +93,8 @@ export function OffPlatformAssetFields({ branches, branchScope, disabled }: OffP
           <div className="space-y-1.5">
             <Label htmlFor="oc-branch">
               Chi nhánh
-              {!branchScope && <OptionalMark />}
+              {/* Bị giới hạn chi nhánh thì không có "Toàn đơn vị" — bắt buộc chọn một. */}
+              {branchScope && <span className="text-destructive"> *</span>}
             </Label>
             <Controller
               control={control}
@@ -125,10 +125,7 @@ export function OffPlatformAssetFields({ branches, branchScope, disabled }: OffP
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="oc-org">
-          Tổ chức đấu giá
-          <OptionalMark />
-        </Label>
+        <Label htmlFor="oc-org">Tổ chức đấu giá</Label>
         <Controller
           control={control}
           name="auctionOrgId"
@@ -146,10 +143,7 @@ export function OffPlatformAssetFields({ branches, branchScope, disabled }: OffP
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="oc-starting">
-          Giá khởi điểm (₫)
-          <OptionalMark />
-        </Label>
+        <Label htmlFor="oc-starting">Giá khởi điểm (₫)</Label>
         <Controller
           control={control}
           name="startingPrice"

@@ -104,7 +104,9 @@ export function RecordPaymentDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="sale-pay-amount">Số tiền</Label>
+              <Label htmlFor="sale-pay-amount">
+                Số tiền <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="sale-pay-amount"
                 inputMode="numeric"
@@ -128,7 +130,9 @@ export function RecordPaymentDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="sale-pay-method">Hình thức</Label>
+              <Label htmlFor="sale-pay-method">
+                Hình thức <span className="text-destructive">*</span>
+              </Label>
               <Select value={method} onValueChange={(v) => setMethod(v as SalePaymentMethod)} disabled={isPending}>
                 <SelectTrigger id="sale-pay-method">
                   <SelectValue />
@@ -167,7 +171,7 @@ export function RecordPaymentDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="sale-pay-file">Chứng từ (tuỳ chọn)</Label>
+            <Label htmlFor="sale-pay-file">Chứng từ</Label>
             <Input
               id="sale-pay-file"
               type="file"

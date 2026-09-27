@@ -6,13 +6,22 @@ import { qk } from "@/lib/queryKeys";
 import {
   canWriteClaim as canWriteClaimFor,
   canWritePosting as canWritePostingFor,
-  isOwnerWsRole,
-  ownerWsCan,
+  HQ_ACCESS_LABEL,
+  ownerAccessCtx,
+  ownerCan,
+  ownerCanIn,
+  ownerIsScoped,
   type OwnerWsAccess,
-  type OwnerWsAction,
-  type OwnerWsRole,
+  type OwnerWsAccessCtx,
   type PostingOwnership,
 } from "@/lib/ownerWorkspace/roles";
+import {
+  HQ_VIEW_MATRIX,
+  ownerMatrixFromRows,
+  ownerMatrixHasWrite,
+  type OwnerAction,
+  type OwnerModule,
+} from "@/lib/ownerWorkspace/permissions";
 import {
   PERSONAL_TENANT,
   pickTenant,
@@ -26,7 +35,16 @@ export interface OwnerWorkspaceMembership {
   /** NULL khi vào qua liên kết trụ sở (không có dòng thành viên). */
   memberId: string | null;
   workspaceId: string;
-  role: OwnerWsRole;
+  /** NULL khi vào qua liên kết trụ sở. */
+  roleId: string | null;
+  /** Tên vai trò để hiển thị ("Trụ sở · chỉ xem" khi vào qua liên kết). */
+  roleName: string;
+  /** Vai trò hệ thống Trưởng đơn vị (owner_ws_roles.is_system). */
+  isOwner: boolean;
+  /** Vai trò có ít nhất một quyền khác "Xem" — dùng xếp thứ tự tenant. */
+  hasWrite: boolean;
+  /** Quyền hiệu lực ở Trạm này: OWNER đầy đủ, trụ sở chỉ xem. */
+  access: OwnerWsAccessCtx;
   /** NULL = toàn bộ không gian. */
   branchScope: string[] | null;
   joinedAt: string | null;
@@ -38,11 +56,11 @@ export interface OwnerWorkspaceMembership {
 const NO_MEMBERSHIPS: OwnerWorkspaceMembership[] = [];
 
 /**
- * Các không gian chủ tài sản mà người dùng là thành viên ĐANG HOẠT ĐỘNG, rồi tới
- * các Trạm chi nhánh đã liên kết với nơi mình là Trưởng đơn vị (Phase 14 — chỉ
- * đọc, role "viewer", xếp sau). Là thành viên trực tiếp của chính chi nhánh đó thì
- * dòng thành viên thắng. Lọc user_id là bắt buộc: policy đọc của bảng thành viên
- * trả cả dòng của đồng nghiệp trong cùng không gian.
+ * Các không gian chủ tài sản mà người dùng là thành viên ĐANG HOẠT ĐỘNG (kèm vai trò
+ * + ma trận quyền của vai trò), rồi tới các Trạm chi nhánh đã liên kết với nơi mình
+ * là Trưởng đơn vị (Phase 14 — chỉ xem, xếp sau). Là thành viên trực tiếp của chính
+ * chi nhánh đó thì dòng thành viên thắng. Lọc user_id là bắt buộc: policy đọc của
+ * bảng thành viên trả cả dòng của đồng nghiệp trong cùng không gian.
  */
 export function useOwnerWorkspaceMemberships() {
   const { userId, loading: authLoading } = useAuth();
@@ -55,19 +73,26 @@ export function useOwnerWorkspaceMemberships() {
       const { data, error } = await supabase
         .from("asset_owner_workspace_members")
         .select(
-          "id, workspace_id, role, branch_scope, joined_at, workspace:asset_owner_workspaces!asset_owner_workspace_members_workspace_id_fkey(*)",
+          "id, workspace_id, role_id, branch_scope, joined_at, workspace:asset_owner_workspaces!asset_owner_workspace_members_workspace_id_fkey(*), ws_role:owner_ws_roles!asset_owner_workspace_members_role_id_fkey(id, name, is_system, permissions:owner_ws_role_permissions(module, action))",
         )
         .eq("user_id", userId!)
         .eq("status", "active");
       if (error) throw error;
       const direct: OwnerWorkspaceMembership[] = (data ?? []).flatMap((row) => {
-        if (!row.workspace || !isOwnerWsRole(row.role)) return [];
+        if (!row.workspace || !row.ws_role) return [];
+        const isOwner = row.ws_role.is_system;
+        const matrix = ownerMatrixFromRows(row.ws_role.permissions ?? []);
+        const access = ownerAccessCtx({ isOwner, matrix, branchScope: row.branch_scope });
         return [
           {
             memberId: row.id,
             workspaceId: row.workspace_id,
-            role: row.role,
-            branchScope: row.branch_scope,
+            roleId: row.ws_role.id,
+            roleName: row.ws_role.name,
+            isOwner,
+            hasWrite: isOwner || ownerMatrixHasWrite(matrix),
+            access,
+            branchScope: access.branchScope ? [...access.branchScope] : null,
             joinedAt: row.joined_at,
             workspace: row.workspace as AssetOwnerWorkspace,
             accessVia: "member" as const,
@@ -75,7 +100,7 @@ export function useOwnerWorkspaceMemberships() {
         ];
       });
 
-      const ownerOf = direct.filter((m) => m.role === "owner").map((m) => m.workspaceId);
+      const ownerOf = direct.filter((m) => m.isOwner).map((m) => m.workspaceId);
       if (ownerOf.length === 0) return direct;
       const { data: children, error: childError } = await supabase
         .from("asset_owner_workspaces")
@@ -89,7 +114,11 @@ export function useOwnerWorkspaceMemberships() {
         .map((w): OwnerWorkspaceMembership => ({
           memberId: null,
           workspaceId: w.id,
-          role: "viewer",
+          roleId: null,
+          roleName: HQ_ACCESS_LABEL,
+          isOwner: false,
+          hasWrite: false,
+          access: ownerAccessCtx({ isOwner: false, matrix: HQ_VIEW_MATRIX, branchScope: null, accessVia: "hq" }),
           branchScope: null,
           joinedAt: w.parent_linked_at,
           workspace: w as AssetOwnerWorkspace,
@@ -144,7 +173,8 @@ function usePersonalTenant(userId: string | null) {
  * nguồn duy nhất thay cho mọi `.eq("owner_user_id", uid)` cũ, nên thành viên được
  * mời cũng vào được cổng. Ở tenant Cá nhân `workspaceId` là null, nên các trang
  * chỉ có nghĩa với không gian giữ nguyên hành vi của chủ tài sản cá nhân.
- * `can` / `canWriteClaim` / `canWritePosting` chỉ để ẩn nút; RLS mới là cổng thật.
+ * `can(module, action)` / `canIn` / `canWriteClaim` / `canWritePosting` chỉ để ẩn
+ * nút; RLS mới là cổng thật (owner_ws_has — migration 20260927170100).
  */
 export function useOwnerWorkspace() {
   const { userId, memberships, isLoading: membershipsLoading, isError } = useOwnerWorkspaceMemberships();
@@ -167,13 +197,18 @@ export function useOwnerWorkspace() {
   const isPersonal = tenant?.kind === "personal";
   const tenantKey = isPersonal ? PERSONAL_TENANT : current?.workspaceId ?? null;
 
-  const role = current?.role ?? null;
+  const access = current?.access ?? null;
   const branchScope = current?.branchScope ?? null;
 
-  const can = useCallback((action: OwnerWsAction) => ownerWsCan(role, action), [role]);
+  const can = useCallback((module: OwnerModule, action: OwnerAction) => ownerCan(access, module, action), [access]);
+  /** Quyền module + phạm vi chi nhánh của bản ghi (null = bản ghi toàn đơn vị). */
+  const canIn = useCallback(
+    (module: OwnerModule, action: OwnerAction, branchId: string | null) => ownerCanIn(access, module, action, branchId),
+    [access],
+  );
   const canWriteClaim = useCallback(
-    (branchIdOfClaim: string | null) => canWriteClaimFor({ role, branchScope }, branchIdOfClaim),
-    [role, branchScope],
+    (branchIdOfClaim: string | null) => canWriteClaimFor(access, branchIdOfClaim),
+    [access],
   );
   /** workspaceId hoặc PERSONAL_TENANT. */
   const selectWorkspace = useCallback(
@@ -184,23 +219,40 @@ export function useOwnerWorkspace() {
   );
   // Quyền trên MỘT hồ sơ theo vai trò ở CHÍNH không gian của hồ sơ — trang chi
   // tiết mở từ link (vd. trả về từ thanh toán) không nhất thiết thuộc tenant đang chọn.
+  // Mặc định so-hoa:update; ký gửi / hợp đồng mua bán truyền module của mình.
   const canWritePosting = useCallback(
-    (posting: PostingOwnership) => {
+    (posting: PostingOwnership, module: OwnerModule = "so-hoa", action: OwnerAction = "update") => {
       const m = posting.workspace_id ? memberships.find((x) => x.workspaceId === posting.workspace_id) : null;
-      return canWritePostingFor(posting, userId, m ? { role: m.role, branchScope: m.branchScope } : null);
+      return canWritePostingFor(posting, userId, m?.access ?? null, module, action);
     },
     [memberships, userId],
   );
-  // Tạo hồ sơ mới trong tenant hiện tại. Cán bộ bị giới hạn vẫn tạo được — wizard
-  // bắt chọn chi nhánh trong phạm vi.
-  const canCreatePosting = isPersonal || ownerWsCan(role, "write");
+  /** Ba quyền của trang chi tiết hồ sơ (PostingAccessProvider): sửa / ký gửi / gửi tổ chức. */
+  const postingAccess = useCallback(
+    (posting: PostingOwnership) => ({
+      edit: canWritePosting(posting),
+      consign: canWritePosting(posting, "ky-gui", "update"),
+      consignCreate: canWritePosting(posting, "ky-gui", "create"),
+    }),
+    [canWritePosting],
+  );
+  // Tạo hồ sơ mới trong tenant hiện tại. Người bị giới hạn chi nhánh vẫn tạo được —
+  // wizard bắt chọn chi nhánh trong phạm vi.
+  const canCreatePosting = isPersonal || ownerCan(access, "so-hoa", "create");
 
   return {
     userId,
     workspaceId: current?.workspaceId ?? null,
     workspace: current?.workspace ?? null,
     memberId: current?.memberId ?? null,
-    role,
+    roleId: current?.roleId ?? null,
+    /** Tên vai trò ở không gian hiện tại; null ở tenant Cá nhân. */
+    roleName: current?.roleName ?? null,
+    isOwner: current?.isOwner ?? false,
+    /** Bị giới hạn chi nhánh — form phải bắt chọn chi nhánh trong phạm vi. */
+    isScoped: ownerIsScoped(access),
+    /** Ngữ cảnh quyền cho các hàm thuần (vd. ownerPeriodicReport); null ở tenant Cá nhân. */
+    access,
     /** null ở tenant Cá nhân. */
     accessVia: current?.accessVia ?? null,
     branchScope,
@@ -208,6 +260,7 @@ export function useOwnerWorkspace() {
     isLoading,
     isError,
     can,
+    canIn,
     canWriteClaim,
     selectWorkspace,
     // Phase 4 — tenant
@@ -217,18 +270,19 @@ export function useOwnerWorkspace() {
     personalName: personal.data?.name ?? null,
     tenantKey,
     canWritePosting,
+    postingAccess,
     canCreatePosting,
   };
 }
 
 /**
- * Ai được Xác nhận / Từ chối claim nào — bản sao owner_ws_claim_write_ok.
- * Chỉ Cán bộ bị giới hạn chi nhánh mới cần tra chi nhánh của claim
- * (asset_owner_id → workspace_branches.id); các vai trò khác không tải gì thêm.
+ * Quyền trên từng claim theo chi nhánh của claim — bản sao owner_ws_claim_write_ok
+ * (Xác nhận / Từ chối = tai-san:update) và owner_ws_has_in cho module khác (vd.
+ * Khai kết quả = ket-qua:update). Chỉ người bị giới hạn chi nhánh mới cần tra chi
+ * nhánh của claim (asset_owner_id → workspace_branches.id); người khác không tải gì thêm.
  */
 export function useClaimWriteAccess() {
-  const { workspaceId, role, branchScope, can, canWriteClaim } = useOwnerWorkspace();
-  const scoped = role === "staff" && branchScope != null;
+  const { workspaceId, isScoped: scoped, can, canIn, canWriteClaim } = useOwnerWorkspace();
 
   const { data: branchByOwner } = useQuery({
     queryKey: [...qk.ownerWorkspace.all(workspaceId), "branch-by-asset-owner"],
@@ -245,15 +299,26 @@ export function useClaimWriteAccess() {
     },
   });
 
-  const canWriteClaimOf = useCallback(
+  const branchOfClaim = useCallback(
     (claim: { asset_owner_id: string | null }) =>
-      canWriteClaim(claim.asset_owner_id ? branchByOwner?.get(claim.asset_owner_id) ?? null : null),
-    [canWriteClaim, branchByOwner],
+      claim.asset_owner_id ? branchByOwner?.get(claim.asset_owner_id) ?? null : null,
+    [branchByOwner],
+  );
+  const canWriteClaimOf = useCallback(
+    (claim: { asset_owner_id: string | null }) => canWriteClaim(branchOfClaim(claim)),
+    [canWriteClaim, branchOfClaim],
+  );
+  /** Quyền module khác trên tài sản của claim (theo chi nhánh của claim). */
+  const canOnClaim = useCallback(
+    (module: OwnerModule, action: OwnerAction, claim: { asset_owner_id: string | null }) =>
+      canIn(module, action, branchOfClaim(claim)),
+    [canIn, branchOfClaim],
   );
 
   return {
     canWriteClaim: canWriteClaimOf,
+    canOnClaim,
     // "Xác nhận tất cả" cập nhật mọi claim chờ — người bị giới hạn phạm vi thì không.
-    canConfirmAll: can("write") && !scoped,
+    canConfirmAll: can("tai-san", "update") && !scoped,
   };
 }

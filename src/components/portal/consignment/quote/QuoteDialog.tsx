@@ -4,8 +4,11 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { addDays, format } from 'date-fns'
 import { uploadQuoteDoc } from '@/hooks/useOrgServiceRequests'
 import { emptyQuotePlan, feeTotalRequired, planLeadTimeDays, validateQuote } from '@/lib/quotePlan'
 import { formatVnd } from '@/lib/advertising/slug'
@@ -25,6 +28,10 @@ interface QuoteDialogProps {
 }
 
 type TabKey = 'plan' | 'fee' | 'note'
+
+/** Hiệu lực mặc định của một báo giá mới. */
+const DEFAULT_VALID_DAYS = 30
+const isoDay = (d: Date) => format(d, 'yyyy-MM-dd')
 
 /**
  * Báo giá tổ chức gửi lại chủ tài sản: phương án tổ chức đấu giá · chi phí theo
@@ -48,6 +55,8 @@ export function QuoteDialog({
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
+  // Bắt buộc: chủ tài sản so "Hiệu lực báo giá" giữa các tổ chức.
+  const [validUntil, setValidUntil] = useState('')
 
   // Mỗi lần mở lại một yêu cầu khác thì nạp lại báo giá cũ (nếu đã từng gửi).
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
@@ -62,17 +71,24 @@ export function QuoteDialog({
     setStartingPrice(request.quote_starting_price != null ? String(request.quote_starting_price) : '')
     setNote(request.quote_note ?? '')
     setFile(null)
+    setValidUntil(request.quote_valid_until ?? isoDay(addDays(new Date(), DEFAULT_VALID_DAYS)))
   }
 
   const pct = commissionPct.trim() === '' ? null : Number(commissionPct)
   const validation = validateQuote(plan, feeItems, Number.isNaN(pct as number) ? null : pct)
   const leadDays = planLeadTimeDays(plan)
+  const today = isoDay(new Date())
+  const validityError = !validUntil
+    ? 'Nhập ngày hết hiệu lực của báo giá.'
+    : validUntil < today
+      ? 'Hiệu lực báo giá phải từ hôm nay trở đi.'
+      : null
 
   const handleSubmit = async () => {
     if (!request) return
-    if (!validation.ok) {
+    if (!validation.ok || validityError) {
       setShowErrors(true)
-      setTab(validation.errors.plan.length > 0 ? 'plan' : 'fee')
+      if (!validation.ok) setTab(validation.errors.plan.length > 0 ? 'plan' : 'fee')
       return
     }
 
@@ -100,6 +116,7 @@ export function QuoteDialog({
       fee_items: feeItems,
       note: note.trim() || undefined,
       doc_path: docPath ?? request.quote_doc_path ?? undefined,
+      valid_until: validUntil,
     })
   }
 
@@ -163,16 +180,32 @@ export function QuoteDialog({
           </div>
         </Tabs>
 
-        {showErrors && !validation.ok && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-4">
+          <Label htmlFor="quote-valid-until" className="text-sm">
+            Hiệu lực báo giá đến <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="quote-valid-until"
+            type="date"
+            value={validUntil}
+            min={today}
+            onChange={(e) => setValidUntil(e.target.value)}
+            aria-invalid={showErrors && !!validityError}
+            className="h-9 w-44"
+          />
+          <span className="text-xs text-muted-foreground">Chủ tài sản thấy ngày này khi so sánh báo giá.</span>
+        </div>
+
+        {showErrors && (!validation.ok || validityError) && (
           <ul className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-            {[...validation.errors.plan, ...validation.errors.fee].map((e) => (
+            {[...validation.errors.plan, ...validation.errors.fee, ...(validityError ? [validityError] : [])].map((e) => (
               <li key={e}>{e}</li>
             ))}
           </ul>
         )}
 
         {/* Tổng kết dính: ba con số chủ tài sản sẽ đem đi so sánh. */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
             Thù lao <b className="font-semibold text-foreground">{commissionPct ? `${commissionPct}%` : '—'}</b>
             {' · '}

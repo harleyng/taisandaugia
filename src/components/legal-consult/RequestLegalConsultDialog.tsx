@@ -116,7 +116,9 @@ export function RequestLegalConsultDialog({
 
             <div className="space-y-2">
               <Label>
-                Tải thêm giấy tờ <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
+                Tải thêm giấy tờ
+                {/* Cần ít nhất 1 tệp: không tick tệp nào có sẵn thì phải tải lên. */}
+                {selected.length === 0 && <span className="text-destructive"> *</span>}
               </Label>
               <AssetDocUpload value={uploaded} onChange={setUploaded} prefix="legal-consult" />
               <p className="text-xs text-muted-foreground">
@@ -125,9 +127,7 @@ export function RequestLegalConsultDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="tvpl-note">
-                Câu hỏi / ghi chú cho chuyên gia <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
-              </Label>
+              <Label htmlFor="tvpl-note">Câu hỏi / ghi chú cho chuyên gia</Label>
               <Textarea
                 id="tvpl-note"
                 rows={3}

@@ -132,16 +132,29 @@ export function cashEventErrorMessage(err: unknown): string {
   return "Không lưu được khoản thu chi. Vui lòng thử lại.";
 }
 
-export const SETTLE_REASONS = ["not_authenticated", "not_found", "not_sold", "defaulted", "already_paid"] as const;
+export const SETTLE_REASONS = ["not_authenticated", "not_found", "forbidden", "not_sold", "defaulted", "already_paid"] as const;
 export type SettleReason = (typeof SETTLE_REASONS)[number];
 
 export const SETTLE_REASON_MESSAGE: Record<SettleReason, string> = {
   not_authenticated: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
   not_found: "Bạn không có quyền ghi thu tiền cho tài sản này.",
+  forbidden: "Vai trò của bạn không có quyền ghi thu tiền cho tài sản này.",
   not_sold: "Tài sản này không đấu thành — không có tiền phải thu.",
   defaulted: "Người trúng đã bỏ cọc — không còn tiền phải thu.",
   already_paid: "Tài sản này đã thu đủ.",
 };
+
+/**
+ * RPC thu tiền owner_cash_set_due / owner_cash_set_defaulted (migration 20260927170100)
+ * trả `{ ok:false, reason }` ⇒ ném lỗi dạng PostgREST để cashEventErrorMessage /
+ * paymentErrorMessage đọc được (không có quyền = 42501).
+ */
+export function assertCashRpcOk(data: unknown): void {
+  const r = (data && typeof data === "object" ? data : {}) as { ok?: unknown; reason?: unknown };
+  if (r.ok !== false) return;
+  const denied = r.reason === "forbidden" || r.reason === "not_found";
+  throw { code: denied ? "42501" : "P0001", message: settleReasonMessage(r.reason) };
+}
 
 export function settleReasonMessage(reason: unknown): string {
   return typeof reason === "string" && (SETTLE_REASONS as readonly string[]).includes(reason)

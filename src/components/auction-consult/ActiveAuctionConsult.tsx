@@ -3,12 +3,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePostingCanWrite } from "@/components/asset-posting/postingAccess";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { CreditCard, ExternalLink, X } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCancelAuctionConsult } from "@/hooks/useAuctionConsultations";
 import { formatVnd } from "@/lib/advertising/slug";
 import { isTvdgQuoteExpired } from "@/lib/auctionConsult/status";
-import { ADMIN_AUCTION_CONSULT_PATH, auctionConsultCheckoutPath } from "@/lib/auctionConsult/paths";
+import { ADMIN_AUCTION_CONSULT_PATH } from "@/lib/auctionConsult/paths";
+import { ServiceContractPayButton } from "@/components/service-contracts/ServiceContractPayButton";
 import type { AuctionConsultation } from "@/types/auctionConsult";
 import { AuctionConsultRequestSummary } from "./AuctionConsultRequestSummary";
 import { AuctionConsultStatusStepper } from "./AuctionConsultStatusStepper";
@@ -78,9 +79,7 @@ export function ActiveAuctionConsult({ row, mode }: { row: AuctionConsultation; 
       {owner && (
         <div className="flex flex-wrap gap-2">
           {row.status === "quoted" && !expired && (isRequester ? (
-            <Button size="sm" onClick={() => navigate(auctionConsultCheckoutPath(row.id, row.asset_posting_id))}>
-              <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Thanh toán {formatVnd(row.quoted_price)}
-            </Button>
+            <ServiceContractPayButton kind="tu-van-dau-gia" orderId={row.id} price={row.quoted_price} />
           ) : (
             <p className="text-xs text-muted-foreground">Chờ người gửi yêu cầu thanh toán.</p>
           ))}

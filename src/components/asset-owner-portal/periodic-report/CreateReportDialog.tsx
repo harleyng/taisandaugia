@@ -111,7 +111,9 @@ export function CreateReportDialog({
 
         <form id="owner-report-create" className="space-y-5" onSubmit={submit} noValidate>
           <div className="space-y-2">
-            <Label>Loại kỳ</Label>
+            <Label>
+              Loại kỳ <span className="text-destructive">*</span>
+            </Label>
             <div className="grid grid-cols-3 gap-2">
               {TARGET_PERIOD_TYPES.map((type) => (
                 <WideRadio key={type} on={periodType === type} onClick={() => !busy && pickType(type)} className="h-full">
@@ -123,7 +125,9 @@ export function CreateReportDialog({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="report-period">Kỳ báo cáo</Label>
+              <Label htmlFor="report-period">
+                Kỳ báo cáo <span className="text-destructive">*</span>
+              </Label>
               <Controller
                 control={form.control}
                 name="periodStart"
@@ -146,7 +150,9 @@ export function CreateReportDialog({
               <OutcomeFieldError msg={errors.periodStart?.message} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="report-scope">Phạm vi</Label>
+              <Label htmlFor="report-scope">
+                Phạm vi <span className="text-destructive">*</span>
+              </Label>
               <Controller
                 control={form.control}
                 name="scope"

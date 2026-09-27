@@ -174,7 +174,6 @@ export function ReportOutcomeDialog({
                     {REPORT_KINDS.map((k) => (
                       <WideRadio key={k} className="h-full" on={field.value === k} onClick={() => field.onChange(k)}>
                         <span className="block text-sm font-semibold text-foreground">{REPORT_KIND_META[k].label}</span>
-                        <span className="block text-xs text-muted-foreground">{REPORT_KIND_META[k].hint}</span>
                       </WideRadio>
                     ))}
                   </div>
@@ -183,7 +182,9 @@ export function ReportOutcomeDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="oc-round">Lượt đấu</Label>
+                  <Label htmlFor="oc-round">
+                    Lượt đấu <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="oc-round"
                     inputMode="numeric"
@@ -198,7 +199,9 @@ export function ReportOutcomeDialog({
                   ) : null}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="oc-date">Ngày đấu giá</Label>
+                  <Label htmlFor="oc-date">
+                    Ngày đấu giá <span className="text-destructive">*</span>
+                  </Label>
                   <Input id="oc-date" type="date" max={today} disabled={busy} {...form.register("auctionDate")} />
                   <OutcomeFieldError msg={errors.auctionDate?.message} />
                 </div>

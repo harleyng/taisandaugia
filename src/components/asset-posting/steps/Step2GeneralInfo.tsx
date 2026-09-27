@@ -103,12 +103,12 @@ export function Step2GeneralInfo({ f, up, errs, ai, postingId, ensurePostingId }
         )}
 
         <label className="block text-[13.5px] font-semibold text-foreground mb-2 mt-4">
-          Video tài sản <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
+          Video tài sản
         </label>
         <AssetVideoUpload value={f.videoUrls} onChange={(v) => up({ videoUrls: v })} />
 
         <label className="block text-[13.5px] font-semibold text-foreground mb-2 mt-4">
-          Model 3D <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
+          Model 3D
         </label>
         <PostingModel3dCard
           postingId={postingId}
@@ -118,7 +118,7 @@ export function Step2GeneralInfo({ f, up, errs, ai, postingId, ensurePostingId }
         />
 
         <label className="block text-[13.5px] font-semibold text-foreground mb-2 mt-4">
-          VR tour <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
+          VR tour
         </label>
         <PostingVrTourCard
           postingId={postingId}

@@ -66,7 +66,9 @@ export function TitleTransferDialog({
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="sale-title-status">Trạng thái</Label>
+            <Label htmlFor="sale-title-status">
+              Trạng thái <span className="text-destructive">*</span>
+            </Label>
             <Select
               value={status}
               onValueChange={(v) => setStatus(v as SaleTitleTransferStatus)}
@@ -98,7 +100,7 @@ export function TitleTransferDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="sale-title-doc">Giấy tờ (tuỳ chọn)</Label>
+            <Label htmlFor="sale-title-doc">Giấy tờ</Label>
             <Input
               id="sale-title-doc"
               type="file"

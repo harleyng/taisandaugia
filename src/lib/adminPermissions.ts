@@ -11,6 +11,7 @@ export type AdminCategory =
   | "ban-hang"
   | "van-hanh"
   | "marketing"
+  | "phap-ly-dau-gia"
   | "noi-dung"
   | "bao-cao"
   | "he-thong";
@@ -48,6 +49,7 @@ export const CATEGORY_LABELS: Record<AdminCategory, string> = {
   "ban-hang": "Bán hàng",
   "van-hanh": "Vận hành & Hỗ trợ",
   marketing: "Marketing",
+  "phap-ly-dau-gia": "Pháp lý & Đấu giá",
   "noi-dung": "Nội dung",
   "bao-cao": "Báo cáo",
   "he-thong": "Quản trị",
@@ -58,6 +60,7 @@ export const CATEGORY_ORDER: AdminCategory[] = [
   "ban-hang",
   "van-hanh",
   "marketing",
+  "phap-ly-dau-gia",
   "noi-dung",
   "bao-cao",
   "he-thong",
@@ -111,11 +114,15 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   { module: "quang-cao", label: "Quảng cáo", category: "marketing", actions: ["view", "create", "update", "delete"] },
 
   // Nội dung
+  // Pháp lý & Đấu giá — hợp đồng (ký gửi / mua bán / dịch vụ) + mẫu hợp đồng.
+  // "phap-ly" chuyển từ Nội dung sang đây (mã giữ nguyên).
+  { module: "hop-dong", label: "Hợp đồng", category: "phap-ly-dau-gia", actions: ["view"] },
+  { module: "mau-hop-dong", label: "Mẫu hợp đồng", category: "phap-ly-dau-gia", actions: ["view", "create", "delete"] },
+  { module: "phap-ly", label: "Văn bản pháp lý", category: "phap-ly-dau-gia", actions: ["view", "create", "update", "delete"] },
   { module: "tin-tuc", label: "Tin tức", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
   // Mã "doi-tac" giữ nguyên, nhưng module giờ quản lý THẺ HIỂN THỊ trang chủ;
   // sổ đăng ký công ty nằm ở "nha-cung-cap".
   { module: "doi-tac", label: "Đối tác trên sàn", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
-  { module: "phap-ly", label: "Văn bản pháp lý", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
   { module: "cong-cu-dau-gia", label: "Công cụ đấu giá", category: "noi-dung", actions: ["view", "create", "update", "delete"] },
   // Báo cáo
   { module: "doanh-thu", label: "Doanh thu", category: "bao-cao", actions: ["view", "export"] },

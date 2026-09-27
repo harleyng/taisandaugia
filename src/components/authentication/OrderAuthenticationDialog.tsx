@@ -87,7 +87,9 @@ export function OrderAuthenticationDialog({ open, onOpenChange, resolvePostingId
         ) : (
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="gd-partner">Đối tác giám định</Label>
+              <Label htmlFor="gd-partner">
+                Đối tác giám định <span className="text-destructive">*</span>
+              </Label>
               <Select value={supplierId} onValueChange={setSupplierId}>
                 <SelectTrigger id="gd-partner">
                   <SelectValue placeholder="Chọn đối tác" />
@@ -103,7 +105,9 @@ export function OrderAuthenticationDialog({ open, onOpenChange, resolvePostingId
             </div>
 
             <div className="space-y-2">
-              <Label>Phương thức</Label>
+              <Label>
+                Phương thức <span className="text-destructive">*</span>
+              </Label>
               <RadioGroup value={variantKey} onValueChange={setVariantKey} className="gap-2">
                 {packages.map((p) => (
                   <label
@@ -129,7 +133,9 @@ export function OrderAuthenticationDialog({ open, onOpenChange, resolvePostingId
 
             {onSite && (
               <div className="space-y-1.5">
-                <Label htmlFor="gd-address">Địa chỉ nơi đặt hiện vật</Label>
+                <Label htmlFor="gd-address">
+                  Địa chỉ nơi đặt hiện vật <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="gd-address"
                   value={siteAddress}
@@ -147,9 +153,7 @@ export function OrderAuthenticationDialog({ open, onOpenChange, resolvePostingId
             )}
             {method !== "from_photos" && (
               <div className="space-y-1.5">
-                <Label htmlFor="gd-time">
-                  Thời gian thuận tiện <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
-                </Label>
+                <Label htmlFor="gd-time">Thời gian thuận tiện</Label>
                 <Input
                   id="gd-time"
                   value={preferredTime}
@@ -160,9 +164,7 @@ export function OrderAuthenticationDialog({ open, onOpenChange, resolvePostingId
               </div>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="gd-note">
-                Ghi chú cho đối tác <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
-              </Label>
+              <Label htmlFor="gd-note">Ghi chú cho đối tác</Label>
               <Textarea
                 id="gd-note"
                 rows={3}

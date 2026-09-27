@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { UNSOLD_REASONS, UNSOLD_REASON_LABEL } from "@/lib/ownerOutcomes";
 import { VOID_OUTCOMES, VOID_OUTCOME_LABEL, type ReportOutcomeForm } from "@/lib/ownerOutcomeReport";
-import { OptionalMark, OutcomeFieldError } from "./OutcomeFieldError";
+import { OutcomeFieldError } from "./OutcomeFieldError";
 
 /** "Đang chọn" tô primary nhạt thay cho nền muted mặc định của Toggle. */
 const CHOICE_ON = "data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-foreground";
@@ -14,7 +14,7 @@ interface OutcomeNotSoldFieldsProps {
   disabled?: boolean;
 }
 
-/** Phần "Không thành" (lý do chọn nhanh) và "Hoãn-Huỷ" (hoãn / huỷ / rút + lý do tuỳ chọn). */
+/** Phần "Không thành" (lý do chọn nhanh) và "Hoãn-Huỷ" (hoãn / huỷ / rút + lý do không bắt buộc). */
 export function OutcomeNotSoldFields({ kind, disabled }: OutcomeNotSoldFieldsProps) {
   const { control, register, watch, formState } = useFormContext<ReportOutcomeForm>();
   const errors = formState.errors;
@@ -23,7 +23,9 @@ export function OutcomeNotSoldFields({ kind, disabled }: OutcomeNotSoldFieldsPro
   if (kind === "unsold") {
     return (
       <div className="space-y-2">
-        <Label id="oc-reason-label">Lý do</Label>
+        <Label id="oc-reason-label">
+          Lý do <span className="text-destructive">*</span>
+        </Label>
         <Controller
           control={control}
           name="unsoldReason"
@@ -64,7 +66,9 @@ export function OutcomeNotSoldFields({ kind, disabled }: OutcomeNotSoldFieldsPro
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label id="oc-void-label">Tình trạng phiên</Label>
+        <Label id="oc-void-label">
+          Tình trạng phiên <span className="text-destructive">*</span>
+        </Label>
         <Controller
           control={control}
           name="voidOutcome"
@@ -89,10 +93,7 @@ export function OutcomeNotSoldFields({ kind, disabled }: OutcomeNotSoldFieldsPro
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="oc-void-note">
-          Lý do
-          <OptionalMark />
-        </Label>
+        <Label htmlFor="oc-void-note">Lý do</Label>
         <Input id="oc-void-note" maxLength={500} disabled={disabled} {...register("note")} />
         <OutcomeFieldError msg={errors.note?.message} />
       </div>

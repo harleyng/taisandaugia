@@ -11,13 +11,19 @@ Lấp mọi màn /chu-tai-san/* còn trống của không gian "ngân hàng" (4c
   • Liên kết        — không gian gắn pháp nhân BIDV làm TRỤ SỞ; 2 trạm con (BIDV Cầu Giấy,
                       BAMC) đã liên kết ⇒ sidebar thành "Tháp Điều Hành"
   • Số hoá tài sản  — 3 hồ sơ của không gian (nháp / chờ duyệt / đã duyệt)
+  • Tổng quan       — lịch sử 2025 (so cùng kỳ năm trước), thêm tài sản bán tháng 9/2026,
+                      chỉ tiêu từng chi nhánh, 7 tin đấu giá mới + 1 tin đấu lại cho "Lịch
+                      đấu giá 7 ngày", phiên cũ 2025 cho KPI tồn đọng năm trước
 
 Mọi dòng seed có id tiền tố 5eed…; 5 tài khoản demo đuôi @example.com. Ghi đi qua trigger /
 RPC thật bằng cách đổi `request.jwt.claims` sang từng người trong MỘT giao dịch.
 
     python3 scripts/seed-owner-demo.py              # seed (dừng nếu đã seed)
     python3 scripts/seed-owner-demo.py --dry-run    # chạy hết SQL rồi ROLLBACK
-    python3 scripts/seed-owner-demo.py --teardown   # gỡ sạch
+    python3 scripts/seed-owner-demo.py --dashboard  # chỉ thêm phần "Tổng quan" lên bộ đã seed
+    python3 scripts/seed-owner-demo.py --teardown   # gỡ sạch (cả phần "Tổng quan")
+
+Lịch đấu giá tính theo NGÀY HIỆN TẠI: các phiên mới rơi vào 29/09 – 08/10/2026.
 
 Đọc SUPABASE_SERVICE_ROLE_KEY + SUPABASE_DB_URI từ .env.local. Mật khẩu tài khoản demo ghi vào
 scripts/owner-demo-accounts.local (gitignore qua *.local).
@@ -132,10 +138,27 @@ USERS = [
 ]
 U = {k: i for k, i, _, _ in USERS}
 U["owner"] = OWNER
-PENDING_INVITES = [
-    ("demo.le.hoang.nam@example.com", "staff", [BR_HCM]),
-    ("demo.kiem.soat.noi.bo@example.com", "viewer", None),
+# Vai trò tuỳ chỉnh mẫu (migration 20260927170100): chỉ thu tiền + xem kết quả / dòng tiền.
+DEMO_ROLE_NAME = "Kế toán (demo)"
+DEMO_ROLE_PERMS = [
+    {"module": "thu-tien", "action": "create"},
+    {"module": "thu-tien", "action": "update"},
+    {"module": "thu-tien", "action": "delete"},
+    {"module": "ket-qua", "action": "view"},
+    {"module": "dong-tien", "action": "view"},
 ]
+# vai trò = code vai trò mặc định (STAFF / VIEWER) hoặc tên vai trò tuỳ chỉnh
+PENDING_INVITES = [
+    ("demo.le.hoang.nam@example.com", "STAFF", [BR_HCM]),
+    ("demo.kiem.soat.noi.bo@example.com", "VIEWER", None),
+    ("demo.ke.toan@example.com", DEMO_ROLE_NAME, None),
+]
+
+
+def role_ref(role):
+    """id vai trò của W: code mặc định (STAFF/VIEWER) hoặc tên vai trò tuỳ chỉnh."""
+    col = "code" if role in ("STAFF", "VIEWER") else "name"
+    return f"(select id from owner_ws_roles where workspace_id = {lit(W)} and {col} = {lit(role)})"
 
 KYC_C1 = sid("0006", 1)
 KYC_C2 = sid("0006", 2)
@@ -149,7 +172,7 @@ def outcome(n, ws, by, rnd, day, result, *, listing=None, title=None, cat=None, 
             org=None, start=None, win=None, part=None, reason=None, due=None, defaulted=False,
             evidence=False, cash=()):
     OUTCOMES.append(dict(
-        id=sid("0001", n), ws=ws, by=by, round=rnd, day=day, outcome=result,
+        n=n, id=sid("0001", n), ws=ws, by=by, round=rnd, day=day, outcome=result,
         listing=L[listing] if listing else None, title=title, cat=cat, branch=branch, org=org,
         start=start, win=win, part=part, reason=reason, due=due, defaulted=defaulted,
         evidence=evidence, cash=list(cash),
@@ -341,6 +364,245 @@ TARGETS = [
     (22, WS_C1, None, "month", "2026-09-01", 45_000_000_000, 2),
     (31, WS_C2, None, "quarter", "2026-07-01", 70_000_000_000, 3),
 ]
+
+# ─── Tổng quan (/chu-tai-san/dashboard) ───────────────────────────────────────
+# Mọi thứ dưới đây là phần "Tổng quan": outcome n ≥ DASH_OUTCOME_FROM, chỉ tiêu n ≥
+# DASH_TARGET_FROM, cộng các danh sách DASH_* — `--dashboard` chỉ ghi phần này.
+#
+# Khối Phân tích so kỳ này với CÙNG KỲ NĂM TRƯỚC ⇒ cần kết quả 2025 (tài sản ngoài sàn,
+# đã thu đủ). Mốc so sánh 27/09: tháng 9 · 5 tài sản / 3 bán / 95 tỷ; quý III · 10 / 7 /
+# 161 tỷ; từ đầu năm · 24 / 17 / 380 tỷ — năm 2026 cao hơn ở cả ba kỳ.
+DASH_OUTCOME_FROM = 300
+DASH_TARGET_FROM = 40
+
+# — 2025, nửa đầu năm
+outcome(301, W, "m1", 1, "2025-01-16", "sold", title="Nhà phố 5 tầng 68 m² – phố Trung Kính, Cầu Giấy, Hà Nội",
+        cat="nha-pho", branch=BR_HN, org=ORG_HN, start=14_200_000_000, win=15_100_000_000, part=4, cash=[
+            (DEP, 2_840_000_000, "2025-01-16", None),
+            (PAY, 12_260_000_000, "2025-02-14", None)])
+outcome(302, W, "m2", 1, "2025-01-22", "unsold", title="Nhà hàng 2 tầng 450 m² – đường Bạch Đằng, Hải Châu, Đà Nẵng",
+        cat="nha-pho", branch=BR_DN, org=ORG_VN, start=28_000_000_000, part=0, reason="no_registrants")
+outcome(303, W, "m2", 1, "2025-02-20", "unsold", title="Căn hộ 3PN 128 m² – Saigon Pearl, Bình Thạnh, TP.HCM",
+        cat="can-ho", branch=BR_HCM, org=ORG_HCM, start=9_600_000_000, part=0, reason="no_registrants")
+outcome(304, W, "m2", 2, "2025-04-22", "sold", title="Căn hộ 3PN 128 m² – Saigon Pearl, Bình Thạnh, TP.HCM",
+        cat="can-ho", branch=BR_HCM, org=ORG_HCM, start=9_120_000_000, win=9_350_000_000, part=2, cash=[
+            (DEP, 1_824_000_000, "2025-04-22", None),
+            (PAY, 7_526_000_000, "2025-05-20", None)])
+outcome(305, W, "owner", 1, "2025-02-26", "sold", title="Nhà xưởng 5.000 m² – KCN VSIP I, Thuận An, Bình Dương",
+        cat="nha-xuong", branch=BR_BD, org=ORG_MN, start=62_000_000_000, win=63_400_000_000, part=3, cash=[
+            (DEP, 12_400_000_000, "2025-02-26", None),
+            (PAY, 30_000_000_000, "2025-03-24", "Thanh toán đợt 1"),
+            (PAY, 21_000_000_000, "2025-04-21", "Thanh toán đợt 2 — tất toán"),
+            (FEE, 450_000_000, "2025-04-25", "Thù lao dịch vụ đấu giá")])
+outcome(306, W, "m2", 1, "2025-03-05", "sold", title="Tòa nhà văn phòng 8 tầng – đường Cộng Hòa, Tân Bình, TP.HCM",
+        cat="nha-pho", branch=BR_HCM, org=ORG_HCM, start=72_000_000_000, win=74_500_000_000, part=3, cash=[
+            (DEP, 14_400_000_000, "2025-03-05", None),
+            (PAY, 60_100_000_000, "2025-04-02", None),
+            (FEE, 480_000_000, "2025-04-08", "Thù lao dịch vụ đấu giá")])
+outcome(307, W, "m2", 1, "2025-03-12", "sold", title="Lô đất 300 m² – đường Võ Nguyên Giáp, Sơn Trà, Đà Nẵng",
+        cat="dat-o", branch=BR_DN, org=ORG_VN, start=21_000_000_000, win=23_800_000_000, part=6, cash=[
+            (DEP, 4_200_000_000, "2025-03-12", None),
+            (PAY, 19_600_000_000, "2025-04-10", None)])
+outcome(308, W, "owner", 1, "2025-03-18", "postponed",
+        title="Nhà xưởng 2.200 m² – KCN Mỹ Phước 2, Bến Cát, Bình Dương", cat="nha-xuong", branch=BR_BD,
+        org=ORG_MN, start=19_500_000_000, reason="Tạm hoãn do tranh chấp hợp đồng thuê xưởng với bên thứ ba")
+outcome(309, W, "m1", 1, "2025-03-25", "unsold", title="Tòa nhà văn phòng 7 tầng – phố Duy Tân, Cầu Giấy, Hà Nội",
+        cat="nha-pho", branch=BR_HN, org=ORG_HN, start=88_000_000_000, part=1, reason="single_bidder")
+outcome(310, W, "m2", 1, "2025-04-09", "sold", title="Ô tô Mercedes-Benz E300 AMG 2020 – TSBĐ khoản vay cá nhân",
+        cat="o-to", branch=BR_HCM, org=ORG_HCM, start=1_450_000_000, win=1_580_000_000, part=5, cash=[
+            (DEP, 290_000_000, "2025-04-09", None),
+            (PAY, 1_290_000_000, "2025-04-18", None)])
+outcome(311, W, "m1", 1, "2025-04-15", "sold", title="Nhà phố 4 tầng 45 m² – phố Khương Trung, Thanh Xuân, Hà Nội",
+        cat="nha-pho", branch=BR_HN, org=ORG_HN, start=7_200_000_000, win=7_900_000_000, part=6, cash=[
+            (DEP, 1_440_000_000, "2025-04-15", None),
+            (PAY, 6_460_000_000, "2025-05-13", None)])
+outcome(312, W, "owner", 1, "2025-05-07", "sold",
+        title="Dây chuyền ép nhựa 12 máy – Công ty TNHH Nhựa Tân Phú (TSBĐ)", cat="day-chuyen", branch=BR_BD,
+        org=ORG_MN, start=6_800_000_000, win=7_200_000_000, part=2, cash=[
+            (DEP, 1_360_000_000, "2025-05-07", None),
+            (PAY, 5_840_000_000, "2025-06-04", None)])
+outcome(313, W, "m2", 1, "2025-05-21", "unsold", title="Khách sạn 9 tầng – đường Hà Bổng, Sơn Trà, Đà Nẵng",
+        cat="nha-pho", branch=BR_DN, org=ORG_VN, start=72_000_000_000, part=0, reason="no_registrants")
+outcome(314, W, "m2", 1, "2025-05-27", "unsold", title="Căn hộ 2PN 70 m² – The Sun Avenue, TP. Thủ Đức, TP.HCM",
+        cat="can-ho", branch=BR_HCM, org=ORG_HCM, start=3_900_000_000, part=1, reason="single_bidder")
+outcome(315, W, "m1", 1, "2025-06-04", "sold", title="Căn hộ 3PN 110 m² – Royal City R2, Thanh Xuân, Hà Nội",
+        cat="can-ho", branch=BR_HN, org=ORG_HN, start=6_900_000_000, win=7_450_000_000, part=5, cash=[
+            (DEP, 1_380_000_000, "2025-06-04", None),
+            (PAY, 6_070_000_000, "2025-07-02", None)])
+outcome(316, W, "m1", 2, "2025-06-10", "unsold", title="Tòa nhà văn phòng 7 tầng – phố Duy Tân, Cầu Giấy, Hà Nội",
+        cat="nha-pho", branch=BR_HN, org=ORG_HN, start=83_600_000_000, part=0, reason="no_registrants",
+        cash=[(FEE, 35_000_000, "2025-06-12", "Chi phí đăng thông báo đấu giá lại lần 2")])
+outcome(317, W, "m2", 1, "2025-06-18", "withdrawn",
+        title="Nhà phố 4 tầng 80 m² – đường Phan Xích Long, Phú Nhuận, TP.HCM", cat="nha-pho", branch=BR_HCM,
+        org=ORG_HCM, start=17_500_000_000, reason="Bên vay tất toán khoản nợ trước ngày đấu giá")
+outcome(318, W, "owner", 1, "2025-06-26", "sold", title="Lô đất 1.000 m² – phường Hoà Lợi, Bến Cát, Bình Dương",
+        cat="dat-o", branch=BR_BD, org=ORG_MN, start=8_200_000_000, win=8_900_000_000, part=4, cash=[
+            (DEP, 1_640_000_000, "2025-06-26", None),
+            (PAY, 7_260_000_000, "2025-07-24", None)])
+# — 2025, quý III (tuần 1–4 tháng 9 cho đường "năm trước" của biểu đồ tháng)
+outcome(319, W, "m1", 1, "2025-07-08", "sold", title="Nhà xưởng 2.000 m² – KCN Thạch Thất – Quốc Oai, Hà Nội",
+        cat="nha-xuong", branch=BR_HN, org=ORG_HN, start=26_000_000_000, win=27_200_000_000, part=3, cash=[
+            (DEP, 5_200_000_000, "2025-07-08", None),
+            (PAY, 22_000_000_000, "2025-08-06", None)])
+outcome(320, W, "m2", 1, "2025-07-22", "unsold", title="Căn hộ Penthouse 260 m² – Sunrise City, Quận 7, TP.HCM",
+        cat="can-ho", branch=BR_HCM, org=ORG_HCM, start=24_500_000_000, part=1, reason="single_bidder")
+outcome(321, W, "m2", 1, "2025-07-30", "sold", title="Xe khách Thaco Universe 47 chỗ 2019 – TSBĐ khoản vay doanh nghiệp",
+        cat="o-to", branch=BR_DN, org=ORG_VN, start=1_200_000_000, win=1_320_000_000, part=3, cash=[
+            (DEP, 240_000_000, "2025-07-30", None),
+            (PAY, 1_080_000_000, "2025-08-11", None)])
+outcome(322, W, "owner", 1, "2025-08-06", "sold", title="Nhà xưởng 3.000 m² – KCN Nam Tân Uyên, Bình Dương",
+        cat="nha-xuong", branch=BR_BD, org=ORG_MN, start=33_000_000_000, win=34_200_000_000, part=2, cash=[
+            (DEP, 6_600_000_000, "2025-08-06", None),
+            (PAY, 27_600_000_000, "2025-09-04", None)])
+outcome(323, W, "owner", 1, "2025-08-13", "unsold", title="Nhà máy chế biến gỗ 8.500 m² – KCN Tân Uyên, Bình Dương",
+        cat="nha-xuong", branch=BR_BD, org=ORG_MN, start=95_000_000_000, part=0, reason="no_registrants")
+outcome(324, W, "m1", 1, "2025-08-27", "sold", title="Căn hộ 2PN 75 m² – Vinhomes Smart City, Nam Từ Liêm, Hà Nội",
+        cat="can-ho", branch=BR_HN, org=ORG_HN, start=3_100_000_000, win=3_420_000_000, part=7, cash=[
+            (DEP, 620_000_000, "2025-08-27", None),
+            (PAY, 2_800_000_000, "2025-09-15", None)])
+outcome(325, W, "m2", 1, "2025-09-04", "sold", title="Nhà phố 3 tầng 96 m² – đường Nguyễn Văn Đậu, Bình Thạnh, TP.HCM",
+        cat="nha-pho", branch=BR_HCM, org=ORG_HCM, start=23_800_000_000, win=25_000_000_000, part=4, cash=[
+            (DEP, 4_760_000_000, "2025-09-04", None),
+            (PAY, 20_240_000_000, "2025-10-02", None)])
+outcome(326, W, "owner", 1, "2025-09-10", "unsold", title="Kho lạnh 3.500 m² – KCN Mỹ Phước 3, Bến Cát, Bình Dương",
+        cat="nha-xuong", branch=BR_BD, org=ORG_MN, start=41_000_000_000, part=0, reason="no_registrants")
+outcome(327, W, "m2", 1, "2025-09-15", "postponed", title="Căn hộ 3PN 120 m² – Estella Heights, TP. Thủ Đức, TP.HCM",
+        cat="can-ho", branch=BR_HCM, org=ORG_HCM, start=11_500_000_000,
+        reason="Hoãn theo quyết định của cơ quan thi hành án dân sự")
+outcome(328, W, "m1", 1, "2025-09-17", "sold",
+        title="Biệt thự song lập 200 m² – KĐT Nam Thăng Long, Bắc Từ Liêm, Hà Nội", cat="nha-pho", branch=BR_HN,
+        org=ORG_HN, start=36_500_000_000, win=38_000_000_000, part=3, cash=[
+            (DEP, 7_300_000_000, "2025-09-17", None),
+            (PAY, 30_700_000_000, "2025-10-15", None),
+            (FEE, 280_000_000, "2025-10-20", "Thù lao dịch vụ đấu giá")])
+outcome(329, W, "m2", 1, "2025-09-24", "sold", title="Lô đất 500 m² – mặt tiền đường Trường Sa, Ngũ Hành Sơn, Đà Nẵng",
+        cat="dat-o", branch=BR_DN, org=ORG_VN, start=30_000_000_000, win=32_000_000_000, part=5, cash=[
+            (DEP, 6_000_000_000, "2025-09-24", None),
+            (PAY, 26_000_000_000, "2025-10-23", None)])
+outcome(330, W, "m2", 1, "2025-09-29", "sold", title="Quyền sử dụng đất 2.000 m² – xã Phước Kiển, Nhà Bè, TP.HCM",
+        cat="dat-o", branch=BR_HCM, org=ORG_HCM, start=11_200_000_000, win=12_000_000_000, part=3, cash=[
+            (DEP, 2_240_000_000, "2025-09-29", None),
+            (PAY, 9_760_000_000, "2025-10-28", None)])
+# — 2025, quý IV (phần còn lại của đường "năm trước" khi xem theo năm)
+outcome(331, W, "m1", 3, "2025-10-14", "sold", title="Tòa nhà văn phòng 7 tầng – phố Duy Tân, Cầu Giấy, Hà Nội",
+        cat="nha-pho", branch=BR_HN, org=ORG_HN, start=79_400_000_000, win=80_500_000_000, part=2, evidence=True,
+        cash=[(DEP, 15_880_000_000, "2025-10-14", None),
+              (PAY, 40_000_000_000, "2025-11-12", "Thanh toán đợt 1"),
+              (PAY, 24_620_000_000, "2025-12-10", "Thanh toán đợt 2 — tất toán"),
+              (FEE, 520_000_000, "2025-12-15", "Thù lao dịch vụ đấu giá")])
+outcome(332, W, "m2", 2, "2025-10-21", "sold", title="Căn hộ Penthouse 260 m² – Sunrise City, Quận 7, TP.HCM",
+        cat="can-ho", branch=BR_HCM, org=ORG_HCM, start=23_300_000_000, win=23_900_000_000, part=2, cash=[
+            (DEP, 4_660_000_000, "2025-10-21", None),
+            (PAY, 19_240_000_000, "2025-11-19", None)])
+outcome(333, W, "owner", 1, "2025-11-05", "sold",
+        title="Dây chuyền sản xuất gạch men – Công ty CP Gạch Thanh Tâm (TSBĐ)", cat="day-chuyen", branch=BR_BD,
+        org=ORG_MN, start=18_000_000_000, win=18_600_000_000, part=2, cash=[
+            (DEP, 3_600_000_000, "2025-11-05", None),
+            (PAY, 15_000_000_000, "2025-12-03", None)])
+outcome(334, W, "m2", 2, "2025-11-18", "unsold", title="Khách sạn 9 tầng – đường Hà Bổng, Sơn Trà, Đà Nẵng",
+        cat="nha-pho", branch=BR_DN, org=ORG_VN, start=68_400_000_000, part=1, reason="single_bidder")
+outcome(335, W, "m2", 1, "2025-12-03", "sold", title="Ô tô Toyota Land Cruiser Prado 2022 – TSBĐ khoản vay cá nhân",
+        cat="o-to", branch=BR_DN, org=ORG_VN, start=2_200_000_000, win=2_380_000_000, part=6, cash=[
+            (DEP, 440_000_000, "2025-12-03", None),
+            (PAY, 1_940_000_000, "2025-12-12", None)])
+# — Tháng 9/2026: thêm 3 tài sản bán đã thu đủ ⇒ chỉ tiêu tháng ~65%, chi nhánh Hà Nội vượt
+outcome(341, W, "m2", 1, "2026-09-03", "sold", title="Quyền sử dụng đất 1.200 m² – xã Tân Thông Hội, Củ Chi, TP.HCM",
+        cat="dat-o", branch=BR_HCM, org=ORG_HCM, start=8_400_000_000, win=8_900_000_000, part=4, cash=[
+            (DEP, 1_780_000_000, "2026-09-03", None),
+            (PAY, 7_120_000_000, "2026-09-24", None)])
+outcome(342, W, "m1", 1, "2026-09-10", "sold", title="Nhà phố 5 tầng 78 m² – phố Kim Mã, Ba Đình, Hà Nội",
+        cat="nha-pho", branch=BR_HN, org=ORG_HN, start=15_900_000_000, win=16_800_000_000, part=5, cash=[
+            (DEP, 3_360_000_000, "2026-09-10", None),
+            (PAY, 13_440_000_000, "2026-09-25", "Người mua thanh toán sớm trước hạn")])
+outcome(343, W, "m2", 1, "2026-09-16", "sold",
+        title="Ô tô Mercedes-Benz GLC 300 4Matic 2022 – TSBĐ khoản vay cá nhân", cat="o-to", branch=BR_HCM,
+        org=ORG_HCM, start=1_550_000_000, win=1_720_000_000, part=6, cash=[
+            (DEP, 310_000_000, "2026-09-16", None),
+            (PAY, 1_410_000_000, "2026-09-23", None)])
+
+# Khoản thu bổ sung cho kết quả của bộ gốc: (outcome n, kind, amount, day, note)
+DASH_CASH = [
+    (32, DEP, 10_400_000_000, "2026-09-22", "Chuyển tiền đặt trước của người trúng"),
+]
+
+TARGETS += [
+    # Chỉ tiêu từng chi nhánh — đổi bộ lọc Đơn vị trên Tổng quan không rơi vào trống
+    (41, W, BR_HN, "month", "2026-09-01", 25_000_000_000, 2),
+    (42, W, BR_HCM, "month", "2026-09-01", 15_000_000_000, 2),
+    (43, W, BR_DN, "month", "2026-09-01", 5_000_000_000, 1),
+    (44, W, BR_BD, "month", "2026-09-01", 20_000_000_000, 1),
+    (45, W, BR_HCM, "quarter", "2026-07-01", 25_000_000_000, 3),
+    (46, W, BR_HN, "year", "2026-01-01", 150_000_000_000, 8),
+    (47, W, BR_HCM, "year", "2026-01-01", 60_000_000_000, 5),
+    (48, W, BR_DN, "year", "2026-01-01", 50_000_000_000, 4),
+    (49, W, BR_BD, "year", "2026-01-01", 180_000_000_000, 8),
+    # Kỳ 2025 đã qua — trang Chỉ tiêu có cả nhóm "Đã hoàn thành" lẫn "Không hoàn thành"
+    (51, W, None, "year", "2025-01-01", 520_000_000_000, 22),
+    (52, W, None, "quarter", "2025-07-01", 150_000_000_000, 7),
+    (53, W, None, "quarter", "2025-10-01", 220_000_000_000, 6),
+]
+
+# Tin đấu giá mới (id 5eed0008-…) claim vào W ⇒ "Lịch đấu giá 7 ngày". Ngày 24/09 là phiên
+# đã qua mà chưa khai kết quả ⇒ thêm một việc "Chờ khai kết quả".
+# (n, chi nhánh, loại tin, tiêu đề, giá, diện tích, tổ chức, phiên, hạn nộp hồ sơ, trạng thái claim, địa chỉ)
+IMG = "https://bcusbpkfnydqcvxxjvew.supabase.co/storage/v1/object/public/listing-images/property-types/{}.jpg"
+BRANCH_OWNER = {  # workspace_branches.asset_owner_id + tên chủ tài sản trên tin
+    BR_HN: ("6262bcb0-1b53-4dc9-b759-affbaa194184", "Ngân hàng TMCP Á Châu"),
+    BR_HCM: ("9babd803-7d54-4619-8ac1-1535cf78ee73", "Ngân hàng TMCP Công Thương Việt Nam"),
+    BR_DN: ("d9b6f97c-094a-41b5-86a5-91b329ea2193", "Ngân hàng TMCP Ngoại thương Việt Nam"),
+    BR_BD: (BIDV, "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam"),
+}
+NEW_LISTINGS = [
+    (1, BR_HN, "nha-pho", "Nhà phố 4 tầng 70 m² – phố Hoàng Quốc Việt, Cầu Giấy, Hà Nội", 13_800_000_000, 70,
+     ORG_HN, "2026-09-29T09:00:00+07:00", "2026-09-24T17:00:00+07:00", "confirmed",
+     {"province": "Hà Nội", "district": "Cầu Giấy", "ward": "Nghĩa Đô", "street": "Số 36 Hoàng Quốc Việt"}),
+    (2, BR_HCM, "can-ho", "Căn hộ 2PN 72 m² – Masteri Thảo Điền, TP. Thủ Đức, TP.HCM", 5_200_000_000, 72,
+     ORG_HCM, "2026-09-30T14:30:00+07:00", "2026-09-25T17:00:00+07:00", "auto_claimed",
+     {"province": "TP. Hồ Chí Minh", "district": "TP. Thủ Đức", "ward": "Thảo Điền", "street": "159 Xa lộ Hà Nội"}),
+    (3, BR_DN, "dat-o", "Lô đất 250 m² – đường Nguyễn Tất Thành, Liên Chiểu, Đà Nẵng", 14_500_000_000, 250,
+     ORG_VN, "2026-10-01T09:30:00+07:00", "2026-09-28T17:00:00+07:00", "confirmed",
+     {"province": "Đà Nẵng", "district": "Liên Chiểu", "ward": "Hòa Minh", "street": "Lô B2-18 Nguyễn Tất Thành"}),
+    (4, BR_BD, "kho-xuong", "Nhà xưởng 1.800 m² – KCN Đồng An 2, Thủ Dầu Một, Bình Dương", 24_600_000_000, 1800,
+     ORG_MN, "2026-10-02T09:00:00+07:00", "2026-09-29T17:00:00+07:00", "auto_claimed",
+     {"province": "Bình Dương", "district": "Thủ Dầu Một", "ward": "Hòa Phú", "street": "Lô F5, KCN Đồng An 2"}),
+    (5, BR_HN, "can-ho", "Căn hộ 3PN 98 m² – Imperia Garden, Thanh Xuân, Hà Nội", 6_100_000_000, 98,
+     ORG_HN, "2026-10-06T09:00:00+07:00", "2026-10-01T17:00:00+07:00", "auto_claimed",
+     {"province": "Hà Nội", "district": "Thanh Xuân", "ward": "Thanh Xuân Trung", "street": "203 Nguyễn Huy Tưởng"}),
+    (6, BR_HCM, "nha-pho", "Shophouse 120 m² – Lakeview City, TP. Thủ Đức, TP.HCM", 19_500_000_000, 120,
+     ORG_HCM, "2026-10-08T14:00:00+07:00", "2026-10-05T17:00:00+07:00", "pending_confirmation",
+     {"province": "TP. Hồ Chí Minh", "district": "TP. Thủ Đức", "ward": "An Phú", "street": "Đường Song Hành"}),
+    (7, BR_HN, "kho-xuong", "Kho bãi 2.600 m² – Quốc lộ 1A, Thanh Trì, Hà Nội", 21_300_000_000, 2600,
+     ORG_HN, "2026-09-24T09:00:00+07:00", "2026-09-19T17:00:00+07:00", "confirmed",
+     {"province": "Hà Nội", "district": "Thanh Trì", "ward": "Liên Ninh", "street": "Km 12 Quốc lộ 1A"}),
+]
+# Phiên đã diễn ra của tin mới (tin 7) — lịch sử phiên của tài sản
+NEW_LISTING_SESSIONS = [(7, "2026-09-24")]
+
+# Kho xưởng Cần Thơ (3 lượt không thành) đấu lần 4 ngày 30/09 như kế hoạch trong báo cáo quý II
+# ⇒ vào lịch 7 ngày và rời nhóm tồn đọng. Cùng khuôn với RESCHEDULE.
+DASH_RESCHEDULE = [
+    ("a7147ce1-3c61-4271-8079-c5a4d5a3351d", "2026-09-30T09:00:00+07:00", "2026-09-25T17:00:00+07:00",
+     "2026-05-18T09:00:00+07:00", None),
+]
+
+# Phiên năm 2025 của 3 tin (nay đã bán) ⇒ KPI "Tồn đọng" có số cùng ngày năm trước (≥ 2 phiên
+# chưa bán tại 27/09/2025). (listing, ngày, giá khởi điểm phiên)
+OLD_SESSIONS = [
+    ("aaaa9aeb-3022-4383-833b-ff9ea724843c", "2025-03-14", 31_000_000_000),
+    ("aaaa9aeb-3022-4383-833b-ff9ea724843c", "2025-07-18", 29_450_000_000),
+    ("434379cc-cff2-4f39-a069-f11c2eff0b58", "2025-04-10", 55_000_000_000),
+    ("434379cc-cff2-4f39-a069-f11c2eff0b58", "2025-08-22", 52_250_000_000),
+    ("513f68df-dfa6-4e9a-abda-1b3516af295f", "2025-05-16", 47_300_000_000),
+    ("513f68df-dfa6-4e9a-abda-1b3516af295f", "2025-09-12", 44_930_000_000),
+]
+
+# Mã khoản thu cố định theo thứ tự trong OUTCOMES — `--dashboard` sinh đúng id như bản seed đầy đủ.
+_cash_n = 0
+for _o in OUTCOMES:
+    _o["cash_ids"] = []
+    for _c in _o["cash"]:
+        _cash_n += 1
+        _o["cash_ids"].append(sid("0002", _cash_n))
 
 # ─── Báo cáo định kỳ: (n, ws, by, branch, type, start, created_at, final, notes, plan_note) ─
 REPORTS = [
@@ -622,8 +884,7 @@ def remove_files():
 
 
 # ─── Bước 2: SQL ──────────────────────────────────────────────────────────────
-def seed_sql(commit):
-    s = ["\\set ON_ERROR_STOP 1", "begin;", """
+SQL_HEADER = ["\\set ON_ERROR_STOP 1", "begin;", """
 create function pg_temp.ok(j jsonb) returns jsonb language plpgsql as $$
 begin
   if coalesce((j->>'ok')::boolean, false) is not true then
@@ -631,6 +892,152 @@ begin
   end if;
   return j;
 end $$;"""]
+
+ORG_NAME = {
+    ORG_VN: "Công ty Đấu giá Hợp danh Việt Nam",
+    ORG_HCM: "Trung tâm Dịch vụ Đấu giá Tài sản TP. Hồ Chí Minh",
+    ORG_MN: "Công ty Đấu giá Hợp danh Miền Nam",
+    ORG_HN: "Trung tâm Dịch vụ Đấu giá Tài sản Hà Nội",
+}
+
+
+def reschedule_sql(items):
+    return [f"update listings set custom_attributes = coalesce(custom_attributes, '{{}}'::jsonb) || "
+            f"jsonb_build_object('auction_time', {lit(at)}, 'registration_deadline', {lit(reg)}) where id = {lit(listing)};"
+            for listing, at, reg, _old_at, _old_reg in items]
+
+
+def outcomes_sql(outs):
+    s = []
+    for o in outs:
+        created = f"{o['day']} 17:30+07"
+        s += [as_user(o["by"]), f"""
+insert into owner_asset_outcomes (id, workspace_id, branch_id, listing_id, asset_title, asset_category, round_no,
+  auction_date, auction_org_id, outcome, failure_reason, starting_price, winning_price, participants, payment_status,
+  payment_due_on, evidence_urls, source, share_to_market, created_at)
+values ({lit(o['id'])}, {lit(o['ws'])}, {lit(o['branch'])}, {lit(o['listing'])}, {lit(o['title'])}, {lit(o['cat'])},
+  {o['round']}, {lit(o['day'])}, {lit(o['org'])}, {lit(o['outcome'])}, {lit(o['reason'])}, {lit(o['start'])},
+  {lit(o['win'])}, {lit(o['part'])}, {lit('defaulted' if o['defaulted'] else 'pending')}, {lit(o['due'])},
+  {("array[" + lit(evidence_path(o)) + "]") if o['evidence'] else "'{}'"}::text[], 'owner_manual', false,
+  {lit(created)});"""]
+        for cash_id, (kind, amount, day, note) in zip(o["cash_ids"], o["cash"]):
+            s.append(f"insert into owner_cash_events (id, outcome_id, kind, amount, occurred_on, note) values "
+                     f"({lit(cash_id)}, {lit(o['id'])}, {lit(kind)}, {amount}, {lit(day)}, {lit(note)});")
+    return s + [AS_SYSTEM, CASH_CREATED_AT]
+
+
+CASH_CREATED_AT = ("update owner_cash_events set created_at = (occurred_on + time '16:00') at time zone "
+                   "'Asia/Ho_Chi_Minh', updated_at = (occurred_on + time '16:00') at time zone 'Asia/Ho_Chi_Minh' "
+                   "where id::text like '5eed0002-%';")
+
+
+def target_criteria_sql(target_id, amount, count):
+    """Tiêu chí của chỉ tiêu (mig 20260927124605) — nguồn DUY NHẤT của mục tiêu; hai cột
+    target_amount/target_count của bảng cha đã ngừng dùng. Cùng thứ tự như owner_save_target."""
+    return (f"insert into owner_workspace_target_criteria (target_id, workspace_id, metric, goal, sort_order) "
+            f"select t.id, t.workspace_id, c.metric, c.goal, c.ord from owner_workspace_targets t, "
+            f"(values ('recovered_amount', {amount}::numeric, 0::smallint), ('sold_count', {count}, 1)) "
+            f"as c(metric, goal, ord) where t.id = {lit(target_id)};")
+
+
+def targets_sql(items):
+    s = []
+    for n, ws, branch, ptype, start, amount, count in items:
+        s += [as_user("owner" if ws == W else ("b1" if ws == WS_C1 else "b2")),
+              f"insert into owner_workspace_targets (id, workspace_id, branch_id, period_type, period_start, "
+              f"created_at) values ({lit(sid('0003', n))}, {lit(ws)}, {lit(branch)}, {lit(ptype)}, {lit(start)}, "
+              f"timestamptz {lit(start + ' 08:00+07')} - interval '5 days');",
+              target_criteria_sql(sid("0003", n), amount, count)]
+    return s
+
+
+def new_listing_id(n):
+    return sid("0008", n)
+
+
+def dashboard_sql():
+    """Phần "Tổng quan" — ghép vào seed đầy đủ, hoặc chạy riêng bằng --dashboard."""
+    s = [AS_SYSTEM] + reschedule_sql(DASH_RESCHEDULE)
+
+    # Tin đấu giá mới + claim vào W (hệ thống ghép tên như run_workspace_match)
+    for n, branch, ptype, title, price, area, org, at, reg, claim, addr in NEW_LISTINGS:
+        owner_id, owner_name = BRANCH_OWNER[branch]
+        ca = {"auction_time": at, "registration_deadline": reg, "asset_owner_name": owner_name,
+              "deposit_amount": price // 5, "document_fee": 500_000,
+              "bid_step": max(10_000_000, price // 100 // 10_000_000 * 10_000_000),
+              "auction_location": f"Trụ sở {ORG_NAME[org]}", "org_name": ORG_NAME[org], "seed_batch": "owner_demo"}
+        legal = "Sổ hồng" if ptype in ("nha-pho", "can-ho") else "Sổ đỏ"
+        desc = (f"Tài sản bảo đảm do {owner_name} xử lý theo hợp đồng thế chấp đã đăng ký giao dịch bảo đảm. "
+                f"Hồ sơ pháp lý đầy đủ ({legal.lower()}), bàn giao theo hiện trạng. Xem tài sản theo lịch của "
+                f"{ORG_NAME[org]}.")
+        lid = new_listing_id(n)
+        s.append(f"""
+insert into listings (id, title, description, purpose, property_type_slug, price, area, image_url, legal_status, address,
+  auction_org_id, asset_owner_id, status, price_unit, custom_attributes, views_count, created_at, updated_at)
+values ({lit(lid)}, {lit(title)}, {lit(desc)}, 'FOR_SALE', {lit(ptype)}, {price}, {area}, {lit(IMG.format(ptype))},
+  {lit(legal)}, {lit(addr)}, {lit(org)}, {lit(owner_id)}, 'ACTIVE', 'TOTAL', {lit(ca)}, {40 + n * 37},
+  timestamptz {lit(reg)} - interval '21 days', timestamptz {lit(reg)} - interval '21 days');
+insert into asset_owner_claims (id, workspace_id, listing_id, asset_owner_id, confidence_score, match_basis, matched_name,
+  status, confirmed_by, confirmed_at, created_at)
+values ({lit(sid('0009', n))}, {lit(W)}, {lit(lid)}, {lit(owner_id)}, {'0.780' if claim == 'pending_confirmation' else '1.000'},
+  'auto_name', {lit(owner_name)}, {lit(claim)}, {lit(OWNER if claim == 'confirmed' else None)},
+  {f"timestamptz {lit(reg)} - interval '18 days'" if claim == 'confirmed' else 'NULL'},
+  timestamptz {lit(reg)} - interval '20 days');""")
+
+    # Lịch sử phiên: phiên đã qua của tin mới + phiên 2025 của 3 tin đã bán
+    sessions = [(new_listing_id(n), day, None) for n, day in NEW_LISTING_SESSIONS] + OLD_SESSIONS
+    for k, (listing, day, price) in enumerate(sessions, start=1):
+        s.append(f"insert into listing_price_sessions (id, listing_id, session_date, price, district, property_type, "
+                 f"created_at) select {lit(sid('000a', k))}, l.id, {lit(day)}, {price if price else 'l.price'}, "
+                 f"l.address->>'province', l.property_type_slug, {lit(day + ' 18:00+07')} "
+                 f"from listings l where l.id = {lit(listing)};")
+
+    # Kết quả 2025 + tháng 9/2026, khoản thu bổ sung, chỉ tiêu
+    s += outcomes_sql([o for o in OUTCOMES if o["n"] >= DASH_OUTCOME_FROM])
+    by_n = {o["n"]: o for o in OUTCOMES}
+    for k, (n, kind, amount, day, note) in enumerate(DASH_CASH, start=1):
+        s += [as_user(by_n[n]["by"]),
+              f"insert into owner_cash_events (id, outcome_id, kind, amount, occurred_on, note) values "
+              f"({lit(sid('0002', 900 + k))}, {lit(by_n[n]['id'])}, {lit(kind)}, {amount}, {lit(day)}, {lit(note)});"]
+    s += [AS_SYSTEM, CASH_CREATED_AT]
+    s += targets_sql([t for t in TARGETS if t[0] >= DASH_TARGET_FROM])
+    return s
+
+
+def dashboard_checks():
+    return [as_user("owner"), "set local role authenticated;", f"""
+\\echo '── Tổng quan dưới quyền secsosoo ──'
+select 'kết quả 2025' as k, count(*)::text as v from owner_outcomes_overview({lit(W)})
+  where resolved_date between '2025-01-01' and '2025-12-31'
+union all select 'cùng kỳ T9/2025 (tới 27/09): tài sản / bán / tỷ',
+  count(*) || ' / ' || count(*) filter (where resolved_outcome = 'sold') || ' / ' || round(coalesce(sum(resolved_price), 0) / 1e9, 1)
+  from owner_outcomes_overview({lit(W)}) where resolved_date between '2025-09-01' and '2025-09-27'
+union all select 'T9/2026 (tới 27/09): tài sản / bán / tỷ',
+  count(*) || ' / ' || count(*) filter (where resolved_outcome = 'sold') || ' / ' || round(coalesce(sum(resolved_price), 0) / 1e9, 1)
+  from owner_outcomes_overview({lit(W)}) where resolved_date between '2026-09-01' and '2026-09-27'
+union all select 'phiên 7 ngày tới', count(*)::text from asset_owner_claims c join listings l on l.id = c.listing_id
+  where c.workspace_id = {lit(W)} and c.status <> 'rejected'
+    and (l.custom_attributes->>'auction_time')::timestamptz between now() and now() + interval '7 days'
+union all select 'chờ xác nhận', count(*)::text from asset_owner_claims
+  where workspace_id = {lit(W)} and status = 'pending_confirmation'
+union all select 'chỉ tiêu W', count(*)::text from owner_workspace_targets where workspace_id = {lit(W)};""",
+            "reset role;"]
+
+
+def dashboard_only_sql(commit):
+    s = list(SQL_HEADER)
+    s.append(f"""
+select case when not exists (select 1 from owner_asset_outcomes where id = {lit(sid('0001', 1))})
+  then pg_temp.ok('{{"ok":false,"reason":"chua_seed_bo_goc_chay_seed_day_du"}}') end;
+select case when exists (select 1 from owner_asset_outcomes where id = {lit(sid('0001', DASH_OUTCOME_FROM + 1))})
+  then pg_temp.ok('{{"ok":false,"reason":"da_co_phan_tong_quan"}}') end;""")
+    s += dashboard_sql() + dashboard_checks()
+    s.append("commit;" if commit else "rollback;")
+    return "\n".join(s) + "\n"
+
+
+def seed_sql(commit):
+    s = list(SQL_HEADER)
     s.append(f"""
 select case when exists (select 1 from owner_asset_outcomes where id = {lit(sid('0001', 1))})
   then pg_temp.ok('{{"ok":false,"reason":"da_seed_roi_chay_teardown_truoc"}}') end;""")
@@ -679,14 +1086,18 @@ update asset_owner_workspaces set created_at = {lit(rev)} where id = :'{ws_var}'
               f"where id = :'{req_var}';",
               f"update asset_owner_workspaces set parent_linked_at = {lit(answered)} where id = :'{ws_var}';"]
 
-    # 4) Thành viên của W qua lời mời thật + 2 lời mời đang chờ
-    for key, role, scope, joined in (("m1", "staff", [BR_HN], "2026-06-15 09:00+07"),
-                                     ("m2", "staff", None, "2026-06-15 09:05+07"),
-                                     ("m3", "viewer", None, "2026-07-01 10:00+07")):
+    # 4) Vai trò tuỳ chỉnh mẫu + thành viên của W qua lời mời thật + lời mời đang chờ
+    s += [as_user("owner"),
+          f"select (pg_temp.ok(owner_ws_create_role({lit(W)}, {lit(DEMO_ROLE_NAME)}, "
+          f"{lit('Ghi thu, đổi hạn, người trúng bỏ cọc — không sửa kết quả phiên.')})))->>'id' as demo_role \\gset",
+          f"select pg_temp.ok(owner_ws_set_role_permissions(:'demo_role', {lit(DEMO_ROLE_PERMS)}));"]
+    for key, role, scope, joined in (("m1", "STAFF", [BR_HN], "2026-06-15 09:00+07"),
+                                     ("m2", "STAFF", None, "2026-06-15 09:05+07"),
+                                     ("m3", "VIEWER", None, "2026-07-01 10:00+07")):
         email = next(e for k, _i, e, _n in USERS if k == key)
         scope_sql = f"array[{lit(scope[0])}]::uuid[]" if scope else "null"
         s += [as_user("owner"),
-              f"select (pg_temp.ok(owner_ws_create_invite({lit(W)}, {lit(email)}, {lit(role)}, {scope_sql})))->>'token' "
+              f"select (pg_temp.ok(owner_ws_create_invite({lit(W)}, {lit(email)}, {role_ref(role)}, {scope_sql})))->>'token' "
               f"as tok_{key} \\gset",
               as_user(key),
               f"select pg_temp.ok(owner_ws_accept_invite(:'tok_{key}'));",
@@ -700,44 +1111,23 @@ update asset_owner_workspaces set created_at = {lit(rev)} where id = :'{ws_var}'
         scope_sql = f"array[{lit(scope[0])}]::uuid[]" if scope else "null"
         s += [as_user("owner"),
               # chỉ in 'ok' — token lời mời chính là bí mật của link
-              f"select (pg_temp.ok(owner_ws_create_invite({lit(W)}, {lit(email)}, {lit(role)}, {scope_sql})))->>'ok';"]
+              f"select (pg_temp.ok(owner_ws_create_invite({lit(W)}, {lit(email)}, {role_ref(role)}, {scope_sql})))->>'ok';"]
     s += [AS_SYSTEM,
           f"update asset_owner_workspace_invites set created_at = now() - interval '2 days', "
           f"expires_at = now() + interval '5 days' where workspace_id = {lit(W)} and accepted_at is null "
           f"and email in ({', '.join(lit(e) for e, _r, _s in PENDING_INVITES)});"]
 
     # 5) Hai tài sản đấu lại tháng 10
-    for listing, at, reg, _old_at, _old_reg in RESCHEDULE:
-        s.append(f"update listings set custom_attributes = coalesce(custom_attributes, '{{}}'::jsonb) || "
-                 f"jsonb_build_object('auction_time', {lit(at)}, 'registration_deadline', {lit(reg)}) where id = {lit(listing)};")
+    s += reschedule_sql(RESCHEDULE)
 
     # 6) Kết quả phiên + sổ thu chi (người khai / người ghi = auth.uid() do guard đóng dấu)
-    cash_n = 0
-    for o in OUTCOMES:
-        created = f"{o['day']} 17:30+07"
-        s += [as_user(o["by"]), f"""
-insert into owner_asset_outcomes (id, workspace_id, branch_id, listing_id, asset_title, asset_category, round_no,
-  auction_date, auction_org_id, outcome, failure_reason, starting_price, winning_price, participants, payment_status,
-  payment_due_on, evidence_urls, source, share_to_market, created_at)
-values ({lit(o['id'])}, {lit(o['ws'])}, {lit(o['branch'])}, {lit(o['listing'])}, {lit(o['title'])}, {lit(o['cat'])},
-  {o['round']}, {lit(o['day'])}, {lit(o['org'])}, {lit(o['outcome'])}, {lit(o['reason'])}, {lit(o['start'])},
-  {lit(o['win'])}, {lit(o['part'])}, {lit('defaulted' if o['defaulted'] else 'pending')}, {lit(o['due'])},
-  {("array[" + lit(evidence_path(o)) + "]") if o['evidence'] else "'{}'"}::text[], 'owner_manual', false,
-  {lit(created)});"""]
-        for kind, amount, day, note in o["cash"]:
-            cash_n += 1
-            s.append(f"insert into owner_cash_events (id, outcome_id, kind, amount, occurred_on, note) values "
-                     f"({lit(sid('0002', cash_n))}, {lit(o['id'])}, {lit(kind)}, {amount}, {lit(day)}, {lit(note)});")
-    s += [AS_SYSTEM,
-          "update owner_cash_events set created_at = (occurred_on + time '16:00') at time zone 'Asia/Ho_Chi_Minh', "
-          "updated_at = (occurred_on + time '16:00') at time zone 'Asia/Ho_Chi_Minh' where id::text like '5eed0002-%';"]
+    s += outcomes_sql([o for o in OUTCOMES if o["n"] < DASH_OUTCOME_FROM])
 
     # 7) Chỉ tiêu (ghi = Trưởng đơn vị của từng trạm)
-    for n, ws, branch, ptype, start, amount, count in TARGETS:
-        s += [as_user("owner" if ws == W else ("b1" if ws == WS_C1 else "b2")),
-              f"insert into owner_workspace_targets (id, workspace_id, branch_id, period_type, period_start, "
-              f"target_amount, target_count, created_at) values ({lit(sid('0003', n))}, {lit(ws)}, {lit(branch)}, "
-              f"{lit(ptype)}, {lit(start)}, {amount}, {count}, timestamptz {lit(start + ' 08:00+07')} - interval '5 days');"]
+    s += targets_sql([t for t in TARGETS if t[0] < DASH_TARGET_FROM])
+
+    # 7b) Phần "Tổng quan" — trước báo cáo để bản chốt đóng băng cả dữ liệu này
+    s += dashboard_sql()
 
     # 8) Hồ sơ số hoá của W
     for p in POSTINGS:
@@ -790,6 +1180,7 @@ union all select 'thành viên W', count(*)::text from owner_ws_list_members({li
 union all select 'lời mời chờ', count(*)::text from asset_owner_workspace_invites where workspace_id = {lit(W)} and accepted_at is null and revoked_at is null
 union all select 'trạm con đọc được', count(*)::text from asset_owner_workspaces where parent_workspace_id = {lit(W)}
 union all select 'hồ sơ số hoá W', count(*)::text from asset_postings where workspace_id = {lit(W)};"""]
+    s += dashboard_checks()
 
     s.append("commit;" if commit else "rollback;")
     return "\n".join(s) + "\n"
@@ -797,7 +1188,7 @@ union all select 'hồ sơ số hoá W', count(*)::text from asset_postings wher
 
 def teardown_sql():
     restore = []
-    for listing, _at, _reg, old_at, old_reg in RESCHEDULE:
+    for listing, _at, _reg, old_at, old_reg in RESCHEDULE + DASH_RESCHEDULE:
         expr = f"(custom_attributes - 'registration_deadline') || jsonb_build_object('auction_time', {lit(old_at)})"
         if old_reg:
             expr += f" || jsonb_build_object('registration_deadline', {lit(old_reg)})"
@@ -808,7 +1199,12 @@ def teardown_sql():
         "delete from owner_workspace_targets where id::text like '5eed0003-%';",
         "delete from owner_asset_outcomes where id::text like '5eed0001-%';",   # kéo theo sổ thu chi
         f"delete from asset_owner_workspace_invites where workspace_id = {lit(W)} and email like 'demo.%@example.com';",
+        # vai trò mẫu chỉ gắn với lời mời vừa xoá ⇒ xoá được (trigger chặn khi còn người dùng)
+        f"delete from owner_ws_roles where workspace_id = {lit(W)} and name = {lit(DEMO_ROLE_NAME)};",
         "delete from asset_postings where id::text like '5eed0005-%';",
+        "delete from listing_price_sessions where id::text like '5eed000a-%';",
+        "delete from asset_owner_claims where id::text like '5eed0009-%';",
+        "delete from listings where id::text like '5eed0008-%';",
         *restore,
         # xoá KYC ⇒ CASCADE không gian con (claim, thành viên, yêu cầu liên kết, chỉ tiêu, báo cáo)
         "delete from asset_owner_org_kyc where id::text like '5eed0006-%';",
@@ -835,6 +1231,12 @@ def main():
             ACCOUNTS_FILE.unlink()
         return
     commit = "--dry-run" not in args
+    if "--dashboard" in args:
+        print("Thêm phần Tổng quan cho secsosoo…" + ("" if commit else " (dry-run, ROLLBACK)"))
+        upload_files()   # biên bản của kết quả mới (upsert, tệp cũ ghi đè y nguyên)
+        print(psql(dashboard_only_sql(commit)))
+        print("Xong." if commit else "Dry-run xong — không ghi gì vào DB.")
+        return
     print("Seed Trạm Điều Hành cho secsosoo…" + ("" if commit else " (dry-run, ROLLBACK)"))
     ensure_accounts()
     upload_files()

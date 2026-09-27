@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { OwnerTabsList, OwnerTabsTrigger } from "@/components/asset-owner-portal/ui/OwnerTabs";
 import {
   Dialog,
   DialogContent,
@@ -41,10 +42,10 @@ import { BranchEntityScopePanel } from "@/components/owner-branches/BranchEntity
 
 const OwnerBranchesPage = () => {
   const { workspace, wsLoading } = useAssetOwnerWorkspace();
-  // Chi nhánh / alias / khớp lại là thiết lập không gian ⇒ chỉ Trưởng đơn vị (RLS
-  // 'manage_workspace'); vai trò khác xem được nhưng không thấy nút ghi.
+  // Chi nhánh / alias / khớp lại là thiết lập không gian ⇒ quyền chi-nhanh:update
+  // (RLS owner_ws_has); vai trò khác xem được nhưng không thấy nút ghi.
   const { can } = useOwnerWorkspace();
-  const canManage = can("manage_workspace");
+  const canManage = can("chi-nhanh", "update");
   const { branches, branchesLoading, metrics, syncFromClaims, createBranch, bulkCreateBranches, deleteBranch, updateBranch, toggleActive } =
     useWorkspaceBranches(workspace?.id ?? null);
 
@@ -142,27 +143,17 @@ const OwnerBranchesPage = () => {
       </div>
 
       <Tabs defaultValue="branches">
-        <TabsList className="mb-4">
-          <TabsTrigger value="branches" className="gap-2">
+        <OwnerTabsList aria-label="Chi nhánh, AMC và khớp tài sản" className="mb-4">
+          <OwnerTabsTrigger value="branches" count={regularBranches.length > 0 ? regularBranches.length : undefined}>
             Chi nhánh
-            {regularBranches.length > 0 && (
-              <span className="text-[10px] bg-primary/10 text-primary font-semibold px-1.5 py-0.5 rounded-full">
-                {regularBranches.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="amc" className="gap-2">
+          </OwnerTabsTrigger>
+          <OwnerTabsTrigger value="amc" count={amcBranches.length > 0 ? amcBranches.length : undefined}>
             AMC
-            {amcBranches.length > 0 && (
-              <span className="text-[10px] bg-purple-100 text-purple-700 font-semibold px-1.5 py-0.5 rounded-full">
-                {amcBranches.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="alias">
+          </OwnerTabsTrigger>
+          <OwnerTabsTrigger value="alias">
             {workspace?.match_scope === "entity" ? "Phạm vi & khớp tài sản" : "Alias & khớp tài sản"}
-          </TabsTrigger>
-        </TabsList>
+          </OwnerTabsTrigger>
+        </OwnerTabsList>
 
         <TabsContent value="branches">
           <BranchTable
@@ -549,7 +540,7 @@ const BranchCreateDialog = ({ open, onOpenChange, onSave, isProcessing }: Branch
           <div className="space-y-1.5">
             <Label className="flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              Tên chi nhánh <span className="text-red-500">*</span>
+              Tên chi nhánh <span className="text-destructive">*</span>
             </Label>
             <Input
               value={displayName}

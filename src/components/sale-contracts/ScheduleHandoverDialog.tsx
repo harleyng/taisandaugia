@@ -46,7 +46,9 @@ export function ScheduleHandoverDialog({
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="sale-handover-at">Thời điểm bàn giao</Label>
+            <Label htmlFor="sale-handover-at">
+              Thời điểm bàn giao <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="sale-handover-at"
               type="datetime-local"

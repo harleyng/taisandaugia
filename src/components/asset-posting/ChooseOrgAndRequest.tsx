@@ -186,7 +186,7 @@ export function ChooseOrgAndRequest({
       {!topUp && lane === "platform" ? (
         <div className="space-y-2">
           <Label htmlFor="request-message" className="text-sm">
-            Lời nhắn cho sàn (tùy chọn)
+            Lời nhắn cho sàn
           </Label>
           <Textarea
             id="request-message"

@@ -11,7 +11,7 @@
 export const OWNER_WS_REASON_MESSAGES: Record<string, string> = {
   // Chung
   not_authenticated: "Vui lòng đăng nhập để tiếp tục.",
-  forbidden: "Bạn không có quyền quản lý thành viên của không gian này.",
+  forbidden: "Vai trò của bạn không có quyền thực hiện thao tác này.",
   not_found: "Không tìm thấy thành viên hoặc lời mời — có thể vừa được thay đổi. Tải lại trang để xem mới nhất.",
 
   // Mời / đổi vai trò / gỡ
@@ -25,6 +25,19 @@ export const OWNER_WS_REASON_MESSAGES: Record<string, string> = {
   cannot_remove_self: "Bạn không thể tự gỡ chính mình khỏi không gian.",
   last_owner: "Không gian phải còn ít nhất một Trưởng đơn vị.",
   not_pending: "Lời mời này đã được dùng hoặc đã bị thu hồi.",
+  owner_only: "Chỉ Trưởng đơn vị mới trao, đổi hoặc gỡ vai trò Trưởng đơn vị.",
+  exceeds_own_permissions:
+    "Vai trò này có quyền mà bạn không có. Bạn chỉ gán, mời hoặc chỉnh vai trò nằm trong quyền của mình.",
+  exceeds_own_scope: "Phạm vi chi nhánh vượt quá phạm vi của bạn.",
+
+  // Vai trò (migration 20260927170100)
+  system_role: "Vai trò Trưởng đơn vị luôn toàn quyền — không sửa hoặc xoá được.",
+  cannot_edit_own_role: "Bạn không thể tự chỉnh vai trò mình đang giữ.",
+  role_in_use: "Vai trò đang được gán cho thành viên hoặc còn lời mời chưa dùng. Chuyển họ sang vai trò khác trước khi xoá.",
+  invalid_permission: "Có quyền không hợp lệ trong ma trận. Tải lại trang rồi thử lại.",
+  invalid_name: "Tên vai trò cần từ 2 đến 60 ký tự.",
+  invalid_description: "Mô tả tối đa 300 ký tự.",
+  name_taken: "Đã có vai trò cùng tên trong đơn vị.",
 
   // Chấp nhận lời mời
   revoked: "Lời mời đã bị thu hồi.",
@@ -35,7 +48,7 @@ export const OWNER_WS_REASON_MESSAGES: Record<string, string> = {
   not_activated: "Bạn cần kích hoạt tài khoản trước khi tham gia.",
 
   // Liên kết trụ sở ↔ chi nhánh (Phase 14, migration 20260926185917)
-  link_forbidden: "Chỉ Trưởng đơn vị mới gửi hoặc trả lời yêu cầu liên kết.",
+  link_forbidden: "Vai trò của bạn không có quyền gửi hoặc trả lời yêu cầu liên kết.",
   link_not_found: "Không tìm thấy yêu cầu liên kết — có thể vừa được thay đổi. Tải lại trang để xem mới nhất.",
   link_self: "Không thể liên kết một Trạm với chính nó.",
   link_parent_not_eligible:

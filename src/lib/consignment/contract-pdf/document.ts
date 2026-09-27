@@ -17,8 +17,9 @@ import { formatVnd } from '@/lib/advertising/slug'
 import { planSummary } from '@/lib/quotePlan'
 import type { OrgParty, OwnerParty } from '@/types/consignment-contract'
 import {
-  DRAFT_NOTICE, EFFECT, LEGAL_BASES, ORG_DUTIES, OWNER_DUTIES, PAYMENT_TERMS, TERMINATION,
+  CONTRACT_TEMPLATE_VERSION, DRAFT_NOTICE, EFFECT, LEGAL_BASES, ORG_DUTIES, OWNER_DUTIES, PAYMENT_TERMS, TERMINATION,
 } from './clauses'
+import { slotList, slotText } from '@/lib/contracts/templates/resolve'
 import type { ContractPdfInput } from './input'
 
 const t = themeOf('FORMAL')
@@ -86,8 +87,23 @@ function orgRows(g: OrgParty): Array<[string, string]> {
 
 const legalFlag = (b: boolean | null) => (b === null ? 'Chưa khai' : b ? 'Có' : 'Không')
 
+/** Câu chữ từ mẫu đang áp dụng; slot trống / thiếu ⇒ hằng số trong clauses.ts. */
+function consignmentClauses(t: unknown) {
+  return {
+    legal_bases: slotList(t, 'legal_bases', LEGAL_BASES),
+    owner_duties: slotList(t, 'owner_duties', OWNER_DUTIES),
+    org_duties: slotList(t, 'org_duties', ORG_DUTIES),
+    payment_terms: slotText(t, 'payment_terms', PAYMENT_TERMS),
+    termination: slotList(t, 'termination', TERMINATION),
+    effect: slotList(t, 'effect', EFFECT),
+    draft_notice: slotText(t, 'draft_notice', DRAFT_NOTICE),
+  }
+}
+
 export function buildContractDocDefinition(input: ContractPdfInput): TDocumentDefinitions {
   const { owner, org, asset, terms } = input
+  const cl = consignmentClauses(input.template?.clauses)
+  const templateVersion = input.template?.version ?? CONTRACT_TEMPLATE_VERSION
   const startingPrice = terms.starting_price ?? asset.starting_price
   const plan = planSummary(terms.plan, startingPrice)
   const fees = terms.fee_items ?? []
@@ -143,7 +159,7 @@ export function buildContractDocDefinition(input: ContractPdfInput): TDocumentDe
     },
     { text: 'HỢP ĐỒNG DỊCH VỤ ĐẤU GIÁ TÀI SẢN', bold: true, fontSize: 14, alignment: 'center', margin: [0, 22, 0, 2] },
     { text: `(Mã hồ sơ trên sàn: ${input.code ?? '—'})`, fontSize: 8, color: t.muted, alignment: 'center', margin: [0, 0, 0, 12] },
-    { stack: LEGAL_BASES.map((b): Content => ({ text: b, italics: true, margin: [0, 0, 0, 2] })) },
+    { stack: cl.legal_bases.map((b): Content => ({ text: b, italics: true, margin: [0, 0, 0, 2] })) },
     { text: 'Hôm nay, ngày …… tháng …… năm ……, tại ………………………………………, chúng tôi gồm:', margin: [0, 10, 0, 6] },
 
     { text: 'BÊN A — BÊN CÓ TÀI SẢN', bold: true, margin: [0, 6, 0, 3] },
@@ -186,7 +202,7 @@ export function buildContractDocDefinition(input: ContractPdfInput): TDocumentDe
         ['Thù lao dịch vụ', terms.commission_pct != null ? `${terms.commission_pct}% giá trị tài sản bán được` : BLANK],
       ]),
       ...feeTable,
-      { text: PAYMENT_TERMS, margin: [0, 5, 0, 0] },
+      { text: cl.payment_terms, margin: [0, 5, 0, 0] },
     ]),
     article(5, 'Thời hạn thực hiện', [
       {
@@ -196,10 +212,10 @@ export function buildContractDocDefinition(input: ContractPdfInput): TDocumentDe
             : 'Thời gian tổ chức cuộc đấu giá do hai bên thống nhất bằng văn bản.',
       },
     ]),
-    article(6, 'Quyền và nghĩa vụ của Bên A', [{ ul: OWNER_DUTIES }]),
-    article(7, 'Quyền và nghĩa vụ của Bên B', [{ ul: ORG_DUTIES }]),
-    article(8, 'Chấm dứt hợp đồng và giải quyết tranh chấp', [{ ul: TERMINATION }]),
-    article(9, 'Hiệu lực hợp đồng', [{ ul: EFFECT }]),
+    article(6, 'Quyền và nghĩa vụ của Bên A', [{ ul: cl.owner_duties }]),
+    article(7, 'Quyền và nghĩa vụ của Bên B', [{ ul: cl.org_duties }]),
+    article(8, 'Chấm dứt hợp đồng và giải quyết tranh chấp', [{ ul: cl.termination }]),
+    article(9, 'Hiệu lực hợp đồng', [{ ul: cl.effect }]),
 
     {
       unbreakable: true,
@@ -238,7 +254,7 @@ export function buildContractDocDefinition(input: ContractPdfInput): TDocumentDe
       margin: [SIDE_MARGIN, 14, SIDE_MARGIN, 0],
       columns: [
         {
-          text: `${DRAFT_NOTICE} · ${input.code ?? ''} · Tạo ngày ${fmtDate(input.generatedAt.toISOString())}`,
+          text: `${cl.draft_notice} · ${templateVersion} · ${input.code ?? ''} · Tạo ngày ${fmtDate(input.generatedAt.toISOString())}`,
           fontSize: 7,
           color: t.muted,
         },

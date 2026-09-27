@@ -49,7 +49,9 @@ All colors MUST be HSL.
     --shadow-md: 0 4px 6px -1px hsl(220 13% 91% / 0.1);
     --shadow-lg: 0 10px 15px -3px hsl(220 13% 91% / 0.1);
     --shadow-xl: 0 20px 25px -5px hsl(220 13% 91% / 0.1);
-    
+    /* Thẻ trắng không viền trên nền xám (cổng chủ tài sản) — bóng đủ đậm để thấy mép thẻ */
+    --shadow-card: 0 1px 2px 0 hsl(var(--foreground) / 0.04), 0 2px 8px -2px hsl(var(--foreground) / 0.08);
+
     --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -67,6 +69,8 @@ All colors MUST be HSL.
   .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
+    /* --foreground sáng ở chế độ tối ⇒ bóng lấy màu nền tối */
+    --shadow-card: 0 1px 2px 0 hsl(var(--background) / 0.6), 0 2px 8px -2px hsl(var(--background) / 0.8);
 
     --card: 224 71% 4%;
     --card-foreground: 210 40% 98%;
@@ -199,6 +203,38 @@ All colors MUST be HSL.
   .leaflet-tile-pane {
     @apply relative z-0;
   }
+}
+
+/* Cổng chủ tài sản — nền xám (<main className="owner-canvas">), thẻ trắng KHÔNG viền
+   mà đổ bóng. Áp theo ngữ cảnh thay vì sửa từng component vì nhiều khối (số hoá, ký gửi,
+   hợp đồng mua bán, tư vấn…) dùng chung với cổng khác, nơi thẻ vẫn giữ viền.
+   - Chỉ thẻ nằm thẳng trên nền; thẻ lồng trong thẻ giữ viền để tách mục.
+   - Viền mang nghĩa (primary/success/warning/destructive, nét đứt) giữ nguyên.
+   - Thẻ có hover:border-* vẫn hiện viền màu khi rê chuột.
+   CSS thuần, KHÔNG đặt trong @layer/@apply: Tailwind coi selector chứa .bg-card là biến
+   thể của chính utility đó ⇒ lỗi "circular dependency". Bóng ghép như utility shadow-*
+   (qua --tw-shadow) để vòng focus (ring) của thẻ bấm được vẫn hiện. */
+.owner-canvas .bg-card.border:not(.bg-card *) {
+  --tw-shadow: var(--shadow-card);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.owner-canvas .bg-card.border:not(.bg-card *):not(
+    :is(
+      [class*=" border-primary"],
+      [class*=" border-success"],
+      [class*=" border-warning"],
+      [class*=" border-destructive"],
+      [class*=" border-dashed"],
+      [class*="hover:border-"]:hover
+    )
+  ) {
+  border-color: transparent;
+}
+
+/* Skeleton (bg-muted) nằm thẳng trên nền xám sẽ tàng hình ⇒ giữ chỗ bằng màu thẻ. */
+.owner-canvas .animate-pulse.bg-muted:not(.bg-card *) {
+  background-color: hsl(var(--card));
 }
 
 /* Tiptap / ProseMirror editor content styles */

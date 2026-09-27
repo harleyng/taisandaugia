@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { qk } from "@/lib/queryKeys";
+import { activeTemplateForPdf } from "@/hooks/useContractTemplates";
 import { assertSaleRpcOk, saleErrorMessage } from "@/lib/saleContracts/errors";
 import {
   SALE_BUCKET,
@@ -534,11 +535,12 @@ export async function generateSaleDraftFile(
   detail: Pick<SaleContractDetail, "contract" | "installments">,
   categoryLabel?: string | null,
 ): Promise<File> {
-  const [{ salePdfBlob }, { buildSalePdfInput, saleDraftFileName }] = await Promise.all([
+  const [{ salePdfBlob }, { buildSalePdfInput, saleDraftFileName }, template] = await Promise.all([
     import("@/lib/saleContracts/contract-pdf"),
     import("@/lib/saleContracts/contract-pdf/input"),
+    activeTemplateForPdf("sale"),
   ]);
-  const input = buildSalePdfInput(detail, { categoryLabel });
+  const input = buildSalePdfInput(detail, { categoryLabel, template });
   const blob = await salePdfBlob(input);
   return new File([blob], saleDraftFileName(input), { type: "application/pdf" });
 }

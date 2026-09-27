@@ -3,8 +3,11 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, XCircle, Clock, Building2, ArrowRight, ExternalLink, Search, X } from "lucide-react";
+import { SelectItem } from "@/components/ui/select";
+import { CheckCircle2, XCircle, Clock, Building2, ArrowRight, ExternalLink, X } from "lucide-react";
+import { OwnerSearchInput } from "@/components/asset-owner-portal/ui/OwnerSearchInput";
+import { OwnerFilterSelect } from "@/components/asset-owner-portal/ui/OwnerFilterSelect";
+import { OwnerTabBar } from "@/components/asset-owner-portal/ui/OwnerTabs";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/utils/formatters";
 import type { AssetOwnerClaim, ClaimStatus } from "@/types/asset-owner";
@@ -184,78 +187,43 @@ export const ClaimsTable = ({ claims, roundCountsByListing = {}, outcomesByListi
       {/* Row 1: search + secondary filters */}
       <div className="flex flex-wrap gap-2 items-center">
         {/* Search */}
-        <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Tìm tên, địa chỉ hoặc mã tài sản..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-8 h-9"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+        <OwnerSearchInput
+          placeholder="Tìm tên, địa chỉ hoặc mã tài sản..."
+          aria-label="Tìm tài sản theo tên, địa chỉ hoặc mã"
+          value={search}
+          onValueChange={setSearch}
+          className="min-w-[180px] flex-1"
+        />
 
         {/* Secondary filter selects — only render when data available */}
         {availableCategories.length > 0 && (
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="h-9 w-auto min-w-[130px] text-sm">
-              <SelectValue placeholder="Loại BĐS" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả loại BĐS</SelectItem>
-              {availableCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <OwnerFilterSelect label="Loại" value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectItem value="all">Tất cả loại BĐS</SelectItem>
+            {availableCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </OwnerFilterSelect>
         )}
 
         {availableProvinces.length > 0 && (
-          <Select value={provinceFilter} onValueChange={setProvinceFilter}>
-            <SelectTrigger className="h-9 w-auto min-w-[120px] text-sm">
-              <SelectValue placeholder="Tỉnh/TP" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả tỉnh/TP</SelectItem>
-              {availableProvinces.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <OwnerFilterSelect label="Tỉnh/TP" value={provinceFilter} onValueChange={setProvinceFilter}>
+            <SelectItem value="all">Tất cả tỉnh/TP</SelectItem>
+            {availableProvinces.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+          </OwnerFilterSelect>
         )}
 
         {availableMatchedNames.length > 1 && (
-          <Select value={matchedNameFilter} onValueChange={setMatchedNameFilter}>
-            <SelectTrigger className="h-9 w-auto min-w-[140px] text-sm">
-              <SelectValue placeholder="Chi nhánh / AMC" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả chi nhánh</SelectItem>
-              {availableMatchedNames.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <OwnerFilterSelect label="Chi nhánh" value={matchedNameFilter} onValueChange={setMatchedNameFilter}>
+            <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+            {availableMatchedNames.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+          </OwnerFilterSelect>
         )}
 
-        <Select value={timePreset} onValueChange={(v) => setTimePreset(v as TimePreset)}>
-          <SelectTrigger className="h-9 w-auto min-w-[140px] text-sm">
-            <SelectValue placeholder="Thời gian" />
-          </SelectTrigger>
-          <SelectContent>
-            {TIME_PRESETS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <OwnerFilterSelect label="Thời gian" value={timePreset} onValueChange={(v) => setTimePreset(v as TimePreset)}>
+          {TIME_PRESETS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+        </OwnerFilterSelect>
 
-        <Select value={minRounds} onValueChange={setMinRounds}>
-          <SelectTrigger className="h-9 w-auto min-w-[130px] text-sm">
-            <SelectValue placeholder="Lần đấu giá" />
-          </SelectTrigger>
-          <SelectContent>
-            {ROUND_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <OwnerFilterSelect label="Số lần" value={minRounds} onValueChange={setMinRounds}>
+          {ROUND_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+        </OwnerFilterSelect>
 
         {hasAnyFilter && (
           <button
@@ -280,32 +248,18 @@ export const ClaimsTable = ({ claims, roundCountsByListing = {}, outcomesByListi
 
       {/* Row 2: status pills + result count */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex gap-1.5 flex-wrap">
-          {STATUS_PILLS.map(({ value, label }) => {
-            const count = countFor(value);
-            const isActive = statusFilter === value;
-            return (
-              <button
-                key={value}
-                onClick={() => setStatusFilter(value)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                )}
-              >
-                {label}
-                <span className={cn(
-                  "text-[10px] font-semibold rounded-full px-1.5 py-px tabular-nums",
-                  isActive ? "bg-white/20 text-white" : "bg-background text-muted-foreground"
-                )}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <OwnerTabBar
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v)}
+          aria-label="Lọc theo trạng thái"
+          className="flex-1"
+          items={STATUS_PILLS.map(({ value, label }) => ({
+            value,
+            label,
+            count: countFor(value),
+            attention: value === "pending_confirmation",
+          }))}
+        />
         <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
           {filtered.length === claims.length
             ? `${claims.length} tài sản`

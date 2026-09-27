@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
 import { EVIDENCE_ACCEPT, validateEvidenceFile, type ReportOutcomeForm } from "@/lib/ownerOutcomeReport";
-import { OptionalMark, OutcomeFieldError } from "./OutcomeFieldError";
+import { OutcomeFieldError } from "./OutcomeFieldError";
 
 interface OutcomeSoldFieldsProps {
   evidence: File | null;
@@ -13,7 +13,7 @@ interface OutcomeSoldFieldsProps {
   disabled?: boolean;
 }
 
-/** Phần "Thành": giá trúng, số người tham gia, biên bản (tuỳ chọn). */
+/** Phần "Thành": giá trúng (bắt buộc), số người tham gia, biên bản. */
 export function OutcomeSoldFields({ evidence, onEvidenceChange, disabled }: OutcomeSoldFieldsProps) {
   const { control, register, formState } = useFormContext<ReportOutcomeForm>();
   const errors = formState.errors;
@@ -36,7 +36,9 @@ export function OutcomeSoldFields({ evidence, onEvidenceChange, disabled }: Outc
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="oc-price">Giá trúng (₫)</Label>
+          <Label htmlFor="oc-price">
+            Giá trúng (₫) <span className="text-destructive">*</span>
+          </Label>
           <Controller
             control={control}
             name="winningPrice"
@@ -54,10 +56,7 @@ export function OutcomeSoldFields({ evidence, onEvidenceChange, disabled }: Outc
           <OutcomeFieldError msg={errors.winningPrice?.message} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="oc-participants">
-            Số người tham gia
-            <OptionalMark />
-          </Label>
+          <Label htmlFor="oc-participants">Số người tham gia</Label>
           <Input
             id="oc-participants"
             inputMode="numeric"
@@ -70,10 +69,7 @@ export function OutcomeSoldFields({ evidence, onEvidenceChange, disabled }: Outc
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="oc-evidence">
-          Biên bản đấu giá
-          <OptionalMark />
-        </Label>
+        <Label htmlFor="oc-evidence">Biên bản đấu giá</Label>
         <Input
           ref={fileRef}
           id="oc-evidence"

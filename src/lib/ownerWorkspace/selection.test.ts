@@ -9,9 +9,11 @@ import {
 } from "./selection";
 import { ownerInviteLink } from "./inviteLink";
 
+// Vai trò mặc định: Trưởng đơn vị / Cán bộ (có quyền ghi) / Người xem (chỉ xem).
 const m = (workspaceId: string, role: "owner" | "staff" | "viewer", joinedAt: string | null) => ({
   workspaceId,
-  role,
+  isOwner: role === "owner",
+  hasWrite: role !== "viewer",
   joinedAt,
 });
 

@@ -68,6 +68,8 @@ export default {
         md: "var(--shadow-md)",
         lg: "var(--shadow-lg)",
         xl: "var(--shadow-xl)",
+        // Trùng tên màu `card` ⇒ Tailwind sinh thêm luật shadow-color; cả hai cùng ra var(--shadow-card).
+        card: "var(--shadow-card)",
       },
       transitionProperty: {
         base: "var(--transition-base)",

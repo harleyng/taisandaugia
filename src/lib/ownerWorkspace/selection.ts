@@ -4,7 +4,7 @@
 // không phải trạng thái cần bền: đọc/ghi luôn bọc try/catch (chế độ riêng tư,
 // storage bị chặn) và mọi trường hợp lỗi đều rơi về lựa chọn mặc định.
 
-import type { OwnerWsAccess, OwnerWsRole } from "./roles";
+import type { OwnerWsAccess } from "./roles";
 
 const KEY_PREFIX = "owner-ws:selected:";
 /** localStorage không bắn sự kiện "storage" trong CÙNG tab ⇒ tự bắn. */
@@ -39,17 +39,22 @@ export function subscribeSelectedWorkspace(onChange: () => void): () => void {
 
 export interface SelectableMembership {
   workspaceId: string;
-  role: OwnerWsRole;
+  /** Vai trò hệ thống Trưởng đơn vị. */
+  isOwner: boolean;
+  /** Vai trò có ít nhất một quyền khác "Xem". */
+  hasWrite: boolean;
   joinedAt: string | null;
   /** Thiếu = thành viên trực tiếp. */
   accessVia?: OwnerWsAccess;
 }
 
-const ROLE_RANK: Record<OwnerWsRole, number> = { owner: 0, staff: 1, viewer: 2 };
-/** Trạm chi nhánh xem với tư cách trụ sở luôn xếp sau mọi nơi mình là thành viên. */
-const HQ_RANK = 3;
-
-const rankOf = (m: SelectableMembership) => (m.accessVia === "hq" ? HQ_RANK : ROLE_RANK[m.role]);
+/**
+ * Trưởng đơn vị (0) → vai trò có quyền ghi (1) → chỉ xem (2) → Trạm chi nhánh xem với
+ * tư cách trụ sở (3, luôn sau mọi nơi mình là thành viên). Giữ đúng thứ tự cũ
+ * owner → staff → viewer của 3 vai trò cố định.
+ */
+const rankOf = (m: SelectableMembership) =>
+  m.accessVia === "hq" ? 3 : m.isOwner ? 0 : m.hasWrite ? 1 : 2;
 
 /**
  * Chọn không gian hiện tại: đúng cái đã lưu nếu người dùng còn là thành viên;
@@ -88,8 +93,8 @@ export type TenantPick<T> =
 
 /**
  * Chọn tenant hiện tại: đúng cái đã lưu nếu còn hợp lệ; nếu không thì theo thứ
- * tự Trưởng đơn vị → Cá nhân → Cán bộ/Người xem. Cá nhân đứng TRƯỚC nơi mình chỉ
- * là Cán bộ/Người xem: chủ tài sản cá nhân nhận lời mời làm Người xem ở một ngân
+ * tự Trưởng đơn vị → Cá nhân → vai trò khác. Cá nhân đứng TRƯỚC nơi mình không phải
+ * Trưởng đơn vị: chủ tài sản cá nhân nhận lời mời làm Người xem ở một ngân
  * hàng thì vẫn mở cổng ra đúng "nhà" của mình như trước.
  */
 export function pickTenant<T extends SelectableMembership>(
@@ -102,7 +107,7 @@ export function pickTenant<T extends SelectableMembership>(
   if (storedMembership) return { kind: "workspace", membership: storedMembership };
 
   const best = pickWorkspace(memberships, null);
-  if (best?.role === "owner") return { kind: "workspace", membership: best };
+  if (best?.isOwner && best.accessVia !== "hq") return { kind: "workspace", membership: best };
   if (hasPersonal) return { kind: "personal" };
   return best ? { kind: "workspace", membership: best } : null;
 }

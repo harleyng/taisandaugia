@@ -19,7 +19,7 @@ interface CashLedgerTableProps {
   onAction: (d: CashDialogState) => void;
 }
 
-/** L4 "Sổ thu chi": các khoản có ngày tiền về trong kỳ — sửa / xoá được (quyết định 2026-09-26). */
+/** Tab "Đã ghi" của Thu tiền: mọi khoản đã ghi, mới nhất trước — sửa / xoá được (quyết định 2026-09-26). */
 export function CashLedgerTable({ events, unitNames, canWrite, onAction }: CashLedgerTableProps) {
   const [limit, setLimit] = useState(PAGE);
   const shown = events.slice(0, limit);
@@ -65,19 +65,23 @@ export function CashLedgerTable({ events, unitNames, canWrite, onAction }: CashL
                 {by && <span className="block truncate">{e.updatedByName ? `Sửa bởi ${by}` : `Ghi bởi ${by}`}</span>}
               </p>
               <div className="flex gap-0.5 md:justify-end">
-                {e.outcomeId && canWrite(e.unitId, e.branchId) && (
+                {e.outcomeId && (
                   <>
-                    <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => onAction({ kind: "edit", event: e })}>
-                      Sửa
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => onAction({ kind: "delete", event: e })}
-                    >
-                      Xoá
-                    </Button>
+                    {canWrite(e.unitId, e.branchId, "update") && (
+                      <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => onAction({ kind: "edit", event: e })}>
+                        Sửa
+                      </Button>
+                    )}
+                    {canWrite(e.unitId, e.branchId, "delete") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => onAction({ kind: "delete", event: e })}
+                      >
+                        Xoá
+                      </Button>
+                    )}
                   </>
                 )}
               </div>

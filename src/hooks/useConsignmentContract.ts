@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { qk } from "@/lib/queryKeys";
+import { activeTemplateForPdf } from "@/hooks/useContractTemplates";
 import { assertRpcOk } from "@/lib/consignment/errors";
 import {
   CONTRACT_BUCKET,
@@ -367,11 +368,12 @@ export async function generateContractDraftFile(
   detail: OrgContractDetail,
   categoryLabel: string | null,
 ): Promise<File> {
-  const [{ buildContractPdfInput, contractDraftFileName }, { contractPdfBlob }] = await Promise.all([
+  const [{ buildContractPdfInput, contractDraftFileName }, { contractPdfBlob }, template] = await Promise.all([
     import("@/lib/consignment/contract-pdf/input"),
     import("@/lib/consignment/contract-pdf"),
+    activeTemplateForPdf("consignment"),
   ]);
-  const input = buildContractPdfInput(detail, { categoryLabel });
+  const input = buildContractPdfInput(detail, { categoryLabel, template });
   const blob = await contractPdfBlob(input);
   return new File([blob], contractDraftFileName(input), { type: "application/pdf" });
 }

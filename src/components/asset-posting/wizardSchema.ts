@@ -214,6 +214,12 @@ export function requirements(
   return r;
 }
 
+/** % điều kiện bắt buộc đã đạt của một hồ sơ đã lưu — "Hoàn thiện 60%" của bản nháp. */
+export function postingCompletionPct(p: AssetPosting): number {
+  const reqs = requirements(postingToWizardValues(p));
+  return reqs.length ? Math.round((reqs.filter((r) => r.ok).length / reqs.length) * 100) : 0;
+}
+
 /** Ép kiểu số cho các trường delta type 'number'. */
 function coerceDelta(childSlug: string, deltaFields: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};

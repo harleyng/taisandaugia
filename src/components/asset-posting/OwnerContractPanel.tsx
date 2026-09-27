@@ -18,7 +18,7 @@ import {
   useConfirmContract,
   usePostingPartyAddress,
 } from "@/hooks/useConsignmentContract";
-import { usePostingCanWrite } from "./postingAccess";
+import { usePostingCanConsign } from "./postingAccess";
 import { canAttachSigned, canCancel, canConfirm, isContractOpen } from "@/lib/consignment/contractState";
 import {
   CONTRACT_STATUS_BADGE_CLASS,
@@ -60,7 +60,8 @@ export function OwnerContractPanel({ contract: c, org, postingId, startingPrice 
   const confirm = useConfirmContract(ctx);
   const cancel = useCancelContract(ctx);
   const addressQuery = usePostingPartyAddress(postingId);
-  const canWrite = usePostingCanWrite();
+  // Xác nhận / tải bản ký / huỷ hợp đồng dịch vụ = ky-gui:update (consignment_contract_can_act).
+  const canWrite = usePostingCanConsign();
   const [dialog, setDialog] = useState<DialogKind>(null);
 
   const orgName = org?.name ?? "Tổ chức đấu giá";

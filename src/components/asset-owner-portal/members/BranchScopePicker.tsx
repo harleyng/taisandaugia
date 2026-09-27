@@ -12,14 +12,14 @@ interface Props {
   error?: string;
 }
 
-/** Phạm vi của Cán bộ: toàn bộ hay chỉ một số chi nhánh. */
+/** Phạm vi chi nhánh của một vai trò khác Trưởng đơn vị: toàn bộ hay chỉ một số chi nhánh. */
 export function BranchScopePicker({ branches, value, onChange, error }: Props) {
   const idPrefix = useId();
 
   if (branches.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        Không gian chưa có chi nhánh — Cán bộ sẽ làm việc trên toàn bộ không gian.
+        Không gian chưa có chi nhánh — thành viên sẽ làm việc trên toàn bộ không gian.
       </p>
     );
   }

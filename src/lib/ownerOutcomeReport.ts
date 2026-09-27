@@ -18,10 +18,10 @@ export type ReportKind = (typeof REPORT_KINDS)[number];
 export const VOID_OUTCOMES = ["postponed", "cancelled", "withdrawn"] as const;
 export type VoidOutcome = (typeof VOID_OUTCOMES)[number];
 
-export const REPORT_KIND_META: Record<ReportKind, { label: string; hint: string }> = {
-  sold: { label: "Thành", hint: "Có người trúng" },
-  unsold: { label: "Không thành", hint: "Không bán được" },
-  void: { label: "Hoãn-Huỷ", hint: "Phiên không diễn ra" },
+export const REPORT_KIND_META: Record<ReportKind, { label: string }> = {
+  sold: { label: "Thành" },
+  unsold: { label: "Không thành" },
+  void: { label: "Hoãn-Huỷ" },
 };
 
 export const VOID_OUTCOME_LABEL: Record<VoidOutcome, string> = {

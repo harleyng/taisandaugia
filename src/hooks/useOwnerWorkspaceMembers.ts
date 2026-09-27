@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { qk } from "@/lib/queryKeys";
 import { assertOwnerWsRpcOk } from "@/lib/ownerWorkspace/errors";
-import { isOwnerWsRole, type OwnerWsRole } from "@/lib/ownerWorkspace/roles";
 
 // Thành viên + lời mời của MỘT không gian chủ tài sản (Phase 3).
 // Mọi thao tác ghi đi qua RPC owner_ws_* (bảng không có policy ghi trực tiếp);
@@ -13,7 +12,10 @@ export interface OwnerWorkspaceMember {
   userId: string;
   fullName: string | null;
   email: string;
-  role: OwnerWsRole;
+  roleId: string;
+  roleName: string;
+  /** Vai trò hệ thống Trưởng đơn vị. */
+  isOwner: boolean;
   branchScope: string[] | null;
   joinedAt: string | null;
 }
@@ -21,7 +23,8 @@ export interface OwnerWorkspaceMember {
 export interface OwnerWorkspaceInvite {
   id: string;
   email: string;
-  role: OwnerWsRole;
+  roleId: string | null;
+  roleName: string;
   branchScope: string[] | null;
   token: string;
   expiresAt: string;
@@ -45,21 +48,17 @@ export function useOwnerWorkspaceMembers(workspaceId: string | null) {
         p_workspace_id: workspaceId!,
       });
       if (error) throw error;
-      return (data ?? []).flatMap((row) =>
-        isOwnerWsRole(row.role)
-          ? [
-              {
-                memberId: row.member_id,
-                userId: row.user_id,
-                fullName: row.full_name,
-                email: row.email,
-                role: row.role,
-                branchScope: row.branch_scope,
-                joinedAt: row.joined_at,
-              },
-            ]
-          : [],
-      );
+      return (data ?? []).map((row) => ({
+        memberId: row.member_id,
+        userId: row.user_id,
+        fullName: row.full_name,
+        email: row.email,
+        roleId: row.role_id,
+        roleName: row.role_name,
+        isOwner: row.is_owner,
+        branchScope: row.branch_scope,
+        joinedAt: row.joined_at,
+      }));
     },
   });
 }
@@ -72,29 +71,26 @@ export function useOwnerWorkspaceInvites(workspaceId: string | null, enabled: bo
     queryFn: async (): Promise<OwnerWorkspaceInvite[]> => {
       const { data, error } = await supabase
         .from("asset_owner_workspace_invites")
-        .select("id, email, role, branch_scope, token, expires_at, created_at")
+        .select(
+          "id, email, role_id, branch_scope, token, expires_at, created_at, ws_role:owner_ws_roles!asset_owner_workspace_invites_role_id_fkey(name)",
+        )
         .eq("workspace_id", workspaceId!)
         .is("accepted_at", null)
         .is("revoked_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       const now = Date.now();
-      return (data ?? []).flatMap((row) =>
-        isOwnerWsRole(row.role)
-          ? [
-              {
-                id: row.id,
-                email: row.email,
-                role: row.role,
-                branchScope: row.branch_scope,
-                token: row.token,
-                expiresAt: row.expires_at,
-                createdAt: row.created_at,
-                isExpired: new Date(row.expires_at).getTime() <= now,
-              },
-            ]
-          : [],
-      );
+      return (data ?? []).map((row) => ({
+        id: row.id,
+        email: row.email,
+        roleId: row.role_id,
+        roleName: row.ws_role?.name ?? "Vai trò đã xoá",
+        branchScope: row.branch_scope,
+        token: row.token,
+        expiresAt: row.expires_at,
+        createdAt: row.created_at,
+        isExpired: new Date(row.expires_at).getTime() <= now,
+      }));
     },
   });
 }
@@ -104,13 +100,13 @@ export function useCreateOwnerInvite(workspaceId: string | null) {
   return useMutation({
     mutationFn: async (input: {
       email: string;
-      role: OwnerWsRole;
+      roleId: string;
       branchScope: string[] | null;
     }): Promise<CreatedOwnerInvite> => {
       const { data, error } = await supabase.rpc("owner_ws_create_invite", {
         p_workspace_id: workspaceId!,
         p_email: input.email,
-        p_role: input.role,
+        p_role_id: input.roleId,
         p_branch_scope: input.branchScope ?? undefined,
       });
       if (error) throw error;
@@ -136,16 +132,17 @@ export function useRevokeOwnerInvite(workspaceId: string | null) {
 export function useUpdateOwnerMember(workspaceId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { memberId: string; role: OwnerWsRole; branchScope: string[] | null }) => {
+    mutationFn: async (input: { memberId: string; roleId: string; branchScope: string[] | null }) => {
       const { data, error } = await supabase.rpc("owner_ws_update_member", {
         p_member_id: input.memberId,
-        p_role: input.role,
+        p_role_id: input.roleId,
         p_branch_scope: input.branchScope ?? undefined,
       });
       if (error) throw error;
       assertOwnerWsRpcOk(data);
     },
-    // Hạ một Trưởng đơn vị cũng thu hồi lời mời người đó gửi ⇒ làm mới cả không gian.
+    // Mất quyền mời cũng thu hồi lời mời người đó gửi; số thành viên của vai trò đổi
+    // ⇒ làm mới cả không gian (gồm danh sách vai trò).
     onSettled: () => queryClient.invalidateQueries({ queryKey: qk.ownerWorkspace.all(workspaceId) }),
   });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ownerActionCount, postingBadge, type OwnerConsignmentSummaryRow } from './postingBadge'
+import { isConsignmentOwnerAction, ownerActionCount, postingBadge, type OwnerConsignmentSummaryRow } from './postingBadge'
 
 const row = (over: Partial<OwnerConsignmentSummaryRow> = {}): OwnerConsignmentSummaryRow => ({
   posting_id: 'p1',
@@ -28,6 +28,20 @@ describe('postingBadge', () => {
   })
 
   it('badge nav đếm số hồ sơ đang chờ chủ tài sản', () => {
-    expect(ownerActionCount([row({ owner_action: 'choose_quote' }), row({ contract_status: 'signed' }), row({ owner_action: 'add_address' })])).toBe(2)
+    expect(ownerActionCount([row({ owner_action: 'choose_quote' }), row({ contract_status: 'signed' }), row({ owner_action: 'send_orgs' })])).toBe(2)
+  })
+
+  it('việc của hợp đồng (xác nhận bản ký, bổ sung địa chỉ) đếm ở menu Hợp đồng, không ở Ký gửi', () => {
+    expect(isConsignmentOwnerAction('confirm_contract')).toBe(false)
+    expect(isConsignmentOwnerAction('add_address')).toBe(false)
+    expect(ownerActionCount([row({ owner_action: 'confirm_contract' }), row({ owner_action: 'add_address' })])).toBe(0)
+  })
+
+  it('chưa gửi / cần gửi thêm cũng là việc của chủ tài sản (thiết kế Ký gửi)', () => {
+    expect(postingBadge(row({ owner_action: 'send_orgs' }))).toMatchObject({ label: 'Chưa gửi tổ chức', needsAction: true })
+    expect(postingBadge(row({ owner_action: 'add_orgs' }))).toMatchObject({ label: 'Cần gửi thêm tổ chức', needsAction: true })
+    expect(isConsignmentOwnerAction('send_orgs')).toBe(true)
+    expect(isConsignmentOwnerAction(null)).toBe(false)
+    expect(ownerActionCount([row({ owner_action: 'send_orgs' }), row({ owner_action: 'add_orgs' }), row()])).toBe(2)
   })
 })

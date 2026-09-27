@@ -73,7 +73,9 @@ export function AttachSignedDialog({
           ) : null}
 
           <div className="space-y-1.5">
-            <Label htmlFor="sale-signed-file">Bản scan đã ký</Label>
+            <Label htmlFor="sale-signed-file">
+              Bản scan đã ký <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="sale-signed-file"
               type="file"
@@ -86,7 +88,9 @@ export function AttachSignedDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="sale-signed-date">Ngày ký</Label>
+              <Label htmlFor="sale-signed-date">
+                Ngày ký <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="sale-signed-date"
                 type="date"

@@ -36,7 +36,7 @@ import type { SaleContractStatus } from "@/types/auction-sale-contract";
  */
 export const PIPELINE_POSTING_SELECT: string = `
   id, title, status, review_status, starting_price, chosen_org_id, created_at, updated_at,
-  user_id, workspace_id, branch_id, province, child_slug,
+  user_id, workspace_id, branch_id, province, child_slug, parent_slug, image_urls,
   chosen_org:auction_organizations!asset_postings_chosen_org_id_fkey(name),
   requests:asset_service_requests(status, created_at, updated_at, reopened_at),
   brokers:asset_broker_requests(status, created_at),
@@ -110,6 +110,9 @@ export interface PipelinePostingRow {
   branch_id?: string | null;
   province?: string | null;
   child_slug?: string | null;
+  parent_slug?: string | null;
+  /** [0] = ảnh bìa (bucket public). */
+  image_urls?: string[] | null;
   chosen_org?: { name: string } | null;
   requests: {
     status: ServiceRequestStatus;

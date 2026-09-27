@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { qk } from "@/lib/queryKeys";
-import type { OwnerWsRole } from "@/lib/ownerWorkspace/roles";
 import { writeSelectedWorkspace } from "@/lib/ownerWorkspace/selection";
 
 // Trang /loi-moi-chu-tai-san/:token — đứng ngoài cổng (người dùng chưa là thành
@@ -12,7 +11,8 @@ export interface OwnerInvitePreview {
   ok: boolean;
   reason?: string;
   workspace_name?: string;
-  role?: OwnerWsRole;
+  /** Tên vai trò do Trạm đặt (migration 20260927170100). */
+  role_name?: string | null;
   invite_email?: string;
   expired?: boolean;
   accepted?: boolean;

@@ -60,7 +60,9 @@ export function CancelContractDialog({ open, onOpenChange, isPending, side, onCo
         </ul>
 
         <div className="space-y-1.5">
-          <Label htmlFor="cancel-reason">Lý do huỷ</Label>
+          <Label htmlFor="cancel-reason">
+            Lý do huỷ <span className="text-destructive">*</span>
+          </Label>
           <Textarea
             id="cancel-reason"
             value={reason}

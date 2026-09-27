@@ -31,6 +31,7 @@ import {
   SELLER_DUTIES,
   TITLE_TRANSFER_TERMS,
 } from "./clauses";
+import { slotList, slotText } from "@/lib/contracts/templates/resolve";
 import type { SalePdfInput } from "./input";
 
 const t = themeOf("FORMAL");
@@ -146,8 +147,26 @@ const sellerSignerOf = (s: SaleSellerParty, isRegistry: boolean): string =>
     ? val(s.rep_full_name)
     : val(s.full_name ?? s.name);
 
+/** Câu chữ từ mẫu đang áp dụng; slot trống / thiếu ⇒ hằng số trong clauses.ts. */
+function saleClauses(t: unknown) {
+  return {
+    legal_bases: slotList(t, "legal_bases", LEGAL_BASES),
+    deposit_clause: slotText(t, "deposit_clause", DEPOSIT_CLAUSE),
+    seller_duties: slotList(t, "seller_duties", SELLER_DUTIES),
+    buyer_duties: slotList(t, "buyer_duties", BUYER_DUTIES),
+    handover_terms: slotText(t, "handover_terms", HANDOVER_TERMS),
+    title_transfer_terms: slotText(t, "title_transfer_terms", TITLE_TRANSFER_TERMS),
+    breach_terms: slotList(t, "breach_terms", BREACH_TERMS),
+    effect: slotList(t, "effect", EFFECT),
+    notarization_note: slotText(t, "notarization_note", NOTARIZATION_NOTE),
+    draft_notice: slotText(t, "draft_notice", DRAFT_NOTICE),
+  };
+}
+
 export function buildSaleDocDefinition(input: SalePdfInput): TDocumentDefinitions {
   const { buyer, seller, org, asset, sellerIsRegistry } = input;
+  const cl = saleClauses(input.template?.clauses);
+  const templateVersion = input.template?.version ?? HDMB_TEMPLATE_VERSION;
   const lotLine = asset.lot_no ? `Lô ${asset.lot_no}` : null;
 
   const scheduleTable: Content[] = input.installments.length
@@ -232,7 +251,7 @@ export function buildSaleDocDefinition(input: SalePdfInput): TDocumentDefinition
       alignment: "center",
       margin: [0, 0, 0, 12],
     },
-    { stack: LEGAL_BASES.map((b): Content => ({ text: b, italics: true, margin: [0, 0, 0, 2] })) },
+    { stack: cl.legal_bases.map((b): Content => ({ text: b, italics: true, margin: [0, 0, 0, 2] })) },
     {
       text: "Hôm nay, ngày …… tháng …… năm ……, tại ………………………………………, chúng tôi gồm:",
       margin: [0, 10, 0, 6],
@@ -287,7 +306,7 @@ export function buildSaleDocDefinition(input: SalePdfInput): TDocumentDefinition
     ]),
 
     article(3, "Tiền đặt trước chuyển thành tiền đặt cọc", [
-      { text: DEPOSIT_CLAUSE },
+      { text: cl.deposit_clause },
       labelRows([
         ["Tiền đặt cọc đã nộp", input.depositCredit > 0 ? formatVnd(input.depositCredit) : BLANK],
         ["Số tiền còn phải thanh toán", formatVnd(input.payable)],
@@ -303,7 +322,7 @@ export function buildSaleDocDefinition(input: SalePdfInput): TDocumentDefinition
     ]),
 
     article(5, "Bàn giao tài sản", [
-      { text: HANDOVER_TERMS },
+      { text: cl.handover_terms },
       ...(input.handoverDueAt
         ? [
             {
@@ -315,16 +334,16 @@ export function buildSaleDocDefinition(input: SalePdfInput): TDocumentDefinition
     ]),
 
     article(6, "Đăng ký quyền sở hữu, quyền sử dụng tài sản", [
-      { text: TITLE_TRANSFER_TERMS },
+      { text: cl.title_transfer_terms },
       ...(input.notarizationRequired
-        ? [{ text: NOTARIZATION_NOTE, margin: [0, 3, 0, 0] } as Content]
+        ? [{ text: cl.notarization_note, margin: [0, 3, 0, 0] } as Content]
         : []),
     ]),
 
-    article(7, "Quyền và nghĩa vụ của Bên bán", [{ ul: SELLER_DUTIES }]),
-    article(8, "Quyền và nghĩa vụ của Bên mua", [{ ul: BUYER_DUTIES }]),
-    article(9, "Vi phạm hợp đồng, chấm dứt và giải quyết tranh chấp", [{ ul: BREACH_TERMS }]),
-    article(10, "Hiệu lực hợp đồng", [{ ul: EFFECT }], { unbreakable: true }),
+    article(7, "Quyền và nghĩa vụ của Bên bán", [{ ul: cl.seller_duties }]),
+    article(8, "Quyền và nghĩa vụ của Bên mua", [{ ul: cl.buyer_duties }]),
+    article(9, "Vi phạm hợp đồng, chấm dứt và giải quyết tranh chấp", [{ ul: cl.breach_terms }]),
+    article(10, "Hiệu lực hợp đồng", [{ ul: cl.effect }], { unbreakable: true }),
 
     {
       unbreakable: true,
@@ -351,7 +370,7 @@ export function buildSaleDocDefinition(input: SalePdfInput): TDocumentDefinition
       margin: [SIDE_MARGIN, 14, SIDE_MARGIN, 0],
       columns: [
         {
-          text: `${DRAFT_NOTICE} · ${HDMB_TEMPLATE_VERSION} · ${input.code ?? ""} · Tạo ngày ${fmtDate(
+          text: `${cl.draft_notice} · ${templateVersion} · ${input.code ?? ""} · Tạo ngày ${fmtDate(
             input.generatedAt.toISOString(),
           )}`,
           fontSize: 7,

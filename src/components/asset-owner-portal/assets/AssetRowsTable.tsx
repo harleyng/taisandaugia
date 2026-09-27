@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { formatMoneyShort } from "@/utils/money";
 import type { OwnerAssetRow } from "@/lib/ownerAssets";
 import { AssetIdTag } from "@/components/asset-owner-portal/outcomes/AssetIdTag";
+import { PostingThumb } from "@/components/asset-posting/digitize/PostingThumb";
 import { StageTrack } from "./StageTrack";
 
 /** Hai dòng: giá trị chính + dòng phụ mờ — mọi ô dùng chung một kiểu để đọc đồng nhất. */
@@ -18,7 +19,7 @@ export function Stacked({ main, sub, className }: { main: ReactNode; sub?: React
 }
 
 export const TH = "whitespace-nowrap border-b border-border bg-muted/40 px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground first:pl-5 last:pr-5";
-export const TD = "border-b border-border px-3 py-3 align-middle first:pl-5 last:pr-5";
+export const TD = "px-3 py-3 align-middle first:pl-5 last:pr-5";
 
 function PriceCell({ row }: { row: OwnerAssetRow }) {
   if (row.priceKind === "winning" && row.price !== null) {
@@ -73,18 +74,23 @@ export function AssetRowsTable({ rows, onOpen, onCta }: AssetRowsTableProps) {
             tabIndex={0}
             onClick={() => onOpen(row)}
             onKeyDown={(e) => onKey(e, row)}
-            className="cursor-pointer transition-colors last:[&>td]:border-b-0 hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+            className="cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
           >
             <td className={TD}>
-              <span className="block max-w-[320px] truncate text-sm font-medium">{row.title}</span>
-              <small className="flex items-baseline gap-1.5 whitespace-nowrap text-[12.5px] text-muted-foreground">
-                {row.code && (
-                  <>
-                    <AssetIdTag listingId={row.id} />·
-                  </>
-                )}
-                <span>{row.category ?? (row.kind === "posting" ? "Hồ sơ số hoá" : "Tin trên sàn")}</span>
-              </small>
+              <div className="flex items-center gap-3">
+                <PostingThumb src={row.thumbnail} parentSlug={row.parentSlug} className="h-11 w-14 rounded-[7px]" />
+                <div className="min-w-0">
+                  <span className="block max-w-[320px] truncate text-sm font-medium">{row.title}</span>
+                  <small className="flex items-baseline gap-1.5 whitespace-nowrap text-[12.5px] text-muted-foreground">
+                    {row.code && (
+                      <>
+                        <AssetIdTag listingId={row.id} />·
+                      </>
+                    )}
+                    <span>{row.category ?? (row.kind === "posting" ? "Hồ sơ số hoá" : "Tin trên sàn")}</span>
+                  </small>
+                </div>
+              </div>
             </td>
             <td className={TD}>
               <Stacked main={row.province ?? "—"} sub={row.branch} />

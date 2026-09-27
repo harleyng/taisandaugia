@@ -2,20 +2,27 @@ import { describe, expect, it } from "vitest";
 import {
   SCOPE_ALL,
   addDays,
-  buildCashFlowView,
+  buildCashReportView,
+  buildCollectionsView,
   cashForecast,
+  cohortAssets,
   cohortWaterfall,
+  collectionBucketOf,
+  collectionBuckets,
   estimateLayer,
   mapCashFlowPayload,
+  matchesAssetQuery,
   outcomeCashContext,
-  periodCashTotals,
   receivables,
   recordableRows,
+  recoveryRate,
   resolveScope,
   scopeData,
+  unitRecovery,
   unitSuccessRates,
   untrackedSoldOf,
   waterfallSteps,
+  writableOverdueCount,
   type CashEvent,
   type CashFlowData,
   type CashRow,
@@ -135,26 +142,6 @@ describe("scope", () => {
   });
 });
 
-describe("periodCashTotals", () => {
-  it("sums by cash date with inclusive bounds; fees and refunds are money out", () => {
-    const t = periodCashTotals(
-      [
-        event({ kind: "deposit", amount: 100, occurredOn: "2026-09-01" }),
-        event({ kind: "payment", amount: 900, occurredOn: "2026-09-30" }),
-        event({ kind: "refund", amount: 50, occurredOn: "2026-09-15" }),
-        event({ kind: "fee", amount: 30, occurredOn: "2026-09-15", outcome: "unsold" }),
-        event({ kind: "payment", amount: 999, occurredOn: "2026-10-01" }),
-      ],
-      SEPT,
-    );
-    expect(t).toEqual({ inflow: 1000, refunds: 50, fees: 30, net: 920, count: 4 });
-  });
-
-  it("counts everything for 'all time'", () => {
-    expect(periodCashTotals([event({ occurredOn: "2020-01-01" })], null).count).toBe(1);
-  });
-});
-
 describe("cohortWaterfall", () => {
   it("adds up like Chỉ tiêu (recoveryOf) and subtracts the cohort's fees from every round", () => {
     const a = row({ price: 1000, startingPrice: 800, paymentStatus: "partial", paidAmount: 300 });
@@ -207,7 +194,9 @@ describe("cohortWaterfall", () => {
 });
 
 describe("waterfallSteps", () => {
-  it("chains totals and floating steps", () => {
+  const notes = { missingStart: 0, defaulted: 0, platform: { count: 0, value: 0 }, untracked: { count: 0, value: 0 }, overpaid: 0 };
+
+  it("goes from winning price to net in five steps (design 2026-09-27)", () => {
     const steps = waterfallSteps({
       count: 1,
       starting: 800,
@@ -217,20 +206,18 @@ describe("waterfallSteps", () => {
       recorded: 600,
       fees: 50,
       net: 550,
-      notes: { missingStart: 0, defaulted: 0, platform: { count: 0, value: 0 }, untracked: { count: 0, value: 0 }, overpaid: 0 },
+      notes,
     });
-    expect(steps.map((s) => [s.key, s.range, s.kind])).toEqual([
-      ["starting", [0, 800], "total"],
-      ["premium", [800, 1000], "up"],
-      ["winning", [0, 1000], "total"],
-      ["awaiting", [600, 1000], "down"],
-      ["recorded", [0, 600], "total"],
-      ["fees", [550, 600], "down"],
-      ["net", [0, 550], "total"],
+    expect(steps.map((s) => [s.key, s.range, s.kind, s.value])).toEqual([
+      ["winning", [0, 1000], "total", 1000],
+      ["awaiting", [600, 1000], "down", -400],
+      ["recorded", [0, 600], "total", 600],
+      ["fees", [550, 600], "down", -50],
+      ["net", [0, 550], "total", 550],
     ]);
   });
 
-  it("draws a bid below the starting price and a negative net as downward spans", () => {
+  it("draws a negative net as a downward span below zero", () => {
     const steps = waterfallSteps({
       count: 1,
       starting: 1000,
@@ -240,10 +227,15 @@ describe("waterfallSteps", () => {
       recorded: 0,
       fees: 30,
       net: -30,
-      notes: { missingStart: 0, defaulted: 0, platform: { count: 0, value: 0 }, untracked: { count: 0, value: 0 }, overpaid: 0 },
+      notes,
     });
-    expect(steps[1]).toMatchObject({ kind: "down", range: [900, 1000], value: -100 });
-    expect(steps[6]).toMatchObject({ range: [-30, 0], value: -30 });
+    expect(steps[3]).toMatchObject({ key: "fees", range: [-30, 0], value: -30 });
+    expect(steps[4]).toMatchObject({ key: "net", range: [-30, 0], value: -30 });
+  });
+
+  it("rates collection as recorded / winning, null without a winning price", () => {
+    expect(recoveryRate({ recorded: 730, winning: 1000 })).toBeCloseTo(0.73);
+    expect(recoveryRate({ recorded: 0, winning: 0 })).toBeNull();
   });
 });
 
@@ -334,23 +326,128 @@ describe("cashForecast", () => {
   });
 });
 
-describe("buildCashFlowView", () => {
-  it("assembles the page and splits the system table by unit", () => {
+describe("Thu tiền — nhóm theo hạn", () => {
+  it("splits owed money into overdue / due within 7 days (today included) / later or undated", () => {
+    const late = row({ date: "2026-08-01" }); // hạn mặc định 31/08 ⇒ trễ
+    const latePartial = row({ date: "2026-08-01", paymentStatus: "partial", paidAmount: 400 });
+    const today = row({ paymentDueOn: AS_OF });
+    const day7 = row({ paymentDueOn: "2026-10-03" });
+    const day8 = row({ paymentDueOn: "2026-10-04" });
+    const undated = row({ date: null, paymentDueOn: null });
+    const recv = receivables([late, latePartial, today, day7, day8, undated], AS_OF);
+    const byKey = new Map(recv.map((r) => [r.row.rowKey, collectionBucketOf(r, AS_OF)]));
+    expect([late, latePartial, today, day7, day8, undated].map((r) => byKey.get(r.rowKey))).toEqual([
+      "overdue",
+      "overdue",
+      "soon",
+      "soon",
+      "later",
+      "later",
+    ]);
+    expect(collectionBuckets(recv, AS_OF).map((b) => [b.key, b.count, b.amount])).toEqual([
+      ["overdue", 2, 1600],
+      ["soon", 2, 2000],
+      ["later", 2, 2000],
+    ]);
+  });
+
+  it("counts the sidebar badge only for overdue rows the viewer can record", () => {
     const data: CashFlowData = {
       asOf: AS_OF,
       units: [unit("u1"), unit("u2", { isSelf: false })],
-      rows: [row({ unitId: "u1", date: "2026-08-01" }), row({ unitId: "u2", date: "2026-09-20" })],
-      events: [event({ unitId: "u1", kind: "payment", amount: 100 }), event({ unitId: "u2", kind: "fee", amount: 20 })],
+      rows: [
+        row({ unitId: "u1", date: "2026-08-01" }),
+        row({ unitId: "u1", date: "2026-08-01", branchId: "b2" }),
+        row({ unitId: "u2", date: "2026-08-01" }),
+        row({ unitId: "u1" }), // chưa tới hạn
+      ],
+      events: [],
       upcoming: [],
     };
-    const v = buildCashFlowView(data, "m-2026-09");
-    expect(v.period.net).toBe(80);
-    expect(v.overdue).toHaveLength(1);
-    expect(v.owedTotal).toBe(2000);
-    expect(v.units.map((u) => [u.unit.id, u.period.net, u.owed, u.overdueCount])).toEqual([
-      ["u1", 100, 1000, 1],
-      ["u2", -20, 1000, 0],
+    expect(writableOverdueCount(data, (unitId, branchId) => unitId === "u1" && branchId !== "b2")).toBe(1);
+  });
+
+  it("lists every entry newest first and keeps owed money from every period", () => {
+    const data: CashFlowData = {
+      asOf: AS_OF,
+      units: [unit("u1")],
+      rows: [row({ date: "2025-01-10" }), row()],
+      events: [
+        event({ id: "old", occurredOn: "2026-09-01" }),
+        event({ id: "new", occurredOn: "2026-09-20" }),
+        event({ id: "edited", occurredOn: "2026-09-20", updatedAt: "2026-09-21T10:00:00Z" }),
+      ],
+      upcoming: [],
+    };
+    const v = buildCollectionsView(data);
+    expect(v.ledger.map((e) => e.id)).toEqual(["edited", "new", "old"]);
+    expect(v.receivables).toHaveLength(2);
+  });
+
+  it("matches the search box on accent-free title or asset code", () => {
+    const item = { title: "Nhà đất 45 Lê Văn Lương", assetCode: "3F9A12BC" };
+    expect(matchesAssetQuery(item, "nha dat")).toBe(true);
+    expect(matchesAssetQuery(item, "LƯƠNG")).toBe(true);
+    expect(matchesAssetQuery(item, "3f9a")).toBe(true);
+    expect(matchesAssetQuery(item, "  ")).toBe(true);
+    expect(matchesAssetQuery(item, "kho xưởng")).toBe(false);
+  });
+});
+
+describe("Dòng tiền — tài sản bán trong kỳ", () => {
+  it("lists the cohort with defaulted sales flagged and overdue days only while money is owed", () => {
+    const partial = row({ date: "2026-09-12", paymentStatus: "partial", paidAmount: 300 });
+    const defaulted = row({ date: "2026-09-11", paymentStatus: "defaulted" });
+    const settledLate = row({ date: "2026-09-02", paymentDueOn: "2026-09-05", paymentStatus: "paid", paidAmount: 1000 });
+    const owedLate = row({ date: "2026-09-01", paymentDueOn: "2026-09-20" });
+    const assets = cohortAssets(
+      [
+        partial,
+        defaulted,
+        settledLate,
+        owedLate,
+        row({ date: "2026-08-01" }),
+        row({ bestKind: "platform", ownOutcomeId: null }),
+      ],
+      SEPT,
+      AS_OF,
+    );
+    expect(assets.map((a) => [a.row.rowKey, a.defaulted, a.recorded, a.awaiting, a.daysOverdue])).toEqual([
+      [partial.rowKey, false, 300, 700, 0],
+      [defaulted.rowKey, true, 0, 0, 0],
+      [settledLate.rowKey, false, 1000, 0, 0],
+      [owedLate.rowKey, false, 0, 1000, 6],
     ]);
+  });
+
+  it("builds the unit table from the same cohort as the hero, so owed + collected = winning", () => {
+    const u1Late = row({ unitId: "u1", date: "2026-09-10", paymentDueOn: "2026-09-20", price: 1000 });
+    const u1Paid = row({ unitId: "u1", date: "2026-09-12", paymentStatus: "paid", paidAmount: 500, price: 500 });
+    const u2 = row({ unitId: "u2", date: "2026-09-15", paymentStatus: "partial", paidAmount: 200, price: 800 });
+    const data: CashFlowData = {
+      asOf: AS_OF,
+      units: [unit("u1"), unit("u2", { isSelf: false })],
+      rows: [u1Late, u1Paid, u2, row({ unitId: "u1", date: "2026-08-01" })],
+      events: [event({ unitId: "u1", rowKey: u1Late.rowKey, kind: "fee", amount: 50 })],
+      upcoming: [],
+    };
+    const units = unitRecovery(data, SEPT);
+    expect(
+      units.map((u) => [u.unit.id, u.totals.winning, u.totals.recorded, u.totals.awaiting, u.totals.net, u.overdue, u.overdueCount]),
+    ).toEqual([
+      ["u1", 1500, 500, 1000, 450, 1000, 1],
+      ["u2", 800, 200, 600, 200, 0, 0],
+    ]);
+    expect(units[0].rate).toBeCloseTo(1 / 3);
+    expect(units[1].rate).toBeCloseTo(0.25);
+
+    const v = buildCashReportView(data, "m-2026-09");
+    expect(v.waterfall.winning).toBe(2300);
+    expect(v.waterfall.recorded + v.waterfall.awaiting).toBe(v.waterfall.winning);
+    expect(v.rate).toBeCloseTo(700 / 2300);
+    expect(v.steps.map((s) => s.key)).toEqual(["winning", "awaiting", "recorded", "fees", "net"]);
+    // Dự báo vẫn tính từ hôm nay: gồm cả khoản của tháng 8.
+    expect(v.forecast.buckets.find((b) => b.key === "overdue")?.owed).toBe(2000);
     expect(recordableRows(data).every((r) => r.unitId === "u1")).toBe(true);
   });
 });

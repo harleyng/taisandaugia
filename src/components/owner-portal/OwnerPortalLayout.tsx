@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { OwnerPortalSidebar } from './OwnerPortalSidebar'
-import { OwnerPortalTopBar } from './OwnerPortalTopBar'
+import { OwnerPortalMobileBar } from './OwnerPortalMobileBar'
+import { OwnerPermissionGate } from './OwnerPermissionGate'
+import { ownerPageTitle } from './owner-page-titles'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
 import { useOwnerPortalName } from '@/hooks/useOwnerPortalName'
@@ -29,6 +31,18 @@ export function OwnerPortalLayout() {
     }
   }, [wsLoading, workspaceId])
 
+  // Tên tab theo trang; rời cổng thì trả lại tiêu đề cũ để không dính sang trang khác.
+  const { pathname } = useLocation()
+  const pageTitle = ownerPageTitle(pathname)
+  const tabTitle = pageTitle ? `${pageTitle} · ${portalName}` : portalName
+  useEffect(() => {
+    const previous = document.title
+    return () => { document.title = previous }
+  }, [])
+  useEffect(() => {
+    document.title = tabTitle
+  }, [tabTitle])
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar — fixed 240px */}
@@ -45,17 +59,20 @@ export function OwnerPortalLayout() {
 
       {/* Main column */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <OwnerPortalTopBar onMenuClick={() => setDrawerOpen(true)} />
+        <OwnerPortalMobileBar onMenuClick={() => setDrawerOpen(true)} />
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Page content — nền xám; thẻ nằm thẳng trên nền bỏ viền, đổ bóng
+            (quy tắc .owner-canvas trong index.css). */}
+        <main className="owner-canvas flex-1 overflow-y-auto bg-muted">
           {/* Khung trang DUY NHẤT của cổng: lề + bề rộng tối đa đặt ở đây để mọi
               trang con thẳng mép nhau. Trang con KHÔNG tự thêm padding/max-w ở gốc. */}
           <div className="mx-auto w-full max-w-7xl p-4 md:p-6">
             {/* Tầng 3 — lỗi ở một trang con không xoá sidebar/topbar, người
                 dùng vẫn điều hướng đi nơi khác được. */}
             <ErrorBoundary key={outletKey} label={portalName} compact>
-              <Outlet />
+              <OwnerPermissionGate>
+                <Outlet />
+              </OwnerPermissionGate>
             </ErrorBoundary>
           </div>
         </main>

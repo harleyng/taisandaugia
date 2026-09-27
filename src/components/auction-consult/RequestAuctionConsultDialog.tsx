@@ -112,7 +112,9 @@ export function RequestAuctionConsultDialog({
             </p>
 
             <div className="space-y-2">
-              <Label>Mục tiêu bán</Label>
+              <Label>
+                Mục tiêu bán <span className="text-destructive">*</span>
+              </Label>
               <Controller
                 control={control}
                 name="saleGoal"
@@ -132,9 +134,7 @@ export function RequestAuctionConsultDialog({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="tvdg-expected">
-                  Giá mong muốn (₫) <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
-                </Label>
+                <Label htmlFor="tvdg-expected">Giá mong muốn (₫)</Label>
                 <Controller
                   control={control}
                   name="expectedPrice"
@@ -145,9 +145,7 @@ export function RequestAuctionConsultDialog({
                 <Err msg={errors.expectedPrice?.message} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="tvdg-min">
-                  Giá thấp nhất chấp nhận (₫) <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
-                </Label>
+                <Label htmlFor="tvdg-min">Giá thấp nhất chấp nhận (₫)</Label>
                 <Controller
                   control={control}
                   name="minPrice"
@@ -186,18 +184,14 @@ export function RequestAuctionConsultDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="tvdg-deadline">
-                  Hạn chót bán <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
-                </Label>
+                <Label htmlFor="tvdg-deadline">Hạn chót bán</Label>
                 <Input id="tvdg-deadline" type="date" {...register("deadline")} />
                 <Err msg={errors.deadline?.message} />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="tvdg-note">
-                Thông tin thêm cho chuyên gia <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
-              </Label>
+              <Label htmlFor="tvdg-note">Thông tin thêm cho chuyên gia</Label>
               <Textarea
                 id="tvdg-note"
                 rows={3}

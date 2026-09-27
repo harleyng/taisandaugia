@@ -17,7 +17,7 @@ export function AuctionConsultGroup({ f, postingId, ensurePostingId }: AuctionCo
   return (
     <Group
       icon={<Lightbulb className="h-4 w-4" />}
-      title="Tư vấn đấu giá (tuỳ chọn)"
+      title="Tư vấn đấu giá"
       desc="Chuyên gia đề xuất hình thức, giá khởi điểm / giá bảo lưu, bước giá, thời lượng và tiền đặt trước trước khi lập phiên"
     >
       <PostingAuctionConsultCard

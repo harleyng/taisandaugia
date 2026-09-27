@@ -1,21 +1,23 @@
-// "Dòng tiền" (docs/owner-control-tower-plan.md Phase 15a): đọc RPC owner_cash_flow và
-// ghi sổ thu chi owner_cash_events. Mọi thao tác ghi làm mới cả nhóm owner_asset_outcomes
+// "Thu tiền" + "Dòng tiền" (docs/owner-control-tower-plan.md Phase 15a): đọc RPC owner_cash_flow
+// và ghi sổ thu chi owner_cash_events. Mọi thao tác ghi làm mới cả nhóm owner_asset_outcomes
 // (Kết quả phiên, Chỉ tiêu, bản xem trước báo cáo, Nhịp đập) qua invalidateOwnerOutcomes.
 
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesInsert } from "@/integrations/supabase/types";
 import { qk } from "@/lib/queryKeys";
-import { mapCashFlowPayload, type CashFlowData } from "@/lib/ownerCashFlow";
+import { mapCashFlowPayload, type CanWriteRow, type CashFlowData } from "@/lib/ownerCashFlow";
 import {
+  assertCashRpcOk,
   cashEventErrorMessage,
   settleReasonMessage,
   type CashEventInsertPayload,
   type CashEventUpdatePayload,
 } from "@/lib/ownerCashEvent";
 import { invalidateOwnerOutcomes } from "@/hooks/useOwnerOutcomeEdit";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 
 /** Một lần đọc cho cả trang; trụ sở nhận thêm các Trạm con đã liên kết. */
 export function useOwnerCashFlow(workspaceId: string | null | undefined) {
@@ -32,6 +34,20 @@ export function useOwnerCashFlow(workspaceId: string | null | undefined) {
       return mapCashFlowPayload(data);
     },
   });
+}
+
+/**
+ * Người xem ghi được dòng nào: chỉ đơn vị của chính mình (dòng chi nhánh của trụ sở chỉ xem),
+ * theo quyền module Thu tiền (thu-tien:create|update|delete) và phạm vi chi nhánh của vai
+ * trò. Chỉ để ẩn nút — RLS / RPC (owner_cash_event_ok) mới là cổng thật.
+ */
+export function useCashCanWrite(data: CashFlowData | undefined): CanWriteRow {
+  const { canIn } = useOwnerWorkspace();
+  const selfId = data?.units.find((u) => u.isSelf)?.id ?? null;
+  return useCallback(
+    (unitId, branchId, action = "create") => unitId === selfId && canIn("thu-tien", action, branchId),
+    [selfId, canIn],
+  );
 }
 
 export type SaveCashEventInput =
@@ -87,14 +103,10 @@ export function useSetPaymentDue(workspaceId: string | null | undefined) {
   return useMutation({
     mutationFn: async ({ outcomeId, dueOn }: { outcomeId: string; dueOn: string | null }) => {
       if (!workspaceId) throw new Error("no_workspace");
-      const { data, error } = await supabase
-        .from("owner_asset_outcomes")
-        .update({ payment_due_on: dueOn })
-        .eq("id", outcomeId)
-        .eq("workspace_id", workspaceId)
-        .select("id");
+      // RPC thay UPDATE thẳng: hạn thanh toán là quyền Thu tiền, không phải quyền sửa kết quả.
+      const { data, error } = await supabase.rpc("owner_cash_set_due", { p_outcome_id: outcomeId, p_due_on: dueOn });
       if (error) throw error;
-      if (!data?.length) throw { code: "42501" };
+      assertCashRpcOk(data);
     },
     onSuccess: (_d, { dueOn }) => toast.success(dueOn ? "Đã đặt hạn thanh toán" : "Đã bỏ hạn thanh toán"),
     onError: (err) => toast.error(cashEventErrorMessage(err)),

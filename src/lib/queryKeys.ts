@@ -53,6 +53,19 @@ export const qk = {
    *  myPostings nên mọi thao tác trên hồ sơ invalidate myPostings(userId) là đủ. */
   ownerPipelinePostings: (userId: string | null | undefined, tenantKey: string | null) =>
     ["my-postings", userId, tenantKey, "pipeline"] as const,
+  /** Danh sách menu "Ký gửi đấu giá" — cũng nằm DƯỚI myPostings vì cùng lý do. */
+  ownerConsignmentPostings: (userId: string | null | undefined, tenantKey: string | null) =>
+    ["my-postings", userId, tenantKey, "consignment"] as const,
+  /** Hợp đồng ký gửi của tenant (menu "Hợp đồng") — DƯỚI myPostings để mọi thao
+   *  hợp đồng phía chủ tài sản (invalidate myPostings) làm mới luôn. */
+  ownerConsignmentContracts: (userId: string | null | undefined, tenantKey: string | null) =>
+    ["my-postings", userId, tenantKey, "consignment-contracts"] as const,
+  /** Một hợp đồng ký gửi (trang chi tiết trong menu "Hợp đồng") — cũng DƯỚI myPostings. */
+  ownerConsignmentContract: (userId: string | null | undefined, contractId?: string | null) =>
+    ["my-postings", userId, "consignment-contract", contractId] as const,
+  /** Danh sách menu "Số hoá tài sản" (hồ sơ + chuỗi ký gửi) — cũng DƯỚI myPostings. */
+  ownerDigitizePostings: (userId: string | null | undefined, tenantKey: string | null) =>
+    ["my-postings", userId, tenantKey, "digitize"] as const,
   postingDetail: (id?: string | null) => ["posting-detail", id] as const,
   consignment: {
     orgRequests: (auctionOrgId?: string | null) => ["org-service-requests", auctionOrgId] as const,
@@ -64,6 +77,10 @@ export const qk = {
     ownerSummary: (userId?: string | null) => ["owner-consignment-summary", userId] as const,
     ownerSummaryIn: (userId: string | null | undefined, tenantKey: string | null) =>
       ["owner-consignment-summary", userId, tenantKey] as const,
+    /** Số tài sản đưa ra đấu giá + thành công của các tổ chức (RPC auction_org_track_records). */
+    orgTrackRecords: (orgIds: readonly string[]) => ["auction-org-track-records", [...orgIds].sort().join(",")] as const,
+    /** Tên chuyên viên sàn phụ trách yêu cầu "nhờ sàn" của một hồ sơ. */
+    brokerAssignee: (postingId?: string | null) => ["owner-broker-assignee", postingId] as const,
   },
 
   /** Model 3D của hồ sơ số hoá. `all` phủ mọi key con — webhook/duyệt đổi trạng
@@ -235,6 +252,28 @@ export const qk = {
     counts: (orgId?: string | null) => ["sale-contracts", "counts", orgId] as const,
   },
 
+  /** Hợp đồng cung ứng dịch vụ (HDCU) — đồng ý trước khi trả tiền 4 dịch vụ. */
+  serviceContracts: {
+    all: ["service-contracts"] as const,
+    ownerIn: (userId: string | null | undefined, tenantKey: string | null) =>
+      ["service-contracts", "owner", userId, tenantKey] as const,
+    detail: (id?: string | null) => ["service-contracts", "id", id] as const,
+    /** Lần đồng ý của MỘT đơn (mọi báo giá) — thẻ đơn + cổng thanh toán. */
+    forOrder: (kind?: string | null, orderId?: string | null) =>
+      ["service-contracts", "order", kind, orderId] as const,
+  },
+
+  /** Mẫu hợp đồng có phiên bản (admin Pháp lý & Đấu giá). Bất biến ⇒ chỉ tạo/xoá. */
+  contractTemplates: {
+    all: ["contract-templates"] as const,
+    list: ["contract-templates", "list"] as const,
+    byId: (id?: string | null) => ["contract-templates", "id", id] as const,
+    active: (type?: string | null) => ["contract-templates", "active", type] as const,
+  },
+
+  /** Danh sách mọi hợp đồng cho admin (RPC admin_contract_list). */
+  adminContracts: ["admin-contracts"] as const,
+
   // ─── Khách hàng của tổ chức & tiếp thị phiên ─────────────────────────────
   /** Danh bạ riêng của tổ chức. byOrg là PREFIX của byId nên sửa khách rồi
    *  invalidate byOrg làm mới cả trang chi tiết. */
@@ -361,6 +400,8 @@ export const qk = {
     all: (workspaceId?: string | null) => ["owner-ws", workspaceId] as const,
     members: (workspaceId?: string | null) => ["owner-ws", workspaceId, "members"] as const,
     invites: (workspaceId?: string | null) => ["owner-ws", workspaceId, "invites"] as const,
+    /** Vai trò của Trạm kèm ma trận quyền + số người dùng (RPC owner_ws_list_roles). */
+    roles: (workspaceId?: string | null) => ["owner-ws", workspaceId, "roles"] as const,
     claims: (workspaceId?: string | null) => ["owner-ws", workspaceId, "claims"] as const,
     /** Liên kết trụ sở ↔ chi nhánh của một Trạm (RPC owner_ws_link_overview) — Phase 14. */
     linkOverview: (workspaceId?: string | null) => ["owner-ws", workspaceId, "link-overview"] as const,

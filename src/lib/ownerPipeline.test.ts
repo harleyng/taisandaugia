@@ -271,6 +271,15 @@ describe("toPipelineCard", () => {
     expect(soldNoPrice).toMatchObject({ price: 3_000_000_000, priceKind: "starting" });
   });
 
+  it("hồ sơ ở Chọn tổ chức / HĐ dịch vụ mở trang Ký gửi, cột khác mở hồ sơ số hoá", () => {
+    const choosing = toPipelineCard(posting({ prep: prep({ requestedAt: "2026-09-03", quotedCount: 2 }) }), NOW);
+    expect(choosing).toMatchObject({ stage: "chon_to_chuc", href: "/chu-tai-san/ky-gui-dau-gia/p1" });
+    const contract = toPipelineCard(posting({ prep: prep({ orgSelectedAt: "2026-09-04" }) }), NOW);
+    expect(contract).toMatchObject({ stage: "hd_dich_vu", href: "/chu-tai-san/ky-gui-dau-gia/p1" });
+    const digitizing = toPipelineCard(posting(), NOW);
+    expect(digitizing).toMatchObject({ stage: "so_hoa", href: "/chu-tai-san/dang-tai-san/p1" });
+  });
+
   it("flags a card that sat too long", () => {
     const stuck = toPipelineCard(listing({ round: round("awaiting_result", { at: "2026-09-10" }) }), NOW);
     expect(stuck).toMatchObject({ stage: "phien", days: 16, overdue: true });

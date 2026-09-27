@@ -29,6 +29,9 @@ const EMPTY_TEXT: Record<OwnerReportTab, string> = {
   all: "Chưa có báo cáo nào.",
 };
 
+// ActionCard vốn nằm TRONG thẻ (có viền); ở đây nó nằm thẳng trên nền xám ⇒ làm thẻ trang.
+const PAGE_LEVEL_CARD = "border-0 bg-card shadow-card";
+
 /**
  * "Báo cáo định kỳ" — /chu-tai-san/bao-cao-dinh-ky (docs/owner-control-tower-plan.md Phase 10).
  * Cùng kiểu với "Hợp đồng mua bán": nhắc việc (tháng trước chưa báo cáo) → tab có số đếm
@@ -36,15 +39,15 @@ const EMPTY_TEXT: Record<OwnerReportTab, string> = {
  */
 const OwnerPeriodicReportsPage = () => {
   const navigate = useNavigate();
-  const { workspaceId, workspace, role, branchScope, can, isLoading: wsLoading } = useOwnerWorkspace();
+  const { workspaceId, workspace, isScoped, branchScope, can, isLoading: wsLoading } = useOwnerWorkspace();
   const { reports, isLoading, isError, refetch } = useOwnerReports(workspaceId);
   const { data: branchOptions = [] } = useWorkspaceBranchOptions(workspaceId);
   const { data: members = [] } = useOwnerWorkspaceMembers(workspaceId);
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Cán bộ bị giới hạn chi nhánh chỉ lập báo cáo cho chi nhánh của mình (RLS cũng chặn).
-  const allowedBranchIds = role === "staff" && branchScope ? branchScope : null;
-  const canCreate = can("write") && (!allowedBranchIds || allowedBranchIds.length > 0);
+  // Người bị giới hạn chi nhánh chỉ lập báo cáo cho chi nhánh của mình (RLS cũng chặn).
+  const allowedBranchIds = isScoped && branchScope ? branchScope : null;
+  const canCreate = can("bao-cao-dinh-ky", "create") && (!allowedBranchIds || allowedBranchIds.length > 0);
 
   const branchNames = useMemo(() => new Map(branchOptions.map((b) => [b.id, b.label])), [branchOptions]);
   const memberNames = useMemo(() => new Map(members.map((m) => [m.userId, m.fullName || m.email])), [members]);
@@ -133,6 +136,7 @@ const OwnerPeriodicReportsPage = () => {
             <ActionCard
               icon={FileBarChart}
               tone="warning"
+              className={PAGE_LEVEL_CARD}
               title={`${periodLabel("month", prevMonth).replace(/^./, (c) => c.toUpperCase())} chưa có báo cáo đã chốt`}
               meta="Hệ thống tự tổng hợp số liệu tháng vừa qua — bạn chỉ cần thêm ghi chú rồi chốt để gửi trụ sở."
               actions={

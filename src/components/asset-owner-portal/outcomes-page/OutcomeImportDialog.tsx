@@ -44,8 +44,8 @@ interface OutcomeImportDialogProps {
 /** "Nhập từ Excel": tải mẫu → chọn file → xem trước (dòng lỗi nêu lý do) → ghi các dòng hợp lệ. */
 export function OutcomeImportDialog({ open, onOpenChange, workspaceId, branches }: OutcomeImportDialogProps) {
   const { claims, claimsLoading } = useAssetOwnerWorkspace();
-  const { role, branchScope } = useOwnerWorkspace();
-  const { canWriteClaim } = useClaimWriteAccess();
+  const { isScoped, branchScope } = useOwnerWorkspace();
+  const { canOnClaim } = useClaimWriteAccess();
   const { data: orgs = [], isLoading: orgsLoading } = useAuctionOrgDirectory();
   const importM = useImportOwnerOutcomes(workspaceId);
   const [step, setStep] = useState<Step>({ kind: "pick" });
@@ -60,14 +60,14 @@ export function OutcomeImportDialog({ open, onOpenChange, workspaceId, branches 
       listings: live.map((c) => ({ id: c.listing_id!, title: c.listing?.title ?? "" })),
       branches,
       orgs,
-      branchScope: role === "staff" ? branchScope : null,
+      branchScope: isScoped ? branchScope : null,
       canWriteListing: (id) => {
         const claim = byListing.get(id);
-        return !!claim && canWriteClaim(claim);
+        return !!claim && canOnClaim("ket-qua", "update", claim);
       },
       today: todayIso(),
     };
-  }, [claims, branches, orgs, role, branchScope, canWriteClaim]);
+  }, [claims, branches, orgs, isScoped, branchScope, canOnClaim]);
 
   const reset = () => {
     setStep({ kind: "pick" });

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ConfirmDefaultDialog, type ConfirmDefaultTarget } from "@/components/asset-owner-portal/pulse/ConfirmDefaultDialog";
 import type { CashFlowData } from "@/lib/ownerCashFlow";
 import type { CanWriteRow, CashDialogState } from "./cashFlowDialogState";
 import { CashEventDialog, type CashEventTarget } from "./CashEventDialog";
@@ -13,7 +14,7 @@ interface CashFlowDialogsProps {
   onClose: () => void;
 }
 
-/** Mọi hộp thoại của trang Dòng tiền — một trạng thái, một chỗ. */
+/** Mọi hộp thoại của trang Thu tiền — một trạng thái, một chỗ. */
 export function CashFlowDialogs({ workspaceId, data, state, canWrite, onClose }: CashFlowDialogsProps) {
   // Định danh ổn định theo trạng thái: hộp thoại reset biểu mẫu khi đích ĐỔI, không phải mỗi lần render.
   const eventTarget = useMemo<CashEventTarget | null>(() => {
@@ -21,6 +22,13 @@ export function CashFlowDialogs({ workspaceId, data, state, canWrite, onClose }:
     if (state?.kind === "edit") return { mode: "edit", event: state.event };
     return null;
   }, [state]);
+  const defaultTarget = useMemo<ConfirmDefaultTarget | null>(
+    () =>
+      state?.kind === "default" && state.row.ownOutcomeId
+        ? { outcomeId: state.row.ownOutcomeId, title: state.row.title }
+        : null,
+    [state],
+  );
 
   return (
     <>
@@ -31,6 +39,7 @@ export function CashFlowDialogs({ workspaceId, data, state, canWrite, onClose }:
         onClose={onClose}
       />
       <PaymentDueDialog workspaceId={workspaceId} row={state?.kind === "due" ? state.row : null} onClose={onClose} />
+      <ConfirmDefaultDialog workspaceId={workspaceId} target={defaultTarget} onClose={onClose} />
     </>
   );
 }

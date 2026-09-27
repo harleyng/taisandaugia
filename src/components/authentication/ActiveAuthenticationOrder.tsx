@@ -2,15 +2,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { CalendarClock, CreditCard, ExternalLink, Package, Truck, X } from "lucide-react";
+import { CalendarClock, ExternalLink, Package, Truck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePostingCanWrite } from "@/components/asset-posting/postingAccess";
 import { useCancelAuthentication, useSubmitAuthenticationShipment } from "@/hooks/useAuthenticationOrders";
 import { formatVnd } from "@/lib/advertising/slug";
 import { gdMethodLabel, isQuoteExpired } from "@/lib/authentication/status";
-import { ADMIN_AUTHENTICATION_PATH, authenticationCheckoutPath } from "@/lib/authentication/paths";
+import { ADMIN_AUTHENTICATION_PATH } from "@/lib/authentication/paths";
+import { ServiceContractPayButton } from "@/components/service-contracts/ServiceContractPayButton";
 import type { AuthenticationOrder } from "@/types/authentication";
 import { AuthenticationStatusStepper } from "./AuthenticationStatusStepper";
 
@@ -87,9 +89,7 @@ export function ActiveAuthenticationOrder({ order, mode }: { order: Authenticati
       {owner && (
         <div className="flex flex-wrap gap-2">
           {order.status === "quoted" && !expired && (isRequester ? (
-            <Button size="sm" onClick={() => navigate(authenticationCheckoutPath(order.id, order.asset_posting_id))}>
-              <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Thanh toán {formatVnd(order.quoted_price)}
-            </Button>
+            <ServiceContractPayButton kind="giam-dinh" orderId={order.id} price={order.quoted_price} />
           ) : (
             <p className="text-xs text-muted-foreground">Chờ người gửi yêu cầu thanh toán.</p>
           ))}
@@ -131,8 +131,12 @@ function ShipmentForm({ order, editable }: { order: AuthenticationOrder; editabl
           ? "Đã ghi nhận mã vận đơn — đối tác sẽ xác nhận khi nhận hiện vật. Sửa lại được nếu nhập nhầm."
           : "Đã thanh toán — đóng gói và gửi hiện vật tới đối tác theo hướng dẫn sàn gửi, rồi nhập mã vận đơn."}
       </p>
+      <Label htmlFor={`gd-tracking-${order.id}`}>
+        Mã vận đơn <span className="text-destructive">*</span>
+      </Label>
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input
+          id={`gd-tracking-${order.id}`}
           value={tracking}
           maxLength={200}
           placeholder="Mã vận đơn (VD: VNPOST, GHN…)"

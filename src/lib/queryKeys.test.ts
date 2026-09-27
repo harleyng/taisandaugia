@@ -51,6 +51,7 @@ describe("qk — ghim giá trị key", () => {
     expect(qk.ownerWorkspace.memberships(UID)).toEqual(["owner-ws-memberships", UID]);
     expect(qk.ownerWorkspace.members(PID)).toEqual(["owner-ws", PID, "members"]);
     expect(qk.ownerWorkspace.invites(PID)).toEqual(["owner-ws", PID, "invites"]);
+    expect(qk.ownerWorkspace.roles(PID)).toEqual(["owner-ws", PID, "roles"]);
     expect(qk.ownerWorkspace.claims(PID)).toEqual(["owner-ws", PID, "claims"]);
     expect(qk.ownerWorkspace.linkOverview(PID)).toEqual(["owner-ws", PID, "link-overview"]);
     expect(qk.ownerWorkspace.linkRequests(PID)).toEqual(["owner-ws", PID, "link-requests"]);
@@ -70,6 +71,7 @@ describe("qk — bất biến prefix (chống invalidate câm)", () => {
     for (const child of [
       qk.ownerWorkspace.members(PID),
       qk.ownerWorkspace.invites(PID),
+      qk.ownerWorkspace.roles(PID),
       qk.ownerWorkspace.claims(PID),
       qk.ownerWorkspace.linkOverview(PID),
       qk.ownerWorkspace.linkRequests(PID),
@@ -87,6 +89,12 @@ describe("qk — bất biến prefix (chống invalidate câm)", () => {
     expect(covers(qk.myPostingsIn(UID, PID), qk.ownerPipelinePostings(UID, PID))).toBe(true);
     // Tenant khác không bị làm mới nhầm.
     expect(covers(qk.myPostingsIn(UID, "personal"), qk.ownerPipelinePostings(UID, PID))).toBe(false);
+  });
+
+  it("mọi thao tác ký gửi (invalidate myPostings) làm mới danh sách Ký gửi đấu giá", () => {
+    expect(qk.ownerConsignmentPostings(UID, PID)).toEqual(["my-postings", UID, PID, "consignment"]);
+    expect(covers(qk.myPostings(UID), qk.ownerConsignmentPostings(UID, PID))).toBe(true);
+    expect(covers(qk.myPostingsIn(UID, "personal"), qk.ownerConsignmentPostings(UID, PID))).toBe(false);
   });
 
   it("khai / sửa kết quả (invalidate ownerAssetOutcomes) làm mới trang Kết quả phiên và lịch sử lượt", () => {

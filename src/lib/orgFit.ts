@@ -126,3 +126,31 @@ export function orgFitSentence(result: OrgMatchResult, c: MatchCriteria): string
   // Hoa đầu câu: mệnh đề nào cũng viết thường để nối được ở giữa câu.
   return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
+
+/**
+ * Bản ngắn cho dòng gợi ý ở trang Ký gửi: tối đa hai điểm mạnh nối bằng " · ";
+ * không có điểm mạnh thì nêu MỘT lưu ý. KHÔNG kèm số phiên của engine — cạnh dòng
+ * này đã có thành tích thật của tổ chức (RPC auction_org_track_records).
+ */
+export function orgFitShort(result: OrgMatchResult, c: MatchCriteria): string | null {
+  const { breakdown } = result;
+  const allowed = speakable(c);
+  const signals = (Object.keys(MATCH_WEIGHTS) as Signal[]).filter((k) => allowed.has(k));
+  const strengths = signals
+    .filter((k) => ratio(breakdown, k) >= STRONG)
+    .sort((a, b) => ratio(breakdown, b) - ratio(breakdown, a))
+    .map((k) => strengthClause(k, result, c))
+    .filter((x): x is string => !!x)
+    .slice(0, 2);
+  const parts = strengths.length
+    ? strengths
+    : signals
+        .filter((k) => ratio(breakdown, k) <= WEAK)
+        .sort((a, b) => ratio(breakdown, a) - ratio(breakdown, b))
+        .map((k) => caveatClause(k, result, c))
+        .filter((x): x is string => !!x)
+        .slice(0, 1);
+  if (!parts.length) return null;
+  const text = parts.join(" · ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

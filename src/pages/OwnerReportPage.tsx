@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { OwnerNoWorkspaceState } from "@/components/asset-owner-portal/ui/OwnerNoWorkspaceState";
+import { BenchmarkBlock } from "@/components/asset-owner-portal/benchmark/BenchmarkBlock";
 import { useNavigate } from "react-router-dom";
 import {
   Loader2, SlidersHorizontal, X, ChevronDown, ChevronUp,
@@ -950,6 +951,10 @@ const OwnerReportPage = () => {
           )}
         </>
       ))}
+
+      {/* ── So sánh ẩn danh với chi nhánh cùng hệ thống (dời từ Tổng quan) — không theo bộ lọc
+             báo cáo, tự ẩn khi không đủ dữ liệu ─── */}
+      <BenchmarkBlock />
 
       {/* ── Confirm dialog (paid reports) ─── */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

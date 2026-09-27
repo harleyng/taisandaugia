@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { format, parseISO } from 'date-fns'
 import { Download, FileText, MapPin, Scale, Send, XCircle } from 'lucide-react'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
@@ -86,6 +87,15 @@ export function RequestDetailSheet({ request, auctionOrgId, onOpenChange, onQuot
             {PARENT_NAME[r.parent_slug] ?? r.parent_slug} · {CHILD_LABEL[r.child_slug] ?? r.child_slug}
             {r.origin === 'platform' && ' · Sàn giới thiệu'}
           </SheetDescription>
+          <p className="text-xs text-muted-foreground">
+            <span className="font-mono">{r.posting_code}</span>
+            {(r.status === 'sent' || r.status === 'seen') && r.respond_by && (
+              <> · Hạn phản hồi <b className="font-semibold text-foreground">{format(parseISO(r.respond_by), 'dd/MM/yyyy')}</b></>
+            )}
+            {r.status === 'quoted' && r.quote_valid_until && (
+              <> · Báo giá hiệu lực đến {format(parseISO(r.quote_valid_until), 'dd/MM/yyyy')}</>
+            )}
+          </p>
         </SheetHeader>
 
         <div className="space-y-5 py-5">

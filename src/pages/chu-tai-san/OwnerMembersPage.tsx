@@ -4,7 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { OwnerPageHeader } from "@/components/asset-owner-portal/ui/OwnerPageHeader";
+import { OwnerTabsList, OwnerTabsTrigger } from "@/components/asset-owner-portal/ui/OwnerTabs";
 import { SectionCard } from "@/components/asset-owner-portal/ui/SectionCard";
 import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
 import { OwnerMembersTable } from "@/components/asset-owner-portal/members/OwnerMembersTable";
@@ -13,6 +15,7 @@ import { InviteOwnerMemberDialog } from "@/components/asset-owner-portal/members
 import { EditOwnerMemberDialog } from "@/components/asset-owner-portal/members/EditOwnerMemberDialog";
 import { RemoveOwnerMemberDialog } from "@/components/asset-owner-portal/members/RemoveOwnerMemberDialog";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
+import { useUrlFilterState } from "@/hooks/useUrlFilterState";
 import {
   useOwnerWorkspaceInvites,
   useOwnerWorkspaceMembers,
@@ -20,23 +23,33 @@ import {
   type OwnerWorkspaceMember,
 } from "@/hooks/useOwnerWorkspaceMembers";
 
+const TAB_MEMBERS = "thanh-vien";
+const TAB_INVITES = "loi-moi";
+const DEFAULTS = { tab: TAB_MEMBERS };
+const ALLOWED = { tab: [TAB_MEMBERS, TAB_INVITES] } as const;
+
 /**
  * Thành viên của không gian chủ tài sản — /chu-tai-san/thanh-vien.
- * Trưởng đơn vị mời / đổi vai trò / gỡ; các vai trò khác xem danh sách.
+ * Mời / đổi vai trò / gỡ theo quyền module "Thành viên" của vai trò (thanh-vien:
+ * create / update / delete); vai trò tự định nghĩa ở /chu-tai-san/vai-tro.
+ * Hai tab Thành viên / Lời mời (?tab=loi-moi) — tab Lời mời chỉ người mời được thấy (RLS).
  * Mọi thao tác ghi đi qua RPC owner_ws_* (docs/owner-control-tower-plan.md Phase 3).
  */
 const OwnerMembersPage = () => {
   const navigate = useNavigate();
-  const { workspaceId, workspace, userId, can, accessVia, isLoading: wsLoading } = useOwnerWorkspace();
-  const canManage = can("manage_members");
+  const { workspaceId, workspace, userId, can, isOwner, accessVia, isLoading: wsLoading } = useOwnerWorkspace();
+  const canInvite = can("thanh-vien", "create");
+  const canEditMember = can("thanh-vien", "update");
+  const canRemoveMember = can("thanh-vien", "delete");
   // Trụ sở xem Trạm chi nhánh qua liên kết: danh sách thành viên chỉ chi nhánh thấy.
   const viaHq = accessVia === "hq";
 
   const membersQ = useOwnerWorkspaceMembers(viaHq ? null : workspaceId);
-  const invitesQ = useOwnerWorkspaceInvites(workspaceId, canManage);
+  const invitesQ = useOwnerWorkspaceInvites(workspaceId, canInvite);
   const { data: branches = [] } = useWorkspaceBranchOptions(workspaceId);
   const branchNames = useMemo(() => new Map(branches.map((b) => [b.id, b.label])), [branches]);
 
+  const [f, setFilter] = useUrlFilterState(DEFAULTS, ALLOWED);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<OwnerWorkspaceMember | null>(null);
   const [removeTarget, setRemoveTarget] = useState<OwnerWorkspaceMember | null>(null);
@@ -77,10 +90,12 @@ const OwnerMembersPage = () => {
   }
 
   const members = membersQ.data ?? [];
-  const pendingCount = (invitesQ.data ?? []).length;
-  const subtitle = canManage
+  // "Đang chờ" = chưa hết hạn; lời mời hết hạn vẫn nằm trong tab để "Mời lại" nhưng không tính.
+  const pendingCount = (invitesQ.data ?? []).filter((inv) => !inv.isExpired).length;
+  const tab = canInvite ? f.tab : TAB_MEMBERS;
+  const subtitle = canInvite
     ? `${members.length} thành viên · ${pendingCount} lời mời đang chờ`
-    : `${members.length} thành viên · Chỉ Trưởng đơn vị mới mời và phân quyền`;
+    : `${members.length} thành viên`;
 
   return (
     <div className="space-y-6">
@@ -88,7 +103,7 @@ const OwnerMembersPage = () => {
         title="Thành viên"
         subtitle={membersQ.isLoading ? workspace.primary_name : subtitle}
         actions={
-          canManage && (
+          canInvite && (
             <Button onClick={() => setInviteOpen(true)} className="gap-1.5">
               <UserPlus className="h-4 w-4" strokeWidth={1.5} />
               Mời thành viên
@@ -97,69 +112,88 @@ const OwnerMembersPage = () => {
         }
       />
 
-      <SectionCard title={workspace.primary_name} icon={Users} count={members.length}>
-        {membersQ.isLoading ? (
-          <div className="space-y-2">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : membersQ.isError ? (
-          <EmptyState
-            compact
-            tone="destructive"
-            icon={Users}
-            title="Chưa tải được danh sách thành viên."
-            action={
-              <Button size="sm" variant="outline" onClick={() => void membersQ.refetch()}>
-                Thử lại
-              </Button>
-            }
-          />
-        ) : (
-          <OwnerMembersTable
-            members={members}
-            branchNames={branchNames}
-            currentUserId={userId}
-            canManage={canManage}
-            onEdit={setEditTarget}
-            onRemove={setRemoveTarget}
-          />
+      <Tabs value={tab} onValueChange={(v) => v && setFilter("tab", v)} className="space-y-4">
+        {canInvite && (
+          <OwnerTabsList aria-label="Thành viên và lời mời">
+            <OwnerTabsTrigger value={TAB_MEMBERS}>Thành viên</OwnerTabsTrigger>
+            <OwnerTabsTrigger value={TAB_INVITES} count={pendingCount > 0 ? pendingCount : undefined}>
+              Lời mời
+            </OwnerTabsTrigger>
+          </OwnerTabsList>
         )}
-      </SectionCard>
 
-      {canManage && (
-        <OwnerInvitesCard
+        <TabsContent value={TAB_MEMBERS} className="mt-0">
+          <SectionCard title={workspace.primary_name} icon={Users} count={members.length}>
+            {membersQ.isLoading ? (
+              <div className="space-y-2">
+                {[0, 1, 2].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : membersQ.isError ? (
+              <EmptyState
+                compact
+                tone="destructive"
+                icon={Users}
+                title="Chưa tải được danh sách thành viên."
+                action={
+                  <Button size="sm" variant="outline" onClick={() => void membersQ.refetch()}>
+                    Thử lại
+                  </Button>
+                }
+              />
+            ) : (
+              <OwnerMembersTable
+                members={members}
+                branchNames={branchNames}
+                currentUserId={userId}
+                canEdit={canEditMember}
+                canRemove={canRemoveMember}
+                viewerIsOwner={isOwner}
+                onEdit={setEditTarget}
+                onRemove={setRemoveTarget}
+              />
+            )}
+          </SectionCard>
+        </TabsContent>
+
+        {canInvite && (
+          <TabsContent value={TAB_INVITES} className="mt-0">
+            <OwnerInvitesCard
+              workspaceId={workspaceId}
+              invites={invitesQ.data ?? []}
+              isLoading={invitesQ.isLoading}
+              isError={invitesQ.isError}
+              onRetry={() => void invitesQ.refetch()}
+              branchNames={branchNames}
+            />
+          </TabsContent>
+        )}
+      </Tabs>
+
+      {canInvite && (
+        <InviteOwnerMemberDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
           workspaceId={workspaceId}
-          invites={invitesQ.data ?? []}
-          isLoading={invitesQ.isLoading}
-          isError={invitesQ.isError}
-          onRetry={() => void invitesQ.refetch()}
-          branchNames={branchNames}
+          branches={branches}
         />
       )}
-
-      {canManage && (
-        <>
-          <InviteOwnerMemberDialog
-            open={inviteOpen}
-            onOpenChange={setInviteOpen}
-            workspaceId={workspaceId}
-            branches={branches}
-          />
-          <EditOwnerMemberDialog
-            member={editTarget}
-            onClose={() => setEditTarget(null)}
-            workspaceId={workspaceId}
-            branches={branches}
-          />
-          <RemoveOwnerMemberDialog
-            member={removeTarget}
-            onClose={() => setRemoveTarget(null)}
-            workspaceId={workspaceId}
-            workspaceName={workspace.primary_name}
-          />
-        </>
+      {canEditMember && (
+        <EditOwnerMemberDialog
+          member={editTarget}
+          onClose={() => setEditTarget(null)}
+          workspaceId={workspaceId}
+          branches={branches}
+        />
+      )}
+      {canRemoveMember && (
+        <RemoveOwnerMemberDialog
+          member={removeTarget}
+          onClose={() => setRemoveTarget(null)}
+          workspaceId={workspaceId}
+          workspaceName={workspace.primary_name}
+        />
       )}
     </div>
   );

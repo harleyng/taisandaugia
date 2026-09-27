@@ -245,7 +245,7 @@ export function OptionalGroup({
           onClick={() => setOpen((o) => !o)}
           className="flex items-center gap-1.5 text-[13px] font-semibold text-primary hover:bg-primary/5 rounded-lg px-2 py-1.5 transition"
         >
-          {open ? "Thu gọn" : `Mở ${count} mục tùy chọn`}
+          {open ? "Thu gọn" : `Mở thêm ${count} mục`}
           <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>

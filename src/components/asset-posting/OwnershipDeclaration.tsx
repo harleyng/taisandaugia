@@ -62,6 +62,7 @@ export function OwnershipDeclaration({
           className="text-sm font-normal leading-snug text-foreground cursor-pointer"
         >
           Tôi đã đọc, hiểu và đồng ý với toàn bộ nội dung cam kết trên.
+          <span className="ml-0.5 text-destructive">*</span>
         </Label>
       </div>
 

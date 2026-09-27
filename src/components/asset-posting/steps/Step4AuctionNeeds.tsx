@@ -23,6 +23,8 @@ interface StepProps {
   ensurePostingId: () => Promise<string | null>;
   gdReasons: AuthenticationRequiredReason[];
   gdLotReason: string | null;
+  /** Vai trò được gửi hồ sơ cho tổ chức / nhờ sàn (ky-gui:create). Mặc định có. */
+  canConsign?: boolean;
 }
 
 const FORMATS = Object.keys(AUCTION_FORMAT_LABELS) as AuctionFormat[];
@@ -49,6 +51,7 @@ export function Step4AuctionNeeds({
   ensurePostingId,
   gdReasons,
   gdLotReason,
+  canConsign = true,
 }: StepProps) {
   const want = f.wantsAuction;
 
@@ -73,6 +76,12 @@ export function Step4AuctionNeeds({
           <div className="flex items-center gap-1.5 text-xs font-medium text-destructive mt-2.5">
             <AlertCircle className="h-3.5 w-3.5" /> {errs.wantsAuction}
           </div>
+        )}
+        {want === "yes" && !canConsign && (
+          <p className="mt-2.5 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+            Vai trò của bạn chưa được gửi hồ sơ cho tổ chức đấu giá. Hồ sơ sẽ được lưu kèm thông tin đấu giá;
+            người có quyền Ký gửi trong đơn vị gửi đi sau.
+          </p>
         )}
       </Group>
 
@@ -147,7 +156,7 @@ export function Step4AuctionNeeds({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border pt-[18px]">
                 <TextField
-                  label="Thù lao chấp nhận (tùy chọn)"
+                  label="Thù lao chấp nhận"
                   type="number"
                   unit="%"
                   placeholder="2"
@@ -156,7 +165,7 @@ export function Step4AuctionNeeds({
                   onChange={(v) => up({ commissionPct: v })}
                 />
                 <SelectField
-                  label="Thời gian kỳ vọng (tùy chọn)"
+                  label="Thời gian kỳ vọng"
                   options={TIMELINES}
                   value={f.expectedTimeline ?? ""}
                   onChange={(v) => up({ expectedTimeline: v })}

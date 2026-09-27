@@ -113,13 +113,6 @@ export const isOffPlatform = (row: Pick<OutcomeOverviewRow, "listingId">) => row
 export const OUTCOME_FILTERS = ["all", "sold", "unsold", "void"] as const;
 export type OutcomeFilter = (typeof OUTCOME_FILTERS)[number];
 
-export const OUTCOME_FILTER_LABEL: Record<OutcomeFilter, string> = {
-  all: "Mọi kết quả",
-  sold: "Thành",
-  unsold: "Không thành",
-  void: "Hoãn / Huỷ",
-};
-
 /** Chi nhánh: "all" | "none" (chưa gắn chi nhánh) | id chi nhánh. */
 export const BRANCH_ALL = "all";
 export const BRANCH_NONE = "none";
@@ -150,11 +143,7 @@ function matchesQuery(row: OutcomeOverviewRow, q: string): boolean {
   return code.length >= 4 && shortAssetId(row.listingId).startsWith(code);
 }
 
-export function filterOverview(
-  rows: OutcomeOverviewRow[],
-  f: OverviewFilters,
-  today: string,
-): OutcomeOverviewRow[] {
+export function filterOverview<R extends OutcomeOverviewRow>(rows: R[], f: OverviewFilters, today: string): R[] {
   const range = periodRange(f.period, today);
   return rows.filter((r) => {
     if (!inPeriod(r.date, range)) return false;
@@ -167,7 +156,7 @@ export function filterOverview(
 }
 
 /** Mới nhất lên đầu; ngày trống xuống cuối. */
-export function sortOverview(rows: OutcomeOverviewRow[]): OutcomeOverviewRow[] {
+export function sortOverview<R extends OutcomeOverviewRow>(rows: R[]): R[] {
   return [...rows].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || a.title.localeCompare(b.title, "vi"));
 }
 

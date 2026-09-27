@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatVnd } from "@/lib/advertising/slug";
 import { DispatchOrgsDialog } from "./DispatchOrgsDialog";
+import { BrokerPlanFields } from "./BrokerPlanFields";
 import { useAdminConsignment, useDispatchServiceRequests } from "@/hooks/useAdminConsignment";
 import {
   BROKER_REQUEST_STATUS_LABELS,
@@ -48,6 +49,7 @@ export function ConsignmentCard({ posting }: ConsignmentCardProps) {
               Chủ tài sản nhờ sàn chọn giúp · {BROKER_REQUEST_STATUS_LABELS[broker.status]}
             </p>
             {broker.note && <p className="mt-0.5 text-muted-foreground">“{broker.note}”</p>}
+            {broker.status !== "selected" && <BrokerPlanFields broker={broker} />}
           </div>
         </div>
       )}

@@ -49,13 +49,16 @@ async function openEvidence(path: string) {
 interface OutcomeRoundHistoryProps {
   records: OwnerOutcomeRecord[];
   isLoading: boolean;
+  /** Sửa lượt đã khai (ket-qua:update). */
   canWrite: boolean;
+  /** Xoá lượt đã khai (ket-qua:delete). */
+  canDelete: boolean;
   onEdit: (record: OwnerOutcomeRecord) => void;
   onDelete: (record: OwnerOutcomeRecord) => void;
 }
 
 /** Các lượt đơn vị đã tự khai cho một tài sản — lượt mới nhất trước. */
-export function OutcomeRoundHistory({ records, isLoading, canWrite, onEdit, onDelete }: OutcomeRoundHistoryProps) {
+export function OutcomeRoundHistory({ records, isLoading, canWrite, canDelete, onEdit, onDelete }: OutcomeRoundHistoryProps) {
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -95,14 +98,14 @@ export function OutcomeRoundHistory({ records, isLoading, canWrite, onEdit, onDe
                 </Button>
               )}
               {canWrite && (
-                <>
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(r)}>
-                    Sửa
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => onDelete(r)}>
-                    Xoá
-                  </Button>
-                </>
+                <Button variant="ghost" size="sm" onClick={() => onEdit(r)}>
+                  Sửa
+                </Button>
+              )}
+              {canDelete && (
+                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => onDelete(r)}>
+                  Xoá
+                </Button>
               )}
             </div>
           </li>

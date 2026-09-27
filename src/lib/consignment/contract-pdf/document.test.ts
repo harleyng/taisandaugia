@@ -124,3 +124,22 @@ describe('buildContractPdfInput', () => {
     expect(() => buildContractPdfInput({ ...detail, owner_party: null })).toThrow(/không tạo được/)
   })
 })
+
+describe('mẫu hợp đồng từ DB (contract_templates)', () => {
+  it('slot của mẫu đè hằng số, slot thiếu giữ hằng số; chân trang in mã mẫu', () => {
+    const dd = buildContractDocDefinition({
+      ...base,
+      template: { version: 'HDDV-MAU-2026-10', clauses: { payment_terms: 'Thanh toán trong 5 ngày làm việc.' } },
+    })
+    const strings = texts(dd.content)
+    expect(strings).toContain('Thanh toán trong 5 ngày làm việc.')
+    expect(strings.some((s) => s.startsWith('Căn cứ Bộ luật Dân sự'))).toBe(true)
+    const footer = (dd.footer as (p: number, c: number) => unknown)(1, 1)
+    expect(texts(footer).some((s) => s.includes('HDDV-MAU-2026-10'))).toBe(true)
+  })
+
+  it('không có mẫu ⇒ chân trang in mã mẫu mặc định', () => {
+    const footer = (buildContractDocDefinition(base).footer as (p: number, c: number) => unknown)(1, 1)
+    expect(texts(footer).some((s) => s.includes('HDDV-MAU-2026-09'))).toBe(true)
+  })
+})

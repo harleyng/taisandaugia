@@ -111,7 +111,10 @@ All routes in `src/App.tsx` under one `<BrowserRouter>`. Critical-path pages (`I
 /chu-tai-san               → /chu-tai-san/dashboard
 /chu-tai-san/dashboard     OwnerDashboard
 /chu-tai-san/tai-san       OwnerAssetsPage
-/chu-tai-san/dang-tai-san  AssetPostingWizardPage  (5-step "Số hoá tài sản" wizard: Loại→Thông tin→Pháp lý→Nhu cầu→Xem lại; bước cuối 2 hành động: chỉ số hoá / số hoá & gửi tổ chức. Chọn tổ chức tách ra ChooseOrgAndRequest)
+/chu-tai-san/dang-tai-san  AssetPostingWizardPage  (danh sách hồ sơ `?nhom=&q=`; nút "Số hoá tài sản" mở wizard mới; `?ho-so=<id>` mở wizard cho hồ sơ đã lưu và thoát về chi tiết. 5-step wizard: Loại→Thông tin→Pháp lý→Nhu cầu→Xem lại; bước cuối 2 hành động: chỉ số hoá / số hoá & gửi tổ chức. Chọn tổ chức tách ra ChooseOrgAndRequest)
+/chu-tai-san/dang-tai-san/:id  AssetPostingDetailPage  (chi tiết hồ sơ số hoá: đầu trang + dải tiến trình 4 bước, tab Thông tin tài sản / Tư vấn pháp lý / Tư vấn đấu giá (`?tab=`). `?tab=bao-gia` cũ ⇒ redirect sang chi tiết ký gửi)
+/chu-tai-san/ky-gui-dau-gia     OwnerConsignmentsPage       (menu "Ký gửi đấu giá": hồ sơ của tenant theo giai đoạn ký gửi, lọc `?nhom=`)
+/chu-tai-san/ky-gui-dau-gia/:id OwnerConsignmentDetailPage  (:id = id HỒ SƠ — gửi/gửi thêm tổ chức, nhờ sàn, so sánh/chốt báo giá, hợp đồng dịch vụ)
 /chu-tai-san/chi-nhanh-amc OwnerBranchesPage
 /chu-tai-san/bao-cao       OwnerReportPage
 
@@ -378,7 +381,13 @@ Per-organization RBAC, mirroring admin RBAC but with one deliberate divergence: 
 - **Đồng thời:** khoá `'sale:'||contract_id` rồi `FOR UPDATE`; `org_create_sale_contract` khoá `'bidding:'||session_id` (cùng khoá với chốt phiên) để không đua với xác nhận cọc.
 - **Guard:** `auction_sale_contracts_guard` chặn mọi UPDATE ngoài RPC (GUC cục bộ `app.sale_rpc` qua `_sale_ctx()` / `_sale_ctx_clear()`); hai bảng sổ dùng lại `auction_append_only_guard` ⇒ teardown phải `DISABLE TRIGGER`.
 - **Client:** `src/lib/saleContracts/{stage,money,errors,files,filters}.ts` + `contract-pdf/` (mẫu `HDMB-MAU-2026-09`, CHƯA rà soát pháp lý, in CCCD hai bên nên là tài liệu RIÊNG TƯ) + `src/hooks/useSaleContracts.ts` + `src/components/sale-contracts/` (thân trang DÙNG CHUNG cho cả ba cổng — vai người xem suy từ `can_act` của RPC, không từ route). Query key `qk.saleContracts.*`. Mã quyền tổ chức `hop-dong-mua-ban` (`view`, `update`).
-- **Màn hình:** `/portal/hop-dong-mua-ban` + `/:id` · `/hop-dong-mua-ban/:id` (bên mua, protected) · `/chu-tai-san/hop-dong-mua-ban` + `/:id` (bên bán). Lối vào: `SettlementPanel` trong phòng điều hành (nút "Tạo hợp đồng"), `WonLotsNotice` ở hồ sơ người mua, `SessionSaleContractsCard` ở trang chi tiết phiên.
+- **Màn hình:** `/portal/hop-dong-mua-ban` + `/:id` · `/hop-dong-mua-ban/:id` (bên mua, protected) · `/chu-tai-san/hop-dong/mua-ban/:id` (bên bán, trong menu "Hợp đồng"; route cũ `/chu-tai-san/hop-dong-mua-ban` redirect). Lối vào: `SettlementPanel` trong phòng điều hành (nút "Tạo hợp đồng"), `WonLotsNotice` ở hồ sơ người mua, `SessionSaleContractsCard` ở trang chi tiết phiên.
+
+### Hợp đồng — menu chủ tài sản + HDCU + mẫu hợp đồng (`20260927150001-2`)
+- **Bảng:** `contract_templates` (6 loại `consignment|sale|service:<slug>`, phiên bản BẤT BIẾN — trigger chặn UPDATE, `created_by` không FK; RLS đọc `authenticated`, ghi `mau-hop-dong:create|delete`; `contract_today()` = ngày giờ VN; `active_contract_template(type)`) · `service_contracts` (HDCU, chỉ ghi thêm, `UNIQUE(kind, order_id, quoted_at)`, `template_id` RESTRICT, không FK tới đơn — đa hình).
+- **RPC:** `owner_accept_service_contract` (`{ok,reason}` qua `unwrapServiceContractRpc`), `owner_service_contracts(p_workspace_id)`, `service_contract_detail(id)` (owner + admin), `admin_contract_list()` (cổng `hop-dong:view`, RAISE nếu thiếu), nội bộ `_service_orders()` (UNION 4 bảng đơn, revoke authenticated). Cổng trả tiền (trigger `service_order_require_contract`) ở `supabase/pending/` — CHƯA ÁP.
+- **Client:** `src/lib/contracts/{paths,rows,adminRows}.ts` + `templates/{schema,resolve,samplePdf}.ts` · `src/lib/serviceContracts/` (+ `contract-pdf/`) · hooks `useOwnerContracts`, `useServiceContracts`, `useContractTemplates` (`activeTemplateForPdf` cho chỗ sinh dự thảo), `useAdminContracts` · query key `qk.serviceContracts.*`, `qk.contractTemplates.*`, `qk.adminContracts`, `qk.ownerConsignmentContract(s)` (DƯỚI `my-postings` để mutation hợp đồng ký gửi phía chủ tự làm mới).
+- **Màn hình:** `/chu-tai-san/hop-dong` (+ `/ky-gui/:id`, `/mua-ban/:id`, `/dich-vu/:id`; `/hop-dong-mua-ban(/:id)` redirect) · `/admin/hop-dong` (+ `/ky-gui|mua-ban|dich-vu/:id`, chỉ đọc) · `/admin/mau-hop-dong` (+ `/tao?type=&from=`, `/:id`). Admin RBAC: category `phap-ly-dau-gia`, module `hop-dong` (view), `mau-hop-dong` (view/create/delete), `phap-ly` chuyển sang đây.
 
 ---
 
@@ -410,7 +419,7 @@ Per-organization RBAC, mirroring admin RBAC but with one deliberate divergence: 
 
 ## Portal Navigation Configs
 
-- **Asset-owner portal** — `src/components/owner-portal/owner-nav-config.ts` exports `OWNER_NAV_SECTIONS` (Tổng quan, Tài sản, **Số hoá tài sản**, Chi nhánh, Báo cáo) consumed by `OwnerPortalLayout`. Nav labels differ from route slugs (e.g. label "Số hoá tài sản" → `/chu-tai-san/dang-tai-san`) — keep the config as the single source when adding owner-portal pages.
+- **Asset-owner portal** — `src/components/owner-portal/owner-nav-config.ts` exports `OWNER_NAV_GROUPS` consumed by `OwnerPortalSidebar`; nhóm Tác nghiệp = **Số hoá tài sản** → **Ký gửi đấu giá** → Hợp đồng mua bán (thứ tự vòng đời). Nav labels differ from route slugs (e.g. label "Số hoá tài sản" → `/chu-tai-san/dang-tai-san`, "Ký gửi đấu giá" → `/chu-tai-san/ky-gui-dau-gia`) — keep the config as the single source when adding owner-portal pages; tab title lives in `owner-page-titles.ts` (set by `OwnerPortalLayout`; the portal has no desktop top bar/breadcrumb). Each item carries `module` (role matrix, `src/lib/ownerWorkspace/permissions.ts`); `visibleOwnerNavGroups` hides items without "view", and `OwnerPermissionGate` (inside `OwnerPortalLayout`, map `ownerModulesForPath`) redirects list pages the role can't view to Tổng quan — a new owner page needs a `module` on its nav item AND an entry in `ownerModulesForPath` (record-detail pages stay ungated and check the record's own workspace). Dashboard + Credit are never gated. Roles: `/chu-tai-san/vai-tro(/:id)`.
 - **Auction-company portal** — `PortalLayout` renders the `/portal/*` sidebar (Dashboard, Hồ sơ năng lực group, Hồ sơ dự tuyển, Credit).
 - **Admin portal** — `AdminLayout` renders the `/admin/*` sidebar.
 

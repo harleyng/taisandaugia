@@ -28,6 +28,7 @@ import {
   REPORTS_HREF,
   canDraftReport,
   canFinalizeReport,
+  canShareReport,
   formatReportDay,
   isPeriodOver,
   reportFileName,
@@ -57,10 +58,10 @@ const OwnerPeriodicReportDetailPage = () => {
   const { data: branchOptions = [] } = useWorkspaceBranchOptions(report?.workspaceId ?? null);
 
   const membership = report ? memberships.find((m) => m.workspaceId === report.workspaceId) : undefined;
-  const scope = { role: membership?.role ?? null, branchScope: membership?.branchScope ?? null };
+  const access = membership?.access ?? null;
   const isDraft = report?.status === "draft";
-  const canEdit = !!report && isDraft && canDraftReport(scope, report.branchId);
-  const canFinalize = isDraft && canFinalizeReport(scope);
+  const canEdit = !!report && isDraft && canDraftReport(access, report.branchId);
+  const canFinalize = !!report && isDraft && canFinalizeReport(access, report.branchId);
 
   const form = useForm<ReportNotesForm>({
     resolver: zodResolver(reportNotesSchema),
@@ -198,7 +199,7 @@ const OwnerPeriodicReportDetailPage = () => {
         {/* Cột phải: thông tin + chia sẻ. Mobile xếp sau nội dung báo cáo. */}
         <aside className="space-y-5 lg:sticky lg:top-4">
           <ReportSummaryCard report={report} payload={payload ?? null} scopeLabel={scopeLabel} />
-          {!isDraft && <ReportShareCard report={report} canShare={canFinalizeReport(scope)} />}
+          {!isDraft && <ReportShareCard report={report} canShare={canShareReport(access, report.branchId)} />}
         </aside>
       </div>
 

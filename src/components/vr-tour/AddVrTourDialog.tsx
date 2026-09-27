@@ -82,7 +82,9 @@ export function AddVrTourDialog({ open, onOpenChange, resolvePostingId }: AddVrT
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Gói dịch vụ</Label>
+              <Label>
+                Gói dịch vụ <span className="text-destructive">*</span>
+              </Label>
               <RadioGroup value={variantKey} onValueChange={setVariantKey} className="gap-2">
                 {packages.map((p) => (
                   <label
@@ -103,7 +105,9 @@ export function AddVrTourDialog({ open, onOpenChange, resolvePostingId }: AddVrT
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="vr-partner">Đối tác thực hiện</Label>
+              <Label htmlFor="vr-partner">
+                Đối tác thực hiện <span className="text-destructive">*</span>
+              </Label>
               <Select value={supplierId} onValueChange={setSupplierId}>
                 <SelectTrigger id="vr-partner">
                   <SelectValue placeholder="Chọn đối tác" />
@@ -119,7 +123,9 @@ export function AddVrTourDialog({ open, onOpenChange, resolvePostingId }: AddVrT
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="vr-address">Địa chỉ hiện trường</Label>
+              <Label htmlFor="vr-address">
+                Địa chỉ hiện trường <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="vr-address"
                 value={siteAddress}
@@ -129,9 +135,7 @@ export function AddVrTourDialog({ open, onOpenChange, resolvePostingId }: AddVrT
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="vr-time">
-                Thời gian mong muốn <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
-              </Label>
+              <Label htmlFor="vr-time">Thời gian mong muốn</Label>
               <Input
                 id="vr-time"
                 value={preferredTime}
@@ -141,9 +145,7 @@ export function AddVrTourDialog({ open, onOpenChange, resolvePostingId }: AddVrT
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="vr-note">
-                Ghi chú cho đối tác <span className="font-normal text-muted-foreground">(tuỳ chọn)</span>
-              </Label>
+              <Label htmlFor="vr-note">Ghi chú cho đối tác</Label>
               <Textarea
                 id="vr-note"
                 rows={3}

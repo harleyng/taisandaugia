@@ -96,3 +96,42 @@ export function useDispatchServiceRequests() {
     },
   });
 }
+
+/**
+ * Ngày sàn dự kiến có báo giá đầu tiên của một yêu cầu "nhờ sàn" — chủ tài sản
+ * thấy ở chi tiết ký gửi. Ghi thẳng bảng (policy abr_admin_all).
+ */
+export function useUpdateBrokerExpectedDate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ brokerRequestId, date }: { brokerRequestId: string; postingId: string; date: string }) => {
+      const { error } = await supabase
+        .from("asset_broker_requests")
+        .update({ expected_quote_by: date })
+        .eq("id", brokerRequestId);
+      if (error) throw error;
+    },
+    onSuccess: (_res, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-consignment", vars.postingId] });
+      toast.success("Đã cập nhật ngày báo giá dự kiến.");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Không cập nhật được ngày báo giá dự kiến.");
+    },
+  });
+}
+
+/** Tên chuyên viên sàn phụ trách (admin đọc được profiles). */
+export function useAdminProfileName(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["admin-profile-name", userId],
+    enabled: !!userId,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await supabase.from("profiles").select("name").eq("id", userId!).maybeSingle();
+      if (error) throw error;
+      return data?.name?.trim() || null;
+    },
+  });
+}

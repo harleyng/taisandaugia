@@ -3,13 +3,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { AlertCircle, ArrowLeft, Check, ChevronLeft, ChevronRight, Eye, Loader2, Plus, Save, TrendingUp } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, ChevronLeft, ChevronRight, Eye, Handshake, Loader2, Plus, Save, TrendingUp } from "lucide-react";
 import { Step1AssetType } from "./steps/Step1AssetType";
 import { Step2GeneralInfo } from "./steps/Step2GeneralInfo";
 import { Step3LegalStatus } from "./steps/Step3LegalStatus";
 import { Step4AuctionNeeds } from "./steps/Step4AuctionNeeds";
 import { StepReview } from "./steps/StepReview";
 import { useWizardAuthentication } from "./useWizardAuthentication";
+import { ownerConsignmentPath } from "@/lib/consignment/ownerConsignment";
 import { AuthenticationOutcomeNotice } from "@/components/authentication/AuthenticationOutcomeNotice";
 import { useAiMediaExtraction } from "@/hooks/useAiMediaExtraction";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
@@ -62,6 +63,8 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   const [sentOrgNames, setSentOrgNames] = useState<string[]>([]);
   // Đã gửi yêu cầu "nhờ sàn chọn giúp" — màn hoàn tất nói khác đi.
   const [sentToPlatform, setSentToPlatform] = useState(false);
+  // Hồ sơ vừa hoàn tất — nút "Theo dõi báo giá" mở thẳng trang ký gửi của nó.
+  const [finishedId, setFinishedId] = useState<string | null>(null);
 
   const form = useForm<WizardValues>({
     resolver: zodResolver(wizardSchema),
@@ -98,9 +101,12 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
 
   const gd = useWizardAuthentication(f, savedId);
   const { required: gdRequired, authentic: gdAuthentic } = gd.ctx;
-  // Cán bộ bị giới hạn chi nhánh phải gắn hồ sơ vào chi nhánh trong phạm vi.
-  const { workspaceId, role, branchScope } = useOwnerWorkspace();
-  const branchRequired = !!workspaceId && role === "staff" && branchScope != null;
+  // Người bị giới hạn chi nhánh phải gắn hồ sơ vào chi nhánh trong phạm vi.
+  const { workspaceId, isScoped, isPersonal, can } = useOwnerWorkspace();
+  const branchRequired = !!workspaceId && isScoped;
+  // Gửi hồ sơ cho tổ chức / nhờ sàn chọn giúp là quyền Ký gửi (ky-gui:create), tách
+  // khỏi quyền Số hoá: thiếu quyền thì chỉ lưu hồ sơ (RLS asr/abr_owner_insert cũng chặn).
+  const canConsign = isPersonal || can("ky-gui", "create");
   const reqs = useMemo(
     () => requirements(f, { required: gdRequired, authentic: gdAuthentic }, { branchRequired }),
     [f, gdRequired, gdAuthentic, branchRequired],
@@ -169,7 +175,8 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
       return;
     }
 
-    const done = (orgNames: string[], viaPlatform: boolean) => {
+    const done = (id: string, orgNames: string[], viaPlatform: boolean) => {
+      setFinishedId(id);
       setSentOrgNames(orgNames);
       setSentToPlatform(viaPlatform);
       setPhase("done");
@@ -180,7 +187,7 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
       { posting: buildPostingPayload(f), status: "active", postingId: savedId ?? undefined },
       {
         onSuccess: ({ postingId }) => {
-          const wants = f.wantsAuction === "yes";
+          const wants = canConsign && f.wantsAuction === "yes";
 
           if (wants && f.orgMode === "self" && chosenResults.length > 0) {
             send.mutate(
@@ -192,7 +199,7 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
                 // một chữ nào từ chủ tài sản.
                 message: f.orgMessage?.trim() || undefined,
               },
-              { onSuccess: () => done(chosenOrgNames, false) },
+              { onSuccess: () => done(postingId, chosenOrgNames, false) },
             );
             return;
           }
@@ -200,12 +207,12 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
           if (wants && f.orgMode === "platform") {
             broker.mutate(
               { postingId, note: f.brokerNote },
-              { onSuccess: () => done([], true) },
+              { onSuccess: () => done(postingId, [], true) },
             );
             return;
           }
 
-          done([], false);
+          done(postingId, [], false);
         },
       },
     );
@@ -218,6 +225,7 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
     setStep(1);
     setSentOrgNames([]);
     setSentToPlatform(false);
+    setFinishedId(null);
     setPhase("wizard");
   };
 
@@ -229,9 +237,9 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   // (không phải f.chosenOrgs) — nhãn nút hứa gửi mà finish() không gửi thì còn
   // tệ hơn nhãn chung chung.
   const willSendCount =
-    f.wantsAuction === "yes" && f.orgMode === "self" ? chosenResults.length : 0;
+    canConsign && f.wantsAuction === "yes" && f.orgMode === "self" ? chosenResults.length : 0;
   const finishLabel =
-    f.wantsAuction === "yes" && f.orgMode === "platform"
+    canConsign && f.wantsAuction === "yes" && f.orgMode === "platform"
       ? "Hoàn tất & nhờ sàn chọn giúp"
       : willSendCount > 0
         ? `Hoàn tất & gửi ${willSendCount} tổ chức`
@@ -239,6 +247,9 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
 
   // ─── Màn hoàn tất ─────────────────────────────────────────────────────────
   if (phase === "done") {
+    // Đã gửi đi (tổ chức hoặc sàn) thì việc tiếp theo là chờ báo giá — nút chính
+    // mở trang ký gửi; chỉ số hoá thì nút chính vẫn là xem hồ sơ.
+    const sent = sentOrgNames.length > 0 || sentToPlatform;
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-muted overflow-y-auto">
         <TopBar onExit={finishNav} onSaveDraft={saveDraft} savingDraft={false} />
@@ -259,26 +270,39 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
                 <>
                   Hồ sơ <b className="text-foreground">{f.title}</b> đã gửi tới{" "}
                   <b className="text-foreground">{sentOrgNames.length} tổ chức</b>: {sentOrgNames.join(" · ")}. Báo giá
-                  của từng tổ chức sẽ hiện trong trang hồ sơ để bạn so sánh và chọn.
+                  của từng tổ chức sẽ hiện ở mục Ký gửi đấu giá để bạn so sánh và chọn.
                 </>
               ) : sentToPlatform ? (
                 <>
                   Sàn đang tìm tổ chức đấu giá phù hợp cho{" "}
-                  <b className="text-foreground">{f.title}</b>. Báo giá của các tổ chức sẽ hiện trong trang hồ sơ để bạn
+                  <b className="text-foreground">{f.title}</b>. Báo giá của các tổ chức sẽ hiện ở mục Ký gửi đấu giá để bạn
                   so sánh và chọn.
                 </>
               ) : (
                 <>
-                  Hồ sơ <b className="text-foreground">{f.title}</b> đã lưu vào “Tài sản của tôi”. Bạn có thể gửi cho tổ chức đấu
-                  giá bất cứ lúc nào từ trang chi tiết hồ sơ.
+                  Hồ sơ <b className="text-foreground">{f.title}</b> đã lưu vào “Tài sản của tôi”. Sau khi hồ sơ được duyệt,
+                  bạn có thể gửi cho tổ chức đấu giá ở mục Ký gửi đấu giá.
                 </>
               )}
             </p>
             <div className="flex gap-3 justify-center flex-wrap">
+              {sent && finishedId && (
+                <button
+                  type="button"
+                  onClick={() => navigate(ownerConsignmentPath(finishedId))}
+                  className="inline-flex items-center gap-2 rounded-[10px] bg-primary text-primary-foreground px-5 py-3 text-sm font-semibold hover:bg-primary/90 transition"
+                >
+                  <Handshake className="h-4 w-4" /> Theo dõi báo giá
+                </button>
+              )}
               <button
                 type="button"
                 onClick={finishNav}
-                className="inline-flex items-center gap-2 rounded-[10px] bg-primary text-primary-foreground px-5 py-3 text-sm font-semibold hover:bg-primary/90 transition"
+                className={
+                  sent && finishedId
+                    ? "inline-flex items-center gap-2 rounded-[10px] border border-input bg-background px-5 py-3 text-sm font-semibold text-foreground hover:border-muted-foreground transition"
+                    : "inline-flex items-center gap-2 rounded-[10px] bg-primary text-primary-foreground px-5 py-3 text-sm font-semibold hover:bg-primary/90 transition"
+                }
               >
                 <Eye className="h-4 w-4" /> Xem hồ sơ
               </button>
@@ -342,6 +366,7 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
               ensurePostingId={ensureDraft}
               gdReasons={gd.reasons}
               gdLotReason={gd.lotReason}
+              canConsign={canConsign}
             />
           )}
           {step === 5 && <StepReview f={f} jump={go} missing={missing} chosenOrgNames={chosenOrgNames} />}

@@ -55,7 +55,9 @@ export function ShareReportDialog({ open, onOpenChange, mode, busy, onConfirm }:
         </DialogHeader>
 
         <fieldset className="space-y-2">
-          <legend className="mb-2 text-sm font-medium text-foreground">Thời hạn</legend>
+          <legend className="mb-2 text-sm font-medium text-foreground">
+            Thời hạn <span className="text-destructive">*</span>
+          </legend>
           <RadioGroup
             value={String(days)}
             onValueChange={(v) => {

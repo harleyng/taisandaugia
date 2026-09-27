@@ -1059,6 +1059,7 @@ export type Database = {
           asset_posting_id: string
           assigned_admin_id: string | null
           created_at: string
+          expected_quote_by: string | null
           id: string
           note: string | null
           selected_request_id: string | null
@@ -1071,6 +1072,7 @@ export type Database = {
           asset_posting_id: string
           assigned_admin_id?: string | null
           created_at?: string
+          expected_quote_by?: string | null
           id?: string
           note?: string | null
           selected_request_id?: string | null
@@ -1083,6 +1085,7 @@ export type Database = {
           asset_posting_id?: string
           assigned_admin_id?: string | null
           created_at?: string
+          expected_quote_by?: string | null
           id?: string
           note?: string | null
           selected_request_id?: string | null
@@ -1670,6 +1673,7 @@ export type Database = {
           invited_by: string | null
           revoked_at: string | null
           role: string
+          role_id: string | null
           token: string
           workspace_id: string
         }
@@ -1684,6 +1688,7 @@ export type Database = {
           invited_by?: string | null
           revoked_at?: string | null
           role: string
+          role_id?: string | null
           token?: string
           workspace_id: string
         }
@@ -1698,6 +1703,7 @@ export type Database = {
           invited_by?: string | null
           revoked_at?: string | null
           role?: string
+          role_id?: string | null
           token?: string
           workspace_id?: string
         }
@@ -1717,6 +1723,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "asset_owner_workspace_invites_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "owner_ws_roles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "asset_owner_workspace_invites_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -1733,6 +1746,7 @@ export type Database = {
           invited_by: string | null
           joined_at: string | null
           role: string
+          role_id: string | null
           status: string
           updated_at: string
           user_id: string
@@ -1745,6 +1759,7 @@ export type Database = {
           invited_by?: string | null
           joined_at?: string | null
           role: string
+          role_id?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -1757,6 +1772,7 @@ export type Database = {
           invited_by?: string | null
           joined_at?: string | null
           role?: string
+          role_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -1768,6 +1784,13 @@ export type Database = {
             columns: ["invited_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_owner_workspace_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "owner_ws_roles"
             referencedColumns: ["id"]
           },
           {
@@ -1930,6 +1953,7 @@ export type Database = {
           branch_id: string | null
           child_slug: string
           chosen_org_id: string | null
+          code: string
           commission_pct: number | null
           created_at: string
           delta_fields: Json
@@ -1970,6 +1994,7 @@ export type Database = {
           branch_id?: string | null
           child_slug: string
           chosen_org_id?: string | null
+          code?: string
           commission_pct?: number | null
           created_at?: string
           delta_fields?: Json
@@ -2010,6 +2035,7 @@ export type Database = {
           branch_id?: string | null
           child_slug?: string
           chosen_org_id?: string | null
+          code?: string
           commission_pct?: number | null
           created_at?: string
           delta_fields?: Json
@@ -2103,8 +2129,10 @@ export type Database = {
           quote_plan: Json | null
           quote_service_fee: number | null
           quote_starting_price: number | null
+          quote_valid_until: string | null
           quoted_at: string | null
           reopened_at: string | null
+          respond_by: string
           responded_by: string | null
           seen_at: string | null
           status: string
@@ -2132,8 +2160,10 @@ export type Database = {
           quote_plan?: Json | null
           quote_service_fee?: number | null
           quote_starting_price?: number | null
+          quote_valid_until?: string | null
           quoted_at?: string | null
           reopened_at?: string | null
+          respond_by?: string
           responded_by?: string | null
           seen_at?: string | null
           status?: string
@@ -2161,8 +2191,10 @@ export type Database = {
           quote_plan?: Json | null
           quote_service_fee?: number | null
           quote_starting_price?: number | null
+          quote_valid_until?: string | null
           quoted_at?: string | null
           reopened_at?: string | null
+          respond_by?: string
           responded_by?: string | null
           seen_at?: string | null
           status?: string
@@ -4483,6 +4515,39 @@ export type Database = {
           phone?: string
           status?: string
           subject?: string | null
+        }
+        Relationships: []
+      }
+      contract_templates: {
+        Row: {
+          changelog: string | null
+          clauses: Json
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          template_type: string
+          version: string
+        }
+        Insert: {
+          changelog?: string | null
+          clauses?: Json
+          created_at?: string
+          created_by?: string | null
+          effective_date: string
+          id?: string
+          template_type: string
+          version: string
+        }
+        Update: {
+          changelog?: string | null
+          clauses?: Json
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          id?: string
+          template_type?: string
+          version?: string
         }
         Relationships: []
       }
@@ -8011,12 +8076,61 @@ export type Database = {
           },
         ]
       }
+      owner_workspace_target_criteria: {
+        Row: {
+          created_at: string
+          goal: number
+          id: string
+          metric: string
+          sort_order: number
+          target_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          goal: number
+          id?: string
+          metric: string
+          sort_order?: number
+          target_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          goal?: number
+          id?: string
+          metric?: string
+          sort_order?: number
+          target_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_workspace_target_criteria_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "owner_workspace_targets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_workspace_target_criteria_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_workspace_targets: {
         Row: {
           branch_id: string | null
           created_at: string
           created_by: string | null
           id: string
+          name: string | null
           period_start: string
           period_type: string
           target_amount: number | null
@@ -8029,6 +8143,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          name?: string | null
           period_start: string
           period_type: string
           target_amount?: number | null
@@ -8041,6 +8156,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          name?: string | null
           period_start?: string
           period_type?: string
           target_amount?: number | null
@@ -8065,6 +8181,86 @@ export type Database = {
           },
           {
             foreignKeyName: "owner_workspace_targets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_ws_role_permissions: {
+        Row: {
+          action: string
+          created_at: string
+          module: string
+          role_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          module: string
+          role_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          module?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_ws_role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "owner_ws_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_ws_roles: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_ws_roles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_ws_roles_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "asset_owner_workspaces"
@@ -8411,6 +8607,78 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_contracts: {
+        Row: {
+          accepted_at: string
+          accepted_by: string
+          asset_posting_id: string
+          code: string
+          content_hash: string
+          id: string
+          order_code: string
+          order_id: string
+          owner_party: Json
+          price: number
+          provider_party: Json
+          quoted_at: string
+          service_kind: string
+          template_id: string
+          template_version: string
+          terms: Json
+        }
+        Insert: {
+          accepted_at?: string
+          accepted_by: string
+          asset_posting_id: string
+          code?: string
+          content_hash: string
+          id?: string
+          order_code: string
+          order_id: string
+          owner_party: Json
+          price: number
+          provider_party: Json
+          quoted_at: string
+          service_kind: string
+          template_id: string
+          template_version: string
+          terms: Json
+        }
+        Update: {
+          accepted_at?: string
+          accepted_by?: string
+          asset_posting_id?: string
+          code?: string
+          content_hash?: string
+          id?: string
+          order_code?: string
+          order_id?: string
+          owner_party?: Json
+          price?: number
+          provider_party?: Json
+          quoted_at?: string
+          service_kind?: string
+          template_id?: string
+          template_version?: string
+          terms?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_contracts_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -9606,6 +9874,30 @@ export type Database = {
       _sale_reallocate: { Args: { _contract_id: string }; Returns: undefined }
       _sale_rpc_active: { Args: never; Returns: boolean }
       _sale_settle: { Args: { _contract_id: string }; Returns: boolean }
+      _service_orders: {
+        Args: never
+        Returns: {
+          asset_posting_id: string
+          cancelled_at: string
+          created_at: string
+          done_at: string
+          expert_name: string
+          extra: Json
+          order_code: string
+          order_id: string
+          package_name: string
+          paid_at: string
+          partner_name: string
+          posting_title: string
+          quote_expires_at: string
+          quote_note: string
+          quoted_at: string
+          quoted_price: number
+          service_kind: string
+          status: string
+          user_id: string
+        }[]
+      }
       _settle_auction_consult: {
         Args: {
           _consultation_id: string
@@ -9652,6 +9944,29 @@ export type Database = {
         Returns: Json
       }
       accounted_auction_org_ids: { Args: never; Returns: string[] }
+      active_contract_template: {
+        Args: { _type: string }
+        Returns: {
+          changelog: string | null
+          clauses: Json
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          template_type: string
+          version: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contract_templates"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      add_business_days: {
+        Args: { _days: number; _from: string }
+        Returns: string
+      }
       admin_access_report: {
         Args: { _from: string; _granularity?: string; _to: string }
         Returns: Json
@@ -9690,6 +10005,26 @@ export type Database = {
       admin_complete_legal_consult: {
         Args: { _consultation_id: string; _items: Json; _summary: string }
         Returns: Json
+      }
+      admin_contract_list: {
+        Args: never
+        Returns: {
+          asset_posting_id: string
+          cancelled_at: string
+          code: string
+          contract_type: string
+          created_at: string
+          id: string
+          order_id: string
+          party_a: string
+          party_b: string
+          service_kind: string
+          signed_at: string
+          stage: string
+          status: string
+          title: string
+          value: number
+        }[]
       }
       admin_convert_lead: {
         Args: { _customer_id?: string; _lead_id: string }
@@ -10028,6 +10363,14 @@ export type Database = {
         Args: { _name: string }
         Returns: string
       }
+      auction_org_track_records: {
+        Args: { _org_ids: string[] }
+        Returns: {
+          auction_org_id: string
+          successful: number
+          total: number
+        }[]
+      }
       auction_session_asset_conflict: {
         Args: { _listing_id: string; _posting_id: string; _session_id: string }
         Returns: string
@@ -10239,6 +10582,7 @@ export type Database = {
         }
         Returns: Json
       }
+      contract_today: { Args: never; Returns: string }
       count_campaign_audience: {
         Args: { _respect_optin?: boolean; _spec: Json }
         Returns: number
@@ -10262,6 +10606,7 @@ export type Database = {
         }
         Returns: Json
       }
+      format_asset_posting_code: { Args: { _n: number }; Returns: string }
       get_listing_save_counts: {
         Args: { listing_ids: string[] }
         Returns: {
@@ -10371,6 +10716,7 @@ export type Database = {
           state: string
         }[]
       }
+      next_asset_posting_code: { Args: never; Returns: string }
       normalize_org_name: { Args: { p_name: string }; Returns: string }
       normalize_province: { Args: { _name: string }; Returns: string }
       normalize_provinces: { Args: { _names: string[] }; Returns: string[] }
@@ -10566,6 +10912,7 @@ export type Database = {
           message: string
           origin: string
           parent_slug: string
+          posting_code: string
           posting_id: string
           pricing_mode: string
           province: string
@@ -10577,8 +10924,10 @@ export type Database = {
           quote_plan: Json
           quote_service_fee: number
           quote_starting_price: number
+          quote_valid_until: string
           quoted_at: string
           reopened_at: string
+          respond_by: string
           right_to_sell: boolean
           seen_at: string
           starting_price: number
@@ -10725,6 +11074,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      owner_accept_service_contract: {
+        Args: {
+          _expected_price: number
+          _kind: string
+          _order_id: string
+          _template_id: string
+        }
+        Returns: Json
+      }
       owner_asset_doc_readable: { Args: { _name: string }; Returns: boolean }
       owner_asset_outcomes_resolved: {
         Args: { p_workspace_id: string }
@@ -10765,6 +11123,7 @@ export type Database = {
         Args: { p_linked: string; p_name: string }
         Returns: string
       }
+      owner_broker_assignee: { Args: { _posting_id: string }; Returns: string }
       owner_build_report_payload: {
         Args: {
           p_branch_id?: string
@@ -10797,6 +11156,14 @@ export type Database = {
       }
       owner_cash_flow: {
         Args: { p_include_linked?: boolean; p_workspace_id: string }
+        Returns: Json
+      }
+      owner_cash_set_defaulted: {
+        Args: { p_defaulted: boolean; p_outcome_id: string }
+        Returns: Json
+      }
+      owner_cash_set_due: {
+        Args: { p_due_on: string; p_outcome_id: string }
         Returns: Json
       }
       owner_cash_settle: {
@@ -10918,10 +11285,12 @@ export type Database = {
           title_key: string
         }[]
       }
-      owner_posting_can: {
-        Args: { p_action: string; p_posting_id: string }
-        Returns: boolean
-      }
+      owner_posting_can:
+        | { Args: { p_action: string; p_posting_id: string }; Returns: boolean }
+        | {
+            Args: { p_action: string; p_module: string; p_posting_id: string }
+            Returns: boolean
+          }
       owner_posting_file_owner_ok: {
         Args: {
           p_creator: string
@@ -10934,15 +11303,26 @@ export type Database = {
         Args: { p_posting_id: string }
         Returns: Json
       }
-      owner_posting_row_can: {
-        Args: {
-          p_action: string
-          p_branch_id: string
-          p_user_id: string
-          p_workspace_id: string
-        }
-        Returns: boolean
-      }
+      owner_posting_row_can:
+        | {
+            Args: {
+              p_action: string
+              p_branch_id: string
+              p_user_id: string
+              p_workspace_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_action: string
+              p_branch_id: string
+              p_module: string
+              p_user_id: string
+              p_workspace_id: string
+            }
+            Returns: boolean
+          }
       owner_report_new_share_token: { Args: never; Returns: string }
       owner_report_public_payload: { Args: { p: Json }; Returns: Json }
       owner_report_recovery: {
@@ -11012,9 +11392,47 @@ export type Database = {
           status: string
         }[]
       }
+      owner_save_target: {
+        Args: {
+          p_branch_id: string
+          p_criteria: Json
+          p_name: string
+          p_period_start: string
+          p_period_type: string
+          p_target_id: string
+          p_workspace_id: string
+        }
+        Returns: string
+      }
       owner_select_service_quote: {
         Args: { _request_id: string }
         Returns: Json
+      }
+      owner_service_contracts: {
+        Args: { p_workspace_id?: string }
+        Returns: {
+          accepted_at: string
+          asset_posting_id: string
+          can_accept: boolean
+          cancelled_at: string
+          contract_code: string
+          contract_id: string
+          created_at: string
+          done_at: string
+          legacy: boolean
+          needs_acceptance: boolean
+          order_code: string
+          order_id: string
+          order_status: string
+          package_name: string
+          paid_at: string
+          partner_name: string
+          posting_title: string
+          quote_expires_at: string
+          quoted_at: string
+          quoted_price: number
+          service_kind: string
+        }[]
       }
       owner_share_report: {
         Args: { p_days: number; p_report_id: string }
@@ -11051,16 +11469,58 @@ export type Database = {
         Args: { p_asset_owner_id: string; p_workspace_id: string }
         Returns: boolean
       }
-      owner_ws_create_invite: {
+      owner_ws_create_invite:
+        | {
+            Args: {
+              p_branch_scope?: string[]
+              p_email: string
+              p_role: string
+              p_workspace_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_branch_scope?: string[]
+              p_email: string
+              p_role_id: string
+              p_workspace_id: string
+            }
+            Returns: Json
+          }
+      owner_ws_create_role: {
         Args: {
-          p_branch_scope?: string[]
-          p_email: string
-          p_role: string
+          p_copy_from_role_id?: string
+          p_description?: string
+          p_name: string
           p_workspace_id: string
         }
         Returns: Json
       }
+      owner_ws_default_role_permissions: {
+        Args: { p_code: string }
+        Returns: {
+          action: string
+          module: string
+        }[]
+      }
+      owner_ws_delete_role: { Args: { p_role_id: string }; Returns: Json }
+      owner_ws_has: {
+        Args: { p_action: string; p_module: string; p_workspace_id: string }
+        Returns: boolean
+      }
+      owner_ws_has_in: {
+        Args: {
+          p_action: string
+          p_branch_id: string
+          p_module: string
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
       owner_ws_invite_preview: { Args: { p_token: string }; Returns: Json }
+      owner_ws_is_owner: { Args: { p_workspace_id: string }; Returns: boolean }
+      owner_ws_legacy_action: { Args: { p_action: string }; Returns: boolean }
       owner_ws_link_check: {
         Args: { p_child_ws: string; p_parent_ws: string }
         Returns: string
@@ -11075,11 +11535,37 @@ export type Database = {
           branch_scope: string[]
           email: string
           full_name: string
+          is_owner: boolean
           joined_at: string
           member_id: string
           role: string
+          role_id: string
+          role_name: string
           status: string
           user_id: string
+        }[]
+      }
+      owner_ws_list_roles: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          description: string
+          id: string
+          invite_count: number
+          is_system: boolean
+          member_count: number
+          name: string
+          permissions: Json
+          updated_at: string
+        }[]
+      }
+      owner_ws_my_role_id: { Args: { p_workspace_id: string }; Returns: string }
+      owner_ws_permission_catalog: {
+        Args: never
+        Returns: {
+          action: string
+          module: string
         }[]
       }
       owner_ws_remove_member: { Args: { p_member_id: string }; Returns: Json }
@@ -11093,18 +11579,66 @@ export type Database = {
       }
       owner_ws_revoke_invite: { Args: { p_invite_id: string }; Returns: Json }
       owner_ws_role: { Args: { p_workspace_id: string }; Returns: string }
+      owner_ws_role_is_owner: { Args: { p_role_id: string }; Returns: boolean }
+      owner_ws_role_tier: { Args: { p_role_id: string }; Returns: string }
+      owner_ws_role_within_user: {
+        Args: { p_role_id: string; p_user_id: string }
+        Returns: boolean
+      }
       owner_ws_scope_valid: {
         Args: { p_scope: string[]; p_workspace_id: string }
         Returns: boolean
       }
-      owner_ws_unlink: { Args: { p_child_ws: string }; Returns: Json }
-      owner_ws_update_member: {
-        Args: { p_branch_scope?: string[]; p_member_id: string; p_role: string }
+      owner_ws_scope_within_user: {
+        Args: { p_scope: string[]; p_user_id: string; p_workspace_id: string }
+        Returns: boolean
+      }
+      owner_ws_seed_default_roles: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
+      owner_ws_set_role_permissions: {
+        Args: { p_permissions: Json; p_role_id: string }
         Returns: Json
       }
+      owner_ws_unlink: { Args: { p_child_ws: string }; Returns: Json }
+      owner_ws_update_member:
+        | {
+            Args: {
+              p_branch_scope?: string[]
+              p_member_id: string
+              p_role: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_branch_scope?: string[]
+              p_member_id: string
+              p_role_id: string
+            }
+            Returns: Json
+          }
       owner_ws_update_org_address: {
         Args: { _address: string; _province?: string; p_workspace_id: string }
         Returns: Json
+      }
+      owner_ws_update_role: {
+        Args: { p_description?: string; p_name: string; p_role_id: string }
+        Returns: Json
+      }
+      owner_ws_user_has: {
+        Args: {
+          p_action: string
+          p_module: string
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
+      owner_ws_user_is_owner: {
+        Args: { p_user_id: string; p_workspace_id: string }
+        Returns: boolean
       }
       pay_auction_consult: {
         Args: {
@@ -11381,6 +11915,9 @@ export type Database = {
         Returns: undefined
       }
       server_now: { Args: never; Returns: string }
+      service_contract_detail: { Args: { _contract_id: string }; Returns: Json }
+      service_kind_admin_module: { Args: { _kind: string }; Returns: string }
+      service_kind_label: { Args: { _kind: string }; Returns: string }
       start_asset_3d_scan: { Args: { _posting_id: string }; Returns: Json }
       start_bidding_contract: {
         Args: {
@@ -11415,6 +11952,7 @@ export type Database = {
         Args: { _user1_id: string; _user2_id: string }
         Returns: boolean
       }
+      vn_today: { Args: never; Returns: string }
       withdraw_bid: { Args: { _bid_id: string }; Returns: Json }
     }
     Enums: {

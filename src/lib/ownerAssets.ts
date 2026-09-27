@@ -10,6 +10,7 @@ import { postingBadge, type OwnerConsignmentSummaryRow } from "@/lib/consignment
 import { formatDayMonth } from "@/lib/ownerPulse";
 import { isoDayOf } from "@/lib/ownerOutcomeReport";
 import { shortAssetId } from "@/lib/ownerAssetId";
+import { parentOf } from "@/lib/reports/listingsReport";
 import {
   toPipelineCard,
   type PipelineCard,
@@ -88,6 +89,8 @@ const CONSIGNMENT_CTA: Record<NonNullable<OwnerConsignmentSummaryRow["owner_acti
   choose_quote: "So sánh",
   confirm_contract: "Xác nhận HĐ",
   add_address: "Bổ sung",
+  add_orgs: "Gửi thêm",
+  send_orgs: "Gửi tổ chức",
 };
 
 const mine = (text: string, cta: AssetNextStep["cta"] = null): AssetNextStep => ({
@@ -187,6 +190,9 @@ export interface OwnerAssetRow extends PipelineCard {
   /** Mã tài sản trên sàn — chỉ tin đã nhận (dùng khi nhập kết quả từ Excel). */
   code: string | null;
   category: string | null;
+  /** Ảnh bìa; null ⇒ ô icon theo nhóm tài sản (`parentSlug`). */
+  thumbnail: string | null;
+  parentSlug: string;
   province: string | null;
   branch: string | null;
   /** Số lượt đấu đã biết; 0 = chưa đấu. */
@@ -206,6 +212,8 @@ export interface OwnerClaimRow {
   listingId: string;
   title: string;
   category: string | null;
+  thumbnail: string | null;
+  parentSlug: string;
   province: string | null;
   branch: string | null;
   matchedName: string | null;
@@ -245,6 +253,13 @@ function listingProvince(claim: AssetOwnerClaim): string | null {
   const addr = claim.listing?.address as Record<string, unknown> | null | undefined;
   const v = addr?.province ?? addr?.city;
   return typeof v === "string" && v ? v : null;
+}
+
+function listingThumb(claim: AssetOwnerClaim): { thumbnail: string | null; parentSlug: string } {
+  return {
+    thumbnail: claim.listing?.image_url || null,
+    parentSlug: parentOf(claim.listing?.property_type_slug ?? ""),
+  };
 }
 
 function claimBranch(claim: AssetOwnerClaim, byOwner: Record<string, string>): string | null {
@@ -288,6 +303,7 @@ export function buildOwnerAssets(input: BuildOwnerAssetsInput): OwnerAssetsData 
         listingId: claim.listing_id,
         title: claim.listing.title || "Tài sản",
         category: categoryName(claim.listing.property_type_slug),
+        ...listingThumb(claim),
         province: listingProvince(claim),
         branch: claimBranch(claim, input.branchNameByOwner),
         matchedName: claim.matched_name,
@@ -308,6 +324,7 @@ export function buildOwnerAssets(input: BuildOwnerAssetsInput): OwnerAssetsData 
       stepLabel: STAGE_STEP_LABEL[card.stage],
       code: shortAssetId(facts.id),
       category: categoryName(claim.listing?.property_type_slug),
+      ...listingThumb(claim),
       province: listingProvince(claim),
       branch: claimBranch(claim, input.branchNameByOwner),
       rounds: claim.listing_id ? input.roundCountsByListing[claim.listing_id] ?? 0 : 0,
@@ -330,6 +347,8 @@ export function buildOwnerAssets(input: BuildOwnerAssetsInput): OwnerAssetsData 
       stepLabel: STAGE_STEP_LABEL[card.stage],
       code: null,
       category: categoryName(posting.child_slug),
+      thumbnail: posting.image_urls?.[0] ?? null,
+      parentSlug: posting.parent_slug ?? parentOf(posting.child_slug ?? ""),
       province: posting.province ?? null,
       branch: posting.branch_id ? input.branchNameById[posting.branch_id] ?? null : null,
       rounds,

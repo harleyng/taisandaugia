@@ -12,6 +12,7 @@
 //                    bị hoãn / huỷ / rút. Sang "Phiên" khi phiên mới bắt đầu.
 
 import { dayDiff, formatDayMonth } from "@/lib/ownerPulse";
+import { ownerConsignmentPath } from "@/lib/consignment/ownerConsignment";
 import { isoDayOf, todayIso } from "@/lib/ownerOutcomeReport";
 import { OUTCOME_KIND_LABEL, type OutcomePaymentStatus } from "@/lib/ownerOutcomes";
 import type { AssetPostingReviewStatus } from "@/types/asset-posting";
@@ -291,6 +292,8 @@ export function isStageOverdue(stage: PipelineStage, days: number | null): boole
 // ─── Gom thành bảng ──────────────────────────────────────────────────────────
 
 const SOLD_STAGES: readonly PipelineStage[] = ["trung", "hd_mua_ban", "da_thu_tien"];
+/** Cột mà việc đang diễn ra ở menu "Ký gửi đấu giá" — thẻ hồ sơ mở thẳng trang ký gửi. */
+const CONSIGNMENT_STAGES: readonly PipelineStage[] = ["chon_to_chuc", "hd_dich_vu"];
 
 export interface PipelineCard {
   id: string;
@@ -328,7 +331,7 @@ export function toPipelineCard(f: PipelineFacts, now: Date = new Date()): Pipeli
     id: f.id,
     kind: f.kind,
     title: f.title,
-    href: f.href,
+    href: f.kind === "posting" && CONSIGNMENT_STAGES.includes(stage) ? ownerConsignmentPath(f.id) : f.href,
     stage,
     since,
     days,

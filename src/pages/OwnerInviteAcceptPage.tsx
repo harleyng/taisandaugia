@@ -14,7 +14,6 @@ import {
   type OwnerAcceptResult,
 } from "@/hooks/useOwnerInviteAccept";
 import { ownerWsErrorMessage, ownerWsReasonMessage } from "@/lib/ownerWorkspace/errors";
-import { OWNER_WS_ROLE_LABEL } from "@/lib/ownerWorkspace/roles";
 
 /**
  * Chấp nhận lời mời vào không gian chủ tài sản: /loi-moi-chu-tai-san/:token
@@ -34,7 +33,7 @@ export default function OwnerInviteAcceptPage() {
   const [result, setResult] = useState<OwnerAcceptResult | null>(null);
 
   const workspaceName = preview?.workspace_name ?? "không gian";
-  const roleLabel = preview?.role ? OWNER_WS_ROLE_LABEL[preview.role] : "Thành viên";
+  const roleLabel = preview?.role_name || "Thành viên";
   // Lời mời mình đã dùng vẫn "dùng được": server trả ok ⇒ đưa thẳng vào cổng.
   const usable =
     !!preview?.ok && !preview.expired && !preview.revoked && (!preview.accepted || !!preview.accepted_by_me);

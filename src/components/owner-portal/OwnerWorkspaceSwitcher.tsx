@@ -9,7 +9,6 @@ import {
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
 import { useProfile } from '@/hooks/useProfile'
 import { cn } from '@/lib/utils'
-import { ownerWsAccessLabel } from '@/lib/ownerWorkspace/roles'
 import { PERSONAL_TENANT } from '@/lib/ownerWorkspace/selection'
 
 type TenantKind = 'org' | 'personal'
@@ -27,9 +26,9 @@ interface Props {
  * Chỉ hiện khi có từ 2 tenant trở lên (vd. Trưởng đơn vị ở chi nhánh mình, Người
  * xem ở nơi khác, và hồ sơ Cá nhân). Mỗi tenant hiện TÊN THẬT kèm huy hiệu loại:
  * không gian ⇒ tên tổ chức + "Tổ chức" (kể cả nơi được mời); tenant Cá nhân ⇒ họ
- * tên KYC + "Cá nhân". Trạm chi nhánh đã liên kết hiện nhãn "Trụ sở · chỉ xem" và
- * xếp cuối. Không có mục "đăng ký mới": mỗi tài khoản chỉ có một hồ sơ KYC tổ chức
- * chủ tài sản.
+ * tên KYC + "Cá nhân". Tên dài cắt 1 dòng, rê chuột xem đủ. Trạm chi nhánh đã
+ * liên kết xếp cuối (menu không ghi vai trò — chỉ tên + loại). Không có mục
+ * "đăng ký mới": mỗi tài khoản chỉ có một hồ sơ KYC tổ chức chủ tài sản.
  */
 export function OwnerWorkspaceSwitcher({ className }: Props) {
   const { userId, memberships, hasPersonalTenant, personalName, tenantKey, workspace, isPersonal, selectWorkspace } =
@@ -59,9 +58,11 @@ export function OwnerWorkspaceSwitcher({ className }: Props) {
             <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/50" />
           </button>
         </DropdownMenuTrigger>
+        {/* Rộng hơn sidebar để đọc được tên tổ chức dài; không vượt mép màn hình. */}
         <DropdownMenuContent
           align="start"
-          className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[14rem]"
+          collisionPadding={8}
+          className="w-[24rem] min-w-[var(--radix-dropdown-menu-trigger-width)] max-w-[var(--radix-dropdown-menu-content-available-width)]"
         >
           <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
             Không gian của bạn
@@ -71,7 +72,6 @@ export function OwnerWorkspaceSwitcher({ className }: Props) {
               key={m.workspaceId}
               kind="org"
               name={m.workspace.primary_name}
-              subtitle={ownerWsAccessLabel(m.role, m.accessVia)}
               selected={m.workspaceId === tenantKey}
               onSelect={() => selectWorkspace(m.workspaceId)}
             />
@@ -80,7 +80,6 @@ export function OwnerWorkspaceSwitcher({ className }: Props) {
             <TenantItem
               kind="personal"
               name={personalLabel}
-              subtitle="Tài sản của riêng bạn"
               selected={tenantKey === PERSONAL_TENANT}
               onSelect={() => selectWorkspace(PERSONAL_TENANT)}
             />
@@ -94,37 +93,30 @@ export function OwnerWorkspaceSwitcher({ className }: Props) {
 function TenantItem({
   kind,
   name,
-  subtitle,
   selected,
   onSelect,
 }: {
   kind: TenantKind
   name: string
-  subtitle: string
   selected: boolean
   onSelect: () => void
 }) {
   return (
-    <DropdownMenuItem onClick={onSelect} className="gap-2">
+    <DropdownMenuItem onClick={onSelect} className="gap-2" title={name}>
       <Check
         className={[
           'h-4 w-4 shrink-0',
           selected ? 'opacity-100 text-primary' : 'opacity-0',
         ].join(' ')}
       />
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className="min-w-0 truncate text-sm">{name}</span>
-          <span
-            className={cn(
-              'shrink-0 rounded-full px-1.5 py-px text-[10px] font-medium',
-              kind === 'org' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
-            )}
-          >
-            {KIND_LABEL[kind]}
-          </span>
-        </span>
-        <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
+      <span className="min-w-0 flex-1 truncate text-sm">{name}</span>
+      <span
+        className={cn(
+          'shrink-0 rounded-full px-1.5 py-px text-[10px] font-medium',
+          kind === 'org' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+        )}
+      >
+        {KIND_LABEL[kind]}
       </span>
     </DropdownMenuItem>
   )

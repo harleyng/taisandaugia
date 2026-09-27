@@ -6,7 +6,24 @@
 
 import type { ConsignmentContractStatus } from '@/types/consignment-contract'
 
-export type OwnerAction = 'confirm_contract' | 'add_address' | 'choose_quote'
+export type OwnerAction = 'confirm_contract' | 'add_address' | 'choose_quote' | 'add_orgs' | 'send_orgs'
+
+/**
+ * Việc được đếm vào số của menu "Ký gửi đấu giá" và tab "Cần bạn xử lý".
+ * Hai việc hợp đồng (confirm_contract, add_address) còn ở đây cho tới khi menu
+ * "Hợp đồng" có trang hợp đồng ký gửi — khi đó bỏ khỏi danh sách này.
+ */
+// confirm_contract / add_address là việc của HỢP ĐỒNG — đếm ở menu "Hợp đồng"
+// (useOwnerContractActionCount), không đếm lại ở menu Ký gửi.
+const CONSIGNMENT_OWNER_ACTIONS: readonly OwnerAction[] = [
+  'choose_quote',
+  'add_orgs',
+  'send_orgs',
+]
+
+export function isConsignmentOwnerAction(action: OwnerAction | null | undefined): action is OwnerAction {
+  return !!action && CONSIGNMENT_OWNER_ACTIONS.includes(action)
+}
 
 export interface OwnerConsignmentSummaryRow {
   posting_id: string
@@ -37,6 +54,10 @@ export function postingBadge(row: OwnerConsignmentSummaryRow | null | undefined)
         className: 'bg-accent/20 text-foreground',
         needsAction: true,
       }
+    case 'add_orgs':
+      return { label: 'Cần gửi thêm tổ chức', className: 'bg-destructive/10 text-destructive', needsAction: true }
+    case 'send_orgs':
+      return { label: 'Chưa gửi tổ chức', className: 'bg-warning/10 text-warning', needsAction: true }
   }
   if (row.contract_status === 'signed') {
     return { label: 'Đã ký hợp đồng', className: 'bg-success/10 text-success', needsAction: false }
@@ -48,5 +69,5 @@ export function postingBadge(row: OwnerConsignmentSummaryRow | null | undefined)
 }
 
 export function ownerActionCount(rows: OwnerConsignmentSummaryRow[]): number {
-  return rows.filter((r) => r.owner_action !== null).length
+  return rows.filter((r) => isConsignmentOwnerAction(r.owner_action)).length
 }

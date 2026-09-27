@@ -31,6 +31,8 @@ import {
   Wrench,
   Gavel,
   GraduationCap,
+  FileSignature,
+  FileStack,
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,11 +113,18 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    title: "Pháp lý & Đấu giá",
+    items: [
+      { to: "/admin/hop-dong", label: "Hợp đồng", icon: FileSignature, module: "hop-dong" },
+      { to: "/admin/mau-hop-dong", label: "Mẫu hợp đồng", icon: FileStack, module: "mau-hop-dong" },
+      { to: "/admin/phap-ly", label: "Văn bản pháp lý", icon: ScrollText, module: "phap-ly" },
+    ],
+  },
+  {
     title: "Nội dung",
     items: [
       { to: "/admin/tin-tuc", label: "Tin tức", icon: Newspaper, module: "tin-tuc" },
       { to: "/admin/doi-tac-tren-san", label: "Đối tác trên sàn", icon: Building2, module: "doi-tac" },
-      { to: "/admin/phap-ly", label: "Văn bản pháp lý", icon: ScrollText, module: "phap-ly" },
       { to: "/admin/cong-cu-dau-gia", label: "Công cụ đấu giá", icon: Wrench, module: "cong-cu-dau-gia" },
     ],
   },

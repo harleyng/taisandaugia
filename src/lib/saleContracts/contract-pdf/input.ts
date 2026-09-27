@@ -40,6 +40,13 @@ export interface SalePdfInput {
   /** Nhãn loại tài sản tra sẵn — không kéo ASSET_CATEGORIES (lucide) vào renderer. */
   categoryLabel: string | null;
   generatedAt: Date;
+  /** Mẫu đang áp dụng (contract_templates). Thiếu slot nào ⇒ hằng số trong clauses.ts. */
+  template?: PdfTemplate | null;
+}
+
+export interface PdfTemplate {
+  version: string;
+  clauses: unknown;
 }
 
 const toInt = (v: unknown): number => {
@@ -49,7 +56,7 @@ const toInt = (v: unknown): number => {
 
 export function buildSalePdfInput(
   detail: Pick<SaleContractDetail, "contract" | "installments">,
-  opts: { categoryLabel?: string | null; now?: Date } = {},
+  opts: { categoryLabel?: string | null; now?: Date; template?: PdfTemplate | null } = {},
 ): SalePdfInput {
   const c = detail.contract;
   if (c.status === "cancelled") {
@@ -83,6 +90,7 @@ export function buildSalePdfInput(
     sellerIsRegistry: c.seller_kind === "org_on_behalf",
     categoryLabel: opts.categoryLabel ?? null,
     generatedAt: opts.now ?? new Date(),
+    template: opts.template ?? null,
   };
 }
 

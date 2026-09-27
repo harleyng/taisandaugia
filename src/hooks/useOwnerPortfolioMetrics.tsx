@@ -7,6 +7,7 @@ import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import type { ClaimStatus } from "@/types/asset-owner";
 import { qk } from "@/lib/queryKeys";
 import { useOwnerAssetOutcomes } from "@/hooks/useOwnerAssetOutcomes";
+import { shortAddress } from "@/lib/ownerOutcomesLedger";
 import {
   isSoldOutcome,
   type OutcomeConfidence,
@@ -61,6 +62,8 @@ export interface ListingRow {
   sessionStatus: string;
   propertyTypeSlug: string;
   province: string;
+  /** Phường, quận — cột "Địa chỉ" của Kết quả phiên. */
+  addressLine: string;
   auctionOrgId: string | null;
   auctionOrgName: string | null;
   /** Giá trúng đã hợp nhất nguồn (RPC owner_asset_outcomes_resolved) — không còn đọc custom_attributes. */
@@ -266,6 +269,7 @@ export function useOwnerPortfolioMetrics(
         sessionStatus: getSessionStatus({ status: l.status, custom_attributes: ca }),
         propertyTypeSlug: l.property_type_slug ?? "",
         province: address.province ?? address.city ?? "",
+        addressLine: shortAddress(address),
         auctionOrgId: l.auction_org_id ?? null,
         auctionOrgName: org?.name ?? ca.org_name ?? null,
         winPrice: outcome?.price ?? null,

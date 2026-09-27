@@ -34,16 +34,25 @@ interface AssetPostingHeroProps {
   quoteCount: number;
   /** Đã có hợp đồng dịch vụ ở trạng thái `signed`. */
   hasSignedContract: boolean;
+  /** Nút góc phải — trang Ký gửi dùng để quay về hồ sơ số hoá. */
+  actions?: React.ReactNode;
 }
 
 /**
  * Hero tóm tắt hồ sơ tài sản của chủ tài sản: trạng thái, tên, vài trường nhận
- * dạng (khu vực, giá khởi điểm) và hai con số của luồng ký gửi.
+ * dạng (khu vực, giá khởi điểm) và hai con số của luồng ký gửi. Dùng chung cho
+ * chi tiết hồ sơ số hoá và chi tiết ký gửi — hai trang cùng một tài sản.
  *
  * Chi tiết đầy đủ nằm trong tab "Thông tin" — hero chỉ giữ thứ cần thấy ngay ở
  * MỌI tab, nên không nhồi thêm trường vào đây.
  */
-export function AssetPostingHero({ posting: p, sentCount, quoteCount, hasSignedContract }: AssetPostingHeroProps) {
+export function AssetPostingHero({
+  posting: p,
+  sentCount,
+  quoteCount,
+  hasSignedContract,
+  actions,
+}: AssetPostingHeroProps) {
   const location = [p.ward, p.district, p.province].filter(Boolean).join(", ");
   const { data: branches } = useWorkspaceBranchOptions(p.branch_id ? p.workspace_id : null);
   const branch = p.branch_id ? branches?.find((b) => b.id === p.branch_id)?.label : null;
@@ -98,6 +107,7 @@ export function AssetPostingHero({ posting: p, sentCount, quoteCount, hasSignedC
         </>
       }
       stats={stats}
+      actions={actions}
     />
   );
 }

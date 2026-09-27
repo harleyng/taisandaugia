@@ -10,7 +10,7 @@ import { extractFromMedia, type ExtractionInput, type ExtractionResult } from "@
  *   const { data, error } = await supabase.functions.invoke("extract-asset-media",
  *     { body: { childSlug, parentSlug, province, imageUrls, videoUrls } });
  *
- * miễn là trả về đúng ExtractionResult — AiExtractionCard và panel duyệt không
+ * miễn là trả về đúng ExtractionResult — InfoAiBar và gợi ý từng ô (StepInfo) không
  * phải sửa một dòng nào.
  *
  * Không dùng React Query: đây không phải server state (không cache theo key,
@@ -42,12 +42,21 @@ export interface UseAiMediaExtraction {
   run: (input: ExtractionInput) => void;
   /** Đánh dấu đã quyết xong một hoặc nhiều trường. */
   resolve: (paths: string[]) => void;
+  /**
+   * Path đang giữ giá trị AI điền (nhãn "AI" cạnh tên ô). Người dùng sửa tay ô đó
+   * thì gọi touch() để bỏ nhãn — giá trị không còn là của AI nữa.
+   */
+  applied: ReadonlySet<string>;
+  /** Dùng gợi ý: vừa resolve vừa gắn nhãn "AI". */
+  apply: (paths: string[]) => void;
+  touch: (path: string) => void;
   reset: () => void;
 }
 
 export function useAiMediaExtraction(): UseAiMediaExtraction {
   const [state, setState] = useState<ExtractionState>({ phase: "idle" });
   const [resolved, setResolved] = useState<ReadonlySet<string>>(() => new Set());
+  const [applied, setApplied] = useState<ReadonlySet<string>>(() => new Set());
   const timers = useRef<number[]>([]);
 
   const clearTimers = useCallback(() => {
@@ -63,6 +72,7 @@ export function useAiMediaExtraction(): UseAiMediaExtraction {
     clearTimers();
     setState({ phase: "idle" });
     setResolved(new Set());
+    setApplied(new Set());
   }, [clearTimers]);
 
   const resolve = useCallback((paths: string[]) => {
@@ -73,11 +83,29 @@ export function useAiMediaExtraction(): UseAiMediaExtraction {
     });
   }, []);
 
+  const apply = useCallback(
+    (paths: string[]) => {
+      resolve(paths);
+      setApplied((prev) => new Set([...prev, ...paths]));
+    },
+    [resolve],
+  );
+
+  const touch = useCallback((path: string) => {
+    setApplied((prev) => {
+      if (!prev.has(path)) return prev;
+      const next = new Set(prev);
+      next.delete(path);
+      return next;
+    });
+  }, []);
+
   const run = useCallback(
     (input: ExtractionInput) => {
       clearTimers();
       // Phân tích lại là một lượt mới: mọi quyết định của lượt trước hết hiệu lực.
       setResolved(new Set());
+      setApplied(new Set());
 
       if (input.imageUrls.length === 0) {
         setState({ phase: "error", message: "Cần ít nhất 1 ảnh tài sản để trích xuất." });
@@ -117,5 +145,5 @@ export function useAiMediaExtraction(): UseAiMediaExtraction {
         ? 100
         : 0;
 
-  return { state, progress, resolved, run, resolve, reset };
+  return { state, progress, resolved, run, resolve, applied, apply, touch, reset };
 }

@@ -1,14 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { AlertCircle, ArrowLeft, Check, ChevronLeft, ChevronRight, Eye, Handshake, Loader2, Plus, Save, TrendingUp } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { Step1AssetType } from "./steps/Step1AssetType";
-import { Step2GeneralInfo } from "./steps/Step2GeneralInfo";
 import { Step3LegalStatus } from "./steps/Step3LegalStatus";
 import { Step4AuctionNeeds } from "./steps/Step4AuctionNeeds";
 import { StepReview } from "./steps/StepReview";
+import { StepInfo } from "./info/StepInfo";
+import { infoSections, jumpToSection, sectionOfKey } from "./info/infoSections";
+import { WizardTopBar } from "./wizard/WizardTopBar";
+import { WizardNav } from "./wizard/WizardNav";
+import { WIZARD_STEPS } from "./wizard/wizardSteps";
+import { WizardFooter } from "./wizard/WizardFooter";
+import { WizardDoneScreen } from "./wizard/WizardDoneScreen";
+import { canSaveDraft, useDraftAutosave } from "./wizard/useDraftAutosave";
 import { useWizardAuthentication } from "./useWizardAuthentication";
 import { ownerConsignmentPath } from "@/lib/consignment/ownerConsignment";
 import { AuthenticationOutcomeNotice } from "@/components/authentication/AuthenticationOutcomeNotice";
@@ -32,14 +39,6 @@ import {
   type WizardValues,
 } from "./wizardSchema";
 
-const STEPS = [
-  { n: 1, label: "Loại tài sản", title: "Tài sản thuộc loại nào?" },
-  { n: 2, label: "Thông tin", title: "Thông tin tài sản" },
-  { n: 3, label: "Pháp lý", title: "Pháp lý & giấy tờ" },
-  { n: 4, label: "Đấu giá", title: "Nhu cầu đấu giá" },
-  { n: 5, label: "Xem lại", title: "Xem lại & hoàn tất" },
-];
-
 interface AssetPostingWizardProps {
   /** Mở lại một bản nháp đã lưu. Bỏ trống = tạo hồ sơ mới. */
   postingId?: string | null;
@@ -50,31 +49,27 @@ interface AssetPostingWizardProps {
 }
 
 /**
- * Wizard số hoá tài sản — full-page, requirements-driven (port thiết kế "So Hoa Tai San").
- * Lớp phủ `fixed inset-0` phải ĐỤC (bg-muted, không phải bg-muted/30) để che hẳn
- * sidebar + topbar của Cổng chủ tài sản — luồng số hoá là màn tập trung, không menu.
+ * Wizard số hoá tài sản — full-page, requirements-driven (port thiết kế "So Hoa Tai San v3":
+ * rail dọc + mục con của bước Thông tin, tự lưu nháp, footer cùng lưới với nội dung).
+ * Lớp phủ `fixed inset-0` phải ĐỤC (bg-muted) để che hẳn sidebar + topbar của Cổng chủ
+ * tài sản — luồng số hoá là màn tập trung, không menu.
  */
 export function AssetPostingWizard({ postingId = null, onDone, onCancel }: AssetPostingWizardProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [shown, setShown] = useState<Record<number, boolean>>({});
   const [phase, setPhase] = useState<"wizard" | "done">("wizard");
-  // Tên các tổ chức đã nhận yêu cầu báo giá (rỗng = chưa gửi tổ chức nào).
+  // Kết quả hoàn tất: tổ chức đã nhận yêu cầu báo giá / đã nhờ sàn / id hồ sơ.
   const [sentOrgNames, setSentOrgNames] = useState<string[]>([]);
-  // Đã gửi yêu cầu "nhờ sàn chọn giúp" — màn hoàn tất nói khác đi.
   const [sentToPlatform, setSentToPlatform] = useState(false);
-  // Hồ sơ vừa hoàn tất — nút "Theo dõi báo giá" mở thẳng trang ký gửi của nó.
   const [finishedId, setFinishedId] = useState<string | null>(null);
+  const [savingExit, setSavingExit] = useState(false);
+  const scroller = useRef<HTMLDivElement>(null);
 
-  const form = useForm<WizardValues>({
-    resolver: zodResolver(wizardSchema),
-    mode: "onTouched",
-    defaultValues: wizardDefaults,
-  });
+  const form = useForm<WizardValues>({ resolver: zodResolver(wizardSchema), mode: "onTouched", defaultValues: wizardDefaults });
   const f = form.watch();
 
-  // Nạp bản nháp một lần khi mở lại. Không có bước này thì "Lưu nháp" là bẫy:
-  // ảnh bắt buộc chặn ở bước 2 mà nháp lưu xong không mở lại được.
+  // Nạp bản nháp một lần khi mở lại (không có bước này thì "Lưu nháp" là bẫy).
   const { data: draft } = usePostingDetail(postingId);
   const hydrated = useRef(false);
   useEffect(() => {
@@ -82,19 +77,21 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
     hydrated.current = true;
     form.reset(postingToWizardValues(draft.posting));
   }, [draft, form]);
-  const up = (patch: Partial<WizardValues>) =>
-    Object.entries(patch).forEach(([k, v]) => form.setValue(k as keyof WizardValues, v as never, { shouldValidate: false }));
 
-  // Giữ ở cấp wizard chứ không trong Step2: Step2 unmount mỗi lần đổi bước, để
-  // trong đó thì qua bước 3 rồi quay lại là mất kết quả đã phân tích.
+  // Id hồ sơ đã có trong DB: nháp mở lại, HOẶC bản vừa lưu (tự lưu / "Thêm 3D"…). Mọi
+  // lần lưu sau phải UPDATE dòng này. State thuần để "Số hoá tài sản khác" xoá được.
+  const [savedId, setSavedId] = useState<string | null>(postingId);
+  const autosave = useDraftAutosave(form, savedId, useCallback((id: string) => setSavedId(id), []));
+
+  const up = (patch: Partial<WizardValues>) => {
+    Object.entries(patch).forEach(([k, v]) => form.setValue(k as keyof WizardValues, v as never, { shouldValidate: false }));
+    autosave.schedule();
+  };
+
+  // Giữ ở cấp wizard: StepInfo unmount mỗi lần đổi bước, để trong đó là mất kết quả AI.
   const ai = useAiMediaExtraction();
 
   const create = useCreatePosting();
-  // Id hồ sơ đã có trong DB: bản nháp mở lại, HOẶC bản vừa lưu ngầm khi "Thêm 3D"
-  // (model 3D phải gắn vào một dòng asset_postings có thật). Mọi lần lưu sau đó phải
-  // UPDATE dòng này — dùng lại postingId gốc sẽ INSERT ra hồ sơ trùng. Là state
-  // thuần (không suy từ prop) để "Số hoá tài sản khác" xoá được, không ghi đè hồ sơ cũ.
-  const [savedId, setSavedId] = useState<string | null>(postingId);
   const send = useSendServiceRequests();
   const broker = useCreateBrokerRequest();
   const { results: orgResults, isLoading: orgLoading } = useMatchedOrgs(buildMatchCriteria(f));
@@ -104,115 +101,121 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   // Người bị giới hạn chi nhánh phải gắn hồ sơ vào chi nhánh trong phạm vi.
   const { workspaceId, isScoped, isPersonal, can } = useOwnerWorkspace();
   const branchRequired = !!workspaceId && isScoped;
-  // Gửi hồ sơ cho tổ chức / nhờ sàn chọn giúp là quyền Ký gửi (ky-gui:create), tách
-  // khỏi quyền Số hoá: thiếu quyền thì chỉ lưu hồ sơ (RLS asr/abr_owner_insert cũng chặn).
+  // Gửi hồ sơ cho tổ chức / nhờ sàn là quyền Ký gửi (ky-gui:create), tách khỏi quyền Số hoá.
   const canConsign = isPersonal || can("ky-gui", "create");
   const reqs = useMemo(
     () => requirements(f, { required: gdRequired, authentic: gdAuthentic }, { branchRequired }),
     [f, gdRequired, gdAuthentic, branchRequired],
   );
+  const sections = useMemo(() => infoSections(f, reqs), [f, reqs]);
   const missing = reqs.filter((r) => !r.ok);
   // Chứng thư giám định không chặn "Tiếp tục" — chỉ chặn "Hoàn tất" (chờ đối tác vài ngày).
   const stepMissing = missing.filter((m) => m.step === step && m.key !== "authentication");
   const errs: Record<string, string> = {};
   if (shown[step]) stepMissing.forEach((m) => (errs[m.key] = REQUIREMENT_MSG[m.key] || "Bắt buộc"));
 
-  // Chỉ giữ tổ chức CÓ TRONG kết quả gợi ý: id lạ (nháp cũ, tổ chức rời sàn) thì
-  // không có điểm khớp và cũng không nên hứa gửi tới đó.
+  // Chỉ giữ tổ chức CÓ TRONG kết quả gợi ý (id lạ thì không có điểm khớp, không hứa gửi).
   const chosenResults = orgResults.filter((r) => f.chosenOrgs.includes(r.org.id));
   const chosenOrgNames = chosenResults.map((r) => r.org.name);
 
   const exit = () => (onCancel ? onCancel() : navigate("/chu-tai-san/tai-san"));
   const finishNav = () => (onDone ? onDone() : navigate("/chu-tai-san/tai-san"));
+  const toTop = () => scroller.current?.scrollTo({ top: 0, behavior: "smooth" });
 
   const go = (n: number) => {
     setStep(n);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    toTop();
   };
   const next = () => {
     if (stepMissing.length) {
       setShown((s) => ({ ...s, [step]: true }));
+      const sec = step === 2 ? sectionOfKey(stepMissing[0].key) : undefined;
+      if (sec) jumpToSection(sec);
       return;
     }
     go(Math.min(5, step + 1));
   };
 
-  // Lưu nháp rồi thoát — cần tối thiểu loại + tên tài sản (cột NOT NULL ở DB).
-  const saveDraft = () => {
-    if (!f.parentSlug || !f.childSlug || f.title.trim().length < 3) {
-      toast.error("Nhập tối thiểu loại tài sản và tên tài sản để lưu nháp.");
-      return;
-    }
-    create.mutate({ posting: buildPostingPayload(f), status: "draft", postingId: savedId ?? undefined }, { onSuccess: () => exit() });
-  };
-
-  // Lưu nháp NGẦM, không thoát wizard — cho "Thêm 3D" / "Thêm VR tour". Trả id hồ sơ, null nếu chưa lưu được.
-  const ensureDraft = async (): Promise<string | null> => {
-    const v = form.getValues();
-    if (!v.parentSlug || !v.childSlug || v.title.trim().length < 3) {
-      toast.error("Chọn loại tài sản và nhập tên tài sản (ít nhất 3 ký tự) trước khi thêm 3D / VR tour / giám định / tư vấn.");
-      return null;
-    }
+  /** Lưu nháp thủ công (sau khi hàng đợi tự lưu đã yên). Trả id, null nếu lỗi. */
+  const saveNow = async (v: WizardValues): Promise<string | null> => {
+    const id = await autosave.settle();
     try {
-      const { postingId: id } = await create.mutateAsync({
+      const { postingId: saved } = await create.mutateAsync({
         posting: buildPostingPayload(v),
         status: "draft",
-        postingId: savedId ?? undefined,
+        postingId: id ?? undefined,
       });
-      setSavedId(id);
-      return id;
+      setSavedId(saved);
+      autosave.markSaved(saved);
+      return saved;
     } catch {
       return null; // useCreatePosting đã toast lỗi
     }
   };
 
-  // Hoàn tất số hoá (status active) → nếu có chọn tổ chức thì gửi yêu cầu báo giá
-  // (luồng riêng). Ba lối kết thúc: chỉ số hoá · gửi thẳng tới các tổ chức đã
-  // chọn (1 dòng asset_service_requests mỗi tổ chức) · nhờ sàn chọn giúp.
-  const finish = () => {
+  // "Lưu & thoát" — chưa nhập gì thì thoát luôn; nhập dở thì cần tối thiểu loại + tên.
+  const saveExit = async () => {
+    const v = form.getValues();
+    if (!savedId && !v.title && !v.parentSlug) return exit();
+    if (!canSaveDraft(v)) {
+      toast.error("Nhập tối thiểu loại tài sản và tên tài sản để lưu nháp.");
+      return;
+    }
+    setSavingExit(true);
+    const id = await saveNow(v);
+    setSavingExit(false);
+    if (id) exit();
+  };
+
+  // Lưu nháp NGẦM, không thoát — cho "Thêm 3D" / VR tour / thẩm định / tư vấn.
+  const ensureDraft = async (): Promise<string | null> => {
+    const v = form.getValues();
+    if (!canSaveDraft(v)) {
+      toast.error("Chọn loại tài sản và nhập tên tài sản (ít nhất 3 ký tự) trước khi thêm 3D / VR tour / giám định / tư vấn.");
+      return null;
+    }
+    return saveNow(v);
+  };
+
+  // Hoàn tất (status active) → tuỳ lựa chọn: chỉ số hoá · gửi các tổ chức đã chọn · nhờ sàn.
+  const finish = async () => {
     if (missing.length) {
       setShown({ 1: true, 2: true, 3: true, 4: true });
       return;
     }
+    autosave.setEnabled(false);
+    const id = await autosave.settle();
 
-    const done = (id: string, orgNames: string[], viaPlatform: boolean) => {
-      setFinishedId(id);
+    const done = (pid: string, orgNames: string[], viaPlatform: boolean) => {
+      setFinishedId(pid);
       setSentOrgNames(orgNames);
       setSentToPlatform(viaPlatform);
       setPhase("done");
-      window.scrollTo({ top: 0 });
+      scroller.current?.scrollTo({ top: 0 });
     };
 
     create.mutate(
-      { posting: buildPostingPayload(f), status: "active", postingId: savedId ?? undefined },
+      { posting: buildPostingPayload(f), status: "active", postingId: id ?? undefined },
       {
-        onSuccess: ({ postingId }) => {
+        onError: () => autosave.setEnabled(true),
+        onSuccess: ({ postingId: pid }) => {
           const wants = canConsign && f.wantsAuction === "yes";
-
           if (wants && f.orgMode === "self" && chosenResults.length > 0) {
             send.mutate(
               {
-                postingId,
+                postingId: pid,
                 orgs: chosenResults.map((r) => ({ orgId: r.org.id, matchScore: r.score })),
-                // Bản mô tả gửi tổ chức. Trước đây KHÔNG truyền: ô lời nhắn không
-                // tồn tại trong wizard, nên hộp thư tổ chức nhận hồ sơ không kèm
-                // một chữ nào từ chủ tài sản.
                 message: f.orgMessage?.trim() || undefined,
               },
-              { onSuccess: () => done(postingId, chosenOrgNames, false) },
+              { onSuccess: () => done(pid, chosenOrgNames, false) },
             );
             return;
           }
-
           if (wants && f.orgMode === "platform") {
-            broker.mutate(
-              { postingId, note: f.brokerNote },
-              { onSuccess: () => done(postingId, [], true) },
-            );
+            broker.mutate({ postingId: pid, note: f.brokerNote }, { onSuccess: () => done(pid, [], true) });
             return;
           }
-
-          done(postingId, [], false);
+          done(pid, [], false);
         },
       },
     );
@@ -220,6 +223,9 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
 
   const resetWizard = () => {
     form.reset(wizardDefaults);
+    ai.reset();
+    autosave.reset();
+    autosave.setEnabled(true);
     setSavedId(null);
     setShown({});
     setStep(1);
@@ -231,13 +237,8 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
 
   const busy = create.isPending || send.isPending || broker.isPending;
 
-  // Nút hoàn tất phải nói đúng việc nó làm: finish() có thể gửi luôn yêu cầu báo
-  // giá tới các tổ chức đã chọn / tới sàn, chứ không chỉ lưu hồ sơ.
-  // Điều kiện PHẢI trùng với nhánh trong finish(), kể cả việc đếm chosenResults
-  // (không phải f.chosenOrgs) — nhãn nút hứa gửi mà finish() không gửi thì còn
-  // tệ hơn nhãn chung chung.
-  const willSendCount =
-    canConsign && f.wantsAuction === "yes" && f.orgMode === "self" ? chosenResults.length : 0;
+  // Nhãn nút hoàn tất phải nói đúng việc finish() làm — điều kiện PHẢI trùng nhánh ở trên.
+  const willSendCount = canConsign && f.wantsAuction === "yes" && f.orgMode === "self" ? chosenResults.length : 0;
   const finishLabel =
     canConsign && f.wantsAuction === "yes" && f.orgMode === "platform"
       ? "Hoàn tất & nhờ sàn chọn giúp"
@@ -245,246 +246,93 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
         ? `Hoàn tất & gửi ${willSendCount} tổ chức`
         : "Hoàn tất số hoá";
 
-  // ─── Màn hoàn tất ─────────────────────────────────────────────────────────
-  if (phase === "done") {
-    // Đã gửi đi (tổ chức hoặc sàn) thì việc tiếp theo là chờ báo giá — nút chính
-    // mở trang ký gửi; chỉ số hoá thì nút chính vẫn là xem hồ sơ.
-    const sent = sentOrgNames.length > 0 || sentToPlatform;
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-muted overflow-y-auto">
-        <TopBar onExit={finishNav} onSaveDraft={saveDraft} savingDraft={false} />
-        <div className="mx-auto my-8 w-full max-w-xl px-4">
-          <div className="bg-card border border-border rounded-2xl px-8 py-11 text-center">
-            <div className="w-16 h-16 rounded-full bg-success/10 text-success grid place-items-center mx-auto mb-4">
-              <Check className="h-8 w-8" strokeWidth={2.4} />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground mb-2">
-              {sentOrgNames.length > 0
-                ? "Đã số hoá & gửi yêu cầu báo giá"
-                : sentToPlatform
-                  ? "Đã gửi yêu cầu cho sàn"
-                  : "Đã số hoá tài sản"}
-            </h1>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
-              {sentOrgNames.length > 0 ? (
-                <>
-                  Hồ sơ <b className="text-foreground">{f.title}</b> đã gửi tới{" "}
-                  <b className="text-foreground">{sentOrgNames.length} tổ chức</b>: {sentOrgNames.join(" · ")}. Báo giá
-                  của từng tổ chức sẽ hiện ở mục Ký gửi đấu giá để bạn so sánh và chọn.
-                </>
-              ) : sentToPlatform ? (
-                <>
-                  Sàn đang tìm tổ chức đấu giá phù hợp cho{" "}
-                  <b className="text-foreground">{f.title}</b>. Báo giá của các tổ chức sẽ hiện ở mục Ký gửi đấu giá để bạn
-                  so sánh và chọn.
-                </>
-              ) : (
-                <>
-                  Hồ sơ <b className="text-foreground">{f.title}</b> đã lưu vào “Tài sản của tôi”. Sau khi hồ sơ được duyệt,
-                  bạn có thể gửi cho tổ chức đấu giá ở mục Ký gửi đấu giá.
-                </>
-              )}
-            </p>
-            <div className="flex gap-3 justify-center flex-wrap">
-              {sent && finishedId && (
-                <button
-                  type="button"
-                  onClick={() => navigate(ownerConsignmentPath(finishedId))}
-                  className="inline-flex items-center gap-2 rounded-[10px] bg-primary text-primary-foreground px-5 py-3 text-sm font-semibold hover:bg-primary/90 transition"
-                >
-                  <Handshake className="h-4 w-4" /> Theo dõi báo giá
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={finishNav}
-                className={
-                  sent && finishedId
-                    ? "inline-flex items-center gap-2 rounded-[10px] border border-input bg-background px-5 py-3 text-sm font-semibold text-foreground hover:border-muted-foreground transition"
-                    : "inline-flex items-center gap-2 rounded-[10px] bg-primary text-primary-foreground px-5 py-3 text-sm font-semibold hover:bg-primary/90 transition"
-                }
-              >
-                <Eye className="h-4 w-4" /> Xem hồ sơ
-              </button>
-              <button
-                type="button"
-                onClick={resetWizard}
-                className="inline-flex items-center gap-2 rounded-[10px] border border-input bg-background px-5 py-3 text-sm font-semibold text-foreground hover:border-muted-foreground transition"
-              >
-                <Plus className="h-4 w-4" /> Số hoá tài sản khác
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const s = STEPS[step - 1];
+  const s = WIZARD_STEPS[step - 1];
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-muted">
-      <TopBar onExit={exit} onSaveDraft={saveDraft} savingDraft={create.isPending} />
+      <WizardTopBar
+        parentSlug={f.parentSlug}
+        childSlug={f.childSlug}
+        save={autosave.state}
+        onExit={phase === "done" ? finishNav : exit}
+        onSaveExit={phase === "wizard" ? saveExit : undefined}
+        savingExit={savingExit}
+      />
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-40">
-          <Rail step={step} go={go} reqs={reqs} />
+      <div ref={scroller} className="flex-1 overflow-y-auto">
+        {phase === "done" ? (
+          <WizardDoneScreen
+            title={f.title}
+            sentOrgNames={sentOrgNames}
+            sentToPlatform={sentToPlatform}
+            onTrack={finishedId ? () => navigate(ownerConsignmentPath(finishedId)) : undefined}
+            onView={finishNav}
+            onAnother={resetWizard}
+          />
+        ) : (
+          <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-start gap-6 px-3.5 pb-[120px] pt-5 sm:px-6 sm:pt-8 md:grid-cols-[190px_minmax(0,1fr)] lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-10">
+            <WizardNav step={step} go={go} reqs={reqs} sections={sections} />
+            <main className="flex min-w-0 flex-col gap-3">
+              <h1 className="mb-1.5 text-[22px] font-bold tracking-tight text-foreground">{s.title}</h1>
 
-          {/* Nhắc xuyên suốt các bước: hồ sơ đầy đủ = xử lý nhanh, bán nhanh, giá tốt hơn. */}
-          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-3">
-            <TrendingUp className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-            <p className="text-sm text-foreground">
-              Thông tin càng đầy đủ, hồ sơ càng nhanh được xử lý — tài sản dễ bán hơn và có cơ hội đạt mức giá cao hơn.
-            </p>
+              {/* Hồ sơ bị trả về nháp vì kết luận giám định tiêu cực: lý do phải hiện ngay đây (BR-GD-02). */}
+              {savedId && <AuthenticationOutcomeNotice postingId={savedId} />}
+
+              {step === 2 ? (
+                <StepInfo
+                  f={f}
+                  up={up}
+                  reqs={reqs}
+                  showErr={!!shown[2]}
+                  ai={ai}
+                  postingId={savedId}
+                  ensurePostingId={ensureDraft}
+                />
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {step === 1 && <Step1AssetType f={f} up={up} errs={errs} />}
+                  {step === 3 && <Step3LegalStatus f={f} up={up} errs={errs} postingId={savedId} ensurePostingId={ensureDraft} />}
+                  {step === 4 && (
+                    <Step4AuctionNeeds
+                      f={f}
+                      up={up}
+                      errs={errs}
+                      orgResults={orgResults}
+                      orgLoading={orgLoading}
+                      postingId={savedId}
+                      ensurePostingId={ensureDraft}
+                      gdReasons={gd.reasons}
+                      gdLotReason={gd.lotReason}
+                      canConsign={canConsign}
+                    />
+                  )}
+                  {step === 5 && <StepReview f={f} jump={go} missing={missing} chosenOrgNames={chosenOrgNames} />}
+                </div>
+              )}
+            </main>
           </div>
-
-          {/* Hồ sơ bị trả về nháp vì kết luận giám định tiêu cực: nháp mở lại ở wizard chứ không
-              ở trang chi tiết, nên lý do phải hiện ngay đây (BR-GD-02). */}
-          {savedId && (
-            <div className="mt-3">
-              <AuthenticationOutcomeNotice postingId={savedId} />
-            </div>
-          )}
-
-          <div className="pt-4 pb-4">
-            <h1 className="text-[23px] font-bold tracking-tight text-foreground">{s.title}</h1>
-          </div>
-
-          {step === 1 && <Step1AssetType f={f} up={up} errs={errs} />}
-          {step === 2 && (
-            <Step2GeneralInfo f={f} up={up} errs={errs} ai={ai} postingId={savedId} ensurePostingId={ensureDraft} />
-          )}
-          {step === 3 && <Step3LegalStatus f={f} up={up} errs={errs} postingId={savedId} ensurePostingId={ensureDraft} />}
-          {step === 4 && (
-            <Step4AuctionNeeds
-              f={f}
-              up={up}
-              errs={errs}
-              orgResults={orgResults}
-              orgLoading={orgLoading}
-              postingId={savedId}
-              ensurePostingId={ensureDraft}
-              gdReasons={gd.reasons}
-              gdLotReason={gd.lotReason}
-              canConsign={canConsign}
-            />
-          )}
-          {step === 5 && <StepReview f={f} jump={go} missing={missing} chosenOrgNames={chosenOrgNames} />}
-        </div>
+        )}
       </div>
 
-      {/* Footer bar */}
-      <div className="fixed left-0 right-0 bottom-0 z-[46] border-t border-border bg-background/95 backdrop-blur">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-          {step > 1 ? (
+      {phase === "wizard" && (
+        <WizardFooter
+          step={step}
+          onBack={() => go(step - 1)}
+          onExit={exit}
+          onNext={next}
+          stepMissing={stepMissing}
+          finishButton={
             <button
               type="button"
-              onClick={() => go(step - 1)}
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-input bg-background px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground hover:border-muted-foreground transition"
-            >
-              <ChevronLeft className="h-4 w-4" /> Quay lại
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={exit}
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-input bg-background px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground hover:border-muted-foreground transition"
-            >
-              <ArrowLeft className="h-4 w-4" /> Thoát
-            </button>
-          )}
-          <div className="flex-1" />
-          {step < 5 && shown[step] && stepMissing.length > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-warning max-w-[46ch]">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" /> Còn thiếu: {stepMissing.map((m) => m.label).join(", ")}
-            </div>
-          )}
-          {step === 5 && missing.length > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-warning">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" /> Còn {missing.length} mục bắt buộc
-            </div>
-          )}
-          {step < 5 ? (
-            <button
-              type="button"
-              onClick={next}
-              className="inline-flex items-center gap-1.5 rounded-[10px] bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold hover:bg-primary/90 transition"
-            >
-              Tiếp tục <ChevronRight className="h-4 w-4" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={finish}
+              onClick={() => void finish()}
               disabled={!!missing.length || busy}
-              className="inline-flex items-center gap-1.5 rounded-[10px] bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold hover:bg-primary/90 transition disabled:bg-muted-foreground/40 disabled:cursor-not-allowed"
+              className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-[9px] bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted-foreground/40"
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {finishLabel}
+              {busy ? <Loader2 className="h-[15px] w-[15px] animate-spin" /> : <Check className="h-[15px] w-[15px]" />} {finishLabel}
             </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Top bar ────────────────────────────────────────────────────────────────
-function TopBar({ onExit, onSaveDraft, savingDraft }: { onExit: () => void; onSaveDraft: () => void; savingDraft: boolean }) {
-  return (
-    <header className="shrink-0 sticky top-0 z-40 bg-card border-b border-border flex items-center gap-4 px-4 sm:px-6 h-[60px]">
-      <button
-        type="button"
-        onClick={onExit}
-        className="inline-flex items-center gap-2 text-[13.5px] text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg px-2 py-1.5 transition"
-      >
-        <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Tài sản của tôi</span>
-      </button>
-      <div className="pl-3.5 border-l border-border">
-        <div className="text-[15px] font-semibold text-foreground">Số hoá tài sản</div>
-      </div>
-      <div className="flex-1" />
-      <button
-        type="button"
-        onClick={onSaveDraft}
-        disabled={savingDraft}
-        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg px-2.5 py-1.5 transition disabled:opacity-60"
-      >
-        {savingDraft ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Lưu nháp
-      </button>
-    </header>
-  );
-}
-
-// ─── Rail tiến độ (stepper ngang) ─────────────────────────────────────────────
-function Rail({ step, go, reqs }: { step: number; go: (n: number) => void; reqs: ReturnType<typeof requirements> }) {
-  return (
-    <div className="flex items-center gap-1.5 pb-1">
-      {STEPS.map((s, i) => {
-        const rs = reqs.filter((r) => r.step === s.n);
-        const done = rs.length > 0 && rs.every((r) => r.ok);
-        const active = step === s.n;
-        return (
-          <div key={s.n} className="flex items-center gap-1.5 flex-1 last:flex-none">
-            <button type="button" onClick={() => go(s.n)} className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 shrink-0">
-              <span
-                className={`w-6 h-6 rounded-full grid place-items-center text-xs font-bold shrink-0 border-[1.5px] ${
-                  active
-                    ? "bg-primary border-primary text-primary-foreground"
-                    : done
-                    ? "bg-success border-success text-white"
-                    : "bg-card border-input text-muted-foreground"
-                }`}
-              >
-                {done && !active ? <Check className="h-3.5 w-3.5" /> : s.n}
-              </span>
-              <span className={`text-[13.5px] hidden md:block ${active ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
-                {s.label}
-              </span>
-            </button>
-            {i < STEPS.length - 1 && <span className={`flex-1 h-px min-w-3 ${done ? "bg-success" : "bg-border"}`} />}
-          </div>
-        );
-      })}
+          }
+        />
+      )}
     </div>
   );
 }

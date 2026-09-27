@@ -5,7 +5,6 @@ import {
   AlertCircle,
   Check,
   CheckCircle2,
-  Coins,
   Copy,
   Loader2,
   Smartphone,
@@ -14,10 +13,13 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useCredits } from "@/hooks/useCredits";
+import { useOwnerSubscription } from "@/hooks/useOwnerSubscription";
+import { coverageFor } from "@/lib/ownerSubscription/coverage";
 import { Asset3dRpcError, summarizeScans, usePostingScans, useStartScan } from "@/hooks/useAsset3dScans";
 import { getVariantCost } from "@/lib/serviceCatalog";
-import { buildScanDeeplink, SCAN_EXPIRY_HOURS, SCAN_PARTNER_NAME, SCAN_STEPS } from "@/lib/scan3d/partner";
+import { buildScanDeeplink, SCAN_PARTNER_NAME, SCAN_STEPS } from "@/lib/scan3d/partner";
 import type { StartedScan } from "@/types/asset3d";
+import { Add3dConfirmStep } from "./Add3dConfirmStep";
 
 interface Add3dDialogProps {
   open: boolean;
@@ -29,12 +31,14 @@ interface Add3dDialogProps {
   resolvePostingId: () => Promise<string | null>;
   /** Mở thẳng bước quét của một phiên đang chạy (không qua xác nhận, không trừ credit). */
   resumeScan?: StartedScan | null;
+  /** Trạm của hồ sơ (null = tenant Cá nhân) — chỉ để xem trước gói thuê bao; server tự quyết. */
+  workspaceId?: string | null;
 }
 
 type Step = "method" | "confirm" | "scan";
 
-/** Luồng "Thêm 3D": chọn cách → xác nhận trừ credit → mở app đối tác & chờ kết quả. */
-export function Add3dDialog({ open, onOpenChange, resolvePostingId, resumeScan }: Add3dDialogProps) {
+/** Luồng "Thêm 3D": chọn cách → xác nhận (gói thuê bao / trừ credit) → mở app đối tác & chờ kết quả. */
+export function Add3dDialog({ open, onOpenChange, resolvePostingId, resumeScan, workspaceId }: Add3dDialogProps) {
   const [step, setStep] = useState<Step>("method");
   const [started, setStarted] = useState<StartedScan | null>(null);
 
@@ -46,8 +50,11 @@ export function Add3dDialog({ open, onOpenChange, resolvePostingId, resumeScan }
   }, [open, resumeScan]);
   const [preparing, setPreparing] = useState(false);
   const [insufficient, setInsufficient] = useState(false);
+  const [quotaExhausted, setQuotaExhausted] = useState(false);
 
   const { balance } = useCredits();
+  const { data: sub } = useOwnerSubscription(open ? workspaceId : null);
+  const coverage = coverageFor(sub, "scan_3d_owner");
   const start = useStartScan();
   const { data: cost = 0 } = useQuery({
     queryKey: ["variant-cost", "scan_3d_owner"],
@@ -61,12 +68,14 @@ export function Add3dDialog({ open, onOpenChange, resolvePostingId, resumeScan }
       setStep("method");
       setStarted(null);
       setInsufficient(false);
+      setQuotaExhausted(false);
     }
   };
 
   const confirm = async () => {
     setPreparing(true);
     setInsufficient(false);
+    setQuotaExhausted(false);
     try {
       const postingId = await resolvePostingId();
       if (!postingId) return;
@@ -74,9 +83,16 @@ export function Add3dDialog({ open, onOpenChange, resolvePostingId, resumeScan }
       setStarted(scan);
       setStep("scan");
       if (scan.reused) toast.info("Hồ sơ đang có một phiên quét chưa xong — tiếp tục phiên đó, không trừ thêm credit.");
-      else if (scan.cost > 0) toast.success(`Đã trừ ${scan.cost} credit cho lượt quét 3D.`);
+      else if (scan.covered) {
+        toast.success(
+          scan.remaining == null
+            ? "Đã dùng 1 lượt quét 3D của gói thuê bao."
+            : `Đã dùng 1 lượt quét 3D của gói — còn ${scan.remaining} lượt tháng này.`,
+        );
+      } else if (scan.cost > 0) toast.success(`Đã trừ ${scan.cost} credit cho lượt quét 3D.`);
     } catch (err) {
       if (err instanceof Asset3dRpcError && err.reason === "insufficient") setInsufficient(true);
+      else if (err instanceof Asset3dRpcError && err.reason === "quota_exhausted") setQuotaExhausted(true);
       else toast.error(err instanceof Error ? err.message : "Không bắt đầu được phiên quét.");
     } finally {
       setPreparing(false);
@@ -111,44 +127,16 @@ export function Add3dDialog({ open, onOpenChange, resolvePostingId, resumeScan }
         )}
 
         {step === "confirm" && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Phí quét 3D</span>
-                <span className="font-semibold text-foreground">{cost} credit</span>
-              </div>
-              <div className="mt-1.5 flex items-center justify-between">
-                <span className="text-muted-foreground">Số dư hiện tại</span>
-                <span className="font-medium text-foreground">{balance} credit</span>
-              </div>
-              <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
-                <Coins className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Hoàn lại đủ credit nếu quét không thành công hoặc sau {SCAN_EXPIRY_HOURS} giờ chưa có kết quả.
-              </p>
-            </div>
-
-            {insufficient && (
-              <div className="flex items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                <div className="space-y-2">
-                  <p className="text-foreground">Số dư không đủ để quét 3D. Hồ sơ nháp đã được lưu.</p>
-                  <Button size="sm" variant="outline" onClick={() => window.open("/chu-tai-san/credits", "_blank")}>
-                    Nạp credit (mở tab mới)
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setStep("method")} disabled={preparing}>
-                Quay lại
-              </Button>
-              <Button onClick={confirm} disabled={preparing}>
-                {preparing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Xác nhận & bắt đầu quét
-              </Button>
-            </div>
-          </div>
+          <Add3dConfirmStep
+            cost={cost}
+            balance={balance}
+            coverage={coverage}
+            insufficient={insufficient}
+            quotaExhausted={quotaExhausted}
+            preparing={preparing}
+            onBack={() => setStep("method")}
+            onConfirm={confirm}
+          />
         )}
 
         {step === "scan" && started && <ScanStep scan={started} onClose={() => close(false)} />}
@@ -228,7 +216,8 @@ function ScanStep({ scan, onClose }: { scan: StartedScan; onClose: () => void })
           <p className="font-semibold text-foreground">Quét không thành công</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {mine.error_message ?? "Đối tác không trả được model."}
-            {mine.refunded_at && ` Đã hoàn ${mine.credit_cost} credit.`}
+            {mine.refunded_at && mine.credit_cost > 0 && ` Đã hoàn ${mine.credit_cost} credit.`}
+            {mine.refunded_at && mine.subscription_usage_id && " Đã trả lại lượt quét cho gói thuê bao."}
           </p>
         </div>
         <Button onClick={onClose}>Đóng</Button>

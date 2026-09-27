@@ -4,8 +4,8 @@ import { AUCTION_FORMAT_LABELS, EXPECTED_TIMELINE_LABELS, type AuctionFormat, ty
 import type { OrgMatchResult } from "@/lib/orgMatching";
 import type { AuthenticationRequiredReason } from "@/types/authentication";
 import { AssetBriefEditor } from "../AssetBriefEditor";
-import { AuctionConsultGroup } from "./AuctionConsultGroup";
-import { AuthenticationGroup } from "./AuthenticationGroup";
+import { PostingAuctionConsultCard } from "@/components/auction-consult/PostingAuctionConsultCard";
+import { PostingAuthenticationCard } from "@/components/authentication/PostingAuthenticationCard";
 import { Group, TextField, SelectField, WideRadio, Pill } from "../fields";
 import { groupNumber, parseNumber, vnWords } from "../format";
 import { OrgPicker } from "../OrgPicker";
@@ -40,7 +40,7 @@ function recipientLabel(ids: string[], results: OrgMatchResult[]): string | null
   return `${ids.length} tổ chức`;
 }
 
-/** Bước 4: quyết định đấu giá (có/chưa) → nếu có: giá + hình thức + tổ chức + tùy chọn; giám định. */
+/** Bước 4: tư vấn đấu giá (banner) → quyết định đấu giá (có/chưa) → thẩm định (banner) → nếu có: giá + hình thức + tổ chức. */
 export function Step4AuctionNeeds({
   f,
   up,
@@ -57,6 +57,20 @@ export function Step4AuctionNeeds({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Banner dịch vụ đầu bước (thiết kế v3) — tuỳ chọn, không chặn "Tiếp tục" /
+          "Hoàn tất" (BR-CNS-04: đề xuất chỉ là gợi ý). Gửi yêu cầu tự lưu nháp. */}
+      <PostingAuctionConsultCard
+        variant="banner"
+        postingId={postingId}
+        mode="owner"
+        resolvePostingId={ensurePostingId}
+        prefill={{
+          startingPrice: f.pricingMode === "self" ? Number(f.startingPrice) || null : null,
+          auctionFormat: f.auctionFormat || null,
+          expectedTimeline: f.expectedTimeline || null,
+        }}
+      />
+
       <Group icon={<Landmark className="h-4 w-4" />} title="Nhu cầu đấu giá">
         <label className="block text-[13.5px] font-semibold text-foreground mb-2">
           Bạn có muốn đưa tài sản này ra đấu giá?<span className="ml-0.5 text-destructive">*</span>
@@ -84,6 +98,17 @@ export function Step4AuctionNeeds({
           </p>
         )}
       </Group>
+
+      {/* Thẩm định (giám định) ngay dưới quyết định đấu giá, trước giá khởi điểm (thiết kế v3).
+          Bắt buộc với cổ vật / khi sàn đánh dấu — chặn "Hoàn tất" chứ không chặn "Tiếp tục" (BR-GD-03). */}
+      <PostingAuthenticationCard
+        variant="banner"
+        postingId={postingId}
+        mode="owner"
+        resolvePostingId={ensurePostingId}
+        requiredReasons={gdReasons}
+        lotReason={gdLotReason}
+      />
 
       {want === "yes" && (
         <>
@@ -174,8 +199,6 @@ export function Step4AuctionNeeds({
               </div>
             </div>
           </Group>
-
-          <AuctionConsultGroup f={f} postingId={postingId} ensurePostingId={ensurePostingId} />
 
           <Group
             icon={<Clock className="h-4 w-4" />}
@@ -276,15 +299,6 @@ export function Step4AuctionNeeds({
           </Group>
         </>
       )}
-
-      {/* Cuối bước, sau giá khởi điểm — giá quyết định chính sách bắt buộc giám định (BR-GD-03). */}
-      <AuthenticationGroup
-        postingId={postingId}
-        ensurePostingId={ensurePostingId}
-        reasons={gdReasons}
-        lotReason={gdLotReason}
-        isAntique={f.parentSlug === "co-vat-suu-tam"}
-      />
     </div>
   );
 }

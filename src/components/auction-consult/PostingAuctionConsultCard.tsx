@@ -8,6 +8,7 @@ import { ActiveAuctionConsult } from "./ActiveAuctionConsult";
 import { AuctionConsultHistory } from "./AuctionConsultHistory";
 import { AuctionConsultResult } from "./AuctionConsultResult";
 import { RequestAuctionConsultDialog, type AuctionConsultPrefill } from "./RequestAuctionConsultDialog";
+import { ServiceBanner, ServiceBannerButton } from "@/components/asset-posting/ServiceBanner";
 
 interface PostingAuctionConsultCardProps {
   /** null khi hồ sơ trong wizard chưa từng được lưu. */
@@ -22,6 +23,8 @@ interface PostingAuctionConsultCardProps {
   prefill?: AuctionConsultPrefill;
   /** Hiện các phiên bản cũ (trang hồ sơ). */
   showHistory?: boolean;
+  /** "banner": banner gọn đầu bước 4 của wizard số hoá (thiết kế v3). */
+  variant?: "card" | "banner";
 }
 
 /** Khối "Tư vấn đấu giá" của một hồ sơ số hoá — yêu cầu đang chạy, đề xuất hiện hành, phiên bản trước. */
@@ -32,6 +35,7 @@ export function PostingAuctionConsultCard({
   locked,
   prefill,
   showHistory,
+  variant = "card",
 }: PostingAuctionConsultCardProps) {
   const [open, setOpen] = useState(false);
   // Người xem / Cán bộ ngoài phạm vi chi nhánh chỉ xem.
@@ -40,6 +44,45 @@ export function PostingAuctionConsultCard({
   const { active, current, versions } = summarizeAuctionConsultations(rows);
   const resolve = resolvePostingId ?? (async () => postingId);
   const loading = !!postingId && isLoading;
+
+  const canRequest = mode === "owner" && canWrite && !loading && !active && !locked;
+  const dialog = mode === "owner" && canWrite && (
+    <RequestAuctionConsultDialog
+      open={open}
+      onOpenChange={setOpen}
+      resolvePostingId={resolve}
+      prefill={prefill}
+      isFollowUp={!!current}
+    />
+  );
+
+  if (variant === "banner") {
+    return (
+      <>
+        <ServiceBanner
+          icon={<Lightbulb />}
+          title="Tư vấn đấu giá"
+          desc="Đề xuất hình thức, giá khởi điểm, bước giá, tiền đặt trước"
+          status={active ? { text: "Đã gửi yêu cầu", tone: "warn" } : current ? { text: "Đã có đề xuất", tone: "ok" } : null}
+          action={
+            canRequest && (
+              <ServiceBannerButton onClick={() => setOpen(true)} quiet={!!current}>
+                {current ? "Yêu cầu phương án mới" : "Yêu cầu tư vấn đấu giá"}
+              </ServiceBannerButton>
+            )
+          }
+        >
+          {(active || current) && (
+            <>
+              {current && <AuctionConsultResult row={current} mode={mode} />}
+              {active && <ActiveAuctionConsult row={active} mode={mode} />}
+            </>
+          )}
+        </ServiceBanner>
+        {dialog}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -64,7 +107,7 @@ export function PostingAuctionConsultCard({
 
       {active && <ActiveAuctionConsult row={active} mode={mode} />}
 
-      {mode === "owner" && canWrite && !loading && !active && !locked && (
+      {canRequest && (
         <Button type="button" variant={current ? "outline" : "default"} size="sm" onClick={() => setOpen(true)}>
           <Lightbulb className="mr-1.5 h-3.5 w-3.5" />
           {current ? "Yêu cầu phương án mới" : "Yêu cầu tư vấn đấu giá"}
@@ -73,15 +116,7 @@ export function PostingAuctionConsultCard({
 
       {showHistory && <AuctionConsultHistory versions={versions} mode={mode} />}
 
-      {mode === "owner" && canWrite && (
-        <RequestAuctionConsultDialog
-          open={open}
-          onOpenChange={setOpen}
-          resolvePostingId={resolve}
-          prefill={prefill}
-          isFollowUp={!!current}
-        />
-      )}
+      {dialog}
     </div>
   );
 }

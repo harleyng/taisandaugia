@@ -140,18 +140,18 @@ describe("OwnerAssetsBoard", () => {
     expect(screen.getByText("Máy xúc Komatsu")).toBeInTheDocument();
   });
 
-  it("nút Khai kết quả mở dialog với đúng tài sản, không mở ngăn chi tiết", () => {
+  it("nút Khai kết quả mở dialog với đúng tài sản, không mở popup chi tiết", () => {
     renderBoard();
     fireEvent.click(screen.getByRole("button", { name: "Khai kết quả" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Khai kết quả: Nhà phố Lê Văn Sỹ");
   });
 
-  it("bấm dòng mở ngăn chi tiết với việc tiếp theo", () => {
+  it("bấm dòng mở popup chi tiết với việc tiếp theo", () => {
     renderBoard();
     fireEvent.click(screen.getByText("Máy xúc Komatsu"));
-    const sheet = screen.getByRole("dialog");
-    expect(within(sheet).getByText("Đang chờ tổ chức")).toBeInTheDocument();
-    expect(within(sheet).getByText(/chậm tiến độ/)).toBeInTheDocument();
+    const detail = screen.getByRole("dialog");
+    expect(within(detail).getByText("Đang chờ tổ chức")).toBeInTheDocument();
+    expect(within(detail).getByText(/chậm tiến độ/)).toBeInTheDocument();
   });
 
   it("tab Sàn tìm thấy: Không phải / Xác nhận / Xác nhận tất cả", () => {

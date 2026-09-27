@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-09-27 — Gói thuê bao tổ chức chủ tài sản (hạn mức tháng thay credit)
+
+**Context:** Tổ chức chủ tài sản chuyên nghiệp muốn trả theo kỳ thay vì credit từng lượt; mỗi tổ chức một cấu hình do admin đặt; cá nhân vẫn credit. Người dùng chốt: hạn mức THEO TÍNH NĂNG / tháng, hết hạn mức mặc định CHẶN (admin đổi được sang trừ credit), trả online VNPay + admin kích hoạt tay, chỉ thành viên TRỰC TIẾP của Trạm được bao, kỳ do admin đặt, reset tháng dương lịch VN.
+**Decision:**
+- 1 dòng `owner_subscriptions` / Trạm (không có mẫu gói) + `_entitlements` (variant_key, monthly_quota NULL = không giới hạn) + `_terms` / `_usage` / `_events` chỉ ghi thêm; mọi ghi qua RPC, bảng chỉ admin đọc (module `goi-thue-bao`).
+- `_owner_sub_consume` nối vào `start_asset_3d_scan` (dựng từ bản live) và RPC MỚI `owner_charge_portfolio_report` (trừ báo cáo danh mục chuyển từ client lên server). Hoàn quét 3D ⇒ dòng đảo lượt, không hoàn credit.
+- `_charge_owner_feature_credits` = chỗ DUY NHẤT trừ credit tính năng chủ tài sản ⇒ Phase 15d chỉ đổi ví ở đây.
+- Mig `20260927200000` + `…200100` áp qua psql; SQL 58 PASS (ROLLBACK) + race 2 phiên; E2E trình duyệt 18/18 (tài khoản `sub-*@example.com`, đã xoá).
+**Consequences:** Thêm tính năng vào gói = sửa `owner_sub_supported_variants()` + `SUPPORTED_SUB_VARIANTS` + nối consume. `owner_report_views` còn policy INSERT legacy cho bản production cũ — bỏ sau khi deploy. Không hoàn tiền tự động khi huỷ; doanh thu ghi trọn kỳ lúc trả (không phân bổ).
+
 ## 2026-09-27 — Vai trò tuỳ chỉnh Trạm Điều Hành (module × thao tác, DB chặn ghi)
 
 **Context:** Người dùng muốn trang quản lý vai trò cho cổng chủ tài sản như admin; trước đó 3 vai trò cố định + `owner_ws_can` CASE cứng (§A2 "upgrade when needed"). Người dùng chốt: ma trận module × thao tác, DB chặn GHI theo module, chống leo quyền theo tập con, Tác nghiệp tách 3 module.

@@ -102,6 +102,8 @@ export interface CreatePostingArgs {
   status: Extract<AssetPostingStatus, "draft" | "active">;
   /** Có giá trị = cập nhật hồ sơ nháp đã có; bỏ trống = tạo mới. */
   postingId?: string;
+  /** Tự lưu nháp ngầm của wizard — không toast (thanh trên tự báo trạng thái). */
+  silent?: boolean;
 }
 
 export function useCreatePosting() {
@@ -148,9 +150,11 @@ export function useCreatePosting() {
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
+      if (vars.silent) return;
       toast.success(vars.status === "draft" ? "Đã lưu nháp hồ sơ tài sản." : "Đã số hoá tài sản thành công.");
     },
-    onError: (err) => {
+    onError: (err, vars) => {
+      if (vars.silent) return;
       // Cổng giám định (trigger asset_postings_authentication_gate) trả mã GD_* thô.
       toast.error(
         authenticationGateMessage(err) ??

@@ -10,10 +10,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useCredits } from '@/hooks/useCredits'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
+import { useOwnerSubscription } from '@/hooks/useOwnerSubscription'
+import { EXPIRY_WARNING_DAYS, daysLeft, formatSubDate, vnToday } from '@/lib/ownerSubscription/status'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import { ownerWsAccessLabel } from '@/lib/ownerWorkspace/roles'
-import { ArrowLeft, ChevronsUpDown, CreditCard, LogOut, Plus } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, ChevronsUpDown, CreditCard, LogOut, Plus } from 'lucide-react'
 
 interface Props {
   /** Đóng drawer trên mobile trước khi chuyển trang. */
@@ -28,7 +30,12 @@ export function OwnerPortalAccountMenu({ onNavigate }: Props) {
   const navigate = useNavigate()
   const { balance } = useCredits()
   const { userId } = useAuth()
-  const { workspace, roleName, accessVia, isPersonal } = useOwnerWorkspace()
+  const { workspace, workspaceId, roleName, accessVia, isPersonal } = useOwnerWorkspace()
+  // Gói thuê bao của Trạm đang chọn — chỉ hiện dòng khi gói đã / đang có hiệu lực.
+  const { data: sub } = useOwnerSubscription(isPersonal ? null : workspaceId)
+  const subShown = !!sub && ['active', 'scheduled', 'expired'].includes(sub.status)
+  const subDaysLeft = sub ? daysLeft(sub.ends_on, vnToday()) : null
+  const subWarn = !!sub && (sub.status === 'expired' || (subDaysLeft !== null && subDaysLeft <= EXPIRY_WARNING_DAYS))
   const [kycNames, setKycNames] = useState<{ org: string; individual: string }>({ org: '', individual: '' })
   // Thành viên (kể cả người được mời) thấy tên đơn vị; tenant Cá nhân thấy tên KYC cá nhân.
   const displayName = isPersonal
@@ -65,6 +72,18 @@ export function OwnerPortalAccountMenu({ onNavigate }: Props) {
 
   return (
     <div className="border-t border-sidebar-border px-3 py-3 shrink-0 space-y-1">
+      {subShown && sub && (
+        <button
+          onClick={() => go('/chu-tai-san/goi-thue-bao')}
+          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        >
+          <BadgeCheck className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+          <span className="min-w-0 flex-1 truncate text-left">Gói</span>
+          <span className={subWarn ? 'font-semibold text-warning' : 'text-sidebar-foreground'}>
+            {sub.status === 'expired' ? 'Hết hạn' : `đến ${formatSubDate(sub.ends_on)}`}
+          </span>
+        </button>
+      )}
       <button
         onClick={() => go('/chu-tai-san/credits')}
         className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"

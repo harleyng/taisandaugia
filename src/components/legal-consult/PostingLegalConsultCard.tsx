@@ -8,6 +8,7 @@ import { ActiveLegalConsult } from "./ActiveLegalConsult";
 import { LegalConsultHistory } from "./LegalConsultHistory";
 import { LegalConsultResult } from "./LegalConsultResult";
 import { RequestLegalConsultDialog } from "./RequestLegalConsultDialog";
+import { ServiceBanner, ServiceBannerButton } from "@/components/asset-posting/ServiceBanner";
 
 interface PostingLegalConsultCardProps {
   /** null khi hồ sơ trong wizard chưa từng được lưu. */
@@ -22,6 +23,8 @@ interface PostingLegalConsultCardProps {
   postingDocPaths?: string[];
   /** Hiện lịch sử các phiên bản cũ (trang hồ sơ). */
   showHistory?: boolean;
+  /** "banner": banner gọn đầu bước 3 của wizard số hoá (thiết kế v3). */
+  variant?: "card" | "banner";
 }
 
 /** Khối "Tư vấn pháp lý" của một hồ sơ số hoá — lần đang chạy, kết quả hiện hành, lịch sử. */
@@ -32,6 +35,7 @@ export function PostingLegalConsultCard({
   locked,
   postingDocPaths = [],
   showHistory,
+  variant = "card",
 }: PostingLegalConsultCardProps) {
   const [open, setOpen] = useState(false);
   // Người xem / Cán bộ ngoài phạm vi chi nhánh chỉ xem.
@@ -46,6 +50,45 @@ export function PostingLegalConsultCard({
     () => [...postingDocPaths, ...(rows[0]?.submitted_doc_paths ?? [])],
     [postingDocPaths, rows],
   );
+
+  const canRequest = mode === "owner" && canWrite && !loading && !active && !locked;
+  const dialog = mode === "owner" && canWrite && (
+    <RequestLegalConsultDialog
+      open={open}
+      onOpenChange={setOpen}
+      resolvePostingId={resolve}
+      availableDocPaths={available}
+      isFollowUp={!!current}
+    />
+  );
+
+  if (variant === "banner") {
+    return (
+      <>
+        <ServiceBanner
+          icon={<Scale />}
+          title="Tư vấn pháp lý"
+          desc="Chuyên gia rà soát giấy tờ và chỉ ra mục nào còn thiếu"
+          status={active ? { text: "Đã gửi yêu cầu", tone: "warn" } : current ? { text: "Đã có kết quả tư vấn", tone: "ok" } : null}
+          action={
+            canRequest && (
+              <ServiceBannerButton onClick={() => setOpen(true)} quiet={!!current}>
+                {current ? "Bổ sung & rà soát lại" : "Yêu cầu tư vấn pháp lý"}
+              </ServiceBannerButton>
+            )
+          }
+        >
+          {(active || current) && (
+            <>
+              {current && <LegalConsultResult row={current} />}
+              {active && <ActiveLegalConsult row={active} mode={mode} />}
+            </>
+          )}
+        </ServiceBanner>
+        {dialog}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -70,7 +113,7 @@ export function PostingLegalConsultCard({
 
       {active && <ActiveLegalConsult row={active} mode={mode} />}
 
-      {mode === "owner" && canWrite && !loading && !active && !locked && (
+      {canRequest && (
         <Button type="button" variant={current ? "outline" : "default"} size="sm" onClick={() => setOpen(true)}>
           <Scale className="mr-1.5 h-3.5 w-3.5" />
           {current ? "Bổ sung & rà soát lại" : "Yêu cầu tư vấn pháp lý"}
@@ -79,15 +122,7 @@ export function PostingLegalConsultCard({
 
       {showHistory && <LegalConsultHistory versions={versions} />}
 
-      {mode === "owner" && canWrite && (
-        <RequestLegalConsultDialog
-          open={open}
-          onOpenChange={setOpen}
-          resolvePostingId={resolve}
-          availableDocPaths={available}
-          isFollowUp={!!current}
-        />
-      )}
+      {dialog}
     </div>
   );
 }

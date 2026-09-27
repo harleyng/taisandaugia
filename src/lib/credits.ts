@@ -347,36 +347,8 @@ export const unlockOwner = async (
   return { ok: true };
 };
 
-export const chargeOwnerReport = async (
-  userId: string,
-  workspaceId: string,
-  // Ghi thẳng vào cột JSONB owner_report_views.filter_combo — dùng Json thay
-  // `object` để khớp kiểu sinh tự động.
-  filterCombo: Json,
-  isDefault: boolean,
-): Promise<{ ok: boolean; reason?: "insufficient" }> => {
-  const cost = isDefault ? 0 : await getVariantCost("report_portfolio_owner");
-  if (cost > 0) {
-    await ensureCreditsRow(userId);
-    const ok = await deductCredits(userId, cost);
-    if (!ok) return { ok: false, reason: "insufficient" };
-    await supabase.from("credit_transactions").insert({
-      user_id: userId,
-      type: "owner_report_view",
-      description: "Báo cáo danh mục tài sản",
-      credit_delta: -cost,
-      variant_key: "report_portfolio_owner",
-    });
-  }
-  await supabase.from("owner_report_views").insert({
-    workspace_id: workspaceId,
-    user_id: userId,
-    filter_combo: filterCombo,
-    is_default: isDefault,
-    credits_charged: cost,
-  });
-  return { ok: true };
-};
+// Báo cáo danh mục (chủ tài sản): trừ ở SERVER — RPC owner_charge_portfolio_report
+// (hạn mức gói thuê bao của Trạm trước, rồi mới tới credit). Xem useOwnerReportAccess.
 
 export const unlockDeepReportPeriod = async (
   userId: string,

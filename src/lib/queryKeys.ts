@@ -67,6 +67,8 @@ export const qk = {
   ownerDigitizePostings: (userId: string | null | undefined, tenantKey: string | null) =>
     ["my-postings", userId, tenantKey, "digitize"] as const,
   postingDetail: (id?: string | null) => ["posting-detail", id] as const,
+  /** Mã HS / loại / nơi / ảnh của các hồ sơ trong menu "Hợp đồng" (khoá = danh sách id đã sắp). */
+  ownerPostingBriefs: (ids: readonly string[]) => ["owner-posting-briefs", ...ids] as const,
   consignment: {
     orgRequests: (auctionOrgId?: string | null) => ["org-service-requests", auctionOrgId] as const,
     orgCounts: (auctionOrgId?: string | null) => ["org-service-request-counts", auctionOrgId] as const,
@@ -243,6 +245,9 @@ export const qk = {
     all: ["sale-contracts"] as const,
     byOrg: (orgId?: string | null) => ["sale-contracts", "org", orgId] as const,
     byId: (id?: string | null) => ["sale-contracts", "id", id] as const,
+    /** Hồ sơ số hoá của hợp đồng mua bán (qua hợp đồng ký gửi gốc) — không đổi nữa. */
+    postingOf: (consignmentContractId?: string | null) =>
+      ["sale-contracts", "posting-of", consignmentContractId] as const,
     detail: (id?: string | null) => ["sale-contracts", "id", id, "detail"] as const,
     mine: (userId?: string | null) => ["sale-contracts", "mine", userId] as const,
     ownerMine: (userId?: string | null) => ["sale-contracts", "owner", userId] as const,
@@ -456,6 +461,19 @@ export const qk = {
   },
   /** Bảng giá biến thể — nguồn giá của toàn app, đọc ở nhiều nơi. */
   serviceCatalog: ["service-catalog"] as const,
+
+  // ─── Gói thuê bao tổ chức chủ tài sản ────────────────────────────────────
+  /** Trạng thái + hạn mức gói của một Trạm. Quét 3D / báo cáo danh mục tiêu hạn mức
+   *  ⇒ invalidate `all` sau khi thao tác. */
+  ownerSubscription: {
+    all: ["owner-subscription"] as const,
+    byWorkspace: (workspaceId?: string | null) => ["owner-subscription", workspaceId] as const,
+    quote: (subId?: string | null) => ["owner-subscription", "quote", subId] as const,
+  },
+  adminOwnerSubscriptions: {
+    all: ["admin-owner-subscriptions"] as const,
+    detail: (workspaceId?: string | null) => ["admin-owner-subscriptions", workspaceId] as const,
+  },
 
   // ─── Marketing ───────────────────────────────────────────────────────────
   campaignRecipients: {

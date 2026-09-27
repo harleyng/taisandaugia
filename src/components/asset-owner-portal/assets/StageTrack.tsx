@@ -14,7 +14,7 @@ export function StageTrack({ phase }: { phase: AssetPhase }) {
   );
 }
 
-/** Đường đi 4 bước trong ngăn chi tiết; bước hiện tại in tên bước cụ thể. */
+/** Đường đi 4 bước trong popup chi tiết; bước hiện tại in tên bước cụ thể. */
 export function StagePath({ phase, currentLabel }: { phase: AssetPhase; currentLabel: string }) {
   const step = ASSET_PHASE_META[phase].step;
   return (

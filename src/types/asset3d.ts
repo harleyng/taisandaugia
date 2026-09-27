@@ -22,4 +22,8 @@ export interface StartedScan {
   /** true = trả lại phiên quét đang chạy, không trừ credit. */
   reused: boolean;
   cost: number;
+  /** true = gói thuê bao của Trạm bao lượt quét này (không trừ credit). */
+  covered?: boolean;
+  /** Lượt quét còn lại của gói trong tháng khi covered; null = không giới hạn. */
+  remaining?: number | null;
 }

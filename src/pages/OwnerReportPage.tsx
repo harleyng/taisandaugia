@@ -4,7 +4,7 @@ import { BenchmarkBlock } from "@/components/asset-owner-portal/benchmark/Benchm
 import { useNavigate } from "react-router-dom";
 import {
   Loader2, SlidersHorizontal, X, ChevronDown, ChevronUp,
-  FileBarChart2, Lock, Coins, ArrowUpDown, Check, ChevronsUpDown,
+  FileBarChart2, Lock, ArrowUpDown, Check, ChevronsUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -38,11 +38,12 @@ import { isSoldRow, useOwnerPortfolioMetrics, type PortfolioFilter } from "@/hoo
 import { useOwnerReportAccess } from "@/hooks/useOwnerReportAccess";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useCredits } from "@/hooks/useCredits";
-import { OWNER_REPORT_COST } from "@/lib/credits";
+import { useServiceCatalog } from "@/hooks/useServiceCatalog";
+import { useOwnerSubscription } from "@/hooks/useOwnerSubscription";
+import { coverageFor, coverageLabel } from "@/lib/ownerSubscription/coverage";
+import { OWNER_SUBSCRIPTION_PATH } from "@/lib/ownerSubscription/paths";
+import { ReportUnlockDialog } from "@/components/asset-owner-portal/report/ReportUnlockDialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog, DialogContent,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -259,6 +260,9 @@ const OwnerReportPage = () => {
   const { metrics: allMetrics } = useOwnerPortfolioMetrics(workspaceId, {});
   const { charge } = useOwnerReportAccess(workspaceId ?? "");
   const { balance } = useCredits();
+  const { costOf } = useServiceCatalog();
+  const { data: sub } = useOwnerSubscription(workspaceId);
+  const coverage = coverageFor(sub, "report_portfolio_owner");
 
   // ── filter helpers ─────────────────────────────────────────────────────────
   const toggleSlug = (val: string) => {
@@ -286,7 +290,10 @@ const OwnerReportPage = () => {
     }
   }, [filter]);
 
-  const cost = isDefaultFilter(filter) ? 0 : OWNER_REPORT_COST;
+  // Giá lấy từ catalog DB (service_variants) — cùng nguồn server dùng để trừ.
+  const cost = isDefaultFilter(filter) ? 0 : costOf("report_portfolio_owner");
+  const covered = cost > 0 && coverage.kind === "covered";
+  const blocked = cost > 0 && coverage.kind === "blocked";
 
   const handleUnlock = () => {
     if (cost === 0) {
@@ -294,6 +301,11 @@ const OwnerReportPage = () => {
         onSuccess: () => setUnlocked(true),
         onError: () => setUnlocked(true), // free — still unlock even if logging fails
       });
+    } else if (blocked) {
+      navigate(OWNER_SUBSCRIPTION_PATH);
+    } else if (covered) {
+      // Gói bao ⇒ không cần xác nhận trừ credit; server vẫn quyết định lần cuối.
+      handleConfirm();
     } else {
       setConfirmOpen(true);
     }
@@ -305,6 +317,15 @@ const OwnerReportPage = () => {
         setConfirmOpen(false);
         if (result.ok) {
           setUnlocked(true);
+          if (result.mode === "covered") {
+            toast.success(
+              result.remaining == null
+                ? "Đã dùng 1 lượt xem của gói thuê bao."
+                : `Đã dùng 1 lượt xem của gói — còn ${result.remaining} lượt tháng này.`,
+            );
+          }
+        } else if (result.reason === "quota_exhausted") {
+          toast.error("Đã dùng hết lượt xem báo cáo của gói tháng này — liên hệ quản trị / gia hạn.");
         } else {
           toast.error("Không đủ tín dụng. Vui lòng nạp thêm.");
         }
@@ -562,7 +583,9 @@ const OwnerReportPage = () => {
               <p className="text-[12.5px] text-green-300/80 mt-0.5">
                 {cost === 0
                   ? "Xem toàn bộ danh mục — miễn phí"
-                  : `Bộ lọc tùy chỉnh · ${cost} tín dụng / lần xem`}
+                  : covered || blocked
+                    ? `Bộ lọc tùy chỉnh · ${coverageLabel(coverage, "report_portfolio_owner")}`
+                    : `Bộ lọc tùy chỉnh · ${cost} tín dụng / lần xem`}
               </p>
             </div>
           </div>
@@ -572,7 +595,13 @@ const OwnerReportPage = () => {
             className="bg-yellow-300 hover:bg-yellow-200 disabled:opacity-60 text-yellow-950 text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors flex-shrink-0 whitespace-nowrap flex items-center gap-2"
           >
             {charge.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {cost === 0 ? "Xem báo cáo →" : `Mở khoá báo cáo · ⊛${cost}`}
+            {cost === 0
+              ? "Xem báo cáo →"
+              : covered
+                ? "Mở khoá · theo gói"
+                : blocked
+                  ? "Xem gói thuê bao →"
+                  : `Mở khoá báo cáo · ⊛${cost}`}
           </button>
         </div>
       )}
@@ -957,56 +986,16 @@ const OwnerReportPage = () => {
       <BenchmarkBlock />
 
       {/* ── Confirm dialog (paid reports) ─── */}
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="p-0 overflow-hidden max-w-sm">
-          <div className="bg-gradient-to-br from-[#1f3a2a] to-[#15291d] text-white px-6 py-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
-              <Coins className="h-5 w-5 text-yellow-950" />
-            </div>
-            <h3 className="text-lg font-semibold text-white font-serif">Xác nhận mở khoá báo cáo</h3>
-            <p className="text-xs text-green-300 mt-1">Phân tích riêng theo tiêu chí của bạn</p>
-          </div>
-          <div className="px-6 py-5">
-            <div className="divide-y divide-border">
-              <div className="flex justify-between py-2.5 text-sm">
-                <span className="text-muted-foreground">Bộ lọc</span>
-                <span className="font-medium text-foreground truncate max-w-[180px] text-right">{label}</span>
-              </div>
-              <div className="flex justify-between py-2.5 text-sm">
-                <span className="text-muted-foreground">Chi phí</span>
-                <span className="font-mono font-semibold">⊛{cost} tín dụng</span>
-              </div>
-              <div className="flex justify-between py-2.5 text-sm">
-                <span className="text-muted-foreground">Số dư của bạn</span>
-                <span className={cn("font-mono font-semibold", balance < cost ? "text-destructive" : "text-foreground")}>
-                  ⊛{balance}
-                </span>
-              </div>
-            </div>
-            {balance < cost && (
-              <p className="text-xs text-destructive mt-3">
-                Không đủ tín dụng. Vui lòng nạp thêm để tiếp tục.
-              </p>
-            )}
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => setConfirmOpen(false)}
-                className="flex-1 py-2.5 text-sm font-semibold rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
-              >
-                Để sau
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={charge.isPending || balance < cost}
-                className="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {charge.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Mở khoá · ⊛{cost}
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ReportUnlockDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        filterLabel={label}
+        cost={cost}
+        balance={balance}
+        quotaExhausted={coverage.kind === "credits" && coverage.exhausted}
+        pending={charge.isPending}
+        onConfirm={handleConfirm}
+      />
     </div>
   );
 };

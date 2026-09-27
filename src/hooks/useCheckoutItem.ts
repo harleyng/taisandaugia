@@ -11,6 +11,9 @@ import type { ServiceKindKey } from "@/lib/serviceRequests/kinds";
 import { ownerAuctionConsultPath } from "@/lib/auctionConsult/paths";
 import { isQuoteExpired } from "@/lib/vrTour/status";
 import { ownerPostingPath } from "@/lib/vrTour/paths";
+import { useOwnerSubscriptionQuote } from "@/hooks/useOwnerSubscription";
+import { OWNER_SUBSCRIPTION_PATH } from "@/lib/ownerSubscription/paths";
+import { formatSubDate } from "@/lib/ownerSubscription/status";
 
 /** Thứ đang được thanh toán trên trang VNPay mô phỏng. */
 export interface CheckoutItem {
@@ -39,6 +42,7 @@ interface CheckoutState {
  *   • ?gd_order=<id>        — đơn giám định; cùng quy tắc với VR tour.
  *   • ?tvpl_order=<id>      — lần tư vấn pháp lý; cùng quy tắc với VR tour.
  *   • ?tvdg_order=<id>      — yêu cầu tư vấn đấu giá; cùng quy tắc với VR tour.
+ *   • ?sub=<id>             — gói thuê bao tổ chức chủ tài sản; chỉ Trưởng đơn vị trả được.
  */
 export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   const packageKey = params.get("package") || "";
@@ -53,6 +57,8 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   const tvpl = useLegalConsultation(tvplId || null);
   const tvdgId = params.get("tvdg_order") || "";
   const tvdg = useAuctionConsultation(tvdgId || null);
+  const subId = params.get("sub") || "";
+  const subQuote = useOwnerSubscriptionQuote(subId || null);
   // Đơn dịch vụ gắn hồ sơ số hoá: từ Phase 4 đồng nghiệp cùng không gian ĐỌC được
   // đơn (RLS theo hồ sơ), nhưng chỉ NGƯỜI GỬI yêu cầu thanh toán — _settle_* kiểm
   // user_id, trả trước rồi mới bị từ chối là mất tiền.
@@ -74,6 +80,24 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
       quoted_at: o.quoted_at,
       quoted_price: o.quoted_price == null ? null : Number(o.quoted_price),
     });
+
+  if (subId) {
+    const q = subQuote.data;
+    const back = params.get("return") || OWNER_SUBSCRIPTION_PATH;
+    if (subQuote.isLoading) return { loading: true, item: null, fallbackPath: back };
+    // Không phải Trưởng đơn vị / gói nháp, huỷ / giá 0 ⇒ không có gì để trả.
+    if (!q || !q.can_pay) return { loading: false, item: null, fallbackPath: back };
+    return {
+      loading: false,
+      fallbackPath: back,
+      item: {
+        ref: q.code,
+        label: `${q.plan_name} ${q.code} · ${q.workspace_name} · ${q.term_months} tháng (${formatSubDate(q.next_starts_on)} – ${formatSubDate(q.next_ends_on)})`,
+        priceVnd: Number(q.price_vnd),
+        resultParams: { sub: q.id, amount: String(q.price_vnd) },
+      },
+    };
+  }
 
   if (tvdgId) {
     const o = tvdg.data;

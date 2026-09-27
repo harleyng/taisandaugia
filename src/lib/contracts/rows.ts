@@ -65,6 +65,12 @@ export interface ContractListRow {
   kindLabel: string;
   title: string;
   counterparty: string | null;
+  /** Vai của bên kia khi cần nói rõ ("Bên mua"). */
+  counterpartyRole: string | null;
+  /** Hồ sơ số hoá của tài sản — để tra mã HS / loại / ảnh. Mua bán: null, tra qua consignmentContractId. */
+  postingId: string | null;
+  /** Chỉ mua bán: hợp đồng ký gửi gốc (dẫn tới hồ sơ số hoá). */
+  consignmentContractId: string | null;
   value: number | null;
   valueLabel: string;
   statusLabel: string;
@@ -74,6 +80,8 @@ export interface ContractListRow {
   note: string | null;
   /** Mốc để sắp xếp (ký / đồng ý, không thì tạo). */
   date: string;
+  /** Lần đổi gần nhất — cột "Cập nhật". */
+  updatedAt: string;
   href: string;
   /** Chỉ dòng dịch vụ: để mở hộp thoại đồng ý ngay tại danh sách. */
   service: { kind: ServiceKindKey; orderId: string; postingId: string } | null;
@@ -84,7 +92,7 @@ export interface ContractListRow {
 export type OwnerConsignmentContractItem = Pick<
   ConsignmentContract,
   "id" | "code" | "status" | "asset_posting_id" | "terms" | "org_party" | "asset_snapshot" | "created_at" | "signed_at"
-> & { posting: { title: string | null } | null };
+> & { updated_at?: string | null; posting: { title: string | null } | null };
 
 /** Chỉ hai việc thuộc về hợp đồng; "chọn báo giá" là việc của menu Ký gửi. */
 export type ConsignmentContractAction = "confirm_contract" | "add_address";
@@ -117,6 +125,9 @@ export function fromConsignment(
     kindLabel: "Ký gửi đấu giá",
     title: c.asset_snapshot?.title ?? c.posting?.title ?? "—",
     counterparty: c.org_party?.name ?? null,
+    counterpartyRole: null,
+    postingId: c.asset_posting_id,
+    consignmentContractId: c.id,
     value: c.terms?.service_fee ?? null,
     valueLabel: "Chi phí dịch vụ",
     statusLabel: CONTRACT_STATUS_LABELS_OWNER[c.status],
@@ -125,6 +136,7 @@ export function fromConsignment(
     actionLabel: act ? CONSIGNMENT_ACTION_LABELS[act] : null,
     note: null,
     date: c.signed_at ?? c.created_at,
+    updatedAt: c.updated_at ?? c.signed_at ?? c.created_at,
     href: ownerConsignmentContractPath(c.id),
     service: null,
   };
@@ -148,7 +160,10 @@ export function fromSale(c: SaleContract, action: OwnerSaleAction | null | undef
     code: c.code,
     kindLabel: "Mua bán tài sản",
     title: asset.title ?? "—",
-    counterparty: buyer.full_name ? `Bên mua: ${buyer.full_name}` : null,
+    counterparty: buyer.full_name ?? null,
+    counterpartyRole: buyer.full_name ? "Bên mua" : null,
+    postingId: null,
+    consignmentContractId: c.consignment_contract_id ?? null,
     value: c.price,
     valueLabel: "Giá bán",
     statusLabel: SALE_STAGE_LABELS[stage],
@@ -157,6 +172,7 @@ export function fromSale(c: SaleContract, action: OwnerSaleAction | null | undef
     actionLabel: act ? SALE_ACTION_LABELS[act] : null,
     note: null,
     date: c.signed_at ?? c.created_at,
+    updatedAt: c.updated_at ?? c.signed_at ?? c.created_at,
     href: ownerSaleContractPath(c.id),
     service: null,
   };
@@ -183,6 +199,9 @@ export function fromService(r: OwnerServiceContractRow): ContractListRow {
     kindLabel: SERVICE_CONTRACT_LABELS[r.service_kind],
     title: r.posting_title ?? "—",
     counterparty: r.partner_name,
+    counterpartyRole: null,
+    postingId: r.asset_posting_id,
+    consignmentContractId: null,
     value: r.quoted_price,
     valueLabel: "Phí dịch vụ",
     statusLabel: SERVICE_CONTRACT_STAGE_LABELS[stage],
@@ -197,6 +216,10 @@ export function fromService(r: OwnerServiceContractRow): ContractListRow {
           ? `Đơn ${r.order_code} · chờ người gửi yêu cầu đồng ý`
           : `Đơn ${r.order_code}`,
     date: r.accepted_at ?? r.quoted_at ?? r.created_at,
+    updatedAt: [r.cancelled_at, r.done_at, r.paid_at, r.accepted_at, r.quoted_at].reduce<string>(
+      (max, d) => (d && d > max ? d : max),
+      r.created_at,
+    ),
     // Chưa có hợp đồng ⇒ về thẻ đơn trong hồ sơ (nơi có nút đồng ý & thanh toán).
     href: r.contract_id ? ownerServiceContractPath(r.contract_id) : serviceOrderOwnerPath(r.service_kind, r.asset_posting_id),
     service: { kind: r.service_kind, orderId: r.order_id, postingId: r.asset_posting_id },
@@ -220,9 +243,11 @@ export function matchesContractSearch(row: ContractListRow, q: string): boolean 
   );
 }
 
-/** Việc cần làm lên đầu, còn lại mới nhất trước. */
+/** Việc cần làm lên đầu, còn lại mới cập nhật trước. */
 export function sortContractRows(rows: ContractListRow[]): ContractListRow[] {
-  return [...rows].sort((a, b) => Number(b.needsAction) - Number(a.needsAction) || b.date.localeCompare(a.date));
+  return [...rows].sort(
+    (a, b) => Number(b.needsAction) - Number(a.needsAction) || b.updatedAt.localeCompare(a.updatedAt),
+  );
 }
 
 /** Số việc cần làm — nguồn của huy hiệu menu "Hợp đồng". */

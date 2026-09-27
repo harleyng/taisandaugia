@@ -538,6 +538,7 @@ export type Database = {
           refunded_at: string | null
           scan_token: string
           status: string
+          subscription_usage_id: string | null
           updated_at: string
           user_id: string
         }
@@ -559,6 +560,7 @@ export type Database = {
           refunded_at?: string | null
           scan_token: string
           status?: string
+          subscription_usage_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -580,6 +582,7 @@ export type Database = {
           refunded_at?: string | null
           scan_token?: string
           status?: string
+          subscription_usage_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -596,6 +599,13 @@ export type Database = {
             columns: ["credit_transaction_id"]
             isOneToOne: false
             referencedRelation: "credit_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_3d_scans_subscription_usage_id_fkey"
+            columns: ["subscription_usage_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_usage"
             referencedColumns: ["id"]
           },
           {
@@ -7966,6 +7976,7 @@ export type Database = {
           filter_combo: Json
           id: string
           is_default: boolean
+          subscription_usage_id: string | null
           user_id: string
           viewed_at: string
           workspace_id: string
@@ -7975,6 +7986,7 @@ export type Database = {
           filter_combo?: Json
           id?: string
           is_default?: boolean
+          subscription_usage_id?: string | null
           user_id: string
           viewed_at?: string
           workspace_id: string
@@ -7984,15 +7996,314 @@ export type Database = {
           filter_combo?: Json
           id?: string
           is_default?: boolean
+          subscription_usage_id?: string | null
           user_id?: string
           viewed_at?: string
           workspace_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "owner_report_views_subscription_usage_id_fkey"
+            columns: ["subscription_usage_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_usage"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "owner_report_views_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_subscription_entitlements: {
+        Row: {
+          created_at: string
+          monthly_quota: number | null
+          subscription_id: string
+          variant_key: string
+        }
+        Insert: {
+          created_at?: string
+          monthly_quota?: number | null
+          subscription_id: string
+          variant_key: string
+        }
+        Update: {
+          created_at?: string
+          monthly_quota?: number | null
+          subscription_id?: string
+          variant_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_subscription_entitlements_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_subscription_entitlements_variant_key_fkey"
+            columns: ["variant_key"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["variant_key"]
+          },
+        ]
+      }
+      owner_subscription_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          subscription_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          subscription_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_subscription_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_subscription_terms: {
+        Row: {
+          amount_vnd: number
+          created_at: string
+          created_by: string | null
+          ends_on: string
+          entitlements_snapshot: Json
+          id: string
+          method: string | null
+          months: number
+          note: string | null
+          order_id: string | null
+          overage_mode_snapshot: string | null
+          paid_on: string | null
+          payment_txn_ref: string | null
+          price_snapshot: number | null
+          source: string
+          starts_on: string
+          subscription_id: string
+          workspace_id: string
+        }
+        Insert: {
+          amount_vnd: number
+          created_at?: string
+          created_by?: string | null
+          ends_on: string
+          entitlements_snapshot?: Json
+          id?: string
+          method?: string | null
+          months: number
+          note?: string | null
+          order_id?: string | null
+          overage_mode_snapshot?: string | null
+          paid_on?: string | null
+          payment_txn_ref?: string | null
+          price_snapshot?: number | null
+          source: string
+          starts_on: string
+          subscription_id: string
+          workspace_id: string
+        }
+        Update: {
+          amount_vnd?: number
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string
+          entitlements_snapshot?: Json
+          id?: string
+          method?: string | null
+          months?: number
+          note?: string | null
+          order_id?: string | null
+          overage_mode_snapshot?: string | null
+          paid_on?: string | null
+          payment_txn_ref?: string | null
+          price_snapshot?: number | null
+          source?: string
+          starts_on?: string
+          subscription_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_subscription_terms_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_subscription_terms_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_subscription_terms_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_subscription_usage: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: string
+          note: string | null
+          period_month: string
+          qty: number
+          ref_id: string | null
+          ref_type: string
+          reverses_id: string | null
+          subscription_id: string
+          variant_key: string
+          workspace_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          period_month: string
+          qty: number
+          ref_id?: string | null
+          ref_type: string
+          reverses_id?: string | null
+          subscription_id: string
+          variant_key: string
+          workspace_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          period_month?: string
+          qty?: number
+          ref_id?: string | null
+          ref_type?: string
+          reverses_id?: string | null
+          subscription_id?: string
+          variant_key?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_subscription_usage_reverses_id_fkey"
+            columns: ["reverses_id"]
+            isOneToOne: true
+            referencedRelation: "owner_subscription_usage"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_subscription_usage_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_subscription_usage_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_subscriptions: {
+        Row: {
+          cancel_reason: string | null
+          cancelled_at: string | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          ends_on: string | null
+          id: string
+          note: string | null
+          overage_mode: string
+          plan_name: string
+          price_vnd: number
+          starts_on: string | null
+          status: string
+          term_months: number
+          updated_at: string
+          updated_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string | null
+          id?: string
+          note?: string | null
+          overage_mode?: string
+          plan_name?: string
+          price_vnd?: number
+          starts_on?: string | null
+          status?: string
+          term_months?: number
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string | null
+          id?: string
+          note?: string | null
+          overage_mode?: string
+          plan_name?: string
+          price_vnd?: number
+          starts_on?: string | null
+          status?: string
+          term_months?: number
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_subscriptions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
             referencedRelation: "asset_owner_workspaces"
             referencedColumns: ["id"]
           },
@@ -9837,6 +10148,17 @@ export type Database = {
       }
       _bidding_ctx_clear: { Args: never; Returns: undefined }
       _bidding_rpc_active: { Args: never; Returns: boolean }
+      _charge_owner_feature_credits: {
+        Args: {
+          p_cost: number
+          p_description: string
+          p_type: string
+          p_uid: string
+          p_variant_key: string
+          p_workspace_id: string
+        }
+        Returns: string
+      }
       _close_lot: { Args: { _at: string; _lot_id: string }; Returns: boolean }
       _legal_consult_replace_items: {
         Args: {
@@ -9857,6 +10179,49 @@ export type Database = {
         Returns: undefined
       }
       _lot_lock: { Args: { _lot_id: string }; Returns: undefined }
+      _owner_sub_apply_term: {
+        Args: {
+          p_actor: string
+          p_amount: number
+          p_method: string
+          p_months: number
+          p_note: string
+          p_order_id: string
+          p_paid_on: string
+          p_source: string
+          p_start: string
+          p_sub: Database["public"]["Tables"]["owner_subscriptions"]["Row"]
+          p_txn_ref: string
+        }
+        Returns: Json
+      }
+      _owner_sub_consume: {
+        Args: {
+          p_actor: string
+          p_qty: number
+          p_ref_id: string
+          p_ref_type: string
+          p_variant_key: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      _owner_sub_lines: { Args: { p_sub_id: string }; Returns: Json }
+      _owner_sub_order: {
+        Args: {
+          p_actor: string
+          p_amount: number
+          p_note: string
+          p_ordered_at: string
+          p_sub: Database["public"]["Tables"]["owner_subscriptions"]["Row"]
+          p_user: string
+        }
+        Returns: string
+      }
+      _owner_sub_reverse: {
+        Args: { p_note: string; p_usage_id: string }
+        Returns: undefined
+      }
       _recompute_lot_leader: { Args: { _lot_id: string }; Returns: undefined }
       _sale_ctx: { Args: never; Returns: undefined }
       _sale_ctx_clear: { Args: never; Returns: undefined }
@@ -9926,6 +10291,15 @@ export type Database = {
           _expected_amount: number
           _txn_ref: string
           _uid: string
+        }
+        Returns: Json
+      }
+      _settle_owner_subscription: {
+        Args: {
+          p_expected_amount: number
+          p_sub_id: string
+          p_txn_ref: string
+          p_uid: string
         }
         Returns: Json
       }
@@ -10113,6 +10487,56 @@ export type Database = {
         }
         Returns: {
           id: string
+        }[]
+      }
+      admin_owner_sub_activate: {
+        Args: {
+          p_amount_vnd: number
+          p_method: string
+          p_months: number
+          p_note: string
+          p_paid_on: string
+          p_starts_on: string
+          p_sub_id: string
+        }
+        Returns: Json
+      }
+      admin_owner_sub_set_status: {
+        Args: { p_reason: string; p_status: string; p_sub_id: string }
+        Returns: Json
+      }
+      admin_owner_sub_upsert: {
+        Args: {
+          p_entitlements: Json
+          p_note: string
+          p_overage_mode: string
+          p_plan_name: string
+          p_price_vnd: number
+          p_term_months: number
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      admin_owner_subscription_list: {
+        Args: never
+        Returns: {
+          code: string
+          ends_on: string
+          match_scope: string
+          member_count: number
+          overage_mode: string
+          owner_email: string
+          owner_name: string
+          parent_name: string
+          plan_name: string
+          price_vnd: number
+          starts_on: string
+          status: string
+          subscription_id: string
+          term_months: number
+          workspace_created_at: string
+          workspace_id: string
+          workspace_name: string
         }[]
       }
       admin_prospect_detail: {
@@ -11170,6 +11594,10 @@ export type Database = {
         Args: { p_occurred_on?: string; p_outcome_id: string }
         Returns: Json
       }
+      owner_charge_portfolio_report: {
+        Args: { p_filter: Json; p_is_default: boolean; p_workspace_id: string }
+        Returns: Json
+      }
       owner_consignment_summary: {
         Args: { p_workspace_id?: string }
         Returns: {
@@ -11442,8 +11870,24 @@ export type Database = {
         Args: { p_days: number; p_report_id: string }
         Returns: Json
       }
+      owner_sub_effective_status: {
+        Args: { p_ends_on: string; p_starts_on: string; p_status: string }
+        Returns: string
+      }
+      owner_sub_month: { Args: { p_at?: string }; Returns: string }
+      owner_sub_next_start: { Args: { p_ends_on: string }; Returns: string }
+      owner_sub_supported_variants: { Args: never; Returns: string[] }
+      owner_sub_term_end: {
+        Args: { p_months: number; p_start: string }
+        Returns: string
+      }
       owner_submit_authentication_shipment: {
         Args: { _order_id: string; _tracking: string }
+        Returns: Json
+      }
+      owner_subscription_quote: { Args: { p_sub_id: string }; Returns: Json }
+      owner_subscription_status: {
+        Args: { p_workspace_id: string }
         Returns: Json
       }
       owner_update_kyc_address: {
@@ -11666,6 +12110,10 @@ export type Database = {
           _expected_amount: number
           _txn_ref: string
         }
+        Returns: Json
+      }
+      pay_owner_subscription: {
+        Args: { p_expected_amount: number; p_sub_id: string; p_txn_ref: string }
         Returns: Json
       }
       pay_vr_tour_order: {

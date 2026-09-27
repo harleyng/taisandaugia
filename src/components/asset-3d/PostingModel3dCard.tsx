@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useHasAdminPermission } from "@/hooks/useAdminPermissions";
 import { summarizeScans, useAdminPublish3dModel, usePostingScans } from "@/hooks/useAsset3dScans";
 import { Add3dDialog } from "./Add3dDialog";
+import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { Model3dViewer } from "./Model3dViewer";
 
 interface PostingModel3dCardProps {
@@ -18,6 +19,13 @@ interface PostingModel3dCardProps {
   resolvePostingId?: () => Promise<string | null>;
   /** Hồ sơ đã kết thúc (huỷ / đã ký hợp đồng) ⇒ không thêm model mới. */
   locked?: boolean;
+  /**
+   * Trạm của hồ sơ (null = tenant Cá nhân) để xem trước gói thuê bao. Bỏ trống ⇒ Trạm
+   * đang chọn (wizard tạo hồ sơ mới trong tenant hiện tại).
+   */
+  workspaceId?: string | null;
+  /** "panel": khung gọn nửa cột trong khối "Ảnh & video" của wizard số hoá (thiết kế v3). */
+  variant?: "card" | "panel";
 }
 
 /** Khối "Model 3D" của một hồ sơ số hoá — trạng thái phiên quét, model hiện hành, công khai hay chưa. */
@@ -28,8 +36,12 @@ export function PostingModel3dCard({
   mode,
   resolvePostingId,
   locked,
+  workspaceId,
+  variant = "card",
 }: PostingModel3dCardProps) {
   const [open, setOpen] = useState(false);
+  const tenant = useOwnerWorkspace();
+  const subWorkspaceId = workspaceId !== undefined ? workspaceId : tenant.isPersonal ? null : tenant.workspaceId;
   const [resume, setResume] = useState(false);
   const { data: scans = [], isLoading } = usePostingScans(postingId);
   const { inFlight, current, latest } = summarizeScans(scans);
@@ -61,6 +73,72 @@ export function PostingModel3dCard({
   // luồng xác nhận (lưu nháp ngầm) ⇒ query mới isLoading; return sớm sẽ unmount
   // dialog đang mở và mất bước quét.
   const loading = !!postingId && isLoading;
+
+  const dialog = owner && (
+    <Add3dDialog
+      open={open}
+      onOpenChange={setOpen}
+      resolvePostingId={resolve}
+      resumeScan={resumeScan}
+      workspaceId={subWorkspaceId}
+    />
+  );
+
+  if (variant === "panel") {
+    return (
+      <div className="flex min-w-0 flex-col gap-2.5 rounded-[10px] border border-border bg-card p-3.5">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Box className="h-[15px] w-[15px]" />
+          <b className="text-[13.5px] font-semibold text-foreground">Model 3D</b>
+        </div>
+        {loading ? (
+          <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tải…
+          </div>
+        ) : current ? (
+          <>
+            <Model3dViewer modelUrl={current.model_url!} format={current.format} posterUrl={current.poster_url} title={title} />
+            <VisibilityLine published={!!current.published_at} approved={approved} />
+          </>
+        ) : (
+          !inFlight && <p className="text-[13px] text-muted-foreground">Chưa có model 3D.</p>
+        )}
+        {inFlight && (
+          <div className="flex items-center gap-2 rounded-lg bg-muted px-2.5 py-2 text-[13px] text-foreground">
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
+            {inFlight.status === "processing"
+              ? "Đối tác đang dựng model 3D — thường trong vòng 10 phút."
+              : "Đang chờ kết quả quét từ điện thoại."}
+          </div>
+        )}
+        {lastFailed && (
+          <p className="flex items-start gap-1.5 text-[12.5px] text-destructive">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Lần quét gần nhất không thành công{lastFailed.error_message ? `: ${lastFailed.error_message}` : ""}.
+            {lastFailed.refunded_at ? ` Đã hoàn ${lastFailed.credit_cost} credit.` : ""}
+          </p>
+        )}
+        {owner && !loading && !locked && (
+          <div className="mt-auto flex flex-wrap gap-1.5">
+            {inFlight ? (
+              <Button size="sm" variant="outline" className="h-[34px] text-[13px]" onClick={() => openAdd(true)}>
+                Mở lại liên kết quét
+              </Button>
+            ) : current || lastFailed ? (
+              <Button size="sm" variant="outline" className="h-[34px] text-[13px]" onClick={() => openAdd(false)}>
+                Quét lại 3D
+              </Button>
+            ) : (
+              <Button size="sm" className="h-[34px] text-[13px]" onClick={() => openAdd(false)}>
+                <Box className="mr-1.5 h-3.5 w-3.5" /> Thêm 3D
+              </Button>
+            )}
+          </div>
+        )}
+        {dialog}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -132,14 +210,7 @@ export function PostingModel3dCard({
         </Button>
       )}
 
-      {owner && (
-        <Add3dDialog
-          open={open}
-          onOpenChange={setOpen}
-          resolvePostingId={resolve}
-          resumeScan={resumeScan}
-        />
-      )}
+      {dialog}
     </div>
   );
 }

@@ -1,34 +1,34 @@
 import { ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { formatMoneyShort } from "@/utils/money";
 import { ASSET_PHASE_META, type OwnerAssetRow } from "@/lib/ownerAssets";
 import { StagePath } from "./StageTrack";
 
-interface AssetDetailSheetProps {
+interface AssetDetailDialogProps {
   row: OwnerAssetRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCta: (row: OwnerAssetRow) => void;
 }
 
-/** Ngăn chi tiết bên phải: đường đi 4 bước, việc tiếp theo, vài dữ kiện chính, nơi xem sâu hơn. */
-export function AssetDetailSheet({ row, open, onOpenChange, onCta }: AssetDetailSheetProps) {
+/** Popup chi tiết tài sản: đường đi 4 bước, việc tiếp theo, vài dữ kiện chính, nơi xem sâu hơn. */
+export function AssetDetailDialog({ row, open, onOpenChange, onCta }: AssetDetailDialogProps) {
   const navigate = useNavigate();
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-[460px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-6 overflow-y-auto rounded-2xl sm:max-w-[560px]">
         {row && (
           <>
-            <SheetHeader className="space-y-1 pr-8 text-left">
-              <SheetTitle className="text-lg font-bold leading-snug">{row.title}</SheetTitle>
-              <SheetDescription className="text-[13px]">
+            <DialogHeader className="space-y-1 pr-8 text-left">
+              <DialogTitle className="text-lg font-bold leading-snug">{row.title}</DialogTitle>
+              <DialogDescription className="text-[13px]">
                 {[row.code && `Mã ${row.code}`, row.category, row.province, row.branch].filter(Boolean).join(" · ")}
-              </SheetDescription>
-            </SheetHeader>
+              </DialogDescription>
+            </DialogHeader>
 
             <StagePath phase={row.phase} currentLabel={row.stepLabel} />
 
@@ -103,7 +103,7 @@ export function AssetDetailSheet({ row, open, onOpenChange, onCta }: AssetDetail
             )}
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

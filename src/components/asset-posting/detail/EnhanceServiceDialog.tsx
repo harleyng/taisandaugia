@@ -41,6 +41,7 @@ export function EnhanceServiceDialog({ kind, onClose, posting: p, locked }: Enha
                 reviewStatus={p.review_status}
                 mode="owner"
                 locked={locked}
+                workspaceId={p.workspace_id}
               />
             )}
             {kind === "vr" && (

@@ -29,12 +29,31 @@ interface PostingVrTourCardProps {
   resolvePostingId?: () => Promise<string | null>;
   /** Hồ sơ đã kết thúc (huỷ / đã ký hợp đồng) ⇒ không đặt đơn mới. */
   locked?: boolean;
+  /** "panel": khung gọn nửa cột trong khối "Ảnh & video" của wizard số hoá (thiết kế v3). */
+  variant?: "card" | "panel";
 }
+
+/** Thanh tiến trình gọn của khung "panel" — 5 chặng tới lúc bàn giao. */
+const PANEL_STEPS: [string, string][] = [
+  ["requested", "Yêu cầu"],
+  ["quoted", "Báo giá"],
+  ["paid", "Thanh toán"],
+  ["scheduled", "Hẹn chụp"],
+  ["delivered", "Bàn giao"],
+];
 
 const when = (iso: string | null) => (iso ? format(new Date(iso), "HH:mm, dd/MM/yyyy", { locale: vi }) : "—");
 
 /** Khối "VR tour" của một hồ sơ số hoá — đơn đang chạy, tour đang gắn, công khai hay chưa. */
-export function PostingVrTourCard({ postingId, title, reviewStatus, mode, resolvePostingId, locked }: PostingVrTourCardProps) {
+export function PostingVrTourCard({
+  postingId,
+  title,
+  reviewStatus,
+  mode,
+  resolvePostingId,
+  locked,
+  variant = "card",
+}: PostingVrTourCardProps) {
   const [open, setOpen] = useState(false);
   const { data: orders = [], isLoading } = usePostingVrOrders(postingId);
   const { active, attached } = summarizeVrOrders(orders);
@@ -44,6 +63,49 @@ export function PostingVrTourCard({ postingId, title, reviewStatus, mode, resolv
 
   // Không return sớm khi đang tải: trong wizard postingId đổi null → id giữa lúc dialog mở.
   const loading = !!postingId && isLoading;
+  const canOrder = mode === "owner" && canWrite && !loading && !active && !locked;
+  const dialog = mode === "owner" && canWrite && (
+    <AddVrTourDialog open={open} onOpenChange={setOpen} resolvePostingId={resolve} />
+  );
+
+  if (variant === "panel") {
+    return (
+      <div className="flex min-w-0 flex-col gap-2.5 rounded-[10px] border border-border bg-card p-3.5">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Rotate3d className="h-[15px] w-[15px]" />
+          <b className="text-[13.5px] font-semibold text-foreground">VR tour</b>
+        </div>
+        {loading ? (
+          <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tải…
+          </div>
+        ) : attached && !active ? (
+          <>
+            <VrTourViewer url={attached.vr_url!} title={title} />
+            <VisibilityLine published={!!attached.published_at} approved={approved} />
+          </>
+        ) : (
+          !active && <p className="text-[13px] text-muted-foreground">Chưa có VR tour.</p>
+        )}
+        {active && <ActiveOrder order={active} mode={mode} approved={approved} title={title} compact />}
+        {canOrder && (
+          <div className="mt-auto flex flex-wrap gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant={attached ? "outline" : "default"}
+              className="h-[34px] text-[13px]"
+              onClick={() => setOpen(true)}
+            >
+              {!attached && <Rotate3d className="mr-1.5 h-3.5 w-3.5" />}
+              {attached ? "Đặt chụp lại VR tour" : "Thêm VR tour"}
+            </Button>
+          </div>
+        )}
+        {dialog}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -71,14 +133,14 @@ export function PostingVrTourCard({ postingId, title, reviewStatus, mode, resolv
 
       {active && <ActiveOrder order={active} mode={mode} approved={approved} title={title} />}
 
-      {mode === "owner" && canWrite && !loading && !active && !locked && (
+      {canOrder && (
         <Button type="button" variant={attached ? "outline" : "default"} size="sm" onClick={() => setOpen(true)}>
           <Rotate3d className="mr-1.5 h-3.5 w-3.5" />
           {attached ? "Đặt chụp lại VR tour" : "Thêm VR tour"}
         </Button>
       )}
 
-      {mode === "owner" && canWrite && <AddVrTourDialog open={open} onOpenChange={setOpen} resolvePostingId={resolve} />}
+      {dialog}
     </div>
   );
 }
@@ -88,11 +150,14 @@ function ActiveOrder({
   mode,
   approved,
   title,
+  compact,
 }: {
   order: VrTourOrder;
   mode: "owner" | "admin";
   approved: boolean;
   title: string;
+  /** Bản gọn trong khung "panel": thanh 5 chặng, không viền ngoài. */
+  compact?: boolean;
 }) {
   const navigate = useNavigate();
   const cancel = useCancelVrTour();
@@ -105,8 +170,25 @@ function ActiveOrder({
   const owner = mode === "owner" && canWrite;
   const isRequester = order.user_id === userId;
 
+  const stepIx = PANEL_STEPS.findIndex(([k]) => k === order.status);
+
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-3">
+    <div className={compact ? "space-y-2.5" : "space-y-3 rounded-xl border border-border bg-muted/30 p-3"}>
+      {compact ? (
+        <div className="flex gap-1" aria-label="Tiến trình đơn VR tour">
+          {PANEL_STEPS.map(([k, label], i) => (
+            <span
+              key={k}
+              className={`flex min-w-0 flex-1 flex-col gap-1.5 text-[11px] ${
+                i === stepIx ? "font-semibold text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              <i className={`h-1 rounded-full ${i < stepIx ? "bg-success" : i === stepIx ? "bg-primary" : "bg-border"}`} />
+              <span className="truncate">{label}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">
           Đơn <span className="font-mono font-semibold text-foreground">{order.code}</span> · {order.package_name} ·{" "}
@@ -123,7 +205,7 @@ function ActiveOrder({
           </Button>
         )}
       </div>
-      <VrTourStatusStepper status={order.status} />
+      {!compact && <VrTourStatusStepper status={order.status} />}
 
       <div className="text-sm text-foreground">
         {order.status === "requested" && <p>Sàn đang xem yêu cầu và sẽ gửi báo giá sớm.</p>}
@@ -178,7 +260,7 @@ function ActiveOrder({
             disabled={cancel.isPending}
             onClick={() => cancel.mutate({ orderId: order.id, postingId: order.asset_posting_id })}
           >
-            <X className="mr-1.5 h-3.5 w-3.5" /> Huỷ yêu cầu
+            <X className="mr-1.5 h-3.5 w-3.5" /> {compact ? "Huỷ đơn" : "Huỷ yêu cầu"}
           </Button>
         )}
         {mode === "admin" && order.status === "delivered" && canApprove && (

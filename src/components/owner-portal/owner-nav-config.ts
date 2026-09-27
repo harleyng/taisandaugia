@@ -6,6 +6,7 @@ import {
   BarChart2,
   GitBranch,
   UploadCloud,
+  BadgeCheck,
   CreditCard,
   FileSignature,
   Handshake,
@@ -35,7 +36,7 @@ export interface OwnerNavItem {
   countBadge?: OwnerCountBadgeKind
   /**
    * Module của ma trận vai trò (src/lib/ownerWorkspace/permissions.ts) — mục chỉ hiện
-   * khi vai trò có quyền "Xem" ở ít nhất một module. Không có = luôn hiện (Tổng quan, Credit).
+   * khi vai trò có quyền "Xem" ở ít nhất một module. Không có = luôn hiện (Tổng quan, Gói thuê bao, Credit).
    */
   module?: OwnerModule | readonly OwnerModule[]
 }
@@ -136,6 +137,7 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
         countBadge: 'owner-link-requests',
         module: 'lien-ket',
       },
+      { label: 'Gói thuê bao', icon: BadgeCheck, href: '/chu-tai-san/goi-thue-bao' },
       { label: 'Credit', icon: CreditCard, href: '/chu-tai-san/credits' },
     ],
   },
@@ -156,7 +158,7 @@ export function visibleOwnerNavGroups(
 
 /**
  * Trang DANH SÁCH / trang theo không gian đang chọn → module cần quyền "Xem" (có một là
- * đủ). null = không chặn: Tổng quan, Credit, và trang chi tiết mở theo bản ghi (hồ sơ,
+ * đủ). null = không chặn: Tổng quan, Gói thuê bao, Credit, và trang chi tiết mở theo bản ghi (hồ sơ,
  * ký gửi, hợp đồng, báo cáo) — những trang đó tự xét quyền theo không gian CỦA BẢN GHI.
  */
 export function ownerModulesForPath(pathname: string): readonly OwnerModule[] | null {

@@ -81,6 +81,8 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   { module: "co-hoi", label: "Cơ hội", category: "ban-hang", actions: ["view", "create", "update", "delete", "approve", "export"] },
   { module: "khach-hang", label: "Khách hàng", category: "ban-hang", actions: ["view", "create", "update", "delete", "export"] },
   { module: "don-hang", label: "Đơn hàng", category: "ban-hang", actions: ["view", "create", "update", "delete", "export"] },
+  // Gói thuê bao tổ chức chủ tài sản — cấu hình riêng từng Trạm, kích hoạt tay.
+  { module: "goi-thue-bao", label: "Gói thuê bao", category: "ban-hang", actions: ["view", "create", "update", "export"] },
   // Sổ đăng ký công ty (bảng suppliers). Mã giữ "nha-cung-cap" —
   // "doi-tac" đã thuộc về module thẻ hiển thị trang chủ từ trước.
   { module: "nha-cung-cap", label: "Đối tác", category: "ban-hang", actions: ["view", "create", "update", "delete"] },

@@ -71,6 +71,8 @@ const AdminOpportunitiesPage = lazy(() => import("./pages/admin/opportunities/Ad
 const AdminTasksPage = lazy(() => import("./pages/admin/tasks/AdminTasksPage"));
 const AdminTicketsPage = lazy(() => import("./pages/admin/tickets/AdminTicketsPage"));
 const AdminOrdersPage = lazy(() => import("./pages/admin/orders/AdminOrdersPage"));
+const AdminOwnerSubscriptionsPage = lazy(() => import("./pages/admin/owner-subscriptions/AdminOwnerSubscriptionsPage"));
+const AdminOwnerSubscriptionDetail = lazy(() => import("./pages/admin/owner-subscriptions/AdminOwnerSubscriptionDetail"));
 const AdminPartnersPage = lazy(() => import("./pages/admin/partners/AdminPartnersPage"));
 const AdminAuctionToolsPage = lazy(() => import("./pages/admin/auction-tools/AdminAuctionToolsPage"));
 const AdminLegalDocsPage = lazy(() => import("./pages/admin/legal/AdminLegalDocsPage"));
@@ -149,6 +151,7 @@ const OwnerDashboard = lazy(() => import("./pages/OwnerDashboard"));
 const OwnerBranchesPage = lazy(() => import("./pages/OwnerBranchesPage"));
 const OwnerReportPage = lazy(() => import("./pages/OwnerReportPage"));
 const OwnerCreditsPage = lazy(() => import("./pages/chu-tai-san/OwnerCreditsPage"));
+const OwnerSubscriptionPage = lazy(() => import("./pages/chu-tai-san/OwnerSubscriptionPage"));
 const OwnerMembersPage = lazy(() => import("./pages/chu-tai-san/OwnerMembersPage"));
 const OwnerRolesPage = lazy(() => import("./pages/chu-tai-san/OwnerRolesPage"));
 const OwnerRoleDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerRoleDetailPage"));
@@ -362,6 +365,7 @@ const App = () => (
                   <Route path="vai-tro/:id" element={<OwnerRoleDetailPage />} />
                   <Route path="lien-ket" element={<OwnerLinksPage />} />
                   <Route path="bao-cao" element={<OwnerReportPage />} />
+                  <Route path="goi-thue-bao" element={<OwnerSubscriptionPage />} />
                   <Route path="credits" element={<OwnerCreditsPage />} />
                   {/* Hợp đồng: ký gửi (với tổ chức) · mua bán (với người trúng — chi tiết
                       dùng CHUNG trang với bên mua, vai suy từ can_act) · dịch vụ (với sàn). */}
@@ -712,6 +716,8 @@ const App = () => (
                   <Route path="doi-tac/:id" element={<AdminPermissionRoute module="nha-cung-cap"><AdminSupplierDetail /></AdminPermissionRoute>} />
                   <Route path="dich-vu" element={<AdminPermissionRoute module="dich-vu"><AdminServicesPage /></AdminPermissionRoute>} />
                   <Route path="don-hang" element={<AdminPermissionRoute module="don-hang"><AdminOrdersPage /></AdminPermissionRoute>} />
+                  <Route path="goi-thue-bao" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionsPage /></AdminPermissionRoute>} />
+                  <Route path="goi-thue-bao/:workspaceId" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionDetail /></AdminPermissionRoute>} />
                   <Route path="doi-tac-tren-san" element={<AdminPartnersPage />} />
                   <Route path="hien-thi-tren-san" element={<Navigate to="/admin/doi-tac-tren-san" replace />} />
                   {/* Pháp lý & Đấu giá — hợp đồng (chỉ đọc) + mẫu hợp đồng có phiên bản */}

@@ -16,7 +16,14 @@ import {
   type ContractListRow,
   type OwnerConsignmentContractItem,
 } from "@/lib/contracts/rows";
-import type { ConsignmentContract } from "@/types/consignment-contract";
+import {
+  POSTING_BRIEF_SELECT,
+  postingIdOfRow,
+  toPostingBrief,
+  type PostingBrief,
+  type PostingBriefRow,
+} from "@/lib/contracts/postingBrief";
+import type { ConsignmentContract, ContractEvent } from "@/types/consignment-contract";
 import type { RequestOrg } from "@/hooks/useAssetPosting";
 
 /**
@@ -25,7 +32,7 @@ import type { RequestOrg } from "@/hooks/useAssetPosting";
  */
 
 const CONSIGNMENT_LIST_SELECT =
-  "id, code, status, asset_posting_id, terms, org_party, asset_snapshot, created_at, signed_at, " +
+  "id, code, status, asset_posting_id, terms, org_party, asset_snapshot, created_at, signed_at, updated_at, " +
   "posting:asset_postings!consignment_contracts_asset_posting_id_fkey!inner(title, workspace_id, user_id)";
 
 /** Hợp đồng ký gửi của tenant (kể cả đã huỷ). RLS cc_owner_read giới hạn tập dòng. */
@@ -69,8 +76,24 @@ export function useOwnerContracts() {
     ]);
   }, [consignments.data, consignmentSummary.data, sales.data, saleSummary.data, services.data]);
 
+  // Mua bán trỏ tới hồ sơ qua hợp đồng ký gửi gốc.
+  const consignmentPostings = useMemo(
+    () => new Map((consignments.data ?? []).map((c) => [c.id, c.asset_posting_id])),
+    [consignments.data],
+  );
+  const postingIds = useMemo(
+    () => [...new Set(rows.map((r) => postingIdOfRow(r, consignmentPostings)).filter((id): id is string => !!id))].sort(),
+    [rows, consignmentPostings],
+  );
+  const briefs = usePostingBriefs(postingIds);
+  const briefOf = (row: ContractListRow): PostingBrief | null => {
+    const id = postingIdOfRow(row, consignmentPostings);
+    return id ? (briefs.get(id) ?? null) : null;
+  };
+
   return {
     rows,
+    briefOf,
     isLoading: consignments.isLoading || sales.isLoading || services.isLoading,
     error: consignments.error ?? sales.error ?? services.error,
     refetch: () => {
@@ -79,6 +102,27 @@ export function useOwnerContracts() {
       void services.refetch();
     },
   };
+}
+
+/** Mã HS / loại / nơi / ảnh của nhiều hồ sơ một lượt. RLS chỉ trả hồ sơ người xem đọc được. */
+export function usePostingBriefs(postingIds: readonly string[]): Map<string, PostingBrief> {
+  const { data } = useQuery({
+    queryKey: qk.ownerPostingBriefs(postingIds),
+    enabled: postingIds.length > 0,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<PostingBrief[]> => {
+      const { data, error } = await supabase.from("asset_postings").select(POSTING_BRIEF_SELECT).in("id", [...postingIds]);
+      if (error) throw error;
+      return ((data ?? []) as PostingBriefRow[]).map(toPostingBrief);
+    },
+  });
+  return useMemo(() => new Map((data ?? []).map((b) => [b.id, b])), [data]);
+}
+
+/** Một hồ sơ (trang chi tiết hợp đồng). */
+export function usePostingBrief(postingId: string | null | undefined): PostingBrief | null {
+  const map = usePostingBriefs(postingId ? [postingId] : []);
+  return postingId ? (map.get(postingId) ?? null) : null;
 }
 
 /**
@@ -98,6 +142,8 @@ export function useOwnerContractActionCount(): number {
 
 export interface OwnerConsignmentContractView {
   contract: ConsignmentContract;
+  /** Nhật ký, mới nhất trước (RLS cce_owner_read). */
+  events: ContractEvent[];
   posting: {
     id: string;
     title: string | null;
@@ -128,12 +174,24 @@ export function useOwnerConsignmentContract(contractId: string | null | undefine
       const { posting, ...contract } = data as unknown as ConsignmentContract & {
         posting: OwnerConsignmentContractView["posting"];
       };
-      const { data: org } = await supabase
-        .from("auction_organizations")
-        .select("id, name, province, phone, logo_url")
-        .eq("id", contract.auction_org_id)
-        .maybeSingle();
-      return { contract, posting, org: (org as RequestOrg | null) ?? null };
+      const [{ data: org }, { data: events }] = await Promise.all([
+        supabase
+          .from("auction_organizations")
+          .select("id, name, province, phone, logo_url")
+          .eq("id", contract.auction_org_id)
+          .maybeSingle(),
+        supabase
+          .from("consignment_contract_events")
+          .select("action, side, created_at, data")
+          .eq("contract_id", contract.id)
+          .order("created_at", { ascending: false }),
+      ]);
+      return {
+        contract,
+        events: (events ?? []) as unknown as ContractEvent[],
+        posting,
+        org: (org as RequestOrg | null) ?? null,
+      };
     },
   });
 }

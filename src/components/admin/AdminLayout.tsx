@@ -34,6 +34,7 @@ import {
   FileSignature,
   FileStack,
   type LucideIcon,
+  BadgeCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -81,6 +82,7 @@ const NAV: NavSection[] = [
       { to: "/admin/co-hoi", label: "Cơ hội", icon: Target, module: "co-hoi" },
       { to: "/admin/khach-hang", label: "Khách hàng", icon: Users, module: "khach-hang" },
       { to: "/admin/don-hang", label: "Đơn hàng", icon: ClipboardList, module: "don-hang" },
+      { to: "/admin/goi-thue-bao", label: "Gói thuê bao", icon: BadgeCheck, module: "goi-thue-bao" },
       { to: "/admin/doi-tac", label: "Đối tác", icon: Building2, module: "nha-cung-cap" },
     ],
   },

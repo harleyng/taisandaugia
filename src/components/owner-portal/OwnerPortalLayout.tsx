@@ -4,6 +4,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { OwnerPortalSidebar } from './OwnerPortalSidebar'
 import { OwnerPortalMobileBar } from './OwnerPortalMobileBar'
 import { OwnerPermissionGate } from './OwnerPermissionGate'
+import { OwnerGuideButton } from './OwnerGuideButton'
 import { ownerPageTitle } from './owner-page-titles'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
@@ -77,6 +78,8 @@ export function OwnerPortalLayout() {
           </div>
         </main>
       </div>
+
+      <OwnerGuideButton />
     </div>
   )
 }

@@ -12,9 +12,9 @@ describe('visibleOwnerNavGroups', () => {
     expect(all).toHaveLength(OWNER_NAV_GROUPS.flatMap((g) => g.items).length)
   })
 
-  it('vai trò chỉ xem Thu tiền ⇒ chỉ còn Tổng quan, Thu tiền, Credit; nhóm rỗng bị bỏ', () => {
+  it('vai trò chỉ xem Thu tiền ⇒ chỉ còn Tổng quan, Thu tiền, Gói thuê bao, Credit; nhóm rỗng bị bỏ', () => {
     const groups = visibleOwnerNavGroups(OWNER_NAV_GROUPS, (m) => m === 'thu-tien')
-    expect(groups.flatMap((g) => g.items.map((i) => i.label))).toEqual(['Tổng quan', 'Thu tiền', 'Credit'])
+    expect(groups.flatMap((g) => g.items.map((i) => i.label))).toEqual(['Tổng quan', 'Thu tiền', 'Gói thuê bao', 'Credit'])
     expect(groups.map((g) => g.id)).toEqual(['dieu-hanh', 'tac-nghiep', 'thiet-lap'])
   })
 
@@ -48,6 +48,7 @@ describe('ownerModulesForPath', () => {
   it('Tổng quan, Credit và trang chi tiết mở theo bản ghi ⇒ không chặn', () => {
     expect(ownerModulesForPath('/chu-tai-san/dashboard')).toBeNull()
     expect(ownerModulesForPath('/chu-tai-san/credits')).toBeNull()
+    expect(ownerModulesForPath('/chu-tai-san/goi-thue-bao')).toBeNull()
     expect(ownerModulesForPath('/chu-tai-san/dang-tai-san/123')).toBeNull()
     expect(ownerModulesForPath('/chu-tai-san/hop-dong/mua-ban/123')).toBeNull()
     expect(ownerModulesForPath('/chu-tai-san/bao-cao-dinh-ky/123')).toBeNull()

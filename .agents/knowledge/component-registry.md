@@ -183,7 +183,10 @@ KYC at `/tro-thanh-chu-tai-san` — 2 branches (individual / organization), org 
 |---|---|
 | `AssetPostingWizard.tsx` / `WizardProgress.tsx` / `wizardSchema.ts` | Wizard shell, stepper, Zod schema |
 | `steps/Step1AssetType…Step5MatchAndSend.tsx` | The 5 steps (type → general → legal → auction needs → match & send) |
-| `AssetMediaUpload.tsx` / `AssetDocUpload.tsx` | Media & legal-doc uploads |
+| `info/StepInfo.tsx` (+ `info/InfoMediaGrid`, `info/InfoAiBar`, `info/infoParts`, `info/infoSections`) | Step 2 "Thông tin tài sản" (design v3): 5 sections, photo+video grid, AI bar, inline AI suggestions, 3D/VR panels |
+| `wizard/WizardTopBar` / `WizardNav` / `WizardFooter` / `useDraftAutosave` | v3 shell: top bar with autosave status, vertical rail with step-2 sub-sections, grid-aligned footer, debounced draft autosave |
+| `ServiceBanner.tsx` | Banner shell for `variant="banner"` of legal/auction consult + authentication cards (steps 3–4) |
+| `AssetDocUpload.tsx` | Legal-doc uploads |
 | `DeltaFieldsSection.tsx` / `DeltaFieldInput.tsx` | Category-specific "delta" fields (`constants/asset-delta-fields.ts`) |
 | `OrgMatchCard.tsx` / `OrgComparisonTable.tsx` | Suggested auction-org matches (client-side `rankOrgs`) |
 | `AssetPostingsLanding.tsx` | List `/chu-tai-san/dang-tai-san` (design "So Hoa Tai San - Danh sach & Chi tiet"): tabs Tất cả / Cần bạn xử lý / Đang số hoá / Đang ký gửi / Đã ký hợp đồng + search (`?nhom=&q=`), table `digitize/DigitizeTable` (status dot + 4-segment bar, "Bước tiếp theo", thumb via `digitize/PostingThumb`). Data `hooks/useOwnerDigitizedPostings.ts` (key `qk.ownerDigitizePostings`, under `myPostings`) |
@@ -293,5 +296,5 @@ Small cross-cutting primitives — **reuse before making your own:** `InfoBox`, 
 | Path | Purpose |
 |---|---|
 | `src/components/asset-posting/postingAccess.ts` | `PostingAccessProvider` / `usePostingCanWrite()`. Set by `AssetPostingDetail` from `canWritePosting(posting)`; the default `true` covers the wizard. The action blocks shared with the wizard (3D, VR, giám định, tư vấn, quotes, contract) hide their write buttons through it. |
-| `src/components/asset-posting/BranchField.tsx` | "Chi nhánh" select for the wizard (step 2). Hidden on Cá nhân or when the workspace has no branches. Required and scope-limited for scoped staff. |
+| `BranchSelect` in `src/components/asset-posting/info/StepInfo.tsx` | "Chi nhánh" select for the wizard (step 2). Hidden on Cá nhân or when the workspace has no branches. Required and scope-limited for scoped staff. |
 | `usePostingPartyAddress(postingId)` / `useUpdateOwnerAddress(postingId)` (`useConsignmentContract.ts`) | Bên A address of ONE posting (RPC `owner_posting_party_address`). Edits go to the personal KYC or to the workspace's org KYC. Replaces the old `useOwnerKycAddress`. |

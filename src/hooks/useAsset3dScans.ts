@@ -18,6 +18,7 @@ const REASON_MESSAGES: Record<string, string> = {
   posting_closed: "Hồ sơ đã kết thúc — không thêm model 3D được nữa.",
   service_unavailable: "Dịch vụ quét 3D đang tạm ngưng. Vui lòng thử lại sau.",
   insufficient: "Số dư credit không đủ để quét 3D.",
+  quota_exhausted: "Đã dùng hết lượt quét 3D của gói tháng này — liên hệ quản trị / gia hạn.",
   lot_mismatch: "Kết quả quét không thuộc hồ sơ này nên không được gắn.",
   job_mismatch: "Kết quả quét không khớp phiên quét.",
   job_conflict: "Kết quả quét đã được gắn cho một phiên khác.",
@@ -114,11 +115,15 @@ export function useStartScan() {
         lotId: String(p.lot_id),
         reused: p.reused === true,
         cost: Number(p.cost ?? 0),
+        covered: p.covered === true,
+        remaining: p.remaining == null ? null : Number(p.remaining),
       };
     },
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({ queryKey: qk.asset3d.byPosting(vars.postingId) });
       queryClient.invalidateQueries({ queryKey: qk.userCredits.byUser(userId) });
+      // Lượt quét có thể tiêu hạn mức gói thuê bao của Trạm.
+      queryClient.invalidateQueries({ queryKey: qk.ownerSubscription.all });
     },
   });
 }
@@ -146,6 +151,8 @@ export function useMockPartnerDeliver() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.asset3d.all });
       queryClient.invalidateQueries({ queryKey: qk.userCredits.all });
+      // Quét thất bại hoàn lượt gói (nếu gói bao) thay vì hoàn credit.
+      queryClient.invalidateQueries({ queryKey: qk.ownerSubscription.all });
     },
   });
 }

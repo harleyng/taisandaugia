@@ -11,6 +11,7 @@ import { getVariantPackage } from "@/lib/serviceCatalog";
 import { claimPaymentTxn } from "@/lib/credits";
 import { ContractPaymentResult } from "@/components/payment/ContractPaymentResult";
 import { VrTourPaymentResult } from "@/components/payment/VrTourPaymentResult";
+import { OwnerSubscriptionPaymentResult } from "@/components/payment/OwnerSubscriptionPaymentResult";
 import { AuthenticationPaymentResult } from "@/components/payment/AuthenticationPaymentResult";
 import { LegalConsultPaymentResult } from "@/components/payment/LegalConsultPaymentResult";
 import { AuctionConsultPaymentResult } from "@/components/payment/AuctionConsultPaymentResult";
@@ -204,10 +205,11 @@ const CreditPaymentResult = () => {
 
 /**
  * Một trang kết quả cho ba loại giao dịch: gói credit (mặc định), hồ sơ tham
- * gia (?contract=), đơn VR tour (?vr_order=), đơn giám định (?gd_order=) tư vấn pháp lý (?tvpl_order=) và tư vấn đấu giá (?tvdg_order=). Tách component để luồng credit giữ nguyên từng dòng.
+ * gia (?contract=), đơn VR tour (?vr_order=), đơn giám định (?gd_order=) tư vấn pháp lý (?tvpl_order=), tư vấn đấu giá (?tvdg_order=) và gói thuê bao tổ chức chủ tài sản (?sub=). Tách component để luồng credit giữ nguyên từng dòng.
  */
 const PaymentResult = () => {
   const [params] = useSearchParams();
+  if (params.get("sub")) return <OwnerSubscriptionPaymentResult />;
   if (params.get("vr_order")) return <VrTourPaymentResult />;
   if (params.get("gd_order")) return <AuthenticationPaymentResult />;
   if (params.get("tvpl_order")) return <LegalConsultPaymentResult />;

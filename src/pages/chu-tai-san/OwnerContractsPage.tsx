@@ -8,7 +8,7 @@ import { OwnerFilterBar } from "@/components/asset-owner-portal/ui/OwnerFilterBa
 import { OwnerSearchInput } from "@/components/asset-owner-portal/ui/OwnerSearchInput";
 import { OwnerTabBar } from "@/components/asset-owner-portal/ui/OwnerTabs";
 import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
-import { ContractRowItem } from "@/components/asset-owner-portal/contracts/ContractRowItem";
+import { ContractsTable } from "@/components/asset-owner-portal/contracts/ContractsTable";
 import { ServiceContractAcceptDialog } from "@/components/service-contracts/ServiceContractAcceptDialog";
 import { useOwnerContracts } from "@/hooks/useOwnerContracts";
 import { useUrlFilterState } from "@/hooks/useUrlFilterState";
@@ -33,7 +33,7 @@ type ServiceTarget = NonNullable<ContractListRow["service"]>;
  */
 export default function OwnerContractsPage() {
   const navigate = useNavigate();
-  const { rows, isLoading, error, refetch } = useOwnerContracts();
+  const { rows, briefOf, isLoading, error, refetch } = useOwnerContracts();
   const [f, setFilter] = useUrlFilterState(DEFAULTS, ALLOWED);
   const [accepting, setAccepting] = useState<ServiceTarget | null>(null);
 
@@ -52,17 +52,19 @@ export default function OwnerContractsPage() {
       <OwnerPageHeader
         title="Hợp đồng"
         subtitle={
-          actionCount > 0
-            ? `${actionCount} hợp đồng cần bạn xử lý.`
-            : "Ký gửi với tổ chức đấu giá, mua bán với người trúng và hợp đồng dịch vụ của tài sản."
+          <>
+            {actionCount > 0 && (
+              <b className="font-semibold text-warning">{actionCount} hợp đồng cần bạn xử lý. </b>
+            )}
+            Ký gửi với tổ chức đấu giá, mua bán với người trúng và hợp đồng dịch vụ của tài sản.
+          </>
         }
       />
 
       {isLoading ? (
         <div className="space-y-2.5">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-[76px] w-full rounded-2xl" />
-          ))}
+          <Skeleton className="h-10 w-full max-w-xl rounded-xl" />
+          <Skeleton className="h-72 w-full rounded-2xl" />
         </div>
       ) : error ? (
         <div className="rounded-2xl bg-card shadow-card">
@@ -116,15 +118,12 @@ export default function OwnerContractsPage() {
               <EmptyState
                 icon={FileSignature}
                 compact
-                title={f.loai === "can-xu-ly" && !f.q ? "Không có hợp đồng nào chờ bạn — tốt lắm." : "Không có hợp đồng nào khớp."}
+                title={f.loai === "can-xu-ly" && !f.q ? "Không có hợp đồng nào chờ bạn" : "Không có hợp đồng nào khớp"}
+                description={f.q ? "Thử từ khoá khác." : undefined}
               />
             </div>
           ) : (
-            <div className="space-y-2.5">
-              {visible.map((row) => (
-                <ContractRowItem key={row.key} row={row} onOpen={open} />
-              ))}
-            </div>
+            <ContractsTable rows={visible} briefOf={briefOf} onOpen={open} />
           )}
         </div>
       )}

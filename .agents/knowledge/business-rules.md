@@ -46,7 +46,7 @@ Single access point: **`useCredits()`** (`src/hooks/useCredits.tsx`). Underlying
 | Track owner — 7d/30d/1y | `track_owner_{7d,30d,1y}` | 49 / 149 / 995 |
 | Deep report — month/quarter/year | `deep_report_{month,quarter,year}` | 990 / 2,490 / 8,900 |
 | **Báo cáo cơ hội** (buyer, per view) | `report_opp_buyer` | **1** (was cosmetic; now a real `chargeOppReport` spend) |
-| **Báo cáo danh mục** (owner, per view) | `report_portfolio_owner` | **4** (repriced from 49; `chargeOwnerReport`) |
+| **Báo cáo danh mục** (owner, per view) | `report_portfolio_owner` | **4** (repriced from 49; server RPC `owner_charge_portfolio_report` since 2026-09-27 — covered by an org subscription quota first, see "Gói thuê bao tổ chức chủ tài sản") |
 | **Xuất hồ sơ dự tuyển** (company) | `export_profile_company` | **30** (repriced from 50; `chargeExportProfile`) |
 
 New ledger `type`s: `unlock_opp_report`, `export_profile`. Every consumption row now also stamps `variant_key` + `service_variant_id`.
@@ -108,6 +108,23 @@ Locking is a **real GoTrue ban** (`auth.admin.updateUserById(id, { ban_duration 
 - **Revenue recognition (fixed rule):** *Doanh thu tổng* = credit **top-up** VND + `Σ orders.amount` (excluding `cancelled`). **Credit is counted at top-up (package purchase), NEVER at credit spend** — spend on features is consumption, not new cash. Direct orders recognized at placement (`pending`+`fulfilled`), bucketed by `ordered_at`. Report `revenueReport.ts`; see `architecture.md` Reporting.
 - `orders.customer_id`/`service_id` are `ON DELETE RESTRICT` (can't delete a customer/service with orders); `advertisement_id` is `ON DELETE SET NULL`.
 - **Money collected on behalf of an auction org is NEVER a `direct` order.** Hồ sơ tham gia đấu giá: `_settle_bidding_contract` ghi đơn `commission` (`gross_amount` = tiền hồ sơ, `amount` = phần sàn theo hợp đồng, `user_id` = người mua, `fulfilled`). Xem mục "Hồ sơ tham gia đấu giá".
+
+---
+
+## Gói thuê bao tổ chức chủ tài sản (`owner_subscriptions`, 2026-09-27)
+
+Tổ chức chủ tài sản (= một `asset_owner_workspaces`) có thể trả **gói theo kỳ** thay cho credit. Chủ tài sản cá nhân và tenant "Cá nhân" **luôn** trả credit.
+
+- **Một gói / Trạm, cấu hình riêng** do admin đặt ở `/admin/goi-thue-bao` (module `goi-thue-bao`): tên, giá mỗi kỳ, số tháng (1–36), tính năng + hạn mức mỗi tháng, xử lý khi hết hạn mức.
+- **Tính năng tính theo gói** = `owner_sub_supported_variants()` (bản sao FE `SUPPORTED_SUB_VARIANTS`): `scan_3d_owner`, `report_portfolio_owner`. Tính năng không có trong gói ⇒ trả credit như cũ (không bị chặn). Dịch vụ VND (VR, giám định, TVPL, TVĐG) KHÔNG thuộc gói.
+- **Hạn mức** theo **tháng dương lịch giờ Việt Nam**, không cộng dồn; tháng đầu đủ hạn mức (không chia tỷ lệ). `monthly_quota` NULL = không giới hạn.
+- **Thứ tự trừ** ở mọi điểm: gói của Trạm (`_owner_sub_consume`) → hết hạn mức: `overage_mode='block'` (MẶC ĐỊNH) từ chối `quota_exhausted`, `'credits'` trừ credit → không thuộc gói: credit qua `_charge_owner_feature_credits` (chỗ duy nhất; Phase 15d đổi ví ở đây).
+- **Ai được bao:** thành viên **trực tiếp** đang hoạt động của Trạm, thao tác trên hồ sơ / báo cáo **của Trạm đó** (`asset_postings.workspace_id`). Trụ sở xem chi nhánh qua liên kết ⇒ trả credit; gói trụ sở KHÔNG bao chi nhánh.
+- **Trạng thái:** `draft` (tổ chức không thấy) → `offered` (thấy, trả được, chưa bao) → `active` (hiệu lực trong `[starts_on, ends_on]`; hiển thị `scheduled` / `expired` theo ngày) · `cancelled` (bắt buộc lý do; chào lại được). Chỉ thanh toán / kích hoạt tay mới đặt `active`.
+- **Thanh toán:** chỉ **Trưởng đơn vị** (vai trò OWNER) trả online qua VNPay mô phỏng (`pay_owner_subscription` → `_settle_owner_subscription`, idempotent theo `payment_claims`, `quote_changed` nếu admin đổi giá). Admin kích hoạt tay (`admin_owner_sub_activate`: chuyển khoản / hợp đồng / tặng). Gia hạn **nối tiếp** từ `ends_on + 1` khi còn hạn, hết hạn ⇒ từ hôm nay.
+- **Doanh thu:** mỗi kỳ trả tiền = một đơn `direct` (biến thể `owner_subscription`, `fulfilled`), ghi trọn kỳ lúc trả; kích hoạt 0 ₫ không sinh đơn. Huỷ không tự hoàn tiền.
+- **Sổ lượt dùng** `owner_subscription_usage` chỉ ghi thêm; hoàn lượt (quét 3D thất bại / quá hạn) = dòng đảo cùng `period_month`, không đụng credit. Sửa hạn mức có hiệu lực ngay; kỳ đã trả giữ bản chụp cấu hình (`owner_subscription_terms`).
+- Thành viên đọc gói qua RPC `owner_subscription_status` (không lộ ghi chú nội bộ); các bảng gói chỉ admin đọc, mọi ghi qua RPC.
 
 ---
 

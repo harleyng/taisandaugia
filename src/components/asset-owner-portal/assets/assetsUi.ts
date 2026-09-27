@@ -1,6 +1,6 @@
 import { ASSET_PHASES, ASSET_PHASE_META, type AssetPhase } from "@/lib/ownerAssets";
 
-/** Màu của nhóm giai đoạn — dùng chung cho chấm ở tab, thanh bước và đường đi trong ngăn chi tiết. */
+/** Màu của nhóm giai đoạn — dùng chung cho chấm ở tab, thanh bước và đường đi trong popup chi tiết. */
 export const PHASE_FILL: Record<AssetPhase, string> = {
   prep: "bg-foreground/60",
   auc: "bg-primary",

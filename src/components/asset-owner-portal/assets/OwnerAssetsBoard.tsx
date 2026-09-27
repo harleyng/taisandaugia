@@ -20,7 +20,7 @@ import { AssetTabs } from "./AssetTabs";
 import { ASSET_TABS, type AssetTab } from "./assetsUi";
 import { AssetRowsTable } from "./AssetRowsTable";
 import { ClaimInboxTable } from "./ClaimInboxTable";
-import { AssetDetailSheet } from "./AssetDetailSheet";
+import { AssetDetailDialog } from "./AssetDetailDialog";
 
 const ALL = "__all";
 
@@ -69,7 +69,7 @@ export function OwnerAssetsBoard({
   const [overdueOnly, setOverdueOnly] = useState(false);
 
   const [selected, setSelected] = useState<OwnerAssetRow | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   // Giữ target khi đóng để dialog không trống chữ lúc đang tắt dần.
   const [reportTarget, setReportTarget] = useState<ReportOutcomeTarget | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -103,7 +103,7 @@ export function OwnerAssetsBoard({
 
   const openRow = (row: OwnerAssetRow) => {
     setSelected(row);
-    setSheetOpen(true);
+    setDetailOpen(true);
   };
 
   const runCta = (row: OwnerAssetRow) => {
@@ -115,7 +115,7 @@ export function OwnerAssetsBoard({
     }
     const target = row.claim ? claimToReportTarget(row.claim) : null;
     if (!target || !workspaceId) return;
-    setSheetOpen(false);
+    setDetailOpen(false);
     setReportTarget(target);
     setReportOpen(true);
   };
@@ -244,7 +244,7 @@ export function OwnerAssetsBoard({
         )}
       </div>
 
-      <AssetDetailSheet row={selected} open={sheetOpen} onOpenChange={setSheetOpen} onCta={runCta} />
+      <AssetDetailDialog row={selected} open={detailOpen} onOpenChange={setDetailOpen} onCta={runCta} />
       {workspaceId && (
         <ReportOutcomeDialog open={reportOpen} onOpenChange={setReportOpen} workspaceId={workspaceId} target={reportTarget} />
       )}

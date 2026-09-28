@@ -106,6 +106,20 @@ export default function AdminOwnerSubscriptionDetail() {
         </p>
       )}
 
+      {detail?.status?.plan_id && (
+        <p className="rounded-xl bg-primary/10 px-4 py-2.5 text-sm text-foreground">
+          Theo gói danh mục <span className="font-semibold">{detail.status.plan_name}</span> — Trạm tự mua qua trang Gói dịch vụ.
+          Sửa cấu hình ở đây chỉ áp cho Trạm này; lần gia hạn qua danh mục sẽ chép lại cấu hình của gói.
+        </p>
+      )}
+      {detail?.status?.pending && (
+        <p className="rounded-xl bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+          Đã thanh toán đổi sang gói <span className="font-semibold text-foreground">{detail.status.pending.plan_name}</span>{" "}
+          ({detail.status.pending.months} tháng · {formatMoneyFull(detail.status.pending.price_vnd)}) — tự áp dụng từ{" "}
+          {formatSubDate(detail.status.pending.from)}.
+        </p>
+      )}
+
       {isLoading || !detail ? (
         <Skeleton className="h-64 w-full rounded-2xl" />
       ) : (

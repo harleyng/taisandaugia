@@ -40,7 +40,96 @@ export interface OwnerSubscriptionStatus {
   covered_for_me: boolean;
   /** Chỉ Trưởng đơn vị, gói có giá > 0 và đang chào / hiệu lực / hết hạn. */
   can_pay: boolean;
+  /** Người đang xem là Trưởng đơn vị của Trạm. */
+  is_owner: boolean;
+  /** Gói danh mục đang dùng (null = gói riêng do admin cấu hình). */
+  plan_id: string | null;
+  plan_tier: PlanTier | null;
+  /** Đổi gói đã trả tiền, chờ áp dụng từ kỳ kế tiếp. */
+  pending: SubPendingSwitch | null;
   lines: SubLine[];
+}
+
+export interface SubPendingSwitch {
+  plan_id: string | null;
+  plan_name: string;
+  tier: PlanTier;
+  from: string;
+  months: number;
+  price_vnd: number;
+}
+
+// ─── Danh mục gói dịch vụ (migration 20260928100000_owner_sub_plan_catalog.sql) ──
+
+export type PlanTier = "basic" | "standard" | "premium";
+
+/** Dòng quyền lợi admin tự nhập — CHỈ hiển thị, hệ thống không kiểm. */
+export interface PlanBenefit {
+  group: string;
+  label: string;
+  value: string;
+}
+
+export interface PlanEntitlement {
+  variant_key: SubVariantKey;
+  /** null = không giới hạn. */
+  monthly_quota: number | null;
+}
+
+export interface OwnerSubPlan {
+  id: string;
+  name: string;
+  fit_line: string | null;
+  highlight_line: string | null;
+  tier: PlanTier;
+  monthly_price_vnd: number;
+  overage_mode: OverageMode;
+  is_featured: boolean;
+  is_active: boolean;
+  sort_order: number;
+  benefits: PlanBenefit[];
+  entitlements: PlanEntitlement[];
+}
+
+export interface OwnerSubTermOption {
+  months: number;
+  discount_pct: number;
+  is_active: boolean;
+}
+
+export type PlanPurchaseEffect = "now" | "extend" | "next_term";
+
+/** owner_sub_plan_quote(p_workspace_id, p_plan_id, p_months). */
+export interface OwnerSubPlanQuote {
+  ok: boolean;
+  workspace_id: string;
+  workspace_name: string;
+  plan_id: string;
+  plan_name: string;
+  tier: PlanTier;
+  months: number;
+  discount_pct: number;
+  monthly_price_vnd: number;
+  amount_vnd: number;
+  effect: PlanPurchaseEffect;
+  starts_on: string;
+  ends_on: string;
+  subscription_id: string | null;
+  current_plan_name: string | null;
+  can_pay: boolean;
+  reason: string | null;
+}
+
+export interface PayOwnerSubPlanResult {
+  ok: true;
+  status: "paid" | "already_paid";
+  code: string;
+  workspace_id: string;
+  workspace_name: string;
+  plan_name: string | null;
+  effect: PlanPurchaseEffect;
+  starts_on: string;
+  ends_on: string;
 }
 
 /** owner_subscription_quote(p_sub_id). */

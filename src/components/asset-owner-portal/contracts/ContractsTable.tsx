@@ -104,9 +104,6 @@ export function ContractsTable({ rows, briefOf, onOpen }: ContractsTableProps) {
           </tbody>
         </table>
       </div>
-      <p className="border-t px-[22px] py-3 text-[12.5px] tabular-nums text-muted-foreground">
-        {rows.length} hợp đồng · việc cần xử lý hiện trước, còn lại mới cập nhật trước
-      </p>
     </section>
   );
 }

@@ -12,6 +12,7 @@ import { ownerAuctionConsultPath } from "@/lib/auctionConsult/paths";
 import { isQuoteExpired } from "@/lib/vrTour/status";
 import { ownerPostingPath } from "@/lib/vrTour/paths";
 import { useOwnerSubscriptionQuote } from "@/hooks/useOwnerSubscription";
+import { useOwnerSubPlanQuote } from "@/hooks/useOwnerSubscriptionPlans";
 import { OWNER_SUBSCRIPTION_PATH } from "@/lib/ownerSubscription/paths";
 import { formatSubDate } from "@/lib/ownerSubscription/status";
 
@@ -43,6 +44,8 @@ interface CheckoutState {
  *   • ?tvpl_order=<id>      — lần tư vấn pháp lý; cùng quy tắc với VR tour.
  *   • ?tvdg_order=<id>      — yêu cầu tư vấn đấu giá; cùng quy tắc với VR tour.
  *   • ?sub=<id>             — gói thuê bao tổ chức chủ tài sản; chỉ Trưởng đơn vị trả được.
+ *   • ?sub_plan=<id>&months=<n>&ws=<id> — gói trong danh mục gói dịch vụ; giá do server
+ *     báo (owner_sub_plan_quote), số tiền gửi kèm để server từ chối nếu giá vừa đổi.
  */
 export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   const packageKey = params.get("package") || "";
@@ -59,6 +62,10 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   const tvdg = useAuctionConsultation(tvdgId || null);
   const subId = params.get("sub") || "";
   const subQuote = useOwnerSubscriptionQuote(subId || null);
+  const subPlanId = params.get("sub_plan") || "";
+  const subPlanMonths = Number(params.get("months")) || null;
+  const subPlanWs = params.get("ws") || "";
+  const planQuote = useOwnerSubPlanQuote(subPlanWs || null, subPlanId || null, subPlanMonths);
   // Đơn dịch vụ gắn hồ sơ số hoá: từ Phase 4 đồng nghiệp cùng không gian ĐỌC được
   // đơn (RLS theo hồ sơ), nhưng chỉ NGƯỜI GỬI yêu cầu thanh toán — _settle_* kiểm
   // user_id, trả trước rồi mới bị từ chối là mất tiền.
@@ -80,6 +87,25 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
       quoted_at: o.quoted_at,
       quoted_price: o.quoted_price == null ? null : Number(o.quoted_price),
     });
+
+  if (subPlanId) {
+    const q = planQuote.data;
+    const back = params.get("return") || OWNER_SUBSCRIPTION_PATH;
+    if (planQuote.isLoading) return { loading: true, item: null, fallbackPath: back };
+    // Không phải Trưởng đơn vị / gói ngừng bán / đang có đổi gói chờ ⇒ không có gì để trả.
+    if (!q || !q.can_pay) return { loading: false, item: null, fallbackPath: back };
+    const when = q.effect === "next_term" ? ", áp dụng từ kỳ sau" : "";
+    return {
+      loading: false,
+      fallbackPath: back,
+      item: {
+        ref: q.plan_name,
+        label: `Gói dịch vụ ${q.plan_name} · ${q.workspace_name} · ${q.months} tháng (${formatSubDate(q.starts_on)} – ${formatSubDate(q.ends_on)}${when})`,
+        priceVnd: Number(q.amount_vnd),
+        resultParams: { sub_plan: q.plan_id, months: String(q.months), ws: q.workspace_id, amount: String(q.amount_vnd) },
+      },
+    };
+  }
 
   if (subId) {
     const q = subQuote.data;

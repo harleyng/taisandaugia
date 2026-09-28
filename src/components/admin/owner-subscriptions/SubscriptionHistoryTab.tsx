@@ -10,6 +10,9 @@ const EVENT_LABELS: Record<string, string> = {
   cancelled: "Huỷ gói",
   activated_manual: "Kích hoạt tay",
   paid_online: "Thanh toán online",
+  plan_purchased: "Mua gói danh mục",
+  plan_scheduled: "Đổi gói (từ kỳ sau)",
+  plan_switched: "Áp dụng gói mới",
 };
 
 const dateTime = (iso: string) =>
@@ -17,6 +20,15 @@ const dateTime = (iso: string) =>
 
 function eventDetail(type: string, payload: Record<string, unknown>): string {
   if (type === "cancelled" && payload.reason) return `Lý do: ${payload.reason}`;
+  if (type === "plan_switched") {
+    const to = payload.to as { name?: string } | undefined;
+    return `Chuyển sang ${to?.name ?? "gói mới"} từ ${formatSubDate(payload.effective_on as string)}`;
+  }
+  if (type === "plan_purchased" || type === "plan_scheduled") {
+    const plan = payload.plan as { name?: string } | undefined;
+    const range = `${formatSubDate(payload.starts_on as string)} – ${formatSubDate(payload.ends_on as string)}`;
+    return `${plan?.name ?? "Gói"} · ${range} · ${formatMoneyFull(payload.amount_vnd as number)}`;
+  }
   if (type === "activated_manual" || type === "paid_online") {
     const range = `${formatSubDate(payload.starts_on as string)} – ${formatSubDate(payload.ends_on as string)}`;
     return `${range} · ${formatMoneyFull(payload.amount_vnd as number)}`;

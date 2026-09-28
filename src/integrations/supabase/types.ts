@@ -8089,6 +8089,117 @@ export type Database = {
           },
         ]
       }
+      owner_subscription_plan_entitlements: {
+        Row: {
+          monthly_quota: number | null
+          plan_id: string
+          variant_key: string
+        }
+        Insert: {
+          monthly_quota?: number | null
+          plan_id: string
+          variant_key: string
+        }
+        Update: {
+          monthly_quota?: number | null
+          plan_id?: string
+          variant_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_subscription_plan_entitlements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_subscription_plan_entitlements_variant_key_fkey"
+            columns: ["variant_key"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["variant_key"]
+          },
+        ]
+      }
+      owner_subscription_plans: {
+        Row: {
+          benefits: Json
+          created_at: string
+          created_by: string | null
+          fit_line: string | null
+          highlight_line: string | null
+          id: string
+          is_active: boolean
+          is_featured: boolean
+          monthly_price_vnd: number
+          name: string
+          overage_mode: string
+          sort_order: number
+          tier: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          benefits?: Json
+          created_at?: string
+          created_by?: string | null
+          fit_line?: string | null
+          highlight_line?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          monthly_price_vnd: number
+          name: string
+          overage_mode?: string
+          sort_order?: number
+          tier?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          benefits?: Json
+          created_at?: string
+          created_by?: string | null
+          fit_line?: string | null
+          highlight_line?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          monthly_price_vnd?: number
+          name?: string
+          overage_mode?: string
+          sort_order?: number
+          tier?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      owner_subscription_term_options: {
+        Row: {
+          discount_pct: number
+          is_active: boolean
+          months: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          discount_pct?: number
+          is_active?: boolean
+          months: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          discount_pct?: number
+          is_active?: boolean
+          months?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       owner_subscription_terms: {
         Row: {
           amount_vnd: number
@@ -8104,6 +8215,7 @@ export type Database = {
           overage_mode_snapshot: string | null
           paid_on: string | null
           payment_txn_ref: string | null
+          plan_id: string | null
           price_snapshot: number | null
           source: string
           starts_on: string
@@ -8124,6 +8236,7 @@ export type Database = {
           overage_mode_snapshot?: string | null
           paid_on?: string | null
           payment_txn_ref?: string | null
+          plan_id?: string | null
           price_snapshot?: number | null
           source: string
           starts_on: string
@@ -8144,6 +8257,7 @@ export type Database = {
           overage_mode_snapshot?: string | null
           paid_on?: string | null
           payment_txn_ref?: string | null
+          plan_id?: string | null
           price_snapshot?: number | null
           source?: string
           starts_on?: string
@@ -8156,6 +8270,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_subscription_terms_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_plans"
             referencedColumns: ["id"]
           },
           {
@@ -8252,6 +8373,12 @@ export type Database = {
           id: string
           note: string | null
           overage_mode: string
+          pending_from: string | null
+          pending_months: number | null
+          pending_plan_id: string | null
+          pending_price_vnd: number | null
+          pending_snapshot: Json | null
+          plan_id: string | null
           plan_name: string
           price_vnd: number
           starts_on: string | null
@@ -8271,6 +8398,12 @@ export type Database = {
           id?: string
           note?: string | null
           overage_mode?: string
+          pending_from?: string | null
+          pending_months?: number | null
+          pending_plan_id?: string | null
+          pending_price_vnd?: number | null
+          pending_snapshot?: Json | null
+          plan_id?: string | null
           plan_name?: string
           price_vnd?: number
           starts_on?: string | null
@@ -8290,6 +8423,12 @@ export type Database = {
           id?: string
           note?: string | null
           overage_mode?: string
+          pending_from?: string | null
+          pending_months?: number | null
+          pending_plan_id?: string | null
+          pending_price_vnd?: number | null
+          pending_snapshot?: Json | null
+          plan_id?: string | null
           plan_name?: string
           price_vnd?: number
           starts_on?: string | null
@@ -8300,6 +8439,20 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "owner_subscriptions_pending_plan_id_fkey"
+            columns: ["pending_plan_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_plans"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "owner_subscriptions_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -10218,8 +10371,23 @@ export type Database = {
         }
         Returns: string
       }
+      _owner_sub_plan_eval: {
+        Args: {
+          p_months: number
+          p_plan_id: string
+          p_uid: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      _owner_sub_plan_snapshot: { Args: { p_plan_id: string }; Returns: Json }
       _owner_sub_reverse: {
         Args: { p_note: string; p_usage_id: string }
+        Returns: undefined
+      }
+      _owner_sub_roll: { Args: { p_sub_id: string }; Returns: undefined }
+      _owner_sub_set_entitlements: {
+        Args: { p_entitlements: Json; p_sub_id: string }
         Returns: undefined
       }
       _recompute_lot_leader: { Args: { _lot_id: string }; Returns: undefined }
@@ -10291,6 +10459,17 @@ export type Database = {
           _expected_amount: number
           _txn_ref: string
           _uid: string
+        }
+        Returns: Json
+      }
+      _settle_owner_sub_plan: {
+        Args: {
+          p_expected_amount: number
+          p_months: number
+          p_plan_id: string
+          p_txn_ref: string
+          p_uid: string
+          p_workspace_id: string
         }
         Returns: Json
       }
@@ -10501,8 +10680,29 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_owner_sub_plan_upsert: {
+        Args: {
+          p_benefits: Json
+          p_entitlements: Json
+          p_fit_line: string
+          p_highlight_line: string
+          p_is_active: boolean
+          p_is_featured: boolean
+          p_monthly_price_vnd: number
+          p_name: string
+          p_overage_mode: string
+          p_plan_id: string
+          p_sort_order: number
+          p_tier: string
+        }
+        Returns: Json
+      }
       admin_owner_sub_set_status: {
         Args: { p_reason: string; p_status: string; p_sub_id: string }
+        Returns: Json
+      }
+      admin_owner_sub_term_options_set: {
+        Args: { p_options: Json }
         Returns: Json
       }
       admin_owner_sub_upsert: {
@@ -11876,6 +12076,14 @@ export type Database = {
       }
       owner_sub_month: { Args: { p_at?: string }; Returns: string }
       owner_sub_next_start: { Args: { p_ends_on: string }; Returns: string }
+      owner_sub_plan_price: {
+        Args: { p_discount_pct: number; p_monthly: number; p_months: number }
+        Returns: number
+      }
+      owner_sub_plan_quote: {
+        Args: { p_months: number; p_plan_id: string; p_workspace_id: string }
+        Returns: Json
+      }
       owner_sub_supported_variants: { Args: never; Returns: string[] }
       owner_sub_term_end: {
         Args: { p_months: number; p_start: string }
@@ -12109,6 +12317,16 @@ export type Database = {
           _consultation_id: string
           _expected_amount: number
           _txn_ref: string
+        }
+        Returns: Json
+      }
+      pay_owner_sub_plan: {
+        Args: {
+          p_expected_amount: number
+          p_months: number
+          p_plan_id: string
+          p_txn_ref: string
+          p_workspace_id: string
         }
         Returns: Json
       }

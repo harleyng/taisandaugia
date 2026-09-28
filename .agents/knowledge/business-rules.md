@@ -126,6 +126,16 @@ Tổ chức chủ tài sản (= một `asset_owner_workspaces`) có thể trả 
 - **Sổ lượt dùng** `owner_subscription_usage` chỉ ghi thêm; hoàn lượt (quét 3D thất bại / quá hạn) = dòng đảo cùng `period_month`, không đụng credit. Sửa hạn mức có hiệu lực ngay; kỳ đã trả giữ bản chụp cấu hình (`owner_subscription_terms`).
 - Thành viên đọc gói qua RPC `owner_subscription_status` (không lộ ghi chú nội bộ); các bảng gói chỉ admin đọc, mọi ghi qua RPC.
 
+### Danh mục gói dịch vụ (`owner_subscription_plans`, 2026-09-28)
+
+Bên cạnh gói riêng do admin cấu hình, sàn bán **danh mục gói** (Cơ bản / Tiêu chuẩn / Chuyên nghiệp…) để Trưởng đơn vị tự mua ở `/chu-tai-san/goi-thue-bao/cac-goi` ("Gói dịch vụ"). Admin quản lý ở `/admin/goi-thue-bao/danh-muc`.
+- **Gói danh mục:** giá **mỗi tháng** + hạn mức theo `owner_sub_supported_variants()` (hệ thống kiểm) + `benefits` = dòng quyền lợi admin tự nhập, **CHỈ HIỂN THỊ — hệ thống không kiểm** (chỉ ghi điều sàn thực sự cam kết). Nhiều nhất một gói "Phổ biến nhất".
+- **Kỳ + chiết khấu** (`owner_subscription_term_options`, mặc định 3 / 6 / 12 tháng = 0 / 5 / 10%): giá kỳ = giá tháng × số tháng × (1 − %), làm tròn nghìn (`owner_sub_plan_price` ↔ `planTermPrice`).
+- **Hiệu lực một lượt mua** (`owner_sub_plan_quote`): chưa có gói / chờ thanh toán / nháp / huỷ / hết hạn ⇒ **ngay hôm nay**, thay cấu hình cũ; đang hiệu lực + CÙNG gói ⇒ **nối kỳ**, hạn mức cập nhật ngay theo gói hiện hành; đang hiệu lực + gói KHÁC (kể cả từ gói riêng) ⇒ trả tiền ngay, gói mới áp dụng **từ kỳ kế tiếp** (`ends_on + 1`). Chỉ **một** lần đổi gói chờ tại một thời điểm (`pending_exists`).
+- **Đổi gói chờ** lưu trên `owner_subscriptions.pending_*` và được **cuộn lười** (`_owner_sub_roll`) ở `_owner_sub_consume`, `owner_subscription_status`, báo giá và thanh toán — không có cron.
+- Sửa danh mục KHÔNG đổi gói Trạm đã mua; áp dụng từ lần mua / gia hạn sau. Admin sửa cấu hình một Trạm đang theo gói danh mục ⇒ chỉ Trạm đó đổi; lần gia hạn qua danh mục chép lại cấu hình gói.
+- Thanh toán: chỉ Trưởng đơn vị, VNPay mô phỏng (`pay_owner_sub_plan` → `_settle_owner_sub_plan`, idempotent theo mã giao dịch, `quote_changed` nếu giá đổi); mỗi lượt mua = một đơn `direct` `owner_subscription`.
+
 ---
 
 ## "Giá trị khởi điểm" của một tin đấu giá (fixed rule)

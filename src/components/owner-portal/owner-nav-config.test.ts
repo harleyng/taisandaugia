@@ -12,9 +12,9 @@ describe('visibleOwnerNavGroups', () => {
     expect(all).toHaveLength(OWNER_NAV_GROUPS.flatMap((g) => g.items).length)
   })
 
-  it('vai trò chỉ xem Thu tiền ⇒ chỉ còn Tổng quan, Thu tiền, Gói thuê bao, Credit; nhóm rỗng bị bỏ', () => {
+  it('vai trò chỉ xem Thu tiền ⇒ chỉ còn Tổng quan, Thu tiền, Gói dịch vụ, Credit; nhóm rỗng bị bỏ', () => {
     const groups = visibleOwnerNavGroups(OWNER_NAV_GROUPS, (m) => m === 'thu-tien')
-    expect(groups.flatMap((g) => g.items.map((i) => i.label))).toEqual(['Tổng quan', 'Thu tiền', 'Gói thuê bao', 'Credit'])
+    expect(groups.flatMap((g) => g.items.map((i) => i.label))).toEqual(['Tổng quan', 'Thu tiền', 'Gói dịch vụ', 'Credit'])
     expect(groups.map((g) => g.id)).toEqual(['dieu-hanh', 'tac-nghiep', 'thiet-lap'])
   })
 

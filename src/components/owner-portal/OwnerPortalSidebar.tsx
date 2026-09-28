@@ -5,7 +5,6 @@ import { OWNER_NAV_GROUPS, visibleOwnerNavGroups, type OwnerCountBadgeKind } fro
 import { useOwnerConsignmentSummary } from '@/hooks/useConsignmentContract'
 import { useOwnerContractActionCount } from '@/hooks/useOwnerContracts'
 import { usePendingClaimCount } from '@/hooks/useAssetOwnerWorkspace'
-import { useReportDraftCount } from '@/hooks/useOwnerPeriodicReports'
 import { useOwnerPulse } from '@/hooks/useOwnerPulse'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
 import { usePendingLinkRequestCount } from '@/hooks/useOwnerWorkspaceLinks'
@@ -39,8 +38,6 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
   const awaitingPaymentCount = useOwnerPulse().awaitingPayment.length
   // Tài sản: tin sàn tìm thấy chờ xác nhận (tab "Sàn tìm thấy").
   const { data: foundClaimCount = 0 } = usePendingClaimCount(workspaceId)
-  // Báo cáo định kỳ: bản nháp chờ chốt.
-  const { data: reportDraftCount = 0 } = useReportDraftCount(workspaceId)
 
   // Số hồ sơ đang chờ chủ tài sản làm gì đó (chọn báo giá, bổ sung địa chỉ,
   // xác nhận hợp đồng). Luật nằm ở RPC owner_consignment_summary.
@@ -55,9 +52,7 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
               ? awaitingPaymentCount
               : kind === 'owner-found-claims'
                 ? foundClaimCount
-                : kind === 'owner-report-drafts'
-                  ? reportDraftCount
-                  : 0
+                : 0
 
   const badgeLabel = (kind: OwnerCountBadgeKind | undefined, count: number) =>
     kind === 'owner-link-requests'
@@ -68,9 +63,7 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
             ? `${count} hợp đồng cần bạn xử lý`
             : kind === 'owner-found-claims'
               ? `${count} tin sàn tìm thấy chờ bạn xác nhận`
-              : kind === 'owner-report-drafts'
-                ? `${count} báo cáo chờ chốt`
-                : `${count} hồ sơ cần bạn xử lý`
+              : `${count} hồ sơ cần bạn xử lý`
 
   return (
     <aside className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -125,7 +118,7 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
                     <span className="min-w-0 flex-1 truncate">{item.label}</span>
                     {count > 0 && (
                       <span
-                        className="shrink-0 rounded-full bg-accent px-1.5 py-0.5 text-xs font-semibold text-accent-foreground"
+                        className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-foreground"
                         aria-label={badgeLabel(item.countBadge, count)}
                       >
                         {count}

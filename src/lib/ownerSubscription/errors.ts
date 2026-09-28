@@ -22,6 +22,12 @@ const REASON_MESSAGES: Record<string, string> = {
   reason_required: "Nhập lý do huỷ (ít nhất 3 ký tự).",
   invalid_amount: "Số tiền phải ≥ 0.",
   invalid_method: "Chọn hình thức thanh toán.",
+  pending_exists: "Trạm đã có một lần đổi gói chờ áp dụng từ kỳ sau — chờ tới khi gói mới có hiệu lực.",
+  plan_inactive: "Gói này đã ngừng cung cấp — chọn gói khác.",
+  invalid_term: "Thời hạn không hợp lệ — chọn một kỳ trong danh sách.",
+  invalid_benefits: "Dòng quyền lợi không hợp lệ (nhóm ≤ 40, nội dung ≤ 80, giá trị ≤ 60 ký tự; tối đa 20 dòng).",
+  invalid_tier: "Chọn kiểu hiển thị của gói.",
+  invalid_text: "Mô tả ngắn tối đa 120 ký tự.",
 };
 
 export class OwnerSubRpcError extends Error {

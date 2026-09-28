@@ -28,6 +28,10 @@ const sub = (over: Partial<OwnerSubscriptionStatus> = {}): OwnerSubscriptionStat
   next_reset_on: "2026-10-01",
   covered_for_me: true,
   can_pay: true,
+  is_owner: true,
+  plan_id: null,
+  plan_tier: null,
+  pending: null,
   lines: [line()],
   ...over,
 });

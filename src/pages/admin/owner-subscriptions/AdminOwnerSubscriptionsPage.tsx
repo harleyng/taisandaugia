@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight, LayoutGrid, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminOwnerSubscriptionList } from "@/hooks/useAdminOwnerSubscriptions";
@@ -59,11 +60,16 @@ export default function AdminOwnerSubscriptionsPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Gói thuê bao</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Gói theo kỳ cho tổ chức chủ tài sản thay cho credit — mỗi Trạm một cấu hình riêng. Chủ tài sản cá nhân vẫn dùng credit.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Gói thuê bao</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Gói theo kỳ cho tổ chức chủ tài sản thay cho credit — Trạm tự mua gói trong danh mục, hoặc sàn cấu hình gói riêng cho từng Trạm. Chủ tài sản cá nhân vẫn dùng credit.
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => navigate("/admin/goi-thue-bao/danh-muc")}>
+          <LayoutGrid className="mr-1.5 h-4 w-4" /> Danh mục gói
+        </Button>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

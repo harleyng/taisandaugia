@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePayOwnerSubscription } from "@/hooks/useOwnerSubscription";
+import { usePayOwnerSubPlan } from "@/hooks/useOwnerSubscriptionPlans";
 import { subErrorMessage } from "@/lib/ownerSubscription/errors";
 import { OWNER_SUBSCRIPTION_PATH } from "@/lib/ownerSubscription/paths";
 import { formatSubDate } from "@/lib/ownerSubscription/status";
 
 /**
- * /payment-result?sub=…&amount=… — ghi nhận thanh toán gói thuê bao tổ chức.
+ * /payment-result?sub=…&amount=… (gói riêng) hoặc ?sub_plan=…&months=…&ws=…&amount=… (gói
+ * danh mục) — ghi nhận thanh toán gói dịch vụ của tổ chức.
  *
  * Idempotent ở SERVER (_settle_owner_subscription): F5 / back-forward chỉ nhận
  * `already_paid`. `amount` là giá Trưởng đơn vị đã thấy — server từ chối
@@ -23,11 +25,16 @@ export function OwnerSubscriptionPaymentResult() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { userId, loading: authLoading } = useAuth();
-  const { mutate, data, error, isPending, isIdle } = usePayOwnerSubscription();
+  const paySub = usePayOwnerSubscription();
+  const payPlan = usePayOwnerSubPlan();
   const ranRef = useRef(false);
 
   const status = params.get("status");
   const subId = params.get("sub");
+  const planId = params.get("sub_plan");
+  const months = Number(params.get("months"));
+  const wsId = params.get("ws");
+  const { data, error, isPending, isIdle } = planId ? payPlan : paySub;
   const amount = Number(params.get("amount"));
   const txnRef = params.get("txn");
   const backPath = params.get("return") || OWNER_SUBSCRIPTION_PATH;
@@ -38,9 +45,15 @@ export function OwnerSubscriptionPaymentResult() {
     if (authLoading || !userId) return;
     if (ranRef.current) return;
     ranRef.current = true;
-    if (status !== "success" || !subId || !txnRef || !Number.isFinite(amount)) return;
-    mutate({ subId, txnRef, expectedAmount: amount });
-  }, [authLoading, userId, status, subId, txnRef, amount, mutate]);
+    if (status !== "success" || !txnRef || !Number.isFinite(amount)) return;
+    if (planId) {
+      if (!wsId || !Number.isFinite(months)) return;
+      payPlan.mutate({ workspaceId: wsId, planId, months, txnRef, expectedAmount: amount });
+    } else if (subId) {
+      paySub.mutate({ subId, txnRef, expectedAmount: amount });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutate ổn định; chỉ chạy một lần.
+  }, [authLoading, userId, status, subId, planId, wsId, months, txnRef, amount]);
 
   const failure = (title: string, message: string) => (
     <>
@@ -50,17 +63,19 @@ export function OwnerSubscriptionPaymentResult() {
       <h1 className="mb-2 text-2xl font-bold text-foreground">{title}</h1>
       <p className="text-sm text-muted-foreground">{message}</p>
       <Button onClick={() => navigate(backPath)} size="lg" className="mt-6 w-full">
-        Về trang gói thuê bao
+        Về trang gói dịch vụ
       </Button>
     </>
   );
 
   const content = () => {
     if (status !== "success") {
-      return failure("Thanh toán chưa hoàn tất", "Giao dịch đã bị huỷ. Bạn có thể thanh toán lại từ trang gói thuê bao.");
+      return failure("Thanh toán chưa hoàn tất", "Giao dịch đã bị huỷ. Bạn có thể thanh toán lại từ trang gói dịch vụ.");
     }
     if (error) return failure("Chưa ghi nhận được thanh toán", subErrorMessage(error));
     if (data) {
+      const planName = "plan_name" in data ? data.plan_name : null;
+      const nextTerm = "effect" in data && data.effect === "next_term";
       return (
         <>
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -69,16 +84,25 @@ export function OwnerSubscriptionPaymentResult() {
           <h1 className="mb-2 text-2xl font-bold text-foreground">
             {data.status === "already_paid" ? "Gói đã được thanh toán" : "Thanh toán thành công"}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Gói <span className="font-mono font-semibold text-foreground">{data.code}</span> của{" "}
-            <span className="font-semibold text-foreground">{data.workspace_name}</span> có hiệu lực{" "}
-            {formatSubDate(data.starts_on)} – {formatSubDate(data.ends_on)}.
-          </p>
+          {nextTerm ? (
+            <p className="text-sm text-muted-foreground">
+              Đã thanh toán gói <span className="font-semibold text-foreground">{planName}</span> cho{" "}
+              <span className="font-semibold text-foreground">{data.workspace_name}</span> — áp dụng từ kỳ kế tiếp,{" "}
+              {formatSubDate(data.starts_on)} – {formatSubDate(data.ends_on)}. Gói hiện tại vẫn dùng tới hết kỳ.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Gói {planName && <span className="font-semibold text-foreground">{planName} </span>}
+              <span className="font-mono font-semibold text-foreground">{data.code}</span> của{" "}
+              <span className="font-semibold text-foreground">{data.workspace_name}</span> có hiệu lực{" "}
+              {formatSubDate(data.starts_on)} – {formatSubDate(data.ends_on)}.
+            </p>
+          )}
           <p className="mt-4 rounded-lg bg-primary/10 px-3 py-2 text-sm text-foreground">
             Mọi thành viên của Trạm dùng các tính năng trong gói mà không trừ credit, trong hạn mức mỗi tháng.
           </p>
           <Button onClick={() => navigate(backPath)} size="lg" className="mt-6 w-full">
-            Xem gói thuê bao
+            Xem gói dịch vụ
           </Button>
         </>
       );

@@ -27,7 +27,6 @@ export type OwnerCountBadgeKind =
   | 'owner-link-requests'
   | 'owner-found-claims'
   | 'owner-awaiting-payment'
-  | 'owner-report-drafts'
 
 export interface OwnerNavItem {
   label: string
@@ -36,7 +35,7 @@ export interface OwnerNavItem {
   countBadge?: OwnerCountBadgeKind
   /**
    * Module của ma trận vai trò (src/lib/ownerWorkspace/permissions.ts) — mục chỉ hiện
-   * khi vai trò có quyền "Xem" ở ít nhất một module. Không có = luôn hiện (Tổng quan, Gói thuê bao, Credit).
+   * khi vai trò có quyền "Xem" ở ít nhất một module. Không có = luôn hiện (Tổng quan, Gói dịch vụ, Credit).
    */
   module?: OwnerModule | readonly OwnerModule[]
 }
@@ -114,13 +113,7 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
     items: [
       { label: 'Phân tích danh mục', icon: BarChart2, href: '/chu-tai-san/bao-cao', module: 'phan-tich' },
       { label: 'Dòng tiền', icon: Wallet, href: '/chu-tai-san/dong-tien', module: 'dong-tien' },
-      {
-        label: 'Báo cáo định kỳ',
-        icon: FileBarChart,
-        href: '/chu-tai-san/bao-cao-dinh-ky',
-        module: 'bao-cao-dinh-ky',
-        countBadge: 'owner-report-drafts',
-      },
+      { label: 'Báo cáo định kỳ', icon: FileBarChart, href: '/chu-tai-san/bao-cao-dinh-ky', module: 'bao-cao-dinh-ky' },
     ],
   },
   {
@@ -137,7 +130,7 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
         countBadge: 'owner-link-requests',
         module: 'lien-ket',
       },
-      { label: 'Gói thuê bao', icon: BadgeCheck, href: '/chu-tai-san/goi-thue-bao' },
+      { label: 'Gói dịch vụ', icon: BadgeCheck, href: '/chu-tai-san/goi-thue-bao' },
       { label: 'Credit', icon: CreditCard, href: '/chu-tai-san/credits' },
     ],
   },
@@ -158,7 +151,7 @@ export function visibleOwnerNavGroups(
 
 /**
  * Trang DANH SÁCH / trang theo không gian đang chọn → module cần quyền "Xem" (có một là
- * đủ). null = không chặn: Tổng quan, Gói thuê bao, Credit, và trang chi tiết mở theo bản ghi (hồ sơ,
+ * đủ). null = không chặn: Tổng quan, Gói dịch vụ, Credit, và trang chi tiết mở theo bản ghi (hồ sơ,
  * ký gửi, hợp đồng, báo cáo) — những trang đó tự xét quyền theo không gian CỦA BẢN GHI.
  */
 export function ownerModulesForPath(pathname: string): readonly OwnerModule[] | null {

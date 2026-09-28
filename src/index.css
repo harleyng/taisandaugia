@@ -64,6 +64,64 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 155 25% 17%;
     --sidebar-ring: 152 60% 45%;
+
+    /* Gói dịch vụ (/chu-tai-san/goi-thue-bao) — 3 hạng gói theo design "Goi Dich Vu Chu Tai
+       San": Cơ bản (xanh nhạt), Tiêu chuẩn (xanh đậm), Chuyên nghiệp (đen–vàng kim).
+       NGOẠI LỆ có chủ đích của luật "không thêm màu" (người dùng duyệt 2026-09-28): CHỈ dùng
+       trong các lớp .sub-* cuối file. Thẻ hạng luôn tối/sáng cố định ⇒ không đổi theo .dark. */
+    --tier-basic-1: 150 18% 97.5%;
+    --tier-basic-2: 150 16% 92.5%;
+    --tier-basic-edge: 150 14% 88%;
+    --tier-basic-top: 150 18% 96%;
+    --tier-basic-art: 150 28% 86%;
+    --tier-basic-glow: 150 40% 85%;
+    --tier-std-1: 155 52% 23%;
+    --tier-std-2: 163 58% 12%;
+    --tier-std-glow: 150 50% 34%;
+    --tier-std-card-1: 155 52% 26%;
+    --tier-std-card-2: 160 48% 15%;
+    --tier-std-card-3: 165 40% 9%;
+    --tier-std-edge: 150 50% 45%;
+    --tier-std-muted: 150 28% 82%;
+    --tier-std-card-muted: 150 22% 78%;
+    --tier-std-art: 150 62% 70%;
+    --tier-std-art-glow: 150 70% 45%;
+    --tier-std-hover: 150 30% 94%;
+    --tier-mint: 150 62% 62%;
+    --tier-mint-fg: 160 50% 10%;
+    --tier-pro-1: 36 14% 15%;
+    --tier-pro-2: 30 12% 6%;
+    --tier-pro-glow: 42 55% 42%;
+    --tier-pro-glow-2: 30 40% 30%;
+    --tier-pro-card-top: 40 70% 40%;
+    --tier-pro-card-1: 36 45% 22%;
+    --tier-pro-card-2: 32 20% 11%;
+    --tier-pro-card-3: 30 10% 6%;
+    --tier-pro-edge: 42 65% 58%;
+    --tier-pro-fg: 42 40% 94%;
+    --tier-pro-muted: 40 22% 72%;
+    --tier-pro-card-muted: 40 18% 72%;
+    --tier-gold: 42 62% 64%;
+    --tier-gold-bright: 42 75% 66%;
+    --tier-gold-deep: 38 55% 48%;
+    --tier-gold-fg: 30 30% 10%;
+    --tier-pro-sv: 38 50% 18%;
+    --tier-pro-art: 42 75% 62%;
+    --tier-pro-art-2: 38 70% 58%;
+    --tier-pro-art-glow: 42 80% 55%;
+    --tier-slate-1: 222 35% 14%;
+    --tier-slate-2: 215 30% 20%;
+    --tier-slate-glow: 210 40% 32%;
+    --tier-slate-muted: 215 25% 80%;
+    --tier-slate-art: 210 60% 80%;
+    --tier-warn-bg: 38 92% 93%;
+    --tier-warn-fg: 32 80% 22%;
+    --tier-warn-strong: 32 90% 36%;
+    --tier-warn-pill: 38 92% 60%;
+    --tier-warn-pill-fg: 32 80% 14%;
+    --tier-warn-on-dark: 38 92% 68%;
+    --tier-info: 215 70% 40%;
+    --tier-info-bg: 215 80% 95%;
   }
 
   .dark {
@@ -403,4 +461,204 @@ All colors MUST be HSL.
   color: hsl(var(--muted-foreground));
   pointer-events: none;
   height: 0;
+}
+
+/* ─── Gói dịch vụ (/chu-tai-san/goi-thue-bao) ────────────────────────────────
+   Port 1:1 từ design "Goi Dich Vu Chu Tai San.html" (claude design 979d4c55). Mỗi lớp hạng
+   đặt biến --sub-* để component không phải biết hạng: chữ phụ, màu nhấn, nhãn, nút. */
+.sub-tier-basic,
+.sub-card-basic {
+  --sub-mut: var(--muted-foreground);
+  --sub-accent: var(--primary);
+  --sub-tag-bg: var(--primary);
+  --sub-tag-fg: 0 0% 100%;
+  --sub-sv-bg: 152 45% 94%;
+  --sub-sv-fg: var(--primary);
+  --sub-price: var(--foreground);
+  --sub-cta-bg: var(--primary);
+  --sub-cta-fg: 0 0% 100%;
+  --sub-cta-hover: var(--primary-hover);
+  --sub-new-fg: 30 40% 10%;
+  color: hsl(var(--foreground));
+}
+.sub-tier-standard,
+.sub-card-standard {
+  --sub-mut: var(--tier-std-muted);
+  --sub-accent: var(--tier-mint);
+  --sub-tag-bg: var(--tier-mint);
+  --sub-tag-fg: var(--tier-mint-fg);
+  --sub-sv-bg: var(--tier-mint);
+  --sub-sv-fg: var(--tier-mint-fg);
+  --sub-price: 0 0% 100%;
+  --sub-cta-bg: 0 0% 100%;
+  --sub-cta-fg: var(--primary-hover);
+  --sub-cta-hover: var(--tier-std-hover);
+  --sub-new-fg: var(--tier-mint-fg);
+  color: #fff;
+}
+.sub-tier-premium,
+.sub-card-premium {
+  --sub-mut: var(--tier-pro-muted);
+  --sub-accent: var(--tier-gold-bright);
+  --sub-tag-bg: var(--tier-pro-art);
+  --sub-tag-fg: 30 40% 10%;
+  --sub-sv-bg: var(--tier-pro-sv);
+  --sub-sv-fg: var(--tier-gold-bright);
+  --sub-price: var(--tier-gold-bright);
+  --sub-cta-bg: var(--tier-gold);
+  --sub-cta-fg: var(--tier-gold-fg);
+  --sub-cta-hover: var(--tier-gold-bright);
+  --sub-new-fg: 30 40% 10%;
+  color: hsl(var(--tier-pro-fg));
+}
+.sub-card-standard { --sub-mut: var(--tier-std-card-muted); }
+.sub-card-premium { --sub-mut: var(--tier-pro-card-muted); color: hsl(42 30% 95%); }
+
+/* Nền hạng — khung "Gói hiện tại", đầu cột so sánh (mini). */
+.sub-tier-basic {
+  background: linear-gradient(160deg, hsl(var(--tier-basic-1)), hsl(var(--tier-basic-2)));
+  box-shadow: inset 0 0 0 1px hsl(var(--tier-basic-edge));
+}
+.sub-tier-standard {
+  background:
+    radial-gradient(90% 120% at 100% 0%, hsl(var(--tier-std-glow) / 0.7), transparent 60%),
+    linear-gradient(145deg, hsl(var(--tier-std-1)), hsl(var(--tier-std-2)));
+}
+.sub-tier-premium {
+  background:
+    radial-gradient(80% 110% at 100% 0%, hsl(var(--tier-pro-glow) / 0.45), transparent 62%),
+    radial-gradient(60% 80% at 0% 100%, hsl(var(--tier-pro-glow-2) / 0.35), transparent 70%),
+    linear-gradient(150deg, hsl(var(--tier-pro-1)), hsl(var(--tier-pro-2)));
+  box-shadow: inset 0 0 0 1px hsl(var(--tier-gold-bright) / 0.45);
+}
+
+/* Thẻ gói trong danh mục. */
+.sub-card-basic {
+  background: linear-gradient(180deg, hsl(var(--tier-basic-top)), hsl(var(--card)) 40%);
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+}
+.sub-card-standard {
+  background: linear-gradient(180deg, hsl(var(--tier-std-card-1)) 0%, hsl(var(--tier-std-card-2)) 42%, hsl(var(--tier-std-card-3)) 100%);
+  box-shadow: inset 0 0 0 1px hsl(var(--tier-std-edge) / 0.8), 0 10px 30px -12px hsl(var(--tier-std-card-2) / 0.5);
+}
+.sub-card-premium {
+  background:
+    radial-gradient(90% 50% at 50% 0%, hsl(var(--tier-pro-card-top) / 0.9), transparent 100%),
+    linear-gradient(180deg, hsl(var(--tier-pro-card-1)) 0%, hsl(var(--tier-pro-card-2)) 45%, hsl(var(--tier-pro-card-3)) 100%);
+  box-shadow: inset 0 0 0 1px hsl(var(--tier-pro-edge) / 0.85), 0 12px 34px -12px hsl(var(--tier-pro-card-1) / 0.6);
+}
+
+/* Lớp hoạ tiết trang trí (.art trong design). */
+.sub-art {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.sub-art::before,
+.sub-art::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+.sub-card-basic .sub-art::before,
+.sub-mini.sub-tier-basic .sub-art::before {
+  height: 120px;
+  background: repeating-linear-gradient(90deg, hsl(var(--tier-basic-art)) 0 12px, transparent 12px 26px);
+  -webkit-mask: linear-gradient(to top, #000 0%, transparent 90%), repeating-linear-gradient(0deg, #000 0 10px, transparent 10px 16px);
+  -webkit-mask-composite: source-in;
+  mask: linear-gradient(to top, #000 0%, transparent 90%) intersect, repeating-linear-gradient(0deg, #000 0 10px, transparent 10px 16px);
+}
+.sub-card-basic .sub-art::after,
+.sub-mini.sub-tier-basic .sub-art::after {
+  height: 140px;
+  background: radial-gradient(60% 70% at 80% 100%, hsl(var(--tier-basic-glow) / 0.8), transparent 70%);
+}
+.sub-card-standard .sub-art::before,
+.sub-mini.sub-tier-standard .sub-art::before {
+  height: 220px;
+  background: repeating-radial-gradient(circle at 88% 115%, transparent 0 16px, hsl(var(--tier-mint) / 0.22) 16px 17px);
+  -webkit-mask: linear-gradient(to top, #000 20%, transparent 100%);
+  mask: linear-gradient(to top, #000 20%, transparent 100%);
+}
+.sub-card-standard .sub-art::after,
+.sub-mini.sub-tier-standard .sub-art::after {
+  height: 200px;
+  background: radial-gradient(70% 60% at 85% 110%, hsl(var(--tier-std-art-glow) / 0.45), transparent 70%);
+}
+.sub-card-premium .sub-art::before,
+.sub-mini.sub-tier-premium .sub-art::before {
+  height: 240px;
+  background:
+    repeating-radial-gradient(ellipse 160% 90% at 10% 140%, transparent 0 9px, hsl(var(--tier-pro-art) / 0.28) 9px 10px),
+    repeating-radial-gradient(ellipse 120% 80% at 110% 160%, transparent 0 11px, hsl(var(--tier-pro-art-2) / 0.2) 11px 12px);
+  -webkit-mask: linear-gradient(to top, #000 25%, transparent 100%);
+  mask: linear-gradient(to top, #000 25%, transparent 100%);
+}
+.sub-card-premium .sub-art::after,
+.sub-mini.sub-tier-premium .sub-art::after {
+  height: 220px;
+  background: radial-gradient(60% 55% at 50% 115%, hsl(var(--tier-pro-art-glow) / 0.55), transparent 72%);
+}
+.sub-mini .sub-art::before,
+.sub-mini .sub-art::after {
+  height: 100% !important;
+}
+.sub-hero.sub-tier-standard .sub-art::before {
+  top: 0;
+  left: auto;
+  width: 55%;
+  background: repeating-radial-gradient(circle at 95% 140%, transparent 0 18px, hsl(var(--tier-std-art) / 0.16) 18px 19px);
+  -webkit-mask: linear-gradient(to left, #000 30%, transparent 100%);
+  mask: linear-gradient(to left, #000 30%, transparent 100%);
+}
+.sub-hero.sub-tier-standard .sub-art::after {
+  top: 0;
+  left: auto;
+  width: 50%;
+  background: radial-gradient(60% 90% at 100% 110%, hsl(var(--tier-std-art-glow) / 0.4), transparent 70%);
+}
+
+/* Nút trong thẻ hạng (bo tròn, màu theo hạng). */
+.sub-btn-solid {
+  background: hsl(var(--sub-cta-bg));
+  color: hsl(var(--sub-cta-fg));
+}
+.sub-btn-solid:hover:not(:disabled) { background: hsl(var(--sub-cta-hover)); }
+.sub-btn-gold {
+  background: linear-gradient(135deg, hsl(42 62% 60%), hsl(var(--tier-gold-deep)));
+  color: hsl(var(--tier-gold-fg));
+}
+.sub-btn-gold:hover:not(:disabled) { filter: brightness(1.05); }
+.sub-btn-ghost {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+}
+.sub-btn-ghost:hover:not(:disabled) { background: hsl(var(--muted)); }
+.sub-card-standard .sub-btn-ghost,
+.sub-card-premium .sub-btn-ghost {
+  background: hsl(0 0% 100% / 0.1);
+  color: inherit;
+  box-shadow: inset 0 0 0 1px hsl(0 0% 100% / 0.2);
+}
+
+/* Thanh "Cần hạn mức riêng?". */
+.sub-cust {
+  color: #fff;
+  background:
+    radial-gradient(70% 140% at 100% 100%, hsl(var(--tier-slate-glow) / 0.9), transparent 60%),
+    linear-gradient(120deg, hsl(var(--tier-slate-1)), hsl(var(--tier-slate-2)));
+}
+.sub-cust .sub-art::before {
+  top: 0;
+  left: auto;
+  width: 50%;
+  background: repeating-radial-gradient(circle at 100% 120%, transparent 0 16px, hsl(var(--tier-slate-art) / 0.12) 16px 17px);
+  -webkit-mask: linear-gradient(to left, #000 30%, transparent);
+  mask: linear-gradient(to left, #000 30%, transparent);
 }

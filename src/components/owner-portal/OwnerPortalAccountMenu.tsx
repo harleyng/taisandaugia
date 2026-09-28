@@ -14,8 +14,7 @@ import { useOwnerSubscription } from '@/hooks/useOwnerSubscription'
 import { EXPIRY_WARNING_DAYS, daysLeft, formatSubDate, vnToday } from '@/lib/ownerSubscription/status'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
-import { ownerWsAccessLabel } from '@/lib/ownerWorkspace/roles'
-import { ArrowLeft, BadgeCheck, ChevronsUpDown, CreditCard, LogOut, Plus } from 'lucide-react'
+import { Coins } from 'lucide-react'
 
 interface Props {
   /** Đóng drawer trên mobile trước khi chuyển trang. */
@@ -23,14 +22,15 @@ interface Props {
 }
 
 /**
- * Khối tài khoản ở chân sidebar cổng chủ tài sản: số dư credit + hồ sơ người dùng.
- * "Quay lại Marketplace" và đăng xuất nằm trong menu hồ sơ — cổng không còn top bar.
+ * Khối tài khoản ở chân sidebar cổng chủ tài sản (design "Sidebar Account Menu" — phương án A):
+ * một dòng hồ sơ gộp tên gói (subtitle, đổi màu khi sắp hết hạn / link khi chưa có gói) và số dư
+ * credit. Chi tiết gói + credit, "Quay lại Marketplace" và đăng xuất nằm trong menu hồ sơ.
  */
 export function OwnerPortalAccountMenu({ onNavigate }: Props) {
   const navigate = useNavigate()
   const { balance } = useCredits()
   const { userId } = useAuth()
-  const { workspace, workspaceId, roleName, accessVia, isPersonal } = useOwnerWorkspace()
+  const { workspace, workspaceId, isPersonal } = useOwnerWorkspace()
   // Gói thuê bao của Trạm đang chọn — chỉ hiện dòng khi gói đã / đang có hiệu lực.
   const { data: sub } = useOwnerSubscription(isPersonal ? null : workspaceId)
   const subShown = !!sub && ['active', 'scheduled', 'expired'].includes(sub.status)
@@ -41,7 +41,6 @@ export function OwnerPortalAccountMenu({ onNavigate }: Props) {
   const displayName = isPersonal
     ? kycNames.individual || kycNames.org
     : workspace?.primary_name || kycNames.org || kycNames.individual
-  const subtitle = isPersonal ? 'Cá nhân' : roleName ? ownerWsAccessLabel(roleName, accessVia ?? 'member') : null
 
   useEffect(() => {
     if (!userId) return
@@ -70,65 +69,102 @@ export function OwnerPortalAccountMenu({ onNavigate }: Props) {
     navigate('/')
   }
 
-  return (
-    <div className="border-t border-sidebar-border px-3 py-3 shrink-0 space-y-1">
-      {subShown && sub && (
-        <button
-          onClick={() => go('/chu-tai-san/goi-thue-bao')}
-          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+  const subtitleNode = (() => {
+    if (isPersonal) return <span className="block truncate text-[11px] leading-[1.3] text-sidebar-foreground/60">Cá nhân</span>
+    if (subShown && sub && subWarn) {
+      return (
+        <span
+          className="flex items-center gap-1 truncate text-[11px] font-semibold leading-[1.3] text-warning"
+          title={
+            sub.status === 'expired'
+              ? 'Gói đã hết hạn'
+              : `Gói sắp hết hạn${sub.ends_on ? ` (${formatSubDate(sub.ends_on)})` : ''}`
+          }
         >
-          <BadgeCheck className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-          <span className="min-w-0 flex-1 truncate text-left">Gói</span>
-          <span className={subWarn ? 'font-semibold text-warning' : 'text-sidebar-foreground'}>
-            {sub.status === 'expired' ? 'Hết hạn' : `đến ${formatSubDate(sub.ends_on)}`}
-          </span>
-        </button>
-      )}
-      <button
-        onClick={() => go('/chu-tai-san/credits')}
-        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          <i className="inline-block h-[5px] w-[5px] shrink-0 rounded-full bg-warning" />
+          <span className="truncate">{sub.plan_name}</span>
+        </span>
+      )
+    }
+    if (subShown && sub) {
+      return <span className="block truncate text-[11px] leading-[1.3] text-sidebar-foreground/60">{sub.plan_name}</span>
+    }
+    // Chưa có gói: subtitle là lối tắt tới trang gói — chặn pointerdown để không mở menu.
+    return (
+      <span
+        role="link"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          go('/chu-tai-san/goi-thue-bao')
+        }}
+        className="block truncate text-[11px] font-medium leading-[1.3] text-[hsl(152_60%_55%)] hover:text-[hsl(152_60%_65%)]"
       >
-        <CreditCard className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-        <span className="min-w-0 flex-1 truncate text-left">Credit</span>
-        <span className="font-semibold text-sidebar-foreground">{balance.toLocaleString('vi-VN')}</span>
-        <Plus className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/60" aria-label="Mua thêm credit" />
-      </button>
+        Nâng cấp gói
+      </span>
+    )
+  })()
 
+  const balanceText = balance.toLocaleString('vi-VN')
+
+  return (
+    <div className="border-t border-sidebar-border p-3 shrink-0">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring">
-            <Avatar className="h-8 w-8 shrink-0">
-              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
+          <button className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent">
+            <Avatar className="h-6 w-6 shrink-0">
+              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-[10px] font-semibold">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-sidebar-foreground">
+              <span className="block truncate text-[13px] font-medium leading-[1.3] text-sidebar-foreground">
                 {displayName || 'Chủ tài sản'}
               </span>
-              {subtitle && (
-                <span className="block truncate text-xs text-sidebar-foreground/60">{subtitle}</span>
-              )}
+              {subtitleNode}
             </span>
-            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/50" />
+            <span className="inline-flex shrink-0 items-center gap-1" title={`Số dư ${balanceText} credit`}>
+              <Coins className="h-3 w-3 text-warning" />
+              <span className="text-xs font-semibold text-sidebar-foreground">{balanceText}</span>
+            </span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           side="top"
           align="start"
-          className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[14rem]"
+          className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[14rem] p-[3px] text-[13px]"
         >
-          <DropdownMenuItem onClick={() => go('/')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại Marketplace
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => go('/chu-tai-san/credits')}>
-            <CreditCard className="h-4 w-4 mr-2" />
+          <div className={`grid gap-[3px] p-[3px] ${isPersonal ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {!isPersonal && (
+              <div className="min-w-0 rounded-md bg-muted px-2 py-1.5">
+                <small className="block text-[10.5px] text-muted-foreground">Gói hiện tại</small>
+                <b className={`block truncate text-xs font-semibold ${subWarn ? 'text-warning' : ''}`}>
+                  {subShown && sub ? sub.plan_name : 'Chưa có gói'}
+                </b>
+              </div>
+            )}
+            <div className="min-w-0 rounded-md bg-muted px-2 py-1.5">
+              <small className="block text-[10.5px] text-muted-foreground">Số dư</small>
+              <b className="block truncate text-xs font-semibold">{balanceText} credit</b>
+            </div>
+          </div>
+          <DropdownMenuSeparator />
+          {!isPersonal && (
+            <DropdownMenuItem className="px-2 py-[5px] text-[13px]" onClick={() => go('/chu-tai-san/goi-thue-bao')}>
+              Quản lý gói dịch vụ
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem className="px-2 py-[5px] text-[13px]" onClick={() => go('/chu-tai-san/credits')}>
             Mua thêm credit
           </DropdownMenuItem>
+          <DropdownMenuItem className="px-2 py-[5px] text-[13px]" onClick={() => go('/')}>
+            Quay lại Marketplace
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
-            <LogOut className="h-4 w-4 mr-2" />
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            className="px-2 py-[5px] text-[13px] text-destructive focus:text-destructive"
+          >
             Đăng xuất
           </DropdownMenuItem>
         </DropdownMenuContent>

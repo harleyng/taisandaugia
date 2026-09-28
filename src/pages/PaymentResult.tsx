@@ -205,11 +205,11 @@ const CreditPaymentResult = () => {
 
 /**
  * Một trang kết quả cho ba loại giao dịch: gói credit (mặc định), hồ sơ tham
- * gia (?contract=), đơn VR tour (?vr_order=), đơn giám định (?gd_order=) tư vấn pháp lý (?tvpl_order=), tư vấn đấu giá (?tvdg_order=) và gói thuê bao tổ chức chủ tài sản (?sub=). Tách component để luồng credit giữ nguyên từng dòng.
+ * gia (?contract=), đơn VR tour (?vr_order=), đơn giám định (?gd_order=) tư vấn pháp lý (?tvpl_order=), tư vấn đấu giá (?tvdg_order=) và gói thuê bao tổ chức chủ tài sản (?sub=, gói danh mục ?sub_plan=). Tách component để luồng credit giữ nguyên từng dòng.
  */
 const PaymentResult = () => {
   const [params] = useSearchParams();
-  if (params.get("sub")) return <OwnerSubscriptionPaymentResult />;
+  if (params.get("sub") || params.get("sub_plan")) return <OwnerSubscriptionPaymentResult />;
   if (params.get("vr_order")) return <VrTourPaymentResult />;
   if (params.get("gd_order")) return <AuthenticationPaymentResult />;
   if (params.get("tvpl_order")) return <LegalConsultPaymentResult />;

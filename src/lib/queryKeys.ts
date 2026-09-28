@@ -469,9 +469,15 @@ export const qk = {
     all: ["owner-subscription"] as const,
     byWorkspace: (workspaceId?: string | null) => ["owner-subscription", workspaceId] as const,
     quote: (subId?: string | null) => ["owner-subscription", "quote", subId] as const,
+    /** Danh mục gói đang bán + các kỳ (3 / 6 / 12 tháng). */
+    plans: ["owner-subscription", "plans"] as const,
+    planQuote: (workspaceId?: string | null, planId?: string | null, months?: number | null) =>
+      ["owner-subscription", "plan-quote", workspaceId, planId, months] as const,
   },
   adminOwnerSubscriptions: {
     all: ["admin-owner-subscriptions"] as const,
+    /** Danh mục gói (kể cả gói đã ngừng bán). */
+    plans: ["admin-owner-subscriptions", "plans"] as const,
     detail: (workspaceId?: string | null) => ["admin-owner-subscriptions", workspaceId] as const,
   },
 

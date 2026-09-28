@@ -145,27 +145,6 @@ export function useDraftReportPreviews(reports: readonly OwnerReportListItem[]) 
   return map;
 }
 
-/**
- * Số bản nháp chờ chốt — huy hiệu mục "Báo cáo định kỳ" trên sidebar. Key nằm dưới
- * ownerReports nên tạo / chốt / xoá nháp đều làm mới. RLS tự giới hạn theo chi nhánh.
- */
-export function useReportDraftCount(workspaceId: string | null | undefined) {
-  return useQuery({
-    queryKey: [...qk.ownerReports(workspaceId), "draft-count"],
-    enabled: !!workspaceId,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("owner_report_snapshots")
-        .select("id", { count: "exact", head: true })
-        .eq("workspace_id", workspaceId!)
-        .eq("status", "draft");
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
-}
-
 function useInvalidateReports() {
   const queryClient = useQueryClient();
   return (workspaceId: string, reportId?: string) => {

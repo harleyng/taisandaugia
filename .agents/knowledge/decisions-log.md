@@ -5,6 +5,12 @@
 
 ---
 
+## 2026-09-28 — Danh mục gói dịch vụ (tự mua) + trang "Gói dịch vụ" theo design
+
+**Context:** Người dùng muốn trang gói của cổng chủ tài sản giống hệt design "Goi Dich Vu Chu Tai San" (3 hạng gói, chọn kỳ có chiết khấu, bảng so sánh, tự nâng cấp) — nhưng hệ thống chỉ có gói riêng do admin cấu hình. Người dùng chốt: làm DANH MỤC thật; ngoài 2 tính năng có hạn mức cho phép dòng quyền lợi tự nhập (không kiểm); đổi gói từ kỳ kế tiếp; thêm token màu hạng (ngoại lệ luật không thêm màu); "Xem các gói khác" mở TRANG RIÊNG có nút quay lại (không bung dưới gói hiện tại).
+**Decision:** Mig `20260928100000_owner_sub_plan_catalog` (áp qua psql): `owner_subscription_plans` + `_plan_entitlements` + `_term_options`; `owner_subscriptions.plan_id` + ô `pending_*`; cuộn lười `_owner_sub_roll`; `owner_subscription_status` thành VOLATILE. Lượt mua ghi kỳ với bản chụp cấu hình GÓI (không phải hạn mức đang chạy). Seed 3 gói theo giá/quyền lợi của design — là giữ chỗ, admin phải duyệt lại.
+**Consequences:** SQL 20 kịch bản PASS (ROLLBACK). Dòng quyền lợi seed (Số hoá, Tin ưu tiên, Báo cáo thị trường, PDF, Thư mời, Thành viên) KHÔNG được hệ thống kiểm — sửa/xoá trước khi bán thật. Muốn kiểm thêm tính năng: đi theo đường `owner_sub_supported_variants()`.
+
 ## 2026-09-27 — Gói thuê bao tổ chức chủ tài sản (hạn mức tháng thay credit)
 
 **Context:** Tổ chức chủ tài sản chuyên nghiệp muốn trả theo kỳ thay vì credit từng lượt; mỗi tổ chức một cấu hình do admin đặt; cá nhân vẫn credit. Người dùng chốt: hạn mức THEO TÍNH NĂNG / tháng, hết hạn mức mặc định CHẶN (admin đổi được sang trừ credit), trả online VNPay + admin kích hoạt tay, chỉ thành viên TRỰC TIẾP của Trạm được bao, kỳ do admin đặt, reset tháng dương lịch VN.

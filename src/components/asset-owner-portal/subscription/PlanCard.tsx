@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { formatVndNumber, planCardLines, planTermPrice, type PlanCta } from "@/lib/ownerSubscription/catalog";
+import { PLAN_CARD_MAX_LINES, formatVndNumber, planCardLines, planTermPrice, type PlanCta } from "@/lib/ownerSubscription/catalog";
 import type { OwnerSubPlan } from "@/lib/ownerSubscription/types";
 
 interface Props {
@@ -25,7 +25,9 @@ const CTA_TONE = {
 export function PlanCard({ plan, prev, months, discountPct, tag, cta, locked, lockedHint, onSelect }: Props) {
   const price = planTermPrice(plan.monthly_price_vnd, months, discountPct);
   const full = plan.monthly_price_vnd * months;
-  const lines = planCardLines(prev, plan);
+  const allLines = planCardLines(prev, plan);
+  const lines = allLines.slice(0, PLAN_CARD_MAX_LINES);
+  const hidden = allLines.length - lines.length;
   const disabled = cta.disabled || locked;
 
   return (
@@ -105,6 +107,11 @@ export function PlanCard({ plan, prev, months, discountPct, tag, cta, locked, lo
           </li>
         ))}
       </ul>
+      {hidden > 0 && (
+        <p className="relative z-[1] mt-1 pl-[26px] text-[13px] text-[hsl(var(--sub-mut))]">
+          + {hidden} quyền lợi khác — xem bảng so sánh bên dưới
+        </p>
+      )}
     </article>
   );
 }

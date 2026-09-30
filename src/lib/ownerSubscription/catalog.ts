@@ -76,6 +76,9 @@ function benefitImproved(prev: string | undefined, next: string): boolean {
   return prev.trim() !== next.trim();
 }
 
+/** Thẻ gói chỉ hiện chừng này dòng đầu; phần còn lại xem ở bảng so sánh ngay dưới. */
+export const PLAN_CARD_MAX_LINES = 8;
+
 export interface PlanCardLine {
   key: string;
   /** Phần chữ đậm. */

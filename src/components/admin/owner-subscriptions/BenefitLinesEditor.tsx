@@ -9,7 +9,7 @@ interface Props {
   disabled?: boolean;
 }
 
-const MAX_LINES = 20;
+const MAX_LINES = 30;
 
 /**
  * Dòng quyền lợi hiển thị trên thẻ gói + bảng so sánh (nhóm · nội dung · giá trị). Hệ thống

@@ -1,0 +1,763 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Nón Làng Chuông VR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
+<style>
+/* Layout: full-bleed 3D village; glass panels float over it — step card bottom-left, step rail right (top strip on phones). Single deliberate dark UI look, tinted like bamboo shade, over a daylight scene. */
+:root{
+  --ink:#121a15;            /* shade under a bamboo grove */
+  --panel:rgba(18,26,21,.86);
+  --paper:#f1ecd9;          /* ironed palm leaf */
+  --muted:#aab3a6;
+  --leaf:#a9cc84;           /* young lá lụi, accent */
+  --leaf-deep:#3d6b36;
+  --silk:#ef7d8f;           /* quai lụa, used only for live counters */
+  --line:rgba(241,236,217,.14);
+  --f-display:"Cormorant Garamond","Iowan Old Style",Georgia,serif;
+  --f-body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--ink);color:var(--paper);font-family:var(--f-body);overflow:hidden}
+#app{position:fixed;inset:0}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
+
+.top{position:absolute;left:16px;right:16px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;pointer-events:none}
+.top > *{pointer-events:auto}
+.brand{background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:8px 14px 10px}
+.brand small{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.brand strong{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:26px;line-height:1.05}
+.tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:background .2s,border-color .2s}
+.btn:hover{border-color:rgba(241,236,217,.35)}
+.btn.primary{background:var(--leaf-deep);border-color:var(--leaf-deep);color:#fff}
+.btn.primary:hover{background:#4a7d41}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px;backdrop-filter:blur(10px)}
+.seg button{background:none;border:0;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+
+.rail{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:14px;padding:10px}
+.rail button{display:flex;align-items:center;gap:10px;background:none;border:0;border-radius:8px;padding:6px 10px 6px 6px;text-align:left;font-size:13px;color:var(--muted);white-space:nowrap}
+.rail button:hover{color:var(--paper);background:rgba(241,236,217,.06)}
+.rail .n{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;flex:none}
+.rail button.seen .n{border-color:var(--leaf);color:var(--leaf)}
+.rail button.on{color:var(--paper);background:rgba(169,204,132,.15)}
+.rail button.on .n{background:var(--leaf);border-color:var(--leaf);color:var(--ink)}
+
+.card{position:absolute;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(430px,calc(100% - 32px));background:var(--panel);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:18px 20px 16px;display:flex;flex-direction:column;gap:12px;max-height:calc(100% - 120px);overflow:auto}
+.kicker{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--leaf);font-weight:600}
+.kicker .min{display:none;background:none;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:11px;letter-spacing:.04em;text-transform:none;color:var(--muted)}
+.card h1{font-family:var(--f-display);font-weight:600;font-size:32px;line-height:1.05;margin:0;text-wrap:balance}
+.card .body{margin:0;font-size:14px;line-height:1.6;color:#dcd8c8;max-width:62ch}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.steps li{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--muted);transition:color .3s}
+.steps li::before{content:"";flex:none;width:9px;height:9px;margin-top:5px;border-radius:50%;border:1.5px solid currentColor;transition:background .3s}
+.steps li.act{color:var(--paper)}
+.steps li.act::before{border-color:var(--leaf);box-shadow:0 0 0 3px rgba(169,204,132,.2)}
+.steps li.done{color:#d0cdbd}
+.steps li.done::before{background:var(--leaf);border-color:var(--leaf)}
+.fact{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:10px;font-size:12.5px}
+.fact span:first-child{color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-size:11px;padding-top:2px}
+.fact span:last-child{text-align:right;font-weight:500}
+.gauge{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}
+.gauge b{font-family:var(--f-display);font-size:34px;font-weight:600;color:var(--silk);font-variant-numeric:tabular-nums;line-height:1}
+.bar{height:3px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--leaf)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row .btn{background:rgba(241,236,217,.06)}
+.row .btn.primary{background:var(--leaf-deep);margin-left:auto}
+.hint{font-size:11.5px;color:var(--muted);margin:0}
+
+.loading{position:absolute;inset:0;display:grid;place-items:center;background:var(--ink);z-index:5;text-align:center;padding-inline:16px}
+.loading p{font-family:var(--f-display);font-style:italic;font-size:24px;margin:0 0 6px}
+.loading small{color:var(--muted)}
+.toast{position:absolute;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13px;max-width:calc(100% - 32px)}
+
+@media (max-width:760px){
+  .brand strong{font-size:21px}
+  .rail{top:auto;transform:none;left:16px;right:16px;bottom:auto;top:calc(118px + env(safe-area-inset-top,0px));flex-direction:row;overflow-x:auto;padding:6px;gap:4px;border-radius:12px}
+  .rail button{padding:4px 8px 4px 4px;font-size:12px}
+  .rail .n{width:22px;height:22px}
+  .card{padding:14px 16px 12px;gap:10px;max-height:52%}
+  .card h1{font-size:26px}
+  .kicker .min{display:inline-block}
+  .card.collapsed .body,.card.collapsed .steps,.card.collapsed .fact,.card.collapsed .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div id="app">
+  <canvas id="scene" tabindex="0" aria-label="3D scene of Làng Chuông conical hat village"></canvas>
+  <header class="top">
+    <div class="brand"><small id="b-kicker">Thanh Oai · Hà Nội</small><strong id="b-title">Nón lá Làng Chuông</strong></div>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Language">
+        <button id="lang-vi" aria-pressed="true">VI</button><button id="lang-en" aria-pressed="false">EN</button>
+      </div>
+      <button class="btn" id="overview">Toàn cảnh</button>
+      <button class="btn primary" id="vr">Vào VR</button>
+    </div>
+  </header>
+  <nav class="rail" id="rail" aria-label="Steps"></nav>
+  <section class="card" id="card" aria-live="polite"></section>
+  <div class="toast" id="toast" hidden></div>
+  <div class="loading" id="loading"><div><p>Đang dựng Làng Chuông…</p><small>Building Chuông village…</small></div></div>
+</div>
+
+<script>
+  setTimeout(function(){var l=document.getElementById('loading');if(l&&!l.hidden){l.querySelector('small').textContent='3D engine could not load. Check your connection and reload. / Không tải được bộ dựng 3D, hãy tải lại trang.';}},15000);
+</script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const $ = s => document.querySelector(s);
+const DS = THREE.DoubleSide, SRGB = THREE.SRGBColorSpace;
+const clamp = (x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const lerp = (a,b,t)=>a+(b-a)*t;
+const ease = t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+const sm = (p,a,b)=>ease(clamp((p-a)/(b-a)));
+let seed=11; const rnd=(a=0,b=1)=>{seed=(seed*16807)%2147483647;return a+(seed/2147483647)*(b-a);};
+
+/* ------------------------------------------------------------------ content */
+const STEPS = [
+ { key:'leaf', view:{d:3.3,h:1.7,ty:.8},
+   vi:{name:'Xử lý lá', title:'Vò lá, phơi nắng, phơi sương', body:'Nón Chuông làm từ lá lụi (lá cọ non) mua từ các tỉnh miền Trung như Thanh Hoá, Hà Tĩnh, Quảng Trị. Lá được vò trong cát cho sạch nhựa và mềm, rồi phơi nắng, phơi sương đến khi màu xanh chuyển sang trắng bạc.',
+       steps:['Vò lá trong cát cho sạch nhựa, mềm lá','Phơi nắng rồi phơi sương cho lá trắng, dẻo','Chọn lá trắng đều, không rách'], fact:['Nguồn lá','Lá lụi Thanh Hoá, Hà Tĩnh, Quảng Trị']},
+   en:{name:'Leaf prep', title:'Rubbing, sunning and dewing the leaves', body:'Chuông hats are made from young lụi palm leaves bought from central provinces such as Thanh Hoá, Hà Tĩnh and Quảng Trị. The leaves are rubbed in sand to strip the sap and soften them, then left out in sun and night dew until the green turns silvery white.',
+       steps:['Rub the leaves in sand to clean and soften them','Lay them out in sun, then dew, until white and supple','Sort out even, white, untorn leaves'], fact:['Leaf source','Lụi palm from Thanh Hoá, Hà Tĩnh, Quảng Trị']}},
+ { key:'iron', view:{d:1.55,h:1.05,ty:.35},
+   vi:{name:'Là lá', title:'Là phẳng lá bằng lưỡi cày gang', body:'Thợ nung nóng một chiếc lưỡi cày bằng gang trên bếp than, lót vải lên lá rồi miết nhanh tay. Lá phẳng lì mà không giòn, không rách. Nóng quá lá cháy, nguội quá lá không phẳng, nên việc này cần kinh nghiệm.',
+       steps:['Nung lưỡi cày gang trên bếp than','Lót vải, miết đều từ cuống đến ngọn lá','Xếp lá đã là thành chồng, cắt đều kích cỡ'], fact:['Dụng cụ','Lưỡi cày gang nung nóng']},
+   en:{name:'Ironing', title:'Ironing the leaves with a cast-iron ploughshare', body:'A cast-iron ploughshare is heated over a charcoal stove and pressed quickly across the leaf through a cloth. The leaf comes out perfectly flat without turning brittle or tearing. Too hot scorches it and too cool leaves it wavy, so this takes practice.',
+       steps:['Heat the cast-iron ploughshare over charcoal','Lay a cloth over the leaf and press from base to tip','Stack the ironed leaves and trim them to size'], fact:['Tool','Heated cast-iron ploughshare']}},
+ { key:'frame', view:{d:1.3,h:.95,ty:.45}, gauge:'rings',
+   vi:{name:'Dựng khung', title:'Chuốt vòng và lên khuôn', body:'Tre, giang được chẻ nhỏ và vót tròn, đều, nhẵn thành 16 chiếc vòng to nhỏ khác nhau. Thợ xếp vòng lên khuôn gỗ hình chóp, từ vành lớn nhất dưới cùng lên tới vòng nhỏ nhất ở chóp, sao cho không hở, không gợn.',
+       steps:['Chẻ và vót nan tre thật tròn, đều','Uốn nan thành 16 vòng, buộc kín mối nối','Xếp vòng lên khuôn từ vành lên chóp'], fact:['Khung nón','16 vòng tre, vót tròn đều']},
+   en:{name:'Frame', title:'Shaving the rings and setting the mould', body:'Bamboo is split and shaved into round, even, smooth strips, then bent into 16 rings of graded size. The rings are set on a conical wooden mould, from the wide brim at the bottom up to the smallest ring at the tip, with no gaps or kinks.',
+       steps:['Split and shave bamboo into round, even strips','Bend them into 16 rings and bind the joints','Set the rings on the mould from brim to tip'], fact:['Frame','16 shaved bamboo rings']}},
+ { key:'layer', view:{d:1.3,h:.95,ty:.45},
+   vi:{name:'Lợp lá', title:'Lợp ba lớp lá', body:'Điểm riêng của nón Chuông là ba lớp: lớp lá lót bên trong, lớp mo nứa ở giữa để nón cứng cáp, và lớp lá lụi trắng mịn bên ngoài. Lá được xếp toả từ chóp xuống vành, chồng mép đều tay.',
+       steps:['Xếp lớp lá lót quanh khung','Đặt lớp mo nứa ở giữa cho nón cứng','Lợp lớp lá ngoài trắng mịn, phẳng đều'], fact:['Cấu tạo','Lá lót · mo nứa · lá ngoài']},
+   en:{name:'Layering', title:'Laying the three layers', body:'What sets a Chuông hat apart is its three layers: an inner lining of leaf, a middle layer of bamboo sheath (mo nứa) for stiffness, and a smooth white outer layer of lụi leaf. The leaves fan out from tip to brim with even overlaps.',
+       steps:['Lay the inner lining around the frame','Add the bamboo-sheath middle layer for stiffness','Cover with the smooth white outer leaves'], fact:['Structure','Lining · bamboo sheath · outer leaf']}},
+ { key:'stitch', view:{d:1.15,h:.9,ty:.45}, gauge:'stitch',
+   vi:{name:'Khâu nón', title:'Khâu từng vòng', body:'Người thợ khâu bằng sợi cước trong suốt, lần lượt từng vòng từ chóp xuống vành. Mũi khâu phải đều, khít và giấu kỹ để nước mưa không thấm qua lỗ kim. Đây là công đoạn tốn thời gian và thể hiện tay nghề rõ nhất.',
+       steps:['Luồn cước, khâu vòng nhỏ nhất ở chóp','Khâu tiếp từng vòng xuống dưới, mũi đều khít','Khâu vành bằng mũi dày để giữ chắc mép nón'], fact:['Chỉ khâu','Sợi cước trong suốt']},
+   en:{name:'Stitching', title:'Stitching ring by ring', body:'The hat is sewn with clear nylon line, one ring at a time from the tip down to the brim. Stitches must be even, tight and well hidden so rain cannot seep through the needle holes. This is the slowest step and shows the maker’s skill most clearly.',
+       steps:['Thread the line and sew the smallest ring at the tip','Work down ring by ring with even, tight stitches','Finish the brim with dense stitching to hold the edge'], fact:['Thread','Clear nylon line']}},
+ { key:'decor', view:{d:.9,h:1.0,ty:.8},
+   vi:{name:'In & thêu hình', title:'In, thêu và vẽ hình trang trí', body:'Bên cạnh nón trắng truyền thống, nhiều xưởng ở Làng Chuông nay làm thêm nón trang trí: in hình phong cảnh, thêu chỉ màu hoa sen, hay vẽ tay cành tre. Mẫu mới phần lớn do lớp thợ trẻ thiết kế, phục vụ khách mua làm quà tặng, đồ lưu niệm và hàng xuất khẩu.',
+       steps:['Chọn mẫu, in hình phong cảnh lên thân nón','Thêu chỉ màu theo đường nét hoa sen','Vẽ tay thêm cành tre, đóng dấu đỏ'], fact:['Kỹ thuật','In · thêu chỉ màu · vẽ tay']},
+   en:{name:'Printing & embroidery', title:'Printing, embroidering and painting', body:'Alongside the traditional plain white hat, many Chuông workshops now make decorated ones: a printed landscape, a lotus embroidered in coloured thread, or bamboo painted by hand. Younger makers design most of the new patterns, aimed at buyers looking for gifts, souvenirs and export goods.',
+       steps:['Pick a design and print the landscape onto the hat','Embroider the lotus outline in coloured thread','Hand-paint bamboo and add a red seal'], fact:['Techniques','Printing · thread embroidery · hand painting']}},
+ { key:'finish', view:{d:1.45,h:1.2,ty:.75},
+   vi:{name:'Hun & quét dầu', title:'Hun diêm sinh và quét dầu', body:'Nón khâu xong được hun kín bằng diêm sinh (lưu huỳnh) để lá trắng hơn và chống mốc mọt. Sau đó thợ quét một lớp dầu bóng mỏng để nón và hình trang trí bền màu, chịu nước tốt hơn.',
+       steps:['Úp nón trong lò hoặc bu kín, hun diêm sinh','Mở ra khi lá đã trắng đều','Quét lớp dầu bóng mỏng, để khô'], fact:['Mục đích','Làm trắng lá, chống mốc mọt']},
+   en:{name:'Finishing', title:'Sulfur smoking and varnish', body:'The finished hat is sealed in and smoked with burning sulfur, which whitens the leaf and keeps mould and insects away. A thin coat of clear varnish then helps the hat and its decoration hold their colour and shed water.',
+       steps:['Seal the hat under a cover and smoke it with sulfur','Uncover it once the leaf is evenly white','Brush on a thin coat of varnish and let it dry'], fact:['Purpose','Whitens the leaf, prevents mould']}},
+ { key:'market', view:{d:2.8,h:1.5,ty:.85},
+   vi:{name:'Chợ nón', title:'Buộc quai và ra chợ nón', body:'Nón được buộc quai lụa hoặc vải mềm. Chợ nón Chuông họp sáu phiên mỗi tháng âm lịch, từ tờ mờ sáng; người làng mua lá, vòng và bán nón cho thương lái. Giá mỗi chiếc khoảng 40.000–150.000 đồng tuỳ chất liệu và độ cầu kỳ.',
+       steps:['Buộc quai lụa vào hai bên thành nón','Xếp nón thành chồng, mang ra chợ từ sáng sớm','Bán cho thương lái, đi khắp nơi'], fact:['Phiên chợ','Mùng 4, 10, 14, 20, 24, 30 âm lịch']},
+   en:{name:'Market', title:'Tying the strap and going to market', body:'A silk or soft cloth strap is tied in. The Chuông hat market meets six times each lunar month, starting before dawn; villagers buy leaves and rings there and sell hats to traders. A hat sells for roughly 40,000–150,000 VND depending on materials and detail.',
+       steps:['Tie a silk strap to both sides of the hat','Stack the hats and carry them to the dawn market','Sell to traders who carry them across the country'], fact:['Market days','Lunar 4th, 10th, 14th, 20th, 24th, 30th']}},
+];
+const UI = {
+ vi:{step:'Bước', prev:'Trước', next:'Tiếp', replay:'Làm lại', start:'Bắt đầu tham quan', overview:'Toàn cảnh', vr:'Vào VR', vrExit:'Thoát VR', vrNo:'Chế độ VR cần kính hỗ trợ WebXR (ví dụ Meta Quest). Hãy mở trang này bằng trình duyệt trên kính.', vrFail:'Không mở được phiên VR trên thiết bị này.', kicker:'Thanh Oai · Hà Nội', brand:'Nón lá Làng Chuông',
+     introTitle:'Nón lá Làng Chuông', introBody:'Làng Chuông (xã Phương Trung, Thanh Oai) bên sông Đáy giữ nghề làm nón hàng trăm năm. Mỗi chiếc nón Chuông có 16 vòng tre và ba lớp lá. Đi qua 8 công đoạn, từ bó lá lụi xanh đến chiếc nón trắng ở phiên chợ.',
+     introHint:'Kéo để nhìn quanh · cuộn hoặc chụm để phóng to · phím ← → để chuyển bước', toOverview:'Về toàn cảnh', rings:'Vòng tre đã xếp', stitch:'Vòng đã khâu', collapse:'Thu gọn', expand:'Mở rộng',
+     vrHint:'Cò: bước tiếp  ·  Nút bóp: quay lại', intro7:'8 công đoạn'},
+ en:{step:'Step', prev:'Back', next:'Next', replay:'Replay', start:'Start the tour', overview:'Overview', vr:'Enter VR', vrExit:'Exit VR', vrNo:'VR mode needs a WebXR headset (for example Meta Quest). Open this page in the headset browser.', vrFail:'Could not start a VR session on this device.', kicker:'Thanh Oai · Hà Nội', brand:'Chuông Village Hats',
+     introTitle:'Chuông Village Conical Hats', introBody:'Làng Chuông, in Phương Trung commune beside the Đáy River, has made conical hats (nón lá) for centuries. Every Chuông hat has 16 bamboo rings and three layers of leaf. Walk through the 8 stages, from a bundle of green palm leaves to a white hat at the market.',
+     introHint:'Drag to look around · scroll or pinch to zoom · ← → keys change step', toOverview:'Back to overview', rings:'Rings set', stitch:'Rings stitched', collapse:'Collapse', expand:'Expand',
+     vrHint:'Trigger: next step  ·  Grip: back', intro7:'8 stages'},
+};
+let lang='vi';
+try{const l=localStorage.getItem('nc-lang'); if(l==='vi'||l==='en') lang=l;}catch(e){}
+
+/* ------------------------------------------------------------------ renderer */
+const canvas=$('#scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace=SRGB;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.xr.enabled=true;
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0xdcdcc8,30,85);
+const pmrem=new THREE.PMREMGenerator(renderer);
+scene.environment=pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+
+const camera=new THREE.PerspectiveCamera(55,1,0.03,300);
+const rig=new THREE.Group(); rig.add(camera); scene.add(rig);
+const OV_POS=new THREE.Vector3(0,15,19), OV_TGT=new THREE.Vector3(0,0.5,0);
+camera.position.copy(OV_POS);
+const controls=new OrbitControls(camera,canvas);
+controls.target.copy(OV_TGT);
+controls.enableDamping=true; controls.dampingFactor=.08;
+controls.maxPolarAngle=Math.PI*.48; controls.minDistance=.4; controls.maxDistance=34;
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xfff6e2,0x5f6a4a,1.1));
+const sun=new THREE.DirectionalLight(0xffe6bf,2.6);
+sun.position.set(10,18,7); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-17,right:17,top:17,bottom:-17,near:1,far:60});
+sun.shadow.bias=-0.0004; sun.shadow.normalBias=0.03;
+scene.add(sun);
+
+/* ------------------------------------------------------------------ textures */
+function tex(w,h,fn,rep){
+  const c=document.createElement('canvas'); c.width=w; c.height=h; fn(c.getContext('2d'),w,h);
+  const t=new THREE.CanvasTexture(c); t.colorSpace=SRGB; t.anisotropy=8;
+  if(rep){t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rep[0],rep[1]);}
+  return t;
+}
+const noise=(c,w,h,n,rgb,a0,a1,s0=2,s1=10)=>{for(let i=0;i<n;i++){c.fillStyle=`rgba(${rgb},${rnd(a0,a1)})`;c.fillRect(rnd(0,w),rnd(0,h),rnd(s0,s1),rnd(s0,s1));}};
+const groundTex=tex(512,512,(c,w,h)=>{ // square terracotta courtyard tiles (gạch lá nem)
+  c.fillStyle='#7b5a44'; c.fillRect(0,0,w,h);
+  const s=64; for(let y=0;y<h;y+=s) for(let x=0;x<w;x+=s){c.fillStyle=`hsl(${rnd(14,22)},${rnd(38,50)}%,${rnd(40,50)}%)`;c.fillRect(x+2,y+2,s-4,s-4);}
+  noise(c,w,h,1500,'60,40,30',.03,.1);
+},[24,24]);
+const limeTex=tex(512,256,(c,w,h)=>{ // yellow lime-wash wall with moss at the foot
+  c.fillStyle='#d8b86a'; c.fillRect(0,0,w,h); noise(c,w,h,1600,'120,90,40',.03,.1,3,24);
+  const g=c.createLinearGradient(0,h*.6,0,h); g.addColorStop(0,'rgba(70,90,40,0)'); g.addColorStop(1,'rgba(70,90,40,.55)'); c.fillStyle=g; c.fillRect(0,0,w,h);
+  for(let i=0;i<30;i++){c.fillStyle='rgba(90,70,40,.12)';c.fillRect(rnd(0,w),0,rnd(1,3),rnd(20,120));}
+},[2,1]);
+const fenceTex=tex(512,256,(c,w,h)=>{ // bamboo fence
+  c.fillStyle='#4a3f2a'; c.fillRect(0,0,w,h);
+  for(let x=0;x<w;x+=16){c.fillStyle=`hsl(${rnd(38,50)},${rnd(35,50)}%,${rnd(48,62)}%)`;c.fillRect(x+1,0,14,h);
+    c.fillStyle='rgba(60,45,20,.35)'; for(let y=rnd(10,40);y<h;y+=rnd(50,80)) c.fillRect(x+1,y,14,3);}
+  c.fillStyle='#6b5433'; c.fillRect(0,h*.28,w,8); c.fillRect(0,h*.72,w,8);
+},[3,1]);
+const roofTex=tex(256,256,(c,w,h)=>{
+  c.fillStyle='#6f2e1d'; c.fillRect(0,0,w,h);
+  for(let y=0;y<h;y+=16) for(let x=-(y/16%2)*8;x<w;x+=16){
+    c.fillStyle=`hsl(${rnd(10,16)},${rnd(45,58)}%,${rnd(30,38)}%)`;
+    c.beginPath(); c.moveTo(x,y); c.lineTo(x+16,y); c.arc(x+8,y+10,8,0,Math.PI); c.closePath(); c.fill();
+  }
+},[3,2]);
+const plasterTex=tex(256,256,(c,w,h)=>{c.fillStyle='#e0d6c0';c.fillRect(0,0,w,h);noise(c,w,h,900,'110,95,70',.03,.09,2,14);},[2,1]);
+const skyTex=tex(16,256,(c,w,h)=>{
+  const g=c.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,'#78a6c9'); g.addColorStop(.45,'#c3d6da'); g.addColorStop(.52,'#e5e2cc'); g.addColorStop(1,'#d6d2b8');
+  c.fillStyle=g; c.fillRect(0,0,w,h);
+});
+const leafStripTex=tex(64,512,(c,w,h)=>{ // one palm-leaf strip, grey-white so material colour tints it
+  c.clearRect(0,0,w,h); c.fillStyle='#fff';
+  c.beginPath(); c.moveTo(w/2,0); c.bezierCurveTo(w*.95,h*.1,w*.95,h*.85,w*.62,h); c.lineTo(w*.38,h); c.bezierCurveTo(w*.05,h*.85,w*.05,h*.1,w/2,0); c.fill();
+  c.strokeStyle='rgba(0,0,0,.18)'; c.lineWidth=2; c.beginPath(); c.moveTo(w/2,4); c.lineTo(w/2,h); c.stroke();
+  c.strokeStyle='rgba(0,0,0,.06)'; c.lineWidth=1; for(let x=12;x<w-10;x+=6){c.beginPath();c.moveTo(x,30);c.lineTo(x,h-10);c.stroke();}
+});
+const wickerTex=tex(256,256,(c,w,h)=>{ // woven bamboo cover
+  c.clearRect(0,0,w,h); c.strokeStyle='#9c7a45'; c.lineWidth=7;
+  for(let x=0;x<w;x+=18){c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke();}
+  c.strokeStyle='#b8925a'; for(let y=0;y<h;y+=18){c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();}
+},[6,3]);
+const clothTex=tex(128,128,(c,w,h)=>{c.fillStyle='#39506b';c.fillRect(0,0,w,h);c.strokeStyle='rgba(255,255,255,.08)';for(let i=0;i<w;i+=4){c.beginPath();c.moveTo(i,0);c.lineTo(i,h);c.stroke();}});
+
+/* ------------------------------------------------------------------ the hat: 16 rings, three layers */
+const NR=16;
+const HAT=[]; for(let i=0;i<=NR;i++){const t=i/NR; HAT.push([.21*(1-t)+.0005, .19*t+.014*Math.sin(Math.PI*t)]);}
+const hatGeo=new THREE.LatheGeometry(HAT.map(p=>new THREE.Vector2(p[0],p[1])),96);
+const HW=1024, HH=512;
+const ringY=k=>k===0?HH-5:(1-k/NR)*HH;
+function layerCanvas(base,edge,vein,rings){
+  const c=document.createElement('canvas'); c.width=HW; c.height=HH; const x=c.getContext('2d');
+  x.fillStyle=base; x.fillRect(0,0,HW,HH);
+  const n=96; for(let s=0;s<n;s++){const X=s*HW/n; x.fillStyle=`rgba(255,255,240,${rnd(0,.12)})`; x.fillRect(X,0,HW/n,HH);
+    x.fillStyle=edge; x.fillRect(X,0,1.4,HH); x.fillStyle=vein; x.fillRect(X+HW/n/2,0,1,HH);}
+  if(rings){ for(let k=0;k<NR;k++){x.fillStyle='rgba(105,92,55,.22)'; x.fillRect(0,ringY(k)-2,HW,4);} }
+  return c;
+}
+const LY_LINING=layerCanvas('#cdd3a0','rgba(90,100,50,.25)','rgba(90,100,50,.12)',false);
+const LY_MO=(()=>{const c=document.createElement('canvas');c.width=HW;c.height=HH;const x=c.getContext('2d');x.fillStyle='#b68a55';x.fillRect(0,0,HW,HH);
+  for(let i=0;i<500;i++){x.strokeStyle=`rgba(${rnd(80,130)|0},${rnd(55,85)|0},30,${rnd(.1,.3)})`;x.lineWidth=rnd(1,2);const X=rnd(0,HW);x.beginPath();x.moveTo(X,0);x.bezierCurveTo(X+rnd(-6,6),HH*.3,X+rnd(-6,6),HH*.6,X+rnd(-4,4),HH);x.stroke();}return c;})();
+const LY_OUTER=layerCanvas('#ebe5c6','rgba(120,110,70,.28)','rgba(150,140,90,.14)',true);
+function stitchLayer(x,q){ // q in rings (0..16) stitched from tip down
+  const full=Math.floor(q), frac=q-full;
+  for(let j=0;j<NR;j++){ if(j>full) break; const k=NR-1-j; const y=ringY(k); const n=k===0?220:140;
+    const cnt=j<full?n:Math.floor(frac*n);
+    for(let s=0;s<cnt;s++){const X=(s+.5)*HW/n; const L=k===0?9:6;
+      x.fillStyle='rgba(70,60,35,.35)'; x.fillRect(X+1,y-L+1,k===0?3:2,L*2);
+      x.fillStyle='rgba(255,255,248,.95)'; x.fillRect(X,y-L,k===0?3:2,L*2);} }
+}
+function dynTex(){const c=document.createElement('canvas');c.width=HW;c.height=HH;const t=new THREE.CanvasTexture(c);t.colorSpace=SRGB;t.anisotropy=8;return {c,x:c.getContext('2d'),t,last:-1};}
+function drawLayers(d,p){ if(Math.abs(p-d.last)<.004&&p!==0&&p!==1) return; d.last=p; const x=d.x; x.clearRect(0,0,HW,HH);
+  const seg=(img,f)=>{const w=Math.floor(clamp(f)*HW); if(w>0) x.drawImage(img,0,0,w,HH,0,0,w,HH);};
+  seg(LY_LINING,p*3); seg(LY_MO,p*3-1); seg(LY_OUTER,p*3-2); d.t.needsUpdate=true; }
+function drawStitch(d,q){ if(Math.abs(q-d.last)<.03&&q!==0&&q!==NR) return; d.last=q; d.x.drawImage(LY_OUTER,0,0); stitchLayer(d.x,q); d.t.needsUpdate=true; }
+const layerLive=dynTex(); drawLayers(layerLive,0);
+const stitchLive=dynTex(); drawStitch(stitchLive,0);
+const doneTex=(()=>{const d=dynTex(); d.x.drawImage(LY_OUTER,0,0); stitchLayer(d.x,NR); d.t.needsUpdate=true; return d.t;})();
+const paintedTex=(()=>{const d=dynTex(); d.x.drawImage(LY_OUTER,0,0);
+  for(let k=0;k<5;k++){const cx=(k+.5)*HW/5, cy=HH*.62; d.x.fillStyle='rgba(206,70,96,.75)'; for(let j=0;j<5;j++){d.x.beginPath();d.x.ellipse(cx+Math.cos(j*1.256)*22,cy+Math.sin(j*1.256)*14,16,10,j*1.256,0,7);d.x.fill();}
+    d.x.fillStyle='#e8b93c'; d.x.beginPath(); d.x.arc(cx,cy,7,0,7); d.x.fill(); d.x.strokeStyle='rgba(70,110,50,.8)'; d.x.lineWidth=4; d.x.beginPath(); d.x.moveTo(cx+30,cy+8); d.x.quadraticCurveTo(cx+70,cy+40,cx+100,cy+10); d.x.stroke();}
+  stitchLayer(d.x,NR); d.t.needsUpdate=true; return d.t;})();
+
+/* decoration: printed landscape (centre front), embroidered lotus (left), painted bamboo (right) */
+const DONE=document.createElement('canvas'); DONE.width=HW; DONE.height=HH; {const x=DONE.getContext('2d'); x.drawImage(LY_OUTER,0,0); stitchLayer(x,NR);}
+const ASP=1.4; // canvas px sit ~1.4x taller on the hat surface than wide in this band
+const PRINT=document.createElement('canvas'); PRINT.width=HW; PRINT.height=HH;
+(function(c){ c.save(); c.translate(512,300); c.scale(1,1/ASP);
+  c.beginPath(); c.ellipse(0,0,84,110,0,0,7); c.clip();
+  const g=c.createLinearGradient(0,-110,0,110); g.addColorStop(0,'rgba(120,170,200,.85)'); g.addColorStop(.55,'rgba(236,214,170,.9)'); g.addColorStop(.56,'rgba(90,140,150,.85)'); g.addColorStop(1,'rgba(60,110,120,.9)');
+  c.fillStyle=g; c.fillRect(-90,-115,180,230);
+  c.fillStyle='rgba(214,64,54,.95)'; c.beginPath(); c.arc(26,-38,17,0,7); c.fill();
+  c.fillStyle='rgba(52,92,50,.95)';
+  for(let k=-90;k<90;k+=7){const h=rnd(18,42); c.beginPath(); c.ellipse(k,1-h/2,6,h/2,0,0,7); c.fill();}
+  c.strokeStyle='rgba(235,240,235,.6)'; c.lineWidth=2; for(let y=20;y<100;y+=13){c.beginPath();c.moveTo(-80,y);c.lineTo(80,y);c.stroke();}
+  c.fillStyle='rgba(60,40,25,.95)'; c.beginPath(); c.moveTo(-40,48); c.quadraticCurveTo(-10,64,22,48); c.lineTo(14,56); c.quadraticCurveTo(-10,66,-32,56); c.fill();
+  c.beginPath(); c.moveTo(-6,46); c.lineTo(-6,26); c.lineWidth=2.5; c.strokeStyle='rgba(60,40,25,.95)'; c.stroke();
+  c.fillStyle='rgba(240,232,205,1)'; c.beginPath(); c.moveTo(-18,28); c.lineTo(-6,16); c.lineTo(6,28); c.fill();
+  c.restore();
+  c.strokeStyle='rgba(60,50,30,.5)'; c.lineWidth=2; c.beginPath(); c.ellipse(512,300,84,110/ASP,0,0,7); c.stroke();
+})(PRINT.getContext('2d'));
+function strokesLotus(){const S=[], cx=350, cy=300;
+  const P=(x,y)=>[cx+x,cy+y/ASP];
+  const petals=[[-1.05,52],[-.5,64],[0,72],[.5,64],[1.05,52]];
+  petals.forEach(([a,L],pi)=>{for(let k=0;k<16;k++){const f=(k/15-.5)*.55; const ang=a+f; const len=L*(1-Math.abs(f)*.9);
+    S.push({c:`hsl(${345+rnd(-6,6)},${62+rnd(-8,8)}%,${pi===2?58:66+rnd(-5,5)}%)`,w:2.2,pts:[P(0,6),P(Math.sin(ang)*len*.55,-Math.cos(ang)*len*.55),P(Math.sin(ang)*len,-Math.cos(ang)*len)]});}});
+  for(let k=0;k<5;k++) S.push({c:'#e9b73a',w:3,pts:[P(-10+k*5,4),P(-10+k*5,-1),P(-10+k*5,-6)]});
+  S.push({c:'#4f7c3a',w:3.2,pts:[P(0,8),P(4,60),P(10,120)]});
+  for(let k=0;k<18;k++){const t=k/17; S.push({c:`hsl(${105+rnd(-8,8)},40%,${32+rnd(-4,6)}%)`,w:2.2,pts:[P(8,92),P(30+t*14,70+t*30),P(60,104-t*8+(t-.5)*30)]});}
+  return S;}
+function strokesBamboo(){const S=[], cx=676, cy=300; const P=(x,y)=>[cx+x,cy+y/ASP];
+  for(let seg=0;seg<4;seg++){const y0=120-seg*55; S.push({c:'#3c6b35',w:6,gap:true,pts:[P(-6+seg*3,y0),P(-4+seg*3,y0-26),P(-3+seg*3,y0-50)]});}
+  const leaf=(x,y,a,L)=>S.push({c:'#2f5a2c',w:5,taper:true,pts:[P(x,y),P(x+Math.cos(a)*L*.5,y+Math.sin(a)*L*.5-6),P(x+Math.cos(a)*L,y+Math.sin(a)*L)]});
+  leaf(4,-40,-.5,58); leaf(4,-40,-.1,64); leaf(0,-92,-.8,52); leaf(2,-92,.3,56); leaf(-6,-10,3.5,50); leaf(-6,-10,2.9,46); leaf(-4,-120,-2.2,44);
+  S.push({c:'#c8322e',w:12,pts:[P(34,96),P(40,96),P(46,96)]}); S.push({c:'#c8322e',w:12,pts:[P(34,104),P(40,104),P(46,104)]});
+  return S;}
+const EMB=strokesLotus(), PNT=strokesBamboo();
+function drawStroke(x,s){x.lineCap='round';x.lineJoin='round';const [a,b,c]=s.pts;
+  if(s.taper){x.fillStyle=s.c;x.beginPath();x.moveTo(a[0],a[1]);x.quadraticCurveTo(b[0]-s.w,b[1]-s.w,c[0],c[1]);x.quadraticCurveTo(b[0]+s.w,b[1]+s.w,a[0],a[1]);x.fill();return;}
+  if(!s.gap){x.strokeStyle='rgba(60,40,30,.35)';x.lineWidth=s.w;x.beginPath();x.moveTo(a[0]+1,a[1]+1);x.quadraticCurveTo(b[0]+1,b[1]+1,c[0]+1,c[1]+1);x.stroke();}
+  x.strokeStyle=s.c;x.lineWidth=s.w;x.beginPath();x.moveTo(a[0],a[1]);x.quadraticCurveTo(b[0],b[1],c[0],c[1]);x.stroke();}
+function drawDeco(d,e1,e2,e3){const n2=Math.floor(e2*EMB.length), n3=Math.floor(e3*PNT.length), key=`${Math.round(e1*50)}|${n2}|${n3}`; if(key===d.last) return; d.last=key;
+  const x=d.x; x.drawImage(DONE,0,0); if(e1>0){x.globalAlpha=e1;x.drawImage(PRINT,0,0);x.globalAlpha=1;}
+  for(let i=0;i<n2;i++) drawStroke(x,EMB[i]);
+  for(let i=0;i<n3;i++) drawStroke(x,PNT[i]);
+  d.t.needsUpdate=true;}
+const decoLive=dynTex(); drawDeco(decoLive,0,0,0);
+const decoFull=(()=>{const d=dynTex(); drawDeco(d,1,1,1); return d.t;})();
+function surf(px,py,out=0){const u=px/HW, v=clamp(1-py/HH,0,.999)*NR, i=Math.floor(v), f=v-i; const r=lerp(HAT[i][0],HAT[i+1][0],f)+out, y=lerp(HAT[i][1],HAT[i+1][1],f); const a=u*Math.PI*2; return new THREE.Vector3(Math.sin(a)*r,y,Math.cos(a)*r);}
+
+/* ------------------------------------------------------------------ materials & helpers */
+const std=o=>new THREE.MeshStandardMaterial(Object.assign({roughness:.85,metalness:0,envMapIntensity:.35},o));
+const M={
+  ground:std({map:groundTex,roughness:.95}), lime:std({map:limeTex}), fence:std({map:fenceTex}), roof:std({map:roofTex,roughness:.8}),
+  plaster:std({map:plasterTex}), wood:std({color:0x8b5d38,roughness:.7}), darkWood:std({color:0x4b3322,roughness:.75}),
+  bamboo:std({color:0xcdb07a,roughness:.55}), bambooGreen:std({color:0x7f9446,roughness:.5}), leaf:std({color:0x4f6e34}), leaf2:std({color:0x6a8a3e}),
+  sand:std({color:0xd8c79d,roughness:1}), iron:std({color:0x2c2a28,metalness:.6,roughness:.5}), clay:std({color:0xa0603d}),
+  straw:std({color:0xcaa75a,roughness:1}), cloth:std({map:clothTex}), ivory:std({color:0xefe9cf,roughness:.7,side:DS}),
+};
+const G={box:(w,h,d)=>new THREE.BoxGeometry(w,h,d), cyl:(a,b,h,s=24,open=false)=>new THREE.CylinderGeometry(a,b,h,s,1,open)};
+function mk(geo,mat,parent,x=0,y=0,z=0,o={}){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=o.cast!==false;m.receiveShadow=o.recv!==false;if(parent)parent.add(m);return m;}
+const leafMat=(color,map=leafStripTex)=>std({map,color,alphaTest:.5,side:DS,roughness:.6});
+const leafStripH=leafStripTex.clone(); leafStripH.center.set(.5,.5); leafStripH.rotation=Math.PI/2; leafStripH.needsUpdate=true;
+function brim(parent,y=0){const b=mk(new THREE.TorusGeometry(.211,.0045,8,96),M.bamboo,parent,0,y+.002,0);b.rotation.x=Math.PI/2;return b;}
+function rings(parent){const arr=[];for(let k=0;k<NR;k++){const [r,y]=HAT[k];const t=mk(new THREE.TorusGeometry(r,k===0?.0045:.0028,6,Math.max(24,96-k*4)),M.bamboo,parent,0,y,0,{cast:false});t.rotation.x=Math.PI/2;arr.push(t);}return arr;}
+function mould(parent){
+  const g=new THREE.Group(); parent.add(g);
+  const L=Math.hypot(HAT[0][0],HAT[NR][1]), ang=Math.atan2(HAT[0][0],HAT[NR][1]);
+  for(let i=0;i<8;i++){const a=i/8*Math.PI*2; const rg=new THREE.Group(); rg.rotation.y=a; g.add(rg);
+    const rib=mk(G.box(.014,L*.97,.03),M.darkWood,rg,HAT[0][0]*.47,HAT[NR][1]*.49,0); rib.rotation.z=ang;}
+  mk(G.cyl(.012,.012,.2,8),M.darkWood,g,0,.1,0);
+  return g;
+}
+function stool(parent,x=0,z=0,h=.35){mk(G.box(.46,.04,.46),M.wood,parent,x,h-.02,z);for(const a of [-1,1])for(const b of [-1,1])mk(G.box(.04,h-.04,.04),M.darkWood,parent,x+a*.19,(h-.04)/2,z+b*.19);}
+function quaiCurve(){const pts=[new THREE.Vector3(.13,.07,0),new THREE.Vector3(.11,-.02,.02),new THREE.Vector3(.05,-.13,.03),new THREE.Vector3(0,-.16,.03),new THREE.Vector3(-.05,-.13,.03),new THREE.Vector3(-.11,-.02,.02),new THREE.Vector3(-.13,.07,0)];return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),48,.006,6,false);}
+const leafGeo=new THREE.PlaneGeometry(.07,.62);
+
+/* ------------------------------------------------------------------ stations */
+function stLeaf(g){
+  const green=new THREE.Color(0x6f8f45), white=new THREE.Color(0xe9e6cf);
+  const rackMat=leafMat(green.clone());
+  for(const x of [-1.4,1.4]) mk(G.cyl(.035,.04,1.9,10),M.bamboo,g,x,.95,-.7);
+  const pole=mk(G.cyl(.028,.028,3.0,10),M.bamboo,g,0,1.82,-.7); pole.rotation.z=Math.PI/2;
+  const hung=[];
+  for(let k=0;k<22;k++){const m=mk(leafGeo,rackMat,g,-1.25+k*.12,1.5,-.7+rnd(-.03,.03)); m.rotation.set(0,rnd(-.4,.4),rnd(-.06,.06)); hung.push(m);}
+  // sand tray
+  mk(G.box(1.1,.14,.7),M.darkWood,g,-.35,.07,.55); mk(G.box(1.02,.02,.62),M.sand,g,-.35,.14,.55);
+  const rub=mk(leafGeo,leafMat(green.clone()),g,-.35,.16,.55); rub.rotation.set(-Math.PI/2,0,Math.PI/2);
+  for(let k=0;k<5;k++){const m=mk(leafGeo,leafMat(new THREE.Color(0x7c9950)),g,-.6+k*.12,.155,.45+rnd(-.05,.1));m.rotation.set(-Math.PI/2,0,Math.PI/2+rnd(-.3,.3));}
+  // basket of fresh bundles
+  mk(G.cyl(.28,.22,.36,20,true),std({map:wickerTex,side:DS,alphaTest:.3}),g,.9,.18,.5);
+  mk(G.cyl(.22,.22,.02,20),M.darkWood,g,.9,.01,.5);
+  const bm=leafMat(new THREE.Color(0x55773a));
+  for(let k=0;k<14;k++){const a=k/14*Math.PI*2; const m=mk(leafGeo,bm,g,.9+Math.cos(a)*.1,.45,.5+Math.sin(a)*.1); m.rotation.set(Math.sin(a)*.35,a,Math.cos(a)*.35);}
+  // woven drying trays (nong) on the ground with whitening leaves
+  const trayMat=leafMat(green.clone());
+  for(const [x,z] of [[1.9,-.2],[-1.9,-.1]]){ mk(G.cyl(.55,.55,.04,32),std({map:wickerTex,color:0xc9a66a}),g,x,.02,z);
+    for(let k=0;k<7;k++){const m=mk(leafGeo,trayMat,g,x-.3+k*.1,.05,z); m.rotation.set(-Math.PI/2,0,rnd(-.15,.15)); m.scale.set(1,.8,1);} }
+  return {update(p,t){
+    rub.position.x=-.35+(p>0&&p<.45?Math.sin(t*9)*.22:0);
+    const k=sm(p,.35,.95); rackMat.color.lerpColors(green,white,k); trayMat.color.lerpColors(green,white,k);
+    hung.forEach((m,i)=>m.rotation.z=Math.sin(t*1.3+i)*.05);
+  }};
+}
+function stIron(g){
+  mk(G.box(1.2,.08,.55),M.wood,g,-.1,.28,0); for(const x of [-.6,.4]) mk(G.box(.08,.24,.45),M.darkWood,g,x,.12,0);
+  mk(G.box(.9,.012,.3),M.cloth,g,-.2,.326,0);
+  // charcoal stove (hỏa lò)
+  mk(G.cyl(.15,.12,.26,20,true),std({color:0x9b5b37,side:DS}),g,.75,.13,.05); mk(G.cyl(.12,.12,.02,20),M.clay,g,.75,.02,.05);
+  const coal=new THREE.MeshBasicMaterial({color:0xff6a1a}); mk(new THREE.CircleGeometry(.13,20),coal,g,.75,.24,.05,{cast:false}).rotation.x=-Math.PI/2;
+  const fire=new THREE.PointLight(0xff7a2a,2,1.5,2); fire.position.set(.75,.4,.05); g.add(fire);
+  // ploughshare iron
+  const blade=new THREE.Group(); g.add(blade);
+  const sh=new THREE.Shape(); sh.moveTo(0,-.07); sh.quadraticCurveTo(.18,-.07,.24,0); sh.quadraticCurveTo(.18,.07,0,.07); sh.lineTo(0,-.07);
+  const bladeMat=std({color:0x2c2a28,metalness:.6,roughness:.5,emissive:0x000000});
+  const bm=mk(new THREE.ExtrudeGeometry(sh,{depth:.014,bevelEnabled:false}),bladeMat,blade); bm.rotation.x=-Math.PI/2; bm.position.x=-.12;
+  const hd=mk(G.cyl(.012,.014,.22,8),M.wood,blade,-.22,.06,0); hd.rotation.z=1.2;
+  // curled leaf that flattens
+  const lg=new THREE.PlaneGeometry(.62,.075,60,2); lg.rotateX(-Math.PI/2);
+  const pos=lg.attributes.position, ox=Float32Array.from({length:pos.count},(_,i)=>pos.getX(i));
+  mk(lg,leafMat(new THREE.Color(0xe8e4c8),leafStripH),g,-.2,.336,0);
+  const stack=mk(G.box(.62,.1,.08),std({color:0xeee8cc}),g,-.2,.38,-.4);
+  mk(G.box(.66,.06,.12),M.darkWood,g,-.2,.33,-.4);
+  const hot=new THREE.Color(0x7a1e00), cold=new THREE.Color(0x000000);
+  return {update(p,t){
+    fire.intensity=1.6+Math.sin(t*11)*.3;
+    const flat=sm(p,.25,.85);
+    for(let i=0;i<pos.count;i++){const x=ox[i]; pos.setY(i,(1-flat)*(.012*Math.sin(x*28+1)+.03*Math.pow(Math.abs(x)/.31,3)));}
+    pos.needsUpdate=true; lg.computeVertexNormals();
+    let bx=.75,by=.3,bz=.05;
+    if(p>.2&&p<.88){const f=((p-.2)/.68*3)%1; const pass=Math.floor((p-.2)/.68*3); bx=-.5+.6*(pass%2?1-f:f)+.12; by=.345; bz=0;}
+    blade.position.set(bx,by,bz);
+    bladeMat.emissive.lerpColors(cold,hot,p<.2?sm(p,0,.2):1-sm(p,.2,.9));
+    const s=.2+.8*sm(p,.85,1); stack.scale.y=s; stack.position.y=.36+.05*s;
+  }};
+}
+function stFrame(g){
+  stool(g); const base=new THREE.Group(); base.position.y=.35; g.add(base);
+  mould(base); const rs=rings(base);
+  // bamboo strips and shavings on the floor
+  for(let k=0;k<9;k++){const m=mk(G.cyl(.004,.004,.9,6),M.bamboo,g,.55+rnd(-.05,.05),.01,.2+k*.02);m.rotation.set(0,rnd(-.2,.2),Math.PI/2);}
+  const ringsPile=[]; for(let k=0;k<5;k++){const r=mk(new THREE.TorusGeometry(.2-k*.03,.003,6,48),M.bamboo,g,-.55,.01+k*.006,.15);r.rotation.x=Math.PI/2;ringsPile.push(r);}
+  const knife=mk(G.box(.14,.004,.025),M.iron,g,.5,.02,.45); knife.rotation.y=.4;
+  return {update(p){
+    const q=sm(p,.05,.95)*NR; STATE.count=Math.floor(q+1e-6);
+    rs.forEach((r,k)=>{const s=clamp(q-k); r.visible=s>0; r.scale.setScalar(.6+.4*ease(s)); r.position.y=HAT[k][1]+(1-ease(s))*.08;});
+    ringsPile.forEach((r,k)=>r.visible=k<5-Math.floor(q/3.3));
+  }};
+}
+function stLayer(g){
+  stool(g); const base=new THREE.Group(); base.position.y=.35; g.add(base);
+  mould(base); rings(base); brim(base);
+  mk(hatGeo,std({map:layerLive.t,alphaTest:.5,side:DS,roughness:.75}),base,0,.001,0);
+  // material piles
+  for(let k=0;k<12;k++){const m=mk(leafGeo,M.ivory,g,-.55+rnd(-.02,.02),.01+k*.003,.1);m.rotation.set(-Math.PI/2,0,rnd(-.1,.1)+Math.PI/2);}
+  mk(G.box(.3,.03,.22),std({color:0xb68a55}),g,.55,.015,.12);
+  mk(G.box(.28,.02,.2),std({color:0xc59a62}),g,.56,.04,.1).rotation.y=.2;
+  for(let k=0;k<8;k++){const m=mk(leafGeo,leafMat(new THREE.Color(0xcfd3a0)),g,-.5+k*.03,.02,-.35);m.rotation.set(-Math.PI/2,0,1.2);}
+  return {update(p){ drawLayers(layerLive,sm(p,.02,.98)); }};
+}
+function stStitch(g){
+  stool(g); const base=new THREE.Group(); base.position.y=.35; g.add(base);
+  mould(base); brim(base);
+  const hat=mk(hatGeo,std({map:stitchLive.t,side:DS,roughness:.7}),base,0,.001,0);
+  const needle=new THREE.Group(); base.add(needle);
+  mk(G.cyl(.0015,.0015,.07,6),std({color:0xdddddd,metalness:.9,roughness:.2}),needle).rotation.z=Math.PI/2;
+  const thread=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(.1,.12,0)]),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.7}));
+  needle.add(thread);
+  // spool of line and a finished stack nearby
+  mk(G.cyl(.03,.03,.05,16),std({color:0xd9e6ee,roughness:.2}),g,.45,.02,.2);
+  for(let k=0;k<4;k++){const h=mk(hatGeo,std({map:doneTex,side:DS}),g,-.6,.001+k*.012,.1);brim(h);}
+  return {update(p,t){
+    const q=sm(p,.02,.98)*NR; drawStitch(stitchLive,q); STATE.count=Math.floor(q+1e-6);
+    const j=Math.min(NR-1,Math.floor(q)), k=NR-1-j, u=q-Math.floor(q), a=u*Math.PI*2;
+    const [r,y]=HAT[k]; needle.position.set(Math.sin(a)*(r+.02),y+Math.sin(t*14)*.008,Math.cos(a)*(r+.02)); needle.rotation.y=a;
+    needle.visible=p>0&&p<1;
+  }};
+}
+function stDecor(g){
+  mk(G.box(1.0,.06,.6),M.wood,g,0,.67,0); for(const a of [-1,1])for(const b of [-1,1]) mk(G.box(.05,.64,.05),M.darkWood,g,a*.44,.32,b*.25);
+  mk(G.cyl(.17,.19,.03,32),M.darkWood,g,0,.715,0);
+  const hatG=new THREE.Group(); hatG.position.set(0,.73,0); hatG.rotation.y=Math.PI; g.add(hatG);
+  mk(hatGeo,std({map:decoLive.t,side:DS,roughness:.65}),hatG); brim(hatG);
+  const frame=new THREE.Group(); g.add(frame);
+  for(const [w,h,x,y] of [[.26,.018,0,.1],[.26,.018,0,-.1],[.018,.2,-.13,0],[.018,.2,.13,0]]) mk(G.box(w,h,.012),M.darkWood,frame,x,y,0);
+  mk(new THREE.PlaneGeometry(.24,.18),std({color:0xcfd8de,transparent:true,opacity:.45,side:DS}),frame,0,0,0,{cast:false});
+  const needle=new THREE.Group(); hatG.add(needle);
+  mk(G.cyl(.0015,.0015,.06,6),std({color:0xdddddd,metalness:.9,roughness:.2}),needle).rotation.x=Math.PI/2;
+  const th=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,-.03),new THREE.Vector3(0,.1,-.12)]),new THREE.LineBasicMaterial({color:0xe46b86})); needle.add(th);
+  const brush=new THREE.Group(); hatG.add(brush);
+  mk(G.cyl(.005,.005,.16,8),M.wood,brush,0,.08,0); mk(new THREE.ConeGeometry(.008,.03,8),std({color:0x2f5a2c}),brush,0,-.012,0).rotation.x=Math.PI;
+  [0xe46b86,0xf0b3c0,0x4f7c3a,0xe9b73a].forEach((c,k)=>mk(G.cyl(.022,.022,.05,14),std({color:c,roughness:.5}),g,-.38+k*.06,.725,.2));
+  [0x2f5a2c,0xc8322e].forEach((c,k)=>{mk(G.cyl(.04,.035,.02,16),M.ivory,g,.3+k*.1,.71,.2); mk(new THREE.CircleGeometry(.032,16),std({color:c,roughness:.2}),g,.3+k*.1,.721,.2).rotation.x=-Math.PI/2;});
+  mk(G.box(.2,.004,.14),std({color:0xf4efe0}),g,.32,.702,-.15).rotation.y=.3;
+  const nrm=new THREE.Vector3(0,.21,.19).normalize(), up=new THREE.Vector3();
+  return {update(p,t){
+    const e1=sm(p,.08,.3), e2=sm(p,.36,.68), e3=sm(p,.72,.97); drawDeco(decoLive,e1,e2,e3);
+    const down=sm(p,.02,.1)*(1-sm(p,.3,.36)); frame.visible=p>0&&p<.38;
+    frame.position.set(0,.73+.085,.126).addScaledVector(nrm,.012+(1-down)*.3); frame.rotation.x=-Math.atan2(.21,.19);
+    needle.visible=p>.35&&p<.69; brush.visible=p>.7&&p<.98;
+    if(needle.visible){const i=Math.min(EMB.length-1,Math.floor(e2*EMB.length)), s=EMB[i], pt=((t*3)%1)<.5?s.pts[0]:s.pts[2];
+      needle.position.copy(surf(pt[0],pt[1],.004+Math.abs(Math.sin(t*12))*.012)); up.copy(needle.position).multiplyScalar(2); up.y=needle.position.y*2; needle.lookAt(hatG.localToWorld(up.clone()));}
+    if(brush.visible){const i=Math.min(PNT.length-1,Math.floor(e3*PNT.length)), pt=PNT[i].pts[1]; brush.position.copy(surf(pt[0],pt[1],.006)); brush.rotation.set(.5,0,-.3);}
+  }};
+}
+function stFinish(g){
+  mk(G.box(1.0,.06,.6),M.wood,g,0,.67,0); for(const a of [-1,1])for(const b of [-1,1]) mk(G.box(.05,.64,.05),M.darkWood,g,a*.44,.32,b*.25);
+  const hatMat=new THREE.MeshPhysicalMaterial({map:decoFull,side:DS,roughness:.7,clearcoat:0,clearcoatRoughness:.12,color:0xd8cf9e,envMapIntensity:.6});
+  const hatG=new THREE.Group(); hatG.position.set(0,.7,0); hatG.rotation.y=Math.PI; g.add(hatG);
+  mk(hatGeo,hatMat,hatG); brim(hatG);
+  const coverG=new THREE.Group(); g.add(coverG);
+  const cover=mk(new THREE.LatheGeometry([[.27,0],[.265,.12],[.23,.22],[.15,.29],[.05,.32],[0,.325]].map(p=>new THREE.Vector2(p[0],p[1])),40),std({map:wickerTex,alphaTest:.35,side:DS}),coverG);
+  const brush=new THREE.Group(); g.add(brush);
+  mk(G.cyl(.006,.006,.18,8),M.wood,brush,0,.09,0); mk(G.box(.04,.03,.012),std({color:0x3b2a1b}),brush,0,-.005,0);
+  mk(G.cyl(.06,.05,.05,20),std({color:0x8a5a22,roughness:.2}),g,.36,.725,.15);
+  mk(new THREE.CircleGeometry(.055,20),std({color:0xb97a2a,roughness:.05,envMapIntensity:1}),g,.36,.751,.15).rotation.x=-Math.PI/2;
+  const puff=tex(64,64,(c)=>{const r=c.createRadialGradient(32,32,2,32,32,30);r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=r;c.fillRect(0,0,64,64);});
+  const smoke=[]; for(let i=0;i<12;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:puff,color:0xf2f0d8,transparent:true,opacity:0,depthWrite:false}));s.userData.o=i/12;g.add(s);smoke.push(s);}
+  // spare finished hats hanging on a peg
+  mk(G.box(.9,.08,.05),M.darkWood,g,0,1.6,-.9);
+  for(let k=0;k<3;k++){const h=new THREE.Group();h.position.set(-.3+k*.3,1.4,-.86);h.rotation.x=Math.PI/2-.2;g.add(h);mk(hatGeo,std({map:doneTex,side:DS}),h);brim(h);}
+  const yel=new THREE.Color(0xd8cf9e), wht=new THREE.Color(0xffffff);
+  return {update(p,t){
+    const down=sm(p,.03,.15)*(1-sm(p,.5,.6));
+    if(down<.01) coverG.position.set(.85,0,-.15); else coverG.position.set(0,.7+(1-down)*.5,0);
+    hatMat.color.lerpColors(yel,wht,sm(p,.18,.5)); hatMat.clearcoat=sm(p,.6,.95); hatMat.roughness=lerp(.7,.45,sm(p,.6,.95));
+    smoke.forEach(s=>{const u=(t*.35+s.userData.o)%1, a=s.userData.o*6.28+t*.3; s.position.set(Math.cos(a)*.18*(1+u),.75+u*.6,Math.sin(a)*.18*(1+u)); s.scale.setScalar(.12+u*.3); s.material.opacity=(1-u)*.6*sm(p,.15,.22)*(1-sm(p,.48,.55));});
+    const bu=sm(p,.6,.95); brush.visible=p>.58&&p<.97; const a=bu*Math.PI*4, rr=.16;
+    brush.position.set(Math.sin(a)*rr,.7+.06+(1-bu)*.05+Math.sin(t*8)*.01,Math.cos(a)*rr); brush.rotation.set(Math.cos(a)*.7,0,-Math.sin(a)*.7);
+  }};
+}
+function stMarket(g){
+  // low stall with stacked hats on round trays
+  mk(G.box(2.6,.06,.8),M.bamboo,g,0,.4,-.45); for(const x of [-1.2,1.2]) for(const z of [-.8,-.1]) mk(G.box(.05,.4,.05),M.darkWood,g,x,.2,z);
+  const done=std({map:doneTex,side:DS}), painted=std({map:paintedTex,side:DS}), deco=std({map:decoFull,side:DS});
+  const stackAt=(x,z,n,mat,y=.43)=>{for(let k=0;k<n;k++){const h=mk(hatGeo,mat,g,x,y+k*.014,z,{cast:k===n-1});brim(h);}};
+  stackAt(-.9,-.45,12,done); stackAt(-.35,-.45,9,done); stackAt(.25,-.45,6,deco); stackAt(.85,-.45,10,done);
+  // hanging pole with hats and a price-less sign board with the market days
+  for(const x of [-1.3,1.3]) mk(G.cyl(.03,.035,2.2,10),M.bamboo,g,x,1.1,-.95);
+  const pole=mk(G.cyl(.025,.025,2.7,10),M.bamboo,g,0,2.05,-.95); pole.rotation.z=Math.PI/2;
+  for(let k=0;k<5;k++){const h=new THREE.Group(); h.position.set(-1.0+k*.5,1.72,-.95); h.rotation.x=Math.PI/2-.25; g.add(h); mk(hatGeo,k===2?deco:k===4?painted:done,h).rotation.y=Math.PI; brim(h);}
+  const sign=tex(512,200,(c,w,h)=>{c.fillStyle='#5a3b22';c.fillRect(0,0,w,h);c.strokeStyle='#3b2615';c.lineWidth=10;c.strokeRect(5,5,w-10,h-10);
+    c.fillStyle='#f1e6c8';c.textAlign='center';c.font='600 56px "Cormorant Garamond",Georgia,serif';c.fillText('CHỢ NÓN CHUÔNG',w/2,86);
+    c.font='26px "Be Vietnam Pro",sans-serif';c.fillText('Phiên: mùng 4 · 10 · 14 · 20 · 24 · 30 âm lịch',w/2,146);});
+  const sg=new THREE.Group(); sg.position.set(1.85,0,-.2); sg.rotation.y=-.45; g.add(sg); mk(new THREE.PlaneGeometry(1.0,.39),std({map:sign}),sg,0,1.05,0); for(const x of [-.46,.46]) mk(G.cyl(.02,.02,1.25,8),M.bamboo,sg,x,.62,-.02);
+  // hero hat with silk strap on a pedestal
+  mk(G.cyl(.22,.26,.75,28),M.plaster,g,0,.375,.65);
+  const tilt=new THREE.Group(); tilt.position.set(0,.93,.65); tilt.rotation.x=.3; g.add(tilt); const hero=new THREE.Group(); tilt.add(hero);
+  const hmat=new THREE.MeshPhysicalMaterial({map:decoFull,side:DS,clearcoat:1,clearcoatRoughness:.15,roughness:.45,envMapIntensity:.8});
+  mk(hatGeo,hmat,hero); brim(hero);
+  const quai=mk(quaiCurve(),std({color:0xc23b5a,roughness:.35,envMapIntensity:.8}),hero);
+  const tie=[mk(new THREE.SphereGeometry(.012,8,8),quai.material,hero,.13,.07,0),mk(new THREE.SphereGeometry(.012,8,8),quai.material,hero,-.13,.07,0)];
+  return {update(p,t){
+    const k=sm(p,.05,.4); quai.visible=k>0; quai.scale.set(1,k,1); tie.forEach(s=>s.visible=k>0);
+    hero.rotation.y=t*.3; tilt.position.y=.95+Math.sin(t*1.5)*.01;
+  }};
+}
+const BUILD=[stLeaf,stIron,stFrame,stLayer,stStitch,stDecor,stFinish,stMarket];
+
+/* ------------------------------------------------------------------ village */
+const STATE={count:0};
+mk(new THREE.PlaneGeometry(120,120),M.ground,scene,0,0,0,{cast:false}).rotation.x=-Math.PI/2;
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(140,32,16),new THREE.MeshBasicMaterial({map:skyTex,side:THREE.BackSide,fog:false})));
+// centre: village pond with a bamboo clump
+mk(new THREE.CircleGeometry(2.4,40),std({color:0x3d5a4e,roughness:.05,envMapIntensity:1.1}),scene,0,.02,0,{cast:false}).rotation.x=-Math.PI/2;
+mk(new THREE.TorusGeometry(2.45,.12,8,48),std({color:0x8c8778}),scene,0,.03,0).rotation.x=Math.PI/2;
+function bambooClump(x,z,n=16,h=6){
+  for(let i=0;i<n;i++){const a=rnd(0,6.28), r=rnd(0,.45), H=h*rnd(.75,1.1), tilt=rnd(.05,.22);
+    const s=new THREE.Group(); s.position.set(x+Math.cos(a)*r,0,z+Math.sin(a)*r); s.rotation.set(Math.sin(a)*tilt,0,-Math.cos(a)*tilt); scene.add(s);
+    mk(G.cyl(.035,.05,H,8),M.bambooGreen,s,0,H/2,0);
+    for(let k=0;k<3;k++){const b=mk(new THREE.IcosahedronGeometry(rnd(.5,.9),0),k%2?M.leaf:M.leaf2,s,rnd(-.4,.4),H*rnd(.72,1),rnd(-.4,.4));b.scale.set(1,.55,1);} }
+}
+bambooClump(-3.2,-.8,14,6.5); bambooClump(3.1,1.4,10,5.5);
+
+const R=9.6, N=STEPS.length, stations=[], markers=[];
+function roofGeo(w,d){const s=new THREE.Shape();s.moveTo(-d/2-.4,0);s.lineTo(d/2+.4,0);s.lineTo(0,1.5);s.lineTo(-d/2-.4,0);const g=new THREE.ExtrudeGeometry(s,{depth:w+.6,bevelEnabled:false});g.center();g.rotateY(Math.PI/2);return g;}
+function markerTex(n){return tex(128,128,(c)=>{c.fillStyle='#3d6b36';c.beginPath();c.arc(64,64,54,0,7);c.fill();c.strokeStyle='#f1ecd9';c.lineWidth=6;c.stroke();c.fillStyle='#f1ecd9';c.font='600 64px "Be Vietnam Pro",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(n,64,68);});}
+for(let i=0;i<N;i++){
+  const a=i/N*Math.PI*2;
+  const g=new THREE.Group(); g.position.set(Math.sin(a)*R,0,Math.cos(a)*R); g.rotation.y=a+Math.PI; scene.add(g);
+  mk(G.box(6.4,2.3,.25),i%2?M.fence:M.lime,g,0,1.15,-2.4);
+  mk(G.box(5.4,3,3.6),M.plaster,g,0,1.5,-4.9);
+  mk(roofGeo(5.4,3.6),M.roof,g,0,3.75,-4.9);
+  const s=BUILD[i](g); s.update(0,0,0);
+  const m=new THREE.Sprite(new THREE.SpriteMaterial({map:markerTex(String(i+1)),depthTest:false}));
+  m.position.set(0,2.9,0); m.scale.setScalar(.8); m.userData.i=i; g.add(m); markers.push(m);
+  stations.push({g,s,a});
+  // between stations: straw stacks and leaning woven trays
+  const b=a+Math.PI/N, x=Math.sin(b)*(R+.8), z=Math.cos(b)*(R+.8);
+  mk(G.cyl(.7,.75,1.1,16),M.straw,scene,x,.55,z); mk(new THREE.ConeGeometry(.8,.9,16),M.straw,scene,x,1.55,z);
+  const tray=mk(G.cyl(.45,.45,.03,24),std({map:wickerTex,color:0xc9a66a}),scene,x+Math.cos(b)*1.2,.45,z-Math.sin(b)*1.2); tray.rotation.set(1.2,b,0);
+}
+function viewFor(i,vr){
+  const st=stations[i], v=STEPS[i].view, portrait=camera.aspect<.9;
+  const d=vr?Math.max(1.2,Math.min(v.d,2.2)):v.d*(portrait?1.45:1);
+  const dx=(!vr&&!portrait&&innerWidth>760)?-.28*d:0;
+  const pos=new THREE.Vector3(dx,vr?0:v.h+(portrait?.2:0),d), tgt=new THREE.Vector3(dx,v.ty-(portrait?.25*v.d/3:0),0);
+  st.g.localToWorld(pos); st.g.localToWorld(tgt); return {pos,tgt};
+}
+
+/* ------------------------------------------------------------------ VR panel */
+const vrCanvas=document.createElement('canvas'); vrCanvas.width=1024; vrCanvas.height=700;
+const vrTex=new THREE.CanvasTexture(vrCanvas); vrTex.colorSpace=SRGB;
+const vrPanel=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.75),new THREE.MeshBasicMaterial({map:vrTex,transparent:true}));
+vrPanel.visible=false; scene.add(vrPanel);
+function wrap(c,text,x,y,mw,lh){const words=text.split(' ');let line='';for(const w of words){const t=line?line+' '+w:w;if(c.measureText(t).width>mw&&line){c.fillText(line,x,y);y+=lh;line=w;}else line=t;}if(line){c.fillText(line,x,y);y+=lh;}return y;}
+function drawVR(){
+  const c=vrCanvas.getContext('2d'), W=1024, H=700, u=UI[lang];
+  c.clearRect(0,0,W,H); c.fillStyle='rgba(18,26,21,.92)'; c.beginPath(); c.roundRect(0,0,W,H,36); c.fill();
+  if(cur<0){c.fillStyle='#f1ecd9';c.font='italic 600 64px "Cormorant Garamond",serif';c.fillText(u.introTitle,56,110);c.font='30px "Be Vietnam Pro",sans-serif';c.fillStyle='#dcd8c8';wrap(c,u.introBody,56,180,910,46);vrTex.needsUpdate=true;return;}
+  const s=STEPS[cur][lang];
+  c.fillStyle='#a9cc84'; c.font='600 24px "Be Vietnam Pro",sans-serif'; c.fillText(`${u.step.toUpperCase()} ${cur+1} / ${N}  ·  ${s.name.toUpperCase()}`,56,72);
+  c.fillStyle='#f1ecd9'; c.font='600 60px "Cormorant Garamond",serif'; c.fillText(s.title,56,142);
+  c.font='25px "Be Vietnam Pro",sans-serif'; c.fillStyle='#dcd8c8'; let y=wrap(c,s.body,56,194,912,36)+8;
+  s.steps.forEach((t,k)=>{const done=prog>=(k+1)/3, act=prog>k/3; c.fillStyle=done?'#a9cc84':act?'#f1ecd9':'#6b7568'; c.beginPath(); c.arc(68,y-9,9,0,7); done?c.fill():(c.lineWidth=3,c.strokeStyle=c.fillStyle,c.stroke()); c.fillStyle=act||done?'#f1ecd9':'#aab3a6'; c.fillText(t,94,y); y+=40;});
+  if(STEPS[cur].gauge){c.fillStyle='#ef7d8f';c.font='600 46px "Cormorant Garamond",serif';c.fillText(`${u[STEPS[cur].gauge]}: ${STATE.count} / 16`,56,y+30);}
+  c.fillStyle='rgba(241,236,217,.14)'; c.fillRect(56,H-78,912,6); c.fillStyle='#a9cc84'; c.fillRect(56,H-78,912*prog,6);
+  c.fillStyle='#aab3a6'; c.font='22px "Be Vietnam Pro",sans-serif'; c.fillText(u.vrHint,56,H-34);
+  vrTex.needsUpdate=true;
+}
+function placeVRPanel(i){
+  const st=stations[i]; const p=new THREE.Vector3(-1.2,1.4,1.1); st.g.add(vrPanel); vrPanel.position.copy(p);
+  vrPanel.rotation.set(0,Math.atan2(0-p.x,1.8-p.z),0); vrPanel.visible=true;
+}
+
+/* ------------------------------------------------------------------ tour logic */
+let cur=-1, prog=0, playing=false, tween=null, seen=new Set();
+const DUR=8;
+function tweenCam(pos,tgt,d=1.8,done){tween={p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:tgt,s:0,d,done};}
+function goTo(i){
+  cur=i; playing=false; prog=0; STATE.count=0;
+  markers.forEach(m=>m.visible=i<0);
+  if(i<0){ if(!renderer.xr.isPresenting) tweenCam(OV_POS.clone(),OV_TGT.clone(),2); renderAll(); return; }
+  seen.add(i); stations[i].s.update(0,clock.elapsedTime,0);
+  renderAll();
+  if(renderer.xr.isPresenting){ placeRig(i); setTimeout(()=>{if(cur===i)playing=true;},600); }
+  else { const v=viewFor(i); tweenCam(v.pos,v.tgt,1.8,()=>{ if(cur===i) playing=true; }); }
+}
+function replay(){ if(cur<0) return; prog=0; stations[cur].s.update(0,clock.elapsedTime,0); playing=true; }
+function placeRig(i){
+  const v=viewFor(i,true); const d=v.tgt.clone().sub(v.pos);
+  rig.position.set(v.pos.x,0,v.pos.z); rig.rotation.set(0,Math.atan2(-d.x,-d.z),0);
+  placeVRPanel(i); drawVR();
+}
+
+/* ------------------------------------------------------------------ DOM UI */
+const card=$('#card'), rail=$('#rail');
+function renderAll(){
+  const u=UI[lang];
+  document.documentElement.lang=lang;
+  $('#lang-vi').setAttribute('aria-pressed',lang==='vi'); $('#lang-en').setAttribute('aria-pressed',lang==='en');
+  $('#b-kicker').textContent=u.kicker; $('#b-title').textContent=u.brand; $('#overview').textContent=u.overview;
+  $('#vr').textContent=renderer.xr.isPresenting?u.vrExit:u.vr;
+  rail.innerHTML=STEPS.map((s,i)=>`<button data-i="${i}" class="${i===cur?'on':''} ${seen.has(i)?'seen':''}"><span class="n">${i+1}</span>${s[lang].name}</button>`).join('');
+  const collapsed=card.classList.contains('collapsed');
+  const minBtn=`<button class="min" id="min">${collapsed?u.expand:u.collapse}</button>`;
+  if(cur<0){
+    card.innerHTML=`<div class="kicker"><span>${u.kicker} · ${u.intro7}</span>${minBtn}</div><h1>${u.introTitle}</h1><p class="body">${u.introBody}</p><p class="hint">${u.introHint}</p><div class="row"><button class="btn primary" id="start">${u.start} →</button></div>`;
+  } else {
+    const s=STEPS[cur][lang], gk=STEPS[cur].gauge;
+    card.innerHTML=`<div class="kicker"><span>${u.step} ${cur+1} / ${N} · ${s.name}</span>${minBtn}</div>
+      <h1>${s.title}</h1><p class="body">${s.body}</p>
+      <ul class="steps">${s.steps.map(t=>`<li>${t}</li>`).join('')}</ul>
+      ${gk?`<div class="gauge"><span>${u[gk]}</span><b id="gauge">0 / 16</b></div>`:''}
+      <div class="fact"><span>${s.fact[0]}</span><span>${s.fact[1]}</span></div>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="row"><button class="btn" id="prev" ${cur===0?'disabled':''}>← ${u.prev}</button><button class="btn" id="again">↻ ${u.replay}</button><button class="btn primary" id="next">${cur===N-1?u.toOverview:u.next+' →'}</button></div>`;
+  }
+  lastLive=-1; live();
+  if(renderer.xr.isPresenting) drawVR();
+}
+let lastLive=-1;
+function live(){
+  if(cur<0) return;
+  const k=Math.round(prog*200); if(k===lastLive) return; lastLive=k;
+  const bar=$('#bar'); if(bar) bar.style.width=(prog*100)+'%';
+  card.querySelectorAll('.steps li').forEach((li,j)=>{li.classList.toggle('done',prog>=(j+1)/3-1e-6&&prog>0);li.classList.toggle('act',prog>j/3&&prog<(j+1)/3);});
+  const gg=$('#gauge'); if(gg) gg.textContent=`${STATE.count} / 16`;
+}
+card.addEventListener('click',e=>{
+  const id=e.target.closest('button')?.id;
+  if(id==='start') goTo(0);
+  else if(id==='prev'&&cur>0) goTo(cur-1);
+  else if(id==='next') goTo(cur===N-1?-1:cur+1);
+  else if(id==='again') replay();
+  else if(id==='min'){card.classList.toggle('collapsed'); renderAll();}
+});
+rail.addEventListener('click',e=>{const b=e.target.closest('button'); if(b) goTo(+b.dataset.i);});
+$('#overview').onclick=()=>goTo(-1);
+const setLang=l=>{lang=l;try{localStorage.setItem('nc-lang',l);}catch(e){} renderAll();};
+$('#lang-vi').onclick=()=>setLang('vi'); $('#lang-en').onclick=()=>setLang('en');
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight') goTo(cur>=N-1?-1:cur+1);
+  else if(e.key==='ArrowLeft') goTo(Math.max(-1,cur-1));
+  else if(e.key==='r'||e.key==='R') replay();
+});
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,5000);}
+
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2(); let down=null;
+canvas.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);
+canvas.addEventListener('pointerup',e=>{
+  if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>6||cur>=0) return;
+  const r=canvas.getBoundingClientRect(); ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+  ray.setFromCamera(ndc,camera); const h=ray.intersectObjects(markers); if(h.length) goTo(h[0].object.userData.i);
+});
+
+/* ------------------------------------------------------------------ WebXR */
+const vrBtn=$('#vr'); let xrOK=false, savedCam=null;
+(async()=>{ try{ xrOK=!!(navigator.xr&&await navigator.xr.isSessionSupported('immersive-vr')); }catch(e){ xrOK=false; } vrBtn.classList.toggle('primary',xrOK); })();
+vrBtn.onclick=async()=>{
+  if(renderer.xr.isPresenting){ renderer.xr.getSession().end(); return; }
+  if(!xrOK){ toast(UI[lang].vrNo); return; }
+  try{
+    const session=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
+    renderer.xr.setReferenceSpaceType('local-floor');
+    savedCam={p:camera.position.clone(),t:controls.target.clone()};
+    await renderer.xr.setSession(session);
+    controls.enabled=false; tween=null;
+    session.addEventListener('end',()=>{
+      rig.position.set(0,0,0); rig.rotation.set(0,0,0); vrPanel.visible=false; controls.enabled=true;
+      if(savedCam){camera.position.copy(savedCam.p); controls.target.copy(savedCam.t);} renderAll(); goTo(cur);
+    });
+    if(cur<0) goTo(0); else { placeRig(cur); replay(); }
+    renderAll();
+  }catch(e){ toast(UI[lang].vrFail); }
+};
+for(let k=0;k<2;k++){
+  const c=renderer.xr.getController(k);
+  c.addEventListener('selectstart',()=>goTo(cur>=N-1?0:cur+1));
+  c.addEventListener('squeezestart',()=>goTo(Math.max(0,cur-1)));
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,0,-1)]),new THREE.LineBasicMaterial({color:0xa9cc84}));
+  line.scale.z=2.5; c.add(line); rig.add(c);
+}
+
+/* ------------------------------------------------------------------ loop */
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.9?72:55;camera.updateProjectionMatrix();}
+addEventListener('resize',resize); resize();
+const clock=new THREE.Clock(); let vrTick=0, first=true;
+renderer.setAnimationLoop(()=>{
+  const dt=Math.min(clock.getDelta(),.05), t=clock.elapsedTime;
+  if(tween){ tween.s+=dt/tween.d; const f=ease(clamp(tween.s));
+    camera.position.lerpVectors(tween.p0,tween.p1,f); controls.target.lerpVectors(tween.t0,tween.t1,f);
+    if(tween.s>=1){const d=tween.done; tween=null; d&&d();} }
+  if(cur>=0){
+    if(playing){ prog=Math.min(1,prog+dt/DUR); if(prog>=1) playing=false; }
+    stations[cur].s.update(prog,t,dt); live();
+    if(renderer.xr.isPresenting && (vrTick+=dt)>.25){vrTick=0; drawVR();}
+  }
+  if(controls.enabled){ if(controls.target.length()>16) controls.target.setLength(16); controls.update(); }
+  renderer.render(scene,camera);
+  if(first){first=false; $('#loading').hidden=true;}
+});
+renderAll();
+document.fonts&&document.fonts.ready.then(()=>{ markers.forEach((m,i)=>{m.material.map=markerTex(String(i+1));}); });
+</script>
+
+</body></html>

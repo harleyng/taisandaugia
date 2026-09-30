@@ -93,6 +93,8 @@ PANO_MEKONG = COMMONS + "3/37/Mekong_Delta_2024_360.jpg/3840px-Mekong_Delta_2024
 VR_OVERRIDE = {
     # tour 3D 7 công đoạn làm gốm — bản gốc artifact claude.ai U5YrpwygMxo2RruTB76ZLF
     "bat-trang": "https://taisandaugia.vn/vr/bat-trang.html",
+    # tour 3D 8 công đoạn làm nón (16 vòng tre, 3 lớp lá, in & thêu hình)
+    "lang-chuong": "https://taisandaugia.vn/vr/lang-chuong.html",
 }
 
 

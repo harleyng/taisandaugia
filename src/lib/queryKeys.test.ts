@@ -147,6 +147,8 @@ describe("qk — bất biến prefix (chống invalidate câm)", () => {
       [qk.adminPermissions.all, qk.adminPermissions.byUser(UID)],
       [qk.orgPermissions.all, qk.orgPermissions.byTarget(UID, UID)],
       [qk.partners.all, qk.partners.public],
+      [qk.craftVillages.all, qk.craftVillages.public],
+      [qk.craftVillages.all, qk.craftVillages.mapState(UID)],
       [qk.auctionTools.all, qk.auctionTools.public],
       [qk.orders.all, qk.orders.byCustomer(UID)],
       [qk.orders.all, qk.orders.byAdvertisement(UID)],

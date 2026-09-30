@@ -1,7 +1,10 @@
 export type AssetOwnerKYCStatus = "draft" | "pending_review" | "approved" | "rejected";
 export type AssetOwnerOrgKYCStatus = "draft" | "pending_review" | "under_review" | "approved" | "rejected";
 export type AssetOwnerBranch = "individual" | "organization";
-export type OrgType = "bank_credit" | "amc" | "enforcement" | "state_agency" | "administrator";
+export type OrgType =
+  | "bank_credit" | "amc" | "enforcement" | "state_agency" | "administrator"
+  /** Làng nghề / HTX làng nghề — số hoá & công khai hồ sơ lên bản đồ /lang-nghe. */
+  | "craft_village";
 export type IdType = "cccd" | "passport";
 /** Phân loại pháp nhân trong danh bạ public.asset_owners (rộng hơn OrgType). */
 export type OwnerKind =
@@ -173,4 +176,5 @@ export const ORG_TYPE_LABELS: Record<OrgType, string> = {
   enforcement: "Cơ quan Thi hành án",
   state_agency: "Cơ quan Nhà nước",
   administrator: "Quản tài viên",
+  craft_village: "Làng nghề / HTX làng nghề",
 };

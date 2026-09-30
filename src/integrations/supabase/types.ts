@@ -4704,6 +4704,50 @@ export type Database = {
         }
         Relationships: []
       }
+      craft_village_publications: {
+        Row: {
+          asset_posting_id: string
+          created_at: string
+          is_published: boolean
+          latitude: number
+          longitude: number
+          product: string
+          published_at: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          asset_posting_id: string
+          created_at?: string
+          is_published?: boolean
+          latitude: number
+          longitude: number
+          product: string
+          published_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          asset_posting_id?: string
+          created_at?: string
+          is_published?: boolean
+          latitude?: number
+          longitude?: number
+          product?: string
+          published_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "craft_village_publications_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: true
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_transactions: {
         Row: {
           amount_vnd: number | null
@@ -11809,6 +11853,10 @@ export type Database = {
           quoted_count: number
         }[]
       }
+      owner_craft_map_state: {
+        Args: { _posting_id: string }
+        Returns: Json
+      }
       owner_decide_auction_consult: {
         Args: { _consultation_id: string; _decision: string; _note: string }
         Returns: Json
@@ -12065,6 +12113,16 @@ export type Database = {
           quoted_price: number
           service_kind: string
         }[]
+      }
+      owner_set_craft_map_publication: {
+        Args: {
+          _latitude: number
+          _longitude: number
+          _posting_id: string
+          _product: string
+          _published: boolean
+        }
+        Returns: Json
       }
       owner_share_report: {
         Args: { p_days: number; p_report_id: string }
@@ -12362,6 +12420,22 @@ export type Database = {
         Returns: {
           name: string
           supplier_id: string
+        }[]
+      }
+      public_craft_villages: {
+        Args: never
+        Returns: {
+          description: string | null
+          image_urls: string[]
+          latitude: number
+          longitude: number
+          posting_id: string
+          product: string
+          province: string | null
+          published_at: string
+          title: string | null
+          village_name: string
+          vr_url: string | null
         }[]
       }
       public_org_auctioneers: {

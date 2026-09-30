@@ -190,6 +190,7 @@ const OrgMatchingSpec = lazy(() => import("./pages/OrgMatchingSpec"));
 const TinTucPage = lazy(() => import("./pages/TinTucPage"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const AuctionToolsPage = lazy(() => import("./pages/AuctionToolsPage"));
+const CraftVillagesPage = lazy(() => import("./pages/CraftVillagesPage"));
 const AuctionToolDetail = lazy(() => import("./pages/AuctionToolDetail"));
 const AuctionSessions = lazy(() => import("./pages/AuctionSessions"));
 const AuctionSessionDetail = lazy(() => import("./pages/AuctionSessionDetail"));
@@ -291,6 +292,7 @@ const App = () => (
               <Route path="/tin-tuc" element={<TinTucPage />} />
               <Route path="/tin-tuc/:slug" element={<ArticleDetail />} />
               <Route path="/cong-cu-dau-gia" element={<AuctionToolsPage />} />
+              <Route path="/lang-nghe" element={<CraftVillagesPage />} />
               <Route path="/cong-cu-dau-gia/:slug" element={<AuctionToolDetail />} />
               <Route path="/sessions" element={<AuctionSessions />} />
               <Route path="/sessions/:id" element={<AuctionSessionDetail />} />

@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-09-30 — Bản đồ làng nghề /lang-nghe lấy dữ liệu từ luồng Số hoá của chủ tài sản
+
+**Context:** Người mua/khách vãng lai cần xem bản đồ Việt Nam các làng nghề (ảnh sản phẩm tròn → bấm mở VR tour). Bản đầu làm bảng `craft_villages` do admin quản lý; người dùng đổi hướng: làng nghề là CHỦ TÀI SẢN tự số hoá + đặt VR và tự chọn công khai hồ sơ. Chốt: loại tổ chức mới (không phải nhánh KYC thứ 3), VR = dịch vụ VR tour đối tác sẵn có, lên bản đồ = chủ bật + admin đã duyệt, bỏ bảng admin.
+**Decision:**
+- `asset_owner_org_kyc.org_type` thêm `craft_village` (owner_kind rơi `other`). Bảng phụ `craft_village_publications` (PK = hồ sơ; lat/lng/product/is_published) — KHÔNG cột trên `asset_postings` vì review guard. Ghi chỉ qua `owner_set_craft_map_publication`; đọc công khai chỉ qua `public_craft_villages()` (tập cột an toàn, lọc `is_published` + `review_status='approved'` lúc ĐỌC ⇒ sửa hồ sơ tự ẩn).
+- Mig `20260930110000` áp qua psql (CLI 403); bảng/bucket bản đầu đã DROP, file migration bản đầu xoá + gỡ dòng `schema_migrations`.
+- Link VR không nhúng được (claude.ai `X-Frame-Options: SAMEORIGIN`) ⇒ `lib/vrTour/embed.ts` liệt host, `VrTourViewer` hiện thẻ mở tab mới. Tour 3D Bát Tràng (bản gốc artifact `U5YrpwygMxo2RruTB76ZLF`) TỰ HOST ở `public/vr/bat-trang.html`, lưu `https://taisandaugia.vn/vr/bat-trang.html`; `vrEmbedSrc` nạp link tên miền sàn theo origin đang chạy ⇒ nhúng ngay trong dialog.
+- Seed `scripts/seed-craft-villages.py`: 12 làng đi RPC thật (KYC → hồ sơ duyệt → chuỗi VR 6 bước → công khai); ảnh Commons chép về `asset-media` (hotlink Wikimedia bị 429); VR 11 làng là ảnh 360° MINH HOẠ Hà Nội/Mekong qua Pannellum.
+**Consequences:** Mỗi đơn VR seed ghi 1 dòng hoa hồng `orders` + `payment_claims` — báo cáo doanh thu thấy 12 đơn demo tới khi `--teardown`. Ghim chồng nhau được xếp vòng theo zoom (`spreadOverlapping`). Bản đồ Việt Nam trên sàn phải có nhãn Hoàng Sa/Trường Sa (xem `vietnamMap.ts`).
+
 ## 2026-09-28 — Danh mục gói dịch vụ (tự mua) + trang "Gói dịch vụ" theo design
 
 **Context:** Người dùng muốn trang gói của cổng chủ tài sản giống hệt design "Goi Dich Vu Chu Tai San" (3 hạng gói, chọn kỳ có chiết khấu, bảng so sánh, tự nâng cấp) — nhưng hệ thống chỉ có gói riêng do admin cấu hình. Người dùng chốt: làm DANH MỤC thật; ngoài 2 tính năng có hạn mức cho phép dòng quyền lợi tự nhập (không kiểm); đổi gói từ kỳ kế tiếp; thêm token màu hạng (ngoại lệ luật không thêm màu); "Xem các gói khác" mở TRANG RIÊNG có nút quay lại (không bung dưới gói hiện tại).

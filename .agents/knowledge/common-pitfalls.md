@@ -401,3 +401,10 @@ Supabase mặc định cấp EXECUTE hàm mới trong `public` cho `anon` + `aut
 
 ## Radix `Select` gọi `onValueChange("")` khi danh sách lựa chọn đổi
 Select được điều khiển (RHF `Controller`) mà các `SelectItem` đổi theo trường khác, ví dụ "Kỳ cụ thể" đổi theo Tháng/Quý/Năm, thì Radix bắn `onValueChange("")` ngay sau khi setValue giá trị mới. Hậu quả: trường bị xoá trắng, form không tìm ra bản ghi đã có, hiện placeholder "Chọn kỳ". Truyền `onValueChange={(v) => v && field.onChange(v)}` (xem `targets/TargetDialog.tsx`). Test jsdom bắt được lỗi này.
+
+## Link VR/3D chặn nhúng iframe (claude.ai, …)
+Trang gửi `X-Frame-Options: SAMEORIGIN` / `frame-ancestors` ⇒ iframe chỉ hiện "từ chối kết nối", không có lỗi console bên mình. Kiểm `curl -sI <url>` trước khi giao link; host đã biết chặn liệt ở `lib/vrTour/embed.ts` để `VrTourViewer` hiện thẻ mở tab mới.
+
+## Hotlink ảnh Wikimedia trả 429
+`upload.wikimedia.org` (nhất là thumbnail cỡ lớn chưa cache) giới hạn tốc độ và chặn client "robot". Seed/ảnh công khai phải CHÉP về Storage (`asset-media`), không hotlink — xem `scripts/seed-craft-villages.py` (`fetch` có backoff).
+

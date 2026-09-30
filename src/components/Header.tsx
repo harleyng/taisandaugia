@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard, Layers, Wrench, Gavel } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard, Layers, Wrench, Gavel, MapPinned } from "lucide-react";
 import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
@@ -127,6 +127,18 @@ export const Header = () => {
                   }`}
                 >
                   Công cụ đấu giá
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link
+                  to="/lang-nghe"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    transparent
+                      ? "text-white/90 hover:text-white hover:bg-white/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Làng nghề
                 </Link>
               </NavigationMenuItem>
               <NavigationMenuItem>
@@ -344,6 +356,13 @@ export const Header = () => {
                   >
                     <Wrench className="h-5 w-5" />
                     Công cụ đấu giá
+                  </Link>
+                  <Link
+                    to="/lang-nghe"
+                    className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                  >
+                    <MapPinned className="h-5 w-5" />
+                    Làng nghề
                   </Link>
                 </div>
 

@@ -1,0 +1,703 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bát Tràng Pottery VR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
+<style>
+/* Layout: full-bleed 3D village; glass "ink" panels float over it — step card bottom-left, step rail right (top strip on phones). Single deliberate dark UI look over a daylight scene. */
+:root{
+  --ink:#121822;            /* cobalt-black, like undiluted men lam */
+  --panel:rgba(18,24,34,.86);
+  --paper:#f0e9db;          /* porcelain body */
+  --muted:#a8aebb;
+  --cobalt:#6f93ec;         /* men lam, lifted for dark ground */
+  --cobalt-deep:#2f55b8;
+  --ember:#f09a4a;          /* kiln heat, used only for temperature */
+  --line:rgba(240,233,219,.14);
+  --f-display:"Cormorant Garamond","Iowan Old Style",Georgia,serif;
+  --f-body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--ink);color:var(--paper);font-family:var(--f-body);overflow:hidden}
+#app{position:fixed;inset:0}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px}
+
+.top{position:absolute;left:16px;right:16px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;pointer-events:none}
+.top > *{pointer-events:auto}
+.brand{background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:8px 14px 10px}
+.brand small{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.brand strong{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:26px;line-height:1.05}
+.tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:background .2s,border-color .2s}
+.btn:hover{border-color:rgba(240,233,219,.35)}
+.btn.primary{background:var(--cobalt-deep);border-color:var(--cobalt-deep);color:#fff}
+.btn.primary:hover{background:#3a63cc}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px;backdrop-filter:blur(10px)}
+.seg button{background:none;border:0;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+
+.rail{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:14px;padding:10px}
+.rail button{display:flex;align-items:center;gap:10px;background:none;border:0;border-radius:8px;padding:6px 10px 6px 6px;text-align:left;font-size:13px;color:var(--muted);white-space:nowrap}
+.rail button:hover{color:var(--paper);background:rgba(240,233,219,.06)}
+.rail .n{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;flex:none}
+.rail button.seen .n{border-color:var(--cobalt);color:var(--cobalt)}
+.rail button.on{color:var(--paper);background:rgba(111,147,236,.16)}
+.rail button.on .n{background:var(--cobalt);border-color:var(--cobalt);color:var(--ink)}
+
+.card{position:absolute;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(430px,calc(100% - 32px));background:var(--panel);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:18px 20px 16px;display:flex;flex-direction:column;gap:12px;max-height:calc(100% - 120px);overflow:auto}
+.kicker{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cobalt);font-weight:600}
+.kicker .min{display:none;background:none;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:11px;letter-spacing:.04em;text-transform:none;color:var(--muted)}
+.card h1{font-family:var(--f-display);font-weight:600;font-size:32px;line-height:1.05;margin:0;text-wrap:balance}
+.card .body{margin:0;font-size:14px;line-height:1.6;color:#d9d3c6;max-width:62ch}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.steps li{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--muted);transition:color .3s}
+.steps li::before{content:"";flex:none;width:9px;height:9px;margin-top:5px;border-radius:50%;border:1.5px solid currentColor;transition:background .3s}
+.steps li.act{color:var(--paper)}
+.steps li.act::before{border-color:var(--cobalt);box-shadow:0 0 0 3px rgba(111,147,236,.2)}
+.steps li.done{color:#cfc9bc}
+.steps li.done::before{background:var(--cobalt);border-color:var(--cobalt)}
+.fact{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:10px;font-size:12.5px}
+.fact span:first-child{color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-size:11px;padding-top:2px}
+.fact span:last-child{text-align:right;font-weight:500}
+.gauge{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}
+.gauge b{font-family:var(--f-display);font-size:34px;font-weight:600;color:var(--ember);font-variant-numeric:tabular-nums;line-height:1}
+.bar{height:3px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--cobalt)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row .btn{background:rgba(240,233,219,.06)}
+.row .btn.primary{background:var(--cobalt-deep);margin-left:auto}
+.hint{font-size:11.5px;color:var(--muted);margin:0}
+
+.loading{position:absolute;inset:0;display:grid;place-items:center;background:var(--ink);z-index:5;text-align:center;padding-inline:16px}
+.loading p{font-family:var(--f-display);font-style:italic;font-size:24px;margin:0 0 6px}
+.loading small{color:var(--muted)}
+.toast{position:absolute;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13px;max-width:calc(100% - 32px)}
+
+@media (max-width:760px){
+  .brand strong{font-size:21px}
+  .rail{top:auto;transform:none;left:16px;right:16px;bottom:auto;top:calc(118px + env(safe-area-inset-top,0px));flex-direction:row;overflow-x:auto;padding:6px;gap:4px;border-radius:12px}
+  .rail button{padding:4px 8px 4px 4px;font-size:12px}
+  .rail .n{width:22px;height:22px}
+  .card{padding:14px 16px 12px;gap:10px;max-height:52%}
+  .card h1{font-size:26px}
+  .kicker .min{display:inline-block}
+  .card.collapsed .body,.card.collapsed .steps,.card.collapsed .fact,.card.collapsed .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div id="app">
+  <canvas id="scene" tabindex="0" aria-label="3D scene of Bát Tràng pottery village"></canvas>
+  <header class="top">
+    <div class="brand"><small id="b-kicker">Gia Lâm · Hà Nội</small><strong id="b-title">Làng gốm Bát Tràng</strong></div>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Language">
+        <button id="lang-vi" aria-pressed="true">VI</button><button id="lang-en" aria-pressed="false">EN</button>
+      </div>
+      <button class="btn" id="overview">Toàn cảnh</button>
+      <button class="btn primary" id="vr">Vào VR</button>
+    </div>
+  </header>
+  <nav class="rail" id="rail" aria-label="Steps"></nav>
+  <section class="card" id="card" aria-live="polite"></section>
+  <div class="toast" id="toast" hidden></div>
+  <div class="loading" id="loading"><div><p>Đang dựng làng gốm…</p><small>Building the pottery village…</small></div></div>
+</div>
+
+<script>
+  setTimeout(function(){var l=document.getElementById('loading');if(l&&!l.hidden){l.querySelector('small').textContent='3D engine could not load. Check your connection and reload. / Không tải được bộ dựng 3D, hãy tải lại trang.';}},15000);
+</script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const $ = s => document.querySelector(s);
+const DS = THREE.DoubleSide, SRGB = THREE.SRGBColorSpace;
+const clamp = (x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const lerp = (a,b,t)=>a+(b-a)*t;
+const ease = t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+const sm = (p,a,b)=>ease(clamp((p-a)/(b-a)));
+let seed=7; const rnd=(a=0,b=1)=>{seed=(seed*16807)%2147483647;return a+(seed/2147483647)*(b-a);};
+
+/* ------------------------------------------------------------------ content */
+const STEPS = [
+ { key:'clay', view:{d:3.8,h:2.0,ty:.3},
+   vi:{name:'Lọc đất', title:'Chọn và lọc đất sét', body:'Gốm Bát Tràng dùng đất sét trắng, xưa lấy ngay tại làng, sau này chủ yếu chở về từ Trúc Thôn (Hải Dương). Đất được ngâm nước, khuấy thành hồ loãng rồi cho chảy qua nhiều bể để lắng bỏ sạn và tạp chất.',
+       steps:['Ngâm đất và khuấy thành hồ loãng','Cho chảy qua các bể lắng, bỏ sạn cát','Phơi cho se rồi ủ đất để tăng độ dẻo'], fact:['Nguyên liệu','Đất sét trắng Trúc Thôn']},
+   en:{name:'Clay prep', title:'Selecting and refining the clay', body:'Bát Tràng potters use white clay, once dug in the village itself and later brought mostly from Trúc Thôn in Hải Dương. The clay is soaked, stirred into a slurry and run through a series of settling tanks to remove grit.',
+       steps:['Soak the clay and stir it into a thin slurry','Run it through settling tanks, discarding grit','Dry it to a firm paste, then age it for plasticity'], fact:['Material','White clay from Trúc Thôn']}},
+ { key:'throw', view:{d:2.2,h:1.45,ty:.7},
+   vi:{name:'Tạo dáng', title:'Chuốt gốm trên bàn xoay', body:'Người thợ đặt khối đất vào tâm bàn xoay, dùng tay ướt để mở lòng, kéo thành và vuốt dáng. Khi làm hàng loạt, xưởng dùng khuôn thạch cao để in hoặc rót khuôn.',
+       steps:['Định tâm khối đất trên bàn xoay','Mở lòng và kéo thành gốm lên cao','Thắt cổ, loe miệng, hoàn thiện dáng bình'], fact:['Kỹ thuật','Vuốt tay · in khuôn · rót khuôn']},
+   en:{name:'Forming', title:'Throwing on the wheel', body:'The potter centres a lump of clay on the wheel, opens it with wet hands, pulls up the walls and shapes the body. For batch work, workshops press or slip-cast the clay in plaster moulds.',
+       steps:['Centre the clay on the wheel','Open it and pull the walls upward','Narrow the neck, flare the lip, refine the form'], fact:['Techniques','Throwing · press moulding · slip casting']}},
+ { key:'dry', view:{d:3.3,h:1.6,ty:.8},
+   vi:{name:'Phơi & sửa', title:'Phơi khô và sửa hàng', body:'Phôi được hong nơi thoáng gió, tránh nắng gắt để không nứt. Khi đất se như da, thợ gọt chân đế, làm nhẵn bề mặt và ve lại những chỗ khuyết nhỏ.',
+       steps:['Hong phôi trên giá gỗ nơi thoáng gió','Gọt chân đế khi đất se như da','Làm nhẵn bề mặt, sửa vết nứt nhỏ'], fact:['Co ngót','Khoảng 10–15% qua sấy và nung']},
+   en:{name:'Drying', title:'Drying and trimming', body:'The raw pieces dry on racks in moving air, away from harsh sun that would crack them. Once leather-hard, the potter trims the foot, smooths the surface and patches small flaws.',
+       steps:['Set pieces on wooden racks in a breezy spot','Trim the foot once the clay is leather-hard','Smooth the surface and mend hairline cracks'], fact:['Shrinkage','About 10–15% through drying and firing']}},
+ { key:'paint', view:{d:1.9,h:1.3,ty:.85},
+   vi:{name:'Vẽ', title:'Vẽ trang trí men lam', body:'Hoạ tiết được vẽ bằng bút lông với màu lam từ ô-xít coban, trực tiếp lên xương gốm mộc trước khi tráng men. Đề tài quen thuộc: hoa sen, hoa cúc, mây, sóng nước, rồng.',
+       steps:['Pha màu lam coban với nước','Kẻ vành, vẽ dải hoa văn quanh thân bình','Tô đậm nhạt để hoạ tiết có chiều sâu'], fact:['Màu vẽ','Ô-xít coban, vẽ dưới men']},
+   en:{name:'Painting', title:'Painting in cobalt blue', body:'Designs are brushed straight onto the unglazed body with cobalt-oxide blue, before the glaze goes on. Familiar motifs include lotus, chrysanthemum, clouds, waves and dragons.',
+       steps:['Mix cobalt pigment with water','Rule the bands, then brush motifs around the body','Vary the wash to give the design depth'], fact:['Pigment','Cobalt oxide, painted under the glaze']}},
+ { key:'glaze', view:{d:3.1,h:1.7,ty:.75},
+   vi:{name:'Tráng men', title:'Tráng men', body:'Phôi được nhúng, dội hoặc phun men. Lớp men lúc này trắng đục, chỉ khi nung mới chảy thành lớp thuỷ tinh trong suốt để hoạ tiết lam hiện rõ. Bát Tràng nổi tiếng với men lam, men rạn, men nâu và men tro.',
+       steps:['Khuấy đều thùng men','Nhúng phôi, giữ vài giây rồi nhấc lên','Lau sạch men ở chân đế để không dính lò'], fact:['Dòng men','Lam · rạn · nâu · tro']},
+   en:{name:'Glazing', title:'Glazing', body:'The piece is dipped in, poured over or sprayed with glaze. The coat looks chalky white until firing melts it into clear glass over the blue design. Bát Tràng is known for blue-and-white, crackle, brown and ash glazes.',
+       steps:['Stir the glaze vat','Dip the piece, hold a few seconds, lift it out','Wipe the foot clean so it will not fuse in the kiln'], fact:['Glazes','Blue · crackle · brown · ash']}},
+ { key:'fire', view:{d:6.2,h:2.3,ty:1.5}, gauge:true,
+   vi:{name:'Nung', title:'Nung trong lò', body:'Hàng được xếp trong bao nung để tránh tro bụi rồi đưa vào lò. Làng từng dùng lò ếch, lò bầu, rồi lò hộp đốt than; những bánh than dán trên tường làng là dấu tích thời ấy. Nay phần lớn xưởng nung bằng lò ga, dễ kiểm soát nhiệt.',
+       steps:['Xếp phôi vào bao nung, chất vào lò','Nâng nhiệt từ từ lên khoảng 1.200–1.300 °C','Giữ nhiệt cho men chảy đều, rồi để lò nguội'], fact:['Nhiệt độ nung','Khoảng 1.200–1.300 °C']},
+   en:{name:'Firing', title:'Firing in the kiln', body:'Pieces are stacked in saggars to shield them from ash, then loaded into the kiln. The village moved from frog kilns to climbing kilns to coal-fired box kilns; the coal cakes stuck on village walls date from that era. Most workshops now use gas kilns for tighter control.',
+       steps:['Stack pieces in saggars and load the kiln','Raise the heat slowly to about 1,200–1,300 °C','Hold the heat so the glaze flows evenly, then let it cool'], fact:['Firing range','About 1,200–1,300 °C']}},
+ { key:'done', view:{d:3.0,h:1.45,ty:.9},
+   vi:{name:'Ra lò', title:'Ra lò và kiểm hàng', body:'Khi lò nguội hẳn, thợ mở lò, gõ nhẹ nghe tiếng để phát hiện vết nứt, soi men và màu. Sản phẩm đạt chuẩn được bày ở chợ gốm Bát Tràng và đi khắp nơi.',
+       steps:['Chờ lò nguội hẳn rồi mới mở','Gõ nghe tiếng, soi men, loại hàng lỗi','Đóng gói, bày bán ở chợ gốm'], fact:['Thành phẩm','Bình gốm men lam hoa sen']},
+   en:{name:'Unloading', title:'Unloading and inspection', body:'Once the kiln is fully cool, it is opened. Each piece is tapped and listened to for hidden cracks, and its glaze and colour are checked. Good pieces go to the Bát Tràng pottery market and on to buyers everywhere.',
+       steps:['Wait for the kiln to cool fully before opening','Tap, listen and inspect; set aside flawed pieces','Pack and display at the pottery market'], fact:['Result','Blue-and-white lotus vase']}},
+];
+const UI = {
+ vi:{step:'Bước', prev:'Trước', next:'Tiếp', replay:'Làm lại', start:'Bắt đầu tham quan', overview:'Toàn cảnh', vr:'Vào VR', vrExit:'Thoát VR', vrNo:'Chế độ VR cần kính hỗ trợ WebXR (ví dụ Meta Quest). Hãy mở trang này bằng trình duyệt trên kính.', vrFail:'Không mở được phiên VR trên thiết bị này.', kicker:'Gia Lâm · Hà Nội', brand:'Làng gốm Bát Tràng',
+     introTitle:'Làng gốm Bát Tràng', introBody:'Làng gốm ven sông Hồng, hình thành từ khoảng thế kỷ 14–15. Đi qua 7 công đoạn làm nên một chiếc bình men lam, từ đất sét thô đến lúc ra lò.',
+     introHint:'Kéo để nhìn quanh · cuộn hoặc chụm để phóng to · phím ← → để chuyển bước', toOverview:'Về toàn cảnh', temp:'Nhiệt độ lò (mô phỏng)', collapse:'Thu gọn', expand:'Mở rộng',
+     vrHint:'Cò: bước tiếp  ·  Nút bóp: quay lại', intro7:'7 công đoạn'},
+ en:{step:'Step', prev:'Back', next:'Next', replay:'Replay', start:'Start the tour', overview:'Overview', vr:'Enter VR', vrExit:'Exit VR', vrNo:'VR mode needs a WebXR headset (for example Meta Quest). Open this page in the headset browser.', vrFail:'Could not start a VR session on this device.', kicker:'Gia Lâm · Hà Nội', brand:'Bát Tràng Pottery Village',
+     introTitle:'Bát Tràng Pottery Village', introBody:'A pottery village on the Red River, dating from around the 14th–15th century. Walk through the 7 stages that turn raw clay into a blue-and-white vase, from the settling tanks to the kiln.',
+     introHint:'Drag to look around · scroll or pinch to zoom · ← → keys change step', toOverview:'Back to overview', temp:'Kiln temperature (simulated)', collapse:'Collapse', expand:'Expand',
+     vrHint:'Trigger: next step  ·  Grip: back', intro7:'7 stages'},
+};
+let lang='vi';
+try{const l=localStorage.getItem('bt-lang'); if(l==='vi'||l==='en') lang=l;}catch(e){}
+
+/* ------------------------------------------------------------------ renderer */
+const canvas=$('#scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace=SRGB;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.0;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.xr.enabled=true;
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0xd8d3c4,30,85);
+const pmrem=new THREE.PMREMGenerator(renderer);
+scene.environment=pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+
+const camera=new THREE.PerspectiveCamera(55,1,0.05,300);
+const rig=new THREE.Group(); rig.add(camera); scene.add(rig);
+const OV_POS=new THREE.Vector3(0,15,19), OV_TGT=new THREE.Vector3(0,0.5,0);
+camera.position.copy(OV_POS);
+const controls=new OrbitControls(camera,canvas);
+controls.target.copy(OV_TGT);
+controls.enableDamping=true; controls.dampingFactor=.08;
+controls.maxPolarAngle=Math.PI*.48; controls.minDistance=.6; controls.maxDistance=34;
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xfff1dc,0x6d5a47,1.1));
+const sun=new THREE.DirectionalLight(0xffe0b3,2.6);
+sun.position.set(10,18,7); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-17,right:17,top:17,bottom:-17,near:1,far:60});
+sun.shadow.bias=-0.0004; sun.shadow.normalBias=0.03;
+scene.add(sun);
+
+/* ------------------------------------------------------------------ textures */
+function tex(w,h,fn,rep){
+  const c=document.createElement('canvas'); c.width=w; c.height=h; fn(c.getContext('2d'),w,h);
+  const t=new THREE.CanvasTexture(c); t.colorSpace=SRGB; t.anisotropy=8;
+  if(rep){t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rep[0],rep[1]);}
+  return t;
+}
+function bricks(c,w,h,bw,bh,mortar,L,hue=[8,20]){
+  c.fillStyle=mortar; c.fillRect(0,0,w,h);
+  for(let y=0,r=0;y<h;y+=bh,r++) for(let x=-(r%2)*bw/2;x<w;x+=bw){
+    c.fillStyle=`hsl(${rnd(hue[0],hue[1])},${rnd(34,50)}%,${L+rnd(-9,7)}%)`; c.fillRect(x+2,y+2,bw-4,bh-4);
+  }
+}
+const groundTex=tex(512,512,(c,w,h)=>{ // lane bricks laid in herringbone-ish blocks
+  c.fillStyle='#6a4a3a'; c.fillRect(0,0,w,h);
+  const s=32;
+  for(let by=0;by<h;by+=s*2) for(let bx=0;bx<w;bx+=s*2){
+    const vert=((bx+by)/(s*2))%2===0;
+    for(let k=0;k<4;k++){
+      c.fillStyle=`hsl(${rnd(10,18)},${rnd(35,48)}%,${rnd(30,42)}%)`;
+      if(vert) c.fillRect(bx+k*s/2+2,by+2,s/2-4,s*2-4); else c.fillRect(bx+2,by+k*s/2+2,s*2-4,s/2-4);
+    }
+  }
+},[26,26]);
+const wallTex=tex(512,256,(c,w,h)=>bricks(c,w,h,48,22,'#8b7866',44),[2.2,1.4]);
+const coalTex=tex(512,256,(c,w,h)=>{
+  bricks(c,w,h,48,22,'#8b7866',44);
+  for(let y=26;y<h;y+=46) for(let x=24+((y/46)%2)*22;x<w;x+=46){ // hand-slapped coal cakes drying on the wall
+    c.fillStyle='#1f1c1a'; c.beginPath(); c.arc(x+rnd(-2,2),y,18,0,7); c.fill();
+    c.fillStyle='#35302b'; for(let k=0;k<4;k++){c.beginPath();c.arc(x-8+k*5,y-3+rnd(-2,2),2.2,0,7);c.fill();}
+  }
+},[2.2,1.4]);
+const roofTex=tex(256,256,(c,w,h)=>{
+  c.fillStyle='#6f2e1d'; c.fillRect(0,0,w,h);
+  for(let y=0;y<h;y+=16) for(let x=-(y/16%2)*8;x<w;x+=16){
+    c.fillStyle=`hsl(${rnd(10,16)},${rnd(45,58)}%,${rnd(30,38)}%)`;
+    c.beginPath(); c.moveTo(x,y); c.lineTo(x+16,y); c.arc(x+8,y+10,8,0,Math.PI); c.closePath(); c.fill();
+  }
+},[3,2]);
+const plasterTex=tex(256,256,(c,w,h)=>{
+  c.fillStyle='#d9ccb2'; c.fillRect(0,0,w,h);
+  for(let i=0;i<900;i++){c.fillStyle=`rgba(${rnd(80,140)|0},${rnd(70,110)|0},60,${rnd(.03,.09)})`;c.fillRect(rnd(0,w),rnd(0,h),rnd(2,14),rnd(2,14));}
+},[2,1]);
+const skyTex=tex(16,256,(c,w,h)=>{
+  const g=c.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,'#6f9cc6'); g.addColorStop(.45,'#b9cfd9'); g.addColorStop(.52,'#e6ddc9'); g.addColorStop(1,'#d8cdb6');
+  c.fillStyle=g; c.fillRect(0,0,w,h);
+});
+const crackleTex=tex(512,512,(c,w,h)=>{
+  c.fillStyle='#e6d8b8'; c.fillRect(0,0,w,h);
+  c.strokeStyle='rgba(92,66,34,.55)'; c.lineWidth=1.2;
+  for(let i=0;i<260;i++){let x=rnd(0,w),y=rnd(0,h);c.beginPath();c.moveTo(x,y);for(let k=0;k<4;k++){x+=rnd(-26,26);y+=rnd(-26,26);c.lineTo(x,y);}c.stroke();}
+});
+
+/* cobalt pattern for the lotus vase — laid out in the lathe's (u,v) space */
+const PW=1024, PH=512, NP=14;
+const pattern=document.createElement('canvas'); pattern.width=PW; pattern.height=PH;
+(function(c){
+  const B='#1b3a8c', W='rgba(40,82,176,.42)';
+  const Y=i=>(1-i/(NP-1))*PH;
+  c.lineCap='round'; c.lineJoin='round';
+  const hline=(y,lw)=>{c.strokeStyle=B;c.lineWidth=lw;c.beginPath();c.moveTo(0,y);c.lineTo(PW,y);c.stroke();};
+  c.fillStyle=B; c.fillRect(0,Y(11.2),PW,Y(9.7)-Y(11.2));           // lip band
+  hline(Y(9.1),3); hline(Y(7.6),5); hline(Y(5.8),5); hline(Y(2.6),5); hline(Y(1.5),7);
+  // neck: hanging banana leaves
+  const n0=Y(9.1), n1=Y(7.6);
+  for(let k=0;k<24;k++){const x=(k+.5)*PW/24; c.fillStyle=W;c.strokeStyle=B;c.lineWidth=2;
+    c.beginPath();c.moveTo(x-13,n0+3);c.quadraticCurveTo(x-11,(n0+n1)/2,x,n1-4);c.quadraticCurveTo(x+11,(n0+n1)/2,x+13,n0+3);c.closePath();c.fill();c.stroke();
+    c.beginPath();c.moveTo(x,n0+5);c.lineTo(x,n1-8);c.stroke();}
+  // shoulder: cloud scrolls
+  const s0=Y(7.6), s1=Y(5.8), sc=(s0+s1)/2, sh=s1-s0;
+  for(let k=0;k<8;k++){const x=(k+.5)*PW/8; c.strokeStyle=B;c.lineWidth=3.5;c.fillStyle=W;
+    c.beginPath();c.ellipse(x,sc,44,sh*.2,0,0,7);c.fill();
+    c.beginPath();c.arc(x-20,sc,sh*.24,Math.PI*.15,Math.PI*1.85);c.stroke();
+    c.beginPath();c.arc(x+20,sc,sh*.24,Math.PI*1.15,Math.PI*2.85);c.stroke();
+    c.beginPath();c.moveTo(x+46,sc);c.bezierCurveTo(x+58,sc-sh*.28,x+70,sc+sh*.28,x+82,sc);c.stroke();}
+  // belly: scrolling lotus vine
+  const b0=Y(5.8), b1=Y(2.6), bc=(b0+b1)/2, bh=b1-b0;
+  c.strokeStyle=B;c.lineWidth=4;c.beginPath();
+  for(let x=0;x<=PW;x+=4){const y=bc+Math.sin(x/PW*Math.PI*8)*bh*.26; x?c.lineTo(x,y):c.moveTo(x,y);} c.stroke();
+  const leaf=(x,y,r,a)=>{c.save();c.translate(x,y);c.rotate(a);c.fillStyle=W;c.strokeStyle=B;c.lineWidth=2.5;
+    c.beginPath();c.ellipse(0,0,r,r*.42,0,0,7);c.fill();c.stroke();c.beginPath();c.moveTo(-r,0);c.lineTo(r,0);c.stroke();c.restore();};
+  const lotus=(x,y,s)=>{c.strokeStyle=B;c.lineWidth=3;
+    for(const j of [-2,2,-1,1,0]){c.save();c.translate(x,y);c.rotate(j*.42);c.fillStyle=j===0?'rgba(30,64,150,.7)':W;
+      c.beginPath();c.moveTo(0,0);c.bezierCurveTo(-s*.34,-s*.3,-s*.26,-s*.85,0,-s);c.bezierCurveTo(s*.26,-s*.85,s*.34,-s*.3,0,0);c.fill();c.stroke();c.restore();}
+    c.fillStyle=B;c.beginPath();c.ellipse(x,y+2,s*.34,s*.14,0,0,7);c.fill();};
+  for(let k=0;k<8;k++){const x=PW/16+k*PW/8, up=k%2===1, y=bc+(up?-1:1)*bh*.26;
+    if(k%2===0){lotus(x,y+bh*.05,bh*.44);} else {leaf(x,y-bh*.12,bh*.2,-.3);}
+    leaf(x+PW/16,bc+(up?1:-1)*bh*.06,bh*.13,up?.6:-.6);}
+  // base: lotus-petal panels
+  const p0=Y(2.6), p1=Y(1.5), pw=PW/16;
+  for(let k=0;k<16;k++){const x=(k+.5)*pw; c.fillStyle=W;c.strokeStyle=B;c.lineWidth=2.5;
+    c.beginPath();c.moveTo(x-pw/2+3,p1-2);c.quadraticCurveTo(x-pw/2+3,p0+6,x,p0+4);c.quadraticCurveTo(x+pw/2-3,p0+6,x+pw/2-3,p1-2);c.fill();c.stroke();
+    c.beginPath();c.moveTo(x-pw/4,p1-3);c.quadraticCurveTo(x-pw/4,p0+16,x,p0+14);c.quadraticCurveTo(x+pw/4,p0+16,x+pw/4,p1-3);c.stroke();}
+})(pattern.getContext('2d'));
+const bisque=document.createElement('canvas'); bisque.width=PW; bisque.height=PH;
+(function(c){c.fillStyle='#e2d9c6';c.fillRect(0,0,PW,PH);for(let i=0;i<2500;i++){c.fillStyle=`rgba(120,96,70,${rnd(.04,.12)})`;c.fillRect(rnd(0,PW),rnd(0,PH),rnd(1,3),rnd(1,3));}})(bisque.getContext('2d'));
+function paintTex(){const c=document.createElement('canvas');c.width=PW;c.height=PH;const t=new THREE.CanvasTexture(c);t.colorSpace=SRGB;t.anisotropy=8;return {c,x:c.getContext('2d'),t,last:-1};}
+function paintTo(pt,p){ if(Math.abs(p-pt.last)<.004&&p!==1&&p!==0) return; pt.last=p;
+  pt.x.drawImage(bisque,0,0); const w=Math.floor(p*PW); if(w>0) pt.x.drawImage(pattern,0,0,w,PH,0,0,w,PH); pt.t.needsUpdate=true; }
+const paintLive=paintTex(); paintTo(paintLive,0);
+const paintFull=paintTex(); paintTo(paintFull,1);
+const firedTex=tex(PW,PH,(c)=>{c.fillStyle='#eef0ec';c.fillRect(0,0,PW,PH);c.globalAlpha=1;c.drawImage(pattern,0,0);c.globalCompositeOperation='multiply';c.drawImage(pattern,0,0);});
+
+/* ------------------------------------------------------------------ materials & helpers */
+const std=o=>new THREE.MeshStandardMaterial(Object.assign({roughness:.85,metalness:0,envMapIntensity:.35},o));
+const glossy=o=>new THREE.MeshPhysicalMaterial(Object.assign({roughness:.18,clearcoat:1,clearcoatRoughness:.06,envMapIntensity:1.1,side:DS},o));
+const M={
+  ground:std({map:groundTex,roughness:.95}), wall:std({map:wallTex}), coal:std({map:coalTex}), roof:std({map:roofTex,roughness:.8}),
+  plaster:std({map:plasterTex}), wood:std({color:0x8b5d38,roughness:.7}), darkWood:std({color:0x4b3322,roughness:.75}),
+  brick:std({color:0x9a5037}), kiln:std({map:wallTex,color:0xcfa58a}), clayWet:std({color:0x8b7d6b,roughness:.42,side:DS}),
+  stone:std({color:0x9b968c}), leaf:std({color:0x4d6a37}), leaf2:std({color:0x61803f}), trunk:std({color:0x5a4332}),
+  saggar:std({color:0xbfb4a2}), porcelain:std({color:0xe9e3d6,roughness:.6}), cobalt:std({color:0x1d3d91,roughness:.4}),
+};
+const G={box:(w,h,d)=>new THREE.BoxGeometry(w,h,d), cyl:(a,b,h,s=24,open=false)=>new THREE.CylinderGeometry(a,b,h,s,1,open)};
+function mk(geo,mat,parent,x=0,y=0,z=0,o={}){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=o.cast!==false;m.receiveShadow=o.recv!==false;if(parent)parent.add(m);return m;}
+const lathe=(pts,seg=56)=>new THREE.LatheGeometry(pts.map(p=>new THREE.Vector2(p[0],p[1])),seg);
+
+const VASE=[[0,0],[.07,0],[.085,.015],[.12,.07],[.145,.15],[.15,.2],[.13,.27],[.09,.33],[.06,.37],[.055,.41],[.07,.445],[.076,.456],[.062,.456],[.05,.42]];
+const LUMP=[[0,0],[.14,0],[.155,.02],[.16,.05],[.155,.08],[.145,.1],[.125,.12],[.1,.135],[.07,.145],[.04,.15],[.02,.152],[.012,.152],[.006,.152],[0,.15]];
+const BOWL=[[0,0],[.05,0],[.055,.012],[.05,.018],[.07,.03],[.11,.06],[.14,.1],[.134,.1],[.105,.064],[.06,.036],[0,.03]];
+const JAR=[[0,0],[.09,0],[.13,.05],[.16,.14],[.155,.22],[.12,.28],[.09,.3],[.096,.322],[.08,.322],[.07,.3]];
+const CUP=[[0,0],[.03,0],[.035,.01],[.046,.07],[.041,.07],[.03,.013],[0,.013]];
+const PLATE=[[0,0],[.06,0],[.065,.01],[.16,.03],[.18,.045],[.174,.047],[.155,.035],[.06,.017],[0,.017]];
+const heroGeo=lathe(VASE,64);
+
+/* ------------------------------------------------------------------ stations */
+function stClay(g){
+  const pits=[]; const from=[0x5b4735,0x6f5c48,0x86745d], to=[0x5b4735,0x9c8d77,0xd8cdb6];
+  for(let i=0;i<3;i++){const x=(i-1)*1.25;
+    mk(G.box(1.1,.34,1.1),M.brick,g,x,.17,-.2);
+    const wm=std({color:from[i],roughness:.08,envMapIntensity:1});
+    const w=mk(new THREE.PlaneGeometry(.94,.94),wm,g,x,.345,-.2,{cast:false}); w.rotation.x=-Math.PI/2;
+    pits.push({w,wm,a:new THREE.Color(from[i]),b:new THREE.Color(to[i])});
+    if(i<2) mk(G.box(.2,.06,.14),M.brick,g,x+.62,.37,-.2);
+  }
+  const paddle=new THREE.Group(); paddle.position.set(-1.25,.35,-.2); g.add(paddle);
+  const sh=mk(G.cyl(.018,.018,1.2,8),M.wood,paddle,.18,.45,0); sh.rotation.z=.35;
+  mk(G.box(.16,.22,.03),M.wood,paddle,.04,.02,0);
+  const pile=mk(new THREE.SphereGeometry(.5,28,18),M.clayWet,g,2.35,.02,.05); pile.scale.set(1,.55,.9);
+  const block=mk(G.box(.75,.45,.55),M.clayWet,g,-2.35,.225,.2);
+  const bucket=mk(G.cyl(.18,.14,.3,20,true),std({color:0x7a5230,side:DS}),g,1.6,.15,.75);
+  mk(G.cyl(.14,.14,.02,20),std({color:0x8c7b66,roughness:.2}),g,1.6,.24,.75);
+  return {update(p,t,dt){
+    if(p>0&&p<.55) paddle.rotation.y+=dt*2.4;
+    pits[1].wm.color.lerpColors(pits[1].a,pits[1].b,sm(p,.2,.55));
+    pits[2].wm.color.lerpColors(pits[2].a,pits[2].b,sm(p,.4,.75));
+    pits.forEach((q,i)=>q.w.position.y=.345+Math.sin(t*2+i*1.7)*.004);
+    const k=Math.max(.02,sm(p,.7,1)); block.scale.set(1,k,1); block.position.y=.225*k;
+    pile.scale.y=.55*(1-.45*sm(p,.05,.4))+.05;
+  }};
+}
+function stWheel(g){
+  mk(G.cyl(.3,.38,.55),M.darkWood,g,0,.275,0);
+  const wheel=new THREE.Group(); wheel.position.y=.575; g.add(wheel);
+  mk(G.cyl(.4,.4,.05,48),M.wood,wheel);
+  mk(G.box(.05,.052,.78),M.darkWood,wheel,0,0,0);
+  const mat=M.clayWet.clone();
+  const pot=mk(lathe(LUMP,56),mat,wheel,0,.026,0);
+  mk(G.box(.5,.42,.4),M.wood,g,0,.21,-.8);
+  mk(G.box(.35,.5,.35),M.darkWood,g,.75,.25,.1);
+  mk(G.cyl(.13,.09,.08,20),M.porcelain,g,.75,.54,.1);
+  mk(new THREE.CircleGeometry(.11,20),std({color:0x8c7b66,roughness:.15}),g,.75,.575,.1).rotation.x=-Math.PI/2;
+  // stacked fresh pieces on a board
+  mk(G.box(.9,.04,.3),M.wood,g,-.85,.5,-.1); mk(G.box(.9,.46,.04),M.darkWood,g,-.85,.23,-.1);
+  for(let k=0;k<3;k++){const c=mk(lathe(CUP),M.clayWet,g,-1.15+k*.3,.52,-.1);c.scale.setScalar(1.3);}
+  let last=-1;
+  return {update(p,t,dt){
+    wheel.rotation.y+=dt*(p>0&&p<1?10:.0);
+    const k=sm(p,.08,.92);
+    if(Math.abs(k-last)>.003||(k===1&&last!==1)||(k===0&&last!==0)){
+      pot.geometry.dispose(); pot.geometry=lathe(LUMP.map((a,i)=>[lerp(a[0],VASE[i][0],k),lerp(a[1],VASE[i][1],k)]),56); last=k;}
+  }};
+}
+function stDry(g){
+  const wet=new THREE.Color(0x857564), dry=new THREE.Color(0xd9cfbb);
+  const mat=std({color:wet.clone(),roughness:.45,side:DS});
+  for(const x of [-1.4,1.4]) for(const z of [-.75,-.25]) mk(G.box(.06,1.5,.06),M.darkWood,g,x,.75,z);
+  for(const y of [.55,1.15]) mk(G.box(2.95,.04,.55),M.wood,g,0,y,-.5);
+  for(const y of [.57,1.17]) for(let k=0;k<6;k++){const m=mk(heroGeo,mat,g,-1.1+k*.44,y,-.5);m.scale.setScalar(.72);}
+  mk(G.box(.46,.72,.46),M.darkWood,g,0,.36,.65);
+  const disk=mk(G.cyl(.18,.18,.03,32),M.wood,g,0,.735,.65);
+  const hero=mk(heroGeo,mat,g,0,.75,.65);
+  const tool=new THREE.Group(); tool.position.set(.24,.8,.65); g.add(tool);
+  mk(G.box(.012,.012,.16),std({color:0x9a9a9a,metalness:.6,roughness:.3}),tool,0,0,0).rotation.y=.8;
+  const shav=[]; for(let i=0;i<10;i++){const s=mk(new THREE.TorusGeometry(.012,.004,6,10,4),mat,g,rnd(-.3,.3),.74,.65+rnd(-.2,.2)); s.visible=false; shav.push(s);}
+  return {update(p,t,dt){
+    mat.color.lerpColors(wet,dry,sm(p,0,.6)); mat.roughness=lerp(.45,.95,sm(p,0,.6));
+    const trimming=p>.6&&p<1; if(trimming){hero.rotation.y+=dt*6; disk.rotation.y=hero.rotation.y;}
+    tool.visible=p>.6&&p<.98; tool.position.y=.76+Math.sin(t*3)*.03;
+    const n=Math.floor(sm(p,.62,.95)*shav.length); shav.forEach((s,i)=>s.visible=i<n);
+  }};
+}
+function stPaint(g){
+  mk(G.box(1.2,.66,.72),M.wood,g,0,.33,0);
+  const mat=std({map:paintLive.t,roughness:.9,side:DS});
+  const hero=mk(heroGeo,mat,g,0,.66,0);
+  const piv=new THREE.Group(); piv.position.set(0,.66,0); g.add(piv);
+  const brush=new THREE.Group(); piv.add(brush);
+  const h=mk(G.cyl(.007,.007,.22,8),std({color:0xb98d52}),brush,0,.11,0);
+  mk(new THREE.ConeGeometry(.012,.045,10),M.cobalt,brush,0,-.02,0).rotation.x=Math.PI;
+  brush.rotation.x=-.9;
+  mk(G.cyl(.08,.06,.05,20),M.porcelain,g,.42,.685,.18);
+  mk(new THREE.CircleGeometry(.068,20),M.cobalt,g,.42,.712,.18).rotation.x=-Math.PI/2;
+  for(let k=0;k<2;k++){const c=mk(lathe(CUP),std({map:paintFull.t,roughness:.9,side:DS}),g,-.4+k*.16,.66,.2);c.scale.setScalar(1.4);}
+  mk(G.box(.4,.42,.36),M.darkWood,g,0,.21,-.7);
+  return {update(p,t){
+    const k=sm(p,.04,.96); paintTo(paintLive,k);
+    const a=k*Math.PI*2; piv.rotation.y=a;
+    const r=[.1,.14,.15,.13,.07][Math.floor((t*3)%5)];
+    brush.position.set(0,.12+Math.sin(t*9)*.09,.2);
+    piv.visible=p>0&&p<1;
+  }};
+}
+function stGlaze(g){
+  const vatMat=std({color:0x5a3a22,roughness:.3,envMapIntensity:.8,side:DS});
+  mk(G.cyl(.45,.38,.62,40,true),vatMat,g,.25,.31,-.05);
+  mk(new THREE.CircleGeometry(.43,40),std({color:0xece8de,roughness:.35}),g,.25,.53,-.05).rotation.x=-Math.PI/2;
+  mk(G.box(.46,.6,.46),M.darkWood,g,-1.0,.3,.2);
+  mk(G.box(.46,.6,.46),M.darkWood,g,1.2,.3,.25);
+  const holder=new THREE.Group(); g.add(holder);
+  const vase=mk(heroGeo,std({map:paintFull.t,roughness:.9,side:DS}),holder);
+  const shellMat=std({color:0xf1eee6,roughness:.85,transparent:true,opacity:0,side:DS});
+  const shell=mk(heroGeo,shellMat,holder,0,0,0,{cast:false}); shell.scale.setScalar(1.012);
+  // finished glazed pieces waiting on the right stand
+  for(let k=0;k<2;k++){const m=mk(heroGeo,std({color:0xf1eee6,roughness:.85,side:DS}),g,1.1+k*.2,.6,.25);m.scale.setScalar(.45);}
+  const K=[[0,-1,.6,.2],[.14,-1,1.3,.2],[.3,.25,1.3,-.05],[.46,.25,.12,-.05],[.56,.25,.12,-.05],[.7,.25,1.3,-.05],[.84,-1,1.3,.2],[1,-1,.6,.2]];
+  const d=new THREE.Vector3();
+  return {update(p,t){
+    let i=0; while(i<K.length-2&&p>K[i+1][0]) i++;
+    const a=K[i],b=K[i+1],f=ease(clamp((p-a[0])/(b[0]-a[0])));
+    holder.position.set(lerp(a[1],b[1],f),lerp(a[2],b[2],f),lerp(a[3],b[3],f));
+    if(p>.44&&p<.6) holder.rotation.y+=.04;
+    shellMat.opacity=p>.46?.9:0; shellMat.transparent=shellMat.opacity<.9; shell.castShadow=false;
+  }};
+}
+function stKiln(g){
+  mk(G.box(3,1.8,2.4),M.kiln,g,0,.9,-.6);
+  const dome=mk(G.cyl(1.2,1.2,3,32),M.kiln,g,0,1.8,-.6); dome.rotation.z=Math.PI/2;
+  mk(G.cyl(.3,.38,3.4,20),M.kiln,g,0,3.4,-1.45);
+  const sh=new THREE.Shape(); sh.moveTo(-.46,0); sh.lineTo(-.46,1.05); sh.absarc(0,1.05,.46,Math.PI,0,true); sh.lineTo(.46,0); sh.lineTo(-.46,0);
+  const glow=new THREE.MeshBasicMaterial({color:0x1a1210});
+  mk(new THREE.ShapeGeometry(sh,20),glow,g,0,.05,.605,{cast:false});
+  const frame=new THREE.Shape(); frame.moveTo(-.62,0); frame.lineTo(-.62,1.05); frame.absarc(0,1.05,.62,Math.PI,0,true); frame.lineTo(.62,0); frame.lineTo(-.62,0);
+  frame.holes.push(sh);
+  const fr=mk(new THREE.ExtrudeGeometry(frame,{depth:.08,bevelEnabled:false,curveSegments:20}),M.brick,g,0,.05,.6);
+  const light=new THREE.PointLight(0xff7b2e,0,7,2); light.position.set(0,.8,1.1); g.add(light);
+  const sag=[[1.95,.3,3],[2.4,-.3,2],[-1.95,.35,3],[-2.35,-.25,1]];
+  for(const [x,z,n] of sag) for(let k=0;k<n;k++) mk(G.cyl(.23,.23,.27,24),M.saggar,g,x,.135+k*.28,z);
+  for(let i=0;i<14;i++){const c=mk(new THREE.DodecahedronGeometry(rnd(.06,.11)),std({color:0x1d1b1a,roughness:.6}),g,rnd(-1.2,-.6),.05,rnd(.9,1.4));c.rotation.set(rnd(0,3),rnd(0,3),0);}
+  const smokeMat=[]; const smoke=[];
+  const puff=tex(64,64,(c)=>{const r=c.createRadialGradient(32,32,2,32,32,30);r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=r;c.fillRect(0,0,64,64);});
+  for(let i=0;i<14;i++){const m=new THREE.SpriteMaterial({map:puff,color:0x8f8983,transparent:true,opacity:0,depthWrite:false});const s=new THREE.Sprite(m);s.userData.o=i/14;g.add(s);smoke.push(s);}
+  const cA=new THREE.Color(0x1a1210), cB=new THREE.Color(0xff8a2a), cC=new THREE.Color(0xffd08a);
+  return {update(p,t){
+    const heat=sm(p,0,.8)*(1-sm(p,.9,1)*.35);
+    const fl=.88+.12*Math.sin(t*13)*Math.sin(t*7.3);
+    glow.color.copy(cA).lerp(cB,clamp(heat*1.2)*fl).lerp(cC,clamp(heat-.7)*fl);
+    light.intensity=heat*14*fl;
+    smoke.forEach(s=>{const u=(t*.18+s.userData.o)%1; s.position.set(Math.sin(u*6+s.userData.o*9)*.3*u,5.2+u*3.2,-1.45+u*.6); s.scale.setScalar(.5+u*1.8); s.material.opacity=(1-u)*.55*sm(p,.1,.4);});
+    STATE.temp=25+heat*1225;
+  }};
+}
+function stDone(g){
+  mk(G.box(2.9,1.9,.06),M.darkWood,g,0,.95,-.75);
+  for(const x of [-1.42,1.42]) mk(G.box(.06,1.9,.5),M.darkWood,g,x,.95,-.5);
+  for(const y of [.5,1.0,1.5]) mk(G.box(2.8,.04,.48),M.wood,g,0,y,-.5);
+  const celadon=glossy({color:0x9dbfa4}), brown=glossy({color:0x5e331b,roughness:.25}), crackle=glossy({map:crackleTex,roughness:.3}), bw=glossy({map:firedTex});
+  const put=(pts,mat,x,y,s=1,rz=0)=>{const m=mk(lathe(pts),mat,g,x,y,-.5);m.scale.setScalar(s);m.rotation.x=rz;return m;};
+  put(BOWL,celadon,-1.0,.52,1.2); put(BOWL,celadon,-.62,.52,1.0); put(JAR,brown,-.1,.52,1.0); put(VASE,crackle,.5,.52,.85); put(JAR,bw,1.0,.52,.8);
+  const pl1=put(PLATE,bw,-.9,1.22,1.0,Math.PI/2*.82); pl1.position.z=-.62;
+  const pl2=put(PLATE,celadon,-.35,1.2,.9,Math.PI/2*.82); pl2.position.z=-.62;
+  for(let k=0;k<4;k++) put(CUP,k%2?bw:crackle,.2+k*.22,1.02,1.4);
+  put(VASE,brown,1.0,1.02,.8); put(VASE,celadon,-1.05,1.52,.7); put(BOWL,bw,-.45,1.52,1); put(JAR,crackle,.2,1.52,.8); put(VASE,bw,.9,1.52,.7);
+  mk(G.cyl(.26,.3,.8,32),M.porcelain,g,0,.4,.7);
+  const hero=mk(heroGeo,glossy({map:firedTex}),g,0,.8,.7);
+  const ringMat=new THREE.MeshBasicMaterial({color:0x6f93ec,transparent:true,opacity:0,side:DS,depthWrite:false});
+  const ring=mk(new THREE.RingGeometry(.2,.215,48),ringMat,g,0,1.0,.7,{cast:false});
+  const mallet=mk(G.cyl(.01,.01,.2,8),M.wood,g,.3,1.0,.7); mallet.rotation.z=1.2;
+  const spot=new THREE.PointLight(0xfff0d8,0,3,2); spot.position.set(.5,1.6,1.4); g.add(spot);
+  return {update(p,t){
+    hero.rotation.y=sm(p,0,1)*Math.PI*2+t*.15;
+    const tap=sm(p,.25,.6); ringMat.opacity=p>.25&&p<.62?(1-((t*1.6)%1))*.8:0;
+    const s=1+((t*1.6)%1)*1.4; ring.scale.set(s,s,s); ring.rotation.x=Math.PI/2;
+    mallet.visible=p>.2&&p<.65; mallet.position.x=.28+Math.max(0,Math.sin(t*10))*.05;
+    spot.intensity=sm(p,.5,1)*3;
+  }};
+}
+const BUILD=[stClay,stWheel,stDry,stPaint,stGlaze,stKiln,stDone];
+
+/* ------------------------------------------------------------------ village */
+const STATE={temp:25};
+mk(new THREE.PlaneGeometry(120,120),M.ground,scene,0,0,0,{cast:false}).rotation.x=-Math.PI/2;
+const sky=new THREE.Mesh(new THREE.SphereGeometry(140,32,16),new THREE.MeshBasicMaterial({map:skyTex,side:THREE.BackSide,fog:false}));
+scene.add(sky);
+// centre: well + young banyan
+mk(G.cyl(.85,.9,.7,28,true),std({map:wallTex,side:DS}),scene,0,.35,0);
+mk(new THREE.CircleGeometry(.84,28),std({color:0x28343a,roughness:.05,envMapIntensity:1}),scene,0,.45,0).rotation.x=-Math.PI/2;
+mk(G.cyl(.25,.4,3.2,12),M.trunk,scene,2.4,1.6,-1.2);
+[[2.4,3.9,-1.2,1.7],[1.4,3.5,-.7,1.1],[3.3,3.6,-1.6,1.2],[2.3,4.6,-1.5,1.2]].forEach(([x,y,z,r],i)=>mk(new THREE.IcosahedronGeometry(r,1),i%2?M.leaf:M.leaf2,scene,x,y,z));
+
+const R=8.8, stations=[], markers=[];
+function roofGeo(w,d){const s=new THREE.Shape();s.moveTo(-d/2-.4,0);s.lineTo(d/2+.4,0);s.lineTo(0,1.5);s.lineTo(-d/2-.4,0);const g=new THREE.ExtrudeGeometry(s,{depth:w+.6,bevelEnabled:false});g.center();g.rotateY(Math.PI/2);return g;}
+function markerTex(n){return tex(128,128,(c)=>{c.fillStyle='#2f55b8';c.beginPath();c.arc(64,64,54,0,7);c.fill();c.strokeStyle='#f0e9db';c.lineWidth=6;c.stroke();c.fillStyle='#f0e9db';c.font='600 64px "Be Vietnam Pro",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(n,64,68);});}
+for(let i=0;i<7;i++){
+  const a=i/7*Math.PI*2;
+  const g=new THREE.Group(); g.position.set(Math.sin(a)*R,0,Math.cos(a)*R); g.rotation.y=a+Math.PI; scene.add(g);
+  mk(G.box(6.4,2.5,.3),i%2?M.coal:M.wall,g,0,1.25,-2.4);
+  mk(G.box(5.4,3,3.6),M.plaster,g,0,1.5,-4.9);
+  mk(roofGeo(5.4,3.6),M.roof,g,0,3.75,-4.9);
+  const s=BUILD[i](g); s.update(0,0,0);
+  const m=new THREE.Sprite(new THREE.SpriteMaterial({map:markerTex(String(i+1)),depthTest:false}));
+  m.position.set(0,2.9,0); m.scale.setScalar(.8); m.userData.i=i; g.add(m); markers.push(m);
+  stations.push({g,s,a});
+  // between stations: stacked big jars (chum) and a shrub
+  const b=a+Math.PI/7, x=Math.sin(b)*(R+.6), z=Math.cos(b)*(R+.6);
+  const jar=mk(lathe(JAR),std({color:0x6a3b22,roughness:.4,envMapIntensity:.7,side:DS}),scene,x,0,z); jar.scale.setScalar(3.2);
+  const j2=mk(lathe(JAR),std({color:0x7b4a2a,roughness:.4,envMapIntensity:.7,side:DS}),scene,x+Math.cos(b)*1.1,0,z-Math.sin(b)*1.1); j2.scale.setScalar(2.4);
+  mk(new THREE.IcosahedronGeometry(.8,1),M.leaf,scene,Math.sin(b)*(R+2.4),.6,Math.cos(b)*(R+2.4));
+}
+function viewFor(i,vr){
+  const st=stations[i], v=STEPS[i].view, portrait=camera.aspect<.9;
+  const d=vr?Math.min(v.d,2.4):v.d*(portrait?1.45:1);
+  const dx=(!vr&&!portrait&&innerWidth>760)?-.28*d:0; // nudge subject right of the step card on wide screens
+  const pos=new THREE.Vector3(dx,vr?0:v.h+(portrait?.25:0),d), tgt=new THREE.Vector3(dx,v.ty-(portrait?.35:0),0);
+  st.g.localToWorld(pos); st.g.localToWorld(tgt); return {pos,tgt};
+}
+
+/* ------------------------------------------------------------------ VR panel */
+const vrCanvas=document.createElement('canvas'); vrCanvas.width=1024; vrCanvas.height=700;
+const vrTex=new THREE.CanvasTexture(vrCanvas); vrTex.colorSpace=SRGB;
+const vrPanel=new THREE.Mesh(new THREE.PlaneGeometry(1.1,.75),new THREE.MeshBasicMaterial({map:vrTex,transparent:true}));
+vrPanel.visible=false; scene.add(vrPanel);
+function wrap(c,text,x,y,mw,lh){const words=text.split(' ');let line='';for(const w of words){const t=line?line+' '+w:w;if(c.measureText(t).width>mw&&line){c.fillText(line,x,y);y+=lh;line=w;}else line=t;}if(line){c.fillText(line,x,y);y+=lh;}return y;}
+function drawVR(){
+  const c=vrCanvas.getContext('2d'), W=1024, H=700, u=UI[lang];
+  c.clearRect(0,0,W,H); c.fillStyle='rgba(18,24,34,.92)'; c.beginPath(); c.roundRect(0,0,W,H,36); c.fill();
+  if(cur<0){c.fillStyle='#f0e9db';c.font='italic 600 64px "Cormorant Garamond",serif';c.fillText(u.introTitle,56,110);c.font='30px "Be Vietnam Pro",sans-serif';c.fillStyle='#d9d3c6';wrap(c,u.introBody,56,180,910,46);vrTex.needsUpdate=true;return;}
+  const s=STEPS[cur][lang];
+  c.fillStyle='#6f93ec'; c.font='600 24px "Be Vietnam Pro",sans-serif'; c.fillText(`${u.step.toUpperCase()} ${cur+1} / 7  ·  ${s.name.toUpperCase()}`,56,72);
+  c.fillStyle='#f0e9db'; c.font='600 62px "Cormorant Garamond",serif'; c.fillText(s.title,56,142);
+  c.font='26px "Be Vietnam Pro",sans-serif'; c.fillStyle='#d9d3c6'; let y=wrap(c,s.body,56,196,912,38)+10;
+  s.steps.forEach((t,k)=>{const done=prog>=(k+1)/3, act=prog>k/3; c.fillStyle=done?'#6f93ec':act?'#f0e9db':'#6b7280'; c.beginPath(); c.arc(68,y-9,9,0,7); done?c.fill():(c.lineWidth=3,c.strokeStyle=c.fillStyle,c.stroke()); c.fillStyle=act||done?'#f0e9db':'#a8aebb'; c.fillText(t,94,y); y+=42;});
+  if(STEPS[cur].gauge){c.fillStyle='#f09a4a';c.font='600 48px "Cormorant Garamond",serif';c.fillText(fmtTemp(),56,y+34);}
+  c.fillStyle='rgba(240,233,219,.14)'; c.fillRect(56,H-78,912,6); c.fillStyle='#6f93ec'; c.fillRect(56,H-78,912*prog,6);
+  c.fillStyle='#a8aebb'; c.font='22px "Be Vietnam Pro",sans-serif'; c.fillText(u.vrHint,56,H-34);
+  vrTex.needsUpdate=true;
+}
+function placeVRPanel(i){
+  const st=stations[i]; const p=new THREE.Vector3(-1.45,1.45,1.25); st.g.add(vrPanel); vrPanel.position.copy(p);
+  vrPanel.rotation.set(0,Math.atan2(0-p.x,2.2-p.z),0); vrPanel.visible=true;
+}
+
+/* ------------------------------------------------------------------ tour logic */
+let cur=-1, prog=0, playing=false, tween=null, seen=new Set();
+const DUR=7.5;
+function tweenCam(pos,tgt,d=1.8,done){tween={p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:tgt,s:0,d,done};}
+function goTo(i){
+  cur=i; playing=false; prog=0;
+  markers.forEach(m=>m.visible=i<0);
+  if(i<0){ if(!renderer.xr.isPresenting) tweenCam(OV_POS.clone(),OV_TGT.clone(),2); renderAll(); return; }
+  seen.add(i); stations[i].s.update(0,clock.elapsedTime,0);
+  renderAll();
+  if(renderer.xr.isPresenting){ placeRig(i); setTimeout(()=>{if(cur===i)playing=true;},600); }
+  else { const v=viewFor(i); tweenCam(v.pos,v.tgt,1.8,()=>{ if(cur===i) playing=true; }); }
+}
+function replay(){ if(cur<0) return; prog=0; stations[cur].s.update(0,clock.elapsedTime,0); playing=true; }
+function placeRig(i){
+  const v=viewFor(i,true); const d=v.tgt.clone().sub(v.pos);
+  rig.position.set(v.pos.x,0,v.pos.z); rig.rotation.set(0,Math.atan2(-d.x,-d.z),0);
+  placeVRPanel(i); drawVR();
+}
+const fmtTemp=()=>Math.round(STATE.temp).toLocaleString(lang==='vi'?'vi-VN':'en-US')+' °C';
+
+/* ------------------------------------------------------------------ DOM UI */
+const card=$('#card'), rail=$('#rail');
+function renderAll(){
+  const u=UI[lang];
+  document.documentElement.lang=lang;
+  $('#lang-vi').setAttribute('aria-pressed',lang==='vi'); $('#lang-en').setAttribute('aria-pressed',lang==='en');
+  $('#b-kicker').textContent=u.kicker; $('#b-title').textContent=u.brand; $('#overview').textContent=u.overview;
+  $('#vr').textContent=renderer.xr.isPresenting?u.vrExit:u.vr;
+  rail.innerHTML=STEPS.map((s,i)=>`<button data-i="${i}" class="${i===cur?'on':''} ${seen.has(i)?'seen':''}"><span class="n">${i+1}</span>${s[lang].name}</button>`).join('');
+  const collapsed=card.classList.contains('collapsed');
+  const minBtn=`<button class="min" id="min">${collapsed?u.expand:u.collapse}</button>`;
+  if(cur<0){
+    card.innerHTML=`<div class="kicker"><span>${u.kicker} · ${u.intro7}</span>${minBtn}</div><h1>${u.introTitle}</h1><p class="body">${u.introBody}</p><p class="hint">${u.introHint}</p><div class="row"><button class="btn primary" id="start">${u.start} →</button></div>`;
+  } else {
+    const s=STEPS[cur][lang];
+    card.innerHTML=`<div class="kicker"><span>${u.step} ${cur+1} / 7 · ${s.name}</span>${minBtn}</div>
+      <h1>${s.title}</h1><p class="body">${s.body}</p>
+      <ul class="steps">${s.steps.map(t=>`<li>${t}</li>`).join('')}</ul>
+      ${STEPS[cur].gauge?`<div class="gauge"><span>${u.temp}</span><b id="temp">${fmtTemp()}</b></div>`:''}
+      <div class="fact"><span>${s.fact[0]}</span><span>${s.fact[1]}</span></div>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="row"><button class="btn" id="prev" ${cur===0?'disabled':''}>← ${u.prev}</button><button class="btn" id="again">↻ ${u.replay}</button><button class="btn primary" id="next">${cur===6?u.toOverview:u.next+' →'}</button></div>`;
+  }
+  lastLive=-1; live();
+  if(renderer.xr.isPresenting) drawVR();
+}
+let lastLive=-1;
+function live(){
+  if(cur<0) return;
+  const k=Math.round(prog*200); if(k===lastLive && !STEPS[cur].gauge) return; lastLive=k;
+  const bar=$('#bar'); if(bar) bar.style.width=(prog*100)+'%';
+  card.querySelectorAll('.steps li').forEach((li,j)=>{li.classList.toggle('done',prog>=(j+1)/3-1e-6&&prog>0);li.classList.toggle('act',prog>j/3&&prog<(j+1)/3);});
+  const t=$('#temp'); if(t) t.textContent=fmtTemp();
+}
+card.addEventListener('click',e=>{
+  const id=e.target.closest('button')?.id;
+  if(id==='start') goTo(0);
+  else if(id==='prev'&&cur>0) goTo(cur-1);
+  else if(id==='next') goTo(cur===6?-1:cur+1);
+  else if(id==='again') replay();
+  else if(id==='min'){card.classList.toggle('collapsed'); renderAll();}
+});
+rail.addEventListener('click',e=>{const b=e.target.closest('button'); if(b) goTo(+b.dataset.i);});
+$('#overview').onclick=()=>goTo(-1);
+const setLang=l=>{lang=l;try{localStorage.setItem('bt-lang',l);}catch(e){} renderAll();};
+$('#lang-vi').onclick=()=>setLang('vi'); $('#lang-en').onclick=()=>setLang('en');
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight') goTo(cur>=6?-1:cur+1);
+  else if(e.key==='ArrowLeft') goTo(Math.max(-1,cur-1));
+  else if(e.key==='r'||e.key==='R') replay();
+});
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,5000);}
+
+// click markers in overview
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2(); let down=null;
+canvas.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);
+canvas.addEventListener('pointerup',e=>{
+  if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>6||cur>=0) return;
+  const r=canvas.getBoundingClientRect(); ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+  ray.setFromCamera(ndc,camera); const h=ray.intersectObjects(markers); if(h.length) goTo(h[0].object.userData.i);
+});
+
+/* ------------------------------------------------------------------ WebXR */
+const vrBtn=$('#vr'); let xrOK=false, savedCam=null;
+(async()=>{ try{ xrOK=!!(navigator.xr&&await navigator.xr.isSessionSupported('immersive-vr')); }catch(e){ xrOK=false; } vrBtn.classList.toggle('primary',xrOK); })();
+vrBtn.onclick=async()=>{
+  if(renderer.xr.isPresenting){ renderer.xr.getSession().end(); return; }
+  if(!xrOK){ toast(UI[lang].vrNo); return; }
+  try{
+    const session=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
+    renderer.xr.setReferenceSpaceType('local-floor');
+    savedCam={p:camera.position.clone(),t:controls.target.clone()};
+    await renderer.xr.setSession(session);
+    controls.enabled=false; tween=null;
+    session.addEventListener('end',()=>{
+      rig.position.set(0,0,0); rig.rotation.set(0,0,0); vrPanel.visible=false; controls.enabled=true;
+      if(savedCam){camera.position.copy(savedCam.p); controls.target.copy(savedCam.t);} renderAll(); goTo(cur);
+    });
+    if(cur<0) goTo(0); else { placeRig(cur); replay(); }
+    renderAll();
+  }catch(e){ toast(UI[lang].vrFail); }
+};
+for(let k=0;k<2;k++){
+  const c=renderer.xr.getController(k);
+  c.addEventListener('selectstart',()=>goTo(cur>=6?0:cur+1));
+  c.addEventListener('squeezestart',()=>goTo(Math.max(0,cur-1)));
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,0,-1)]),new THREE.LineBasicMaterial({color:0x6f93ec}));
+  line.scale.z=2.5; c.add(line); rig.add(c);
+}
+
+/* ------------------------------------------------------------------ loop */
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<.9?72:55;camera.updateProjectionMatrix();}
+addEventListener('resize',resize); resize();
+const clock=new THREE.Clock(); let vrTick=0, first=true;
+renderer.setAnimationLoop(()=>{
+  const dt=Math.min(clock.getDelta(),.05), t=clock.elapsedTime;
+  if(tween){ tween.s+=dt/tween.d; const f=ease(clamp(tween.s));
+    camera.position.lerpVectors(tween.p0,tween.p1,f); controls.target.lerpVectors(tween.t0,tween.t1,f);
+    if(tween.s>=1){const d=tween.done; tween=null; d&&d();} }
+  if(cur>=0){
+    if(playing){ prog=Math.min(1,prog+dt/DUR); if(prog>=1) playing=false; }
+    stations[cur].s.update(prog,t,dt); live();
+    if(renderer.xr.isPresenting && (vrTick+=dt)>.25){vrTick=0; drawVR();}
+  }
+  if(controls.enabled){ if(controls.target.length()>16) controls.target.setLength(16); controls.update(); }
+  renderer.render(scene,camera);
+  if(first){first=false; $('#loading').hidden=true;}
+});
+renderAll();
+document.fonts&&document.fonts.ready.then(()=>{ markers.forEach((m,i)=>{m.material.map=markerTex(String(i+1));}); });
+</script>
+
+</body></html>

@@ -495,6 +495,13 @@ export const qk = {
     /** "public" đứng sau nên `all` phủ được — xem LUẬT PREFIX ở đầu file. */
     public: ["partners", "public"] as const,
   },
+  // ─── Bản đồ làng nghề (hồ sơ số hoá được chủ công khai) ───────────────────
+  craftVillages: {
+    all: ["craft-villages"] as const,
+    /** "public" đứng sau nên `all` phủ được — xem LUẬT PREFIX ở đầu file. */
+    public: ["craft-villages", "public"] as const,
+    mapState: (postingId?: string | null) => ["craft-villages", "map-state", postingId] as const,
+  },
 
   // ─── Công cụ đấu giá ─────────────────────────────────────────────────────
   auctionTools: {

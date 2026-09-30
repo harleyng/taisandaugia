@@ -1011,3 +1011,13 @@ Bảng `asset_auction_consultations` (một dòng = một YÊU CẦU = một phi
 - **Quyết định người bán:** `owner_decide_auction_consult` chỉ khi `completed` — `accepted|declined`, đổi được tới khi có bản mới; bản `superseded` đóng băng quyết định lúc đó. Chỉ lưu quyết định cuối (không lịch sử sự kiện).
 - **BR-CNS-06:** tổ chức đọc qua `org_session_auction_consult_suggestions(session)` — chỉ bản `completed` + `accepted` + finalized, cho hồ sơ có request `selected` với `auction_org_id` của phiên + `consignment_contracts.status='signed'` (đúng cổng `auction_session_items_validate`); caller `can_manage_auction_sessions OR can_run_auction`; không quyền ⇒ rỗng. UI: panel "Áp dụng" từng trường ở Sửa lô / Thêm lô (override theo lô, mặc định vẫn là báo giá của tổ chức), cảnh báo lệch hình thức ở bảng lô, gợi ý thời lượng ở Mở lô (mặc định vẫn 30 phút). Giá trị đã áp dụng là bản chụp — người bán đổi quyết định sau không kéo lại.
 - **Hoa hồng:** 1 dòng `orders` lúc hoàn tất theo `resolve_contract_terms`. Đối tác seed `8f2b0000-…0001`, HĐ `04/2026/HĐHT-TVDG` 20%, giá gói `tvdg_plan` 3,000,000₫ là GIỮ CHỖ. Mã đơn prefix `TD`.
+
+## Bản đồ làng nghề (`/lang-nghe`)
+
+Nguồn = hồ sơ số hoá của Trạm có `asset_owner_org_kyc.org_type = 'craft_village'` (mig `20260930110000`).
+
+- **Lên bản đồ khi:** chủ bật `craft_village_publications.is_published` (qua `owner_set_craft_map_publication`, quyền `so-hoa:update`) **VÀ** hồ sơ `review_status = 'approved'` **VÀ** `status <> 'cancelled'`. Lọc lúc đọc trong `public_craft_villages()` ⇒ sửa hồ sơ (về chờ duyệt) là tự ẩn, duyệt lại tự hiện.
+- **Công khai những gì:** tiêu đề, mô tả, tỉnh, ≤6 ảnh, tên làng (= `primary_name` Trạm), sản phẩm chính, toạ độ ghim, VR (đơn `attached` + `published_at`). KHÔNG địa chỉ chi tiết, pháp lý, giá.
+- **VR** = đơn VR tour đối tác sẵn có; không có VR ⇒ vẫn lên bản đồ, dialog chỉ hiện ảnh.
+- Mọi bản đồ Việt Nam trên sàn phải ghi nhãn "Quần đảo Hoàng Sa (Việt Nam)" / "Quần đảo Trường Sa (Việt Nam)" — dùng `createVietnamMap` (`components/craft-villages/vietnamMap.ts`).
+

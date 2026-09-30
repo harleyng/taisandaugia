@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-image.jpg";
 import { qk } from "@/lib/queryKeys";
+import { CraftVillagesTeaser } from "@/components/craft-villages/CraftVillagesTeaser";
 
 const heroLocations = [
   { value: "all", label: "Toàn quốc" },
@@ -431,8 +432,8 @@ const Index = () => {
       {/* Completed Auctions */}
       <CompletedAuctions />
 
-
-
+      {/* Craft villages — bản đồ làng nghề */}
+      <CraftVillagesTeaser />
 
       {/* Partners */}
       <PartnersSection />

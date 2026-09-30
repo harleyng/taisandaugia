@@ -27,6 +27,8 @@ dist-ssr
 # Supabase Auth email templates are hand-authored source — keep them tracked
 # despite the blanket *.html ignore above.
 !supabase/templates/*.html
+# Self-hosted VR/3D tours embedded in the craft-village map (served as /vr/*.html).
+!public/vr/*.html
 # Claude Code: settings.json (shared hooks/permissions) is intentionally tracked
 # once cleaned of secrets. Per-user files stay local:
 .claude/launch.json

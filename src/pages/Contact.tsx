@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { HOTLINES } from "@/constants/hotlines";
 
 const contactInfo = [
   {
@@ -19,7 +20,7 @@ const contactInfo = [
   {
     icon: Phone,
     label: "Hotline",
-    value: "1900 1234",
+    value: HOTLINES.map((h) => h.label).join(" hoặc "),
   },
   {
     icon: Mail,

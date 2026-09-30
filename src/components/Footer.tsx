@@ -1,6 +1,7 @@
 import { Mail, Phone, MapPin, Facebook, Youtube } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
+import { HOTLINES } from "@/constants/hotlines";
 
 export const Footer = () => {
   return (
@@ -66,9 +67,15 @@ export const Footer = () => {
                 <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <span>123 Đường ABC, Quận 1, TP.HCM</span>
               </li>
-              <li className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                <span>1900 1234</span>
+              <li className="flex items-start gap-2">
+                <Phone className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span className="flex flex-col gap-1">
+                  {HOTLINES.map((h) => (
+                    <a key={h.tel} href={`tel:${h.tel}`} className="hover:text-background transition-colors">
+                      {h.label}
+                    </a>
+                  ))}
+                </span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />

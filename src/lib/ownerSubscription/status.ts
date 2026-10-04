@@ -1,21 +1,22 @@
 // Nhãn, màu và phép tính ngày của gói thuê bao tổ chức chủ tài sản.
 //
-// SUPPORTED_SUB_VARIANTS là BẢN SAO của owner_sub_supported_variants() (SQL). Thêm tính
-// năng vào gói: sửa cả hai + nối _owner_sub_consume vào điểm trừ credit của tính năng.
+// Quyền lợi gói nằm ở danh mục cố định owner_sub_benefits (DB). Hai hằng dưới đây chỉ phục vụ
+// màn của các quyền lợi hệ thống KIỂM (source 'enforced'). Thêm quyền lợi kiểm hạn mức: thêm
+// dòng danh mục (migration) + nối _owner_sub_consume vào điểm trừ credit của tính năng.
 
 import type { ActivationMethod, OverageMode, SubStatus, SubVariantKey } from "./types";
-
-export const SUPPORTED_SUB_VARIANTS: readonly SubVariantKey[] = ["scan_3d_owner", "report_portfolio_owner"];
 
 export const SUB_FEATURE_LABELS: Record<SubVariantKey, string> = {
   scan_3d_owner: "Quét 3D tài sản",
   report_portfolio_owner: "Báo cáo danh mục tuỳ chỉnh",
+  priority_listing: "Tin đăng ưu tiên",
 };
 
 /** Đơn vị đếm của từng tính năng ("12 lượt quét"). */
 export const SUB_FEATURE_UNITS: Record<SubVariantKey, string> = {
   scan_3d_owner: "lượt quét",
   report_portfolio_owner: "lượt xem",
+  priority_listing: "tin",
 };
 
 export const SUB_STATUS_LABELS: Record<SubStatus, string> = {
@@ -53,8 +54,8 @@ export const OVERAGE_LABELS: Record<OverageMode, string> = {
 };
 
 export const OVERAGE_HINTS: Record<OverageMode, string> = {
-  block: "Hết hạn mức tháng thì thao tác bị chặn tới kỳ làm mới hoặc khi gia hạn / nâng hạn mức.",
-  credits: "Hết hạn mức tháng thì thao tác vẫn chạy và trừ credit của người thao tác như bình thường.",
+  block: "Hết hạn mức thì thao tác bị chặn tới kỳ làm mới hoặc khi gia hạn / nâng hạn mức.",
+  credits: "Hết hạn mức thì thao tác vẫn chạy và trừ credit của người thao tác như bình thường.",
 };
 
 export const ACTIVATION_METHOD_LABELS: Record<ActivationMethod, string> = {

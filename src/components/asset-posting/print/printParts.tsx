@@ -33,3 +33,25 @@ export function SectionHead({ n, title, aux }: { n: string; title: string; aux?:
     </div>
   );
 }
+
+const MAX_COVER_THUMBS = 4;
+
+/**
+ * Cụm ảnh trên bìa: ảnh chính + hàng ảnh nhỏ chia đều theo SỐ ẢNH THẬT (tối đa 4) — không
+ * in ô trống hay ô "+N ảnh"; toàn bộ ảnh đã có ở mục Hình ảnh.
+ */
+export function CoverPhotos({ photos }: { photos: string[] }) {
+  const thumbs = photos.slice(1, 1 + MAX_COVER_THUMBS);
+  return (
+    <div className="pic">
+      <Slot src={photos[0]} placeholder="Chưa có ảnh" className="main" />
+      {thumbs.length > 0 && (
+        <div className={`th n${thumbs.length}`}>
+          {thumbs.map((src, i) => (
+            <Slot key={i} src={src} placeholder={`Ảnh ${i + 2}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -4,7 +4,8 @@
 import { serviceGroupOf, type ServiceGroupKey } from "@/lib/serviceRequests/groups";
 import type { ServiceKindKey } from "@/lib/serviceRequests/kinds";
 import { ownerPostingPath, vrTourCheckoutPath } from "@/lib/vrTour/paths";
-import { authenticationCheckoutPath } from "@/lib/authentication/paths";
+import { authenticationCheckoutPath, ownerAuthenticationPath } from "@/lib/authentication/paths";
+import { ownerValuationPath, valuationCheckoutPath } from "@/lib/valuation/paths";
 import { legalConsultCheckoutPath, ownerLegalConsultPath } from "@/lib/legalConsult/paths";
 import { auctionConsultCheckoutPath, ownerAuctionConsultPath } from "@/lib/auctionConsult/paths";
 import { serviceTemplateType, type ContractTemplateType } from "@/lib/contracts/templates/schema";
@@ -20,6 +21,7 @@ export const SERVICE_CONTRACT_LABELS: Record<ServiceKindKey, string> = {
   "giam-dinh": "Giám định tài sản",
   "tu-van-phap-ly": "Tư vấn pháp lý",
   "tu-van-dau-gia": "Tư vấn đấu giá",
+  "tham-dinh": "Thẩm định giá tài sản",
 };
 
 export const templateTypeOfService = (kind: ServiceKindKey): ContractTemplateType => serviceTemplateType(kind);
@@ -72,6 +74,8 @@ export function serviceContractStageOf(
 export function serviceOrderOwnerPath(kind: ServiceKindKey, postingId: string): string {
   if (kind === "tu-van-phap-ly") return ownerLegalConsultPath(postingId);
   if (kind === "tu-van-dau-gia") return ownerAuctionConsultPath(postingId);
+  if (kind === "tham-dinh") return ownerValuationPath(postingId);
+  if (kind === "giam-dinh") return ownerAuthenticationPath(postingId);
   return ownerPostingPath(postingId);
 }
 
@@ -85,6 +89,8 @@ export function serviceCheckoutPath(kind: ServiceKindKey, orderId: string, posti
       return legalConsultCheckoutPath(orderId, postingId);
     case "tu-van-dau-gia":
       return auctionConsultCheckoutPath(orderId, postingId);
+    case "tham-dinh":
+      return valuationCheckoutPath(orderId, postingId);
   }
 }
 

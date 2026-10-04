@@ -146,6 +146,22 @@ describe("buildOwnerAssets — tin đã nhận", () => {
     expect(rows[0].next).toMatchObject({ mine: true, cta: null });
   });
 
+  it("tin đang đấu giá / không thành có lối 'Đẩy truyền thông'; đã trúng thì không", () => {
+    const href = "/chu-tai-san/truyen-thong?tab=giao-viec&dat=3f9a12bc-0000-0000-0000-000000000001";
+    const auc = buildOwnerAssets(input({ claims: [claim({}, { auction_time: at(10, 20) })] })).rows[0];
+    expect(auc.phase).toBe("auc");
+    expect(auc.links).toContainEqual({ label: "Đẩy truyền thông", href });
+
+    const c = claim({}, { auction_time: at(9, 20) });
+    const won = buildOwnerAssets(input({ claims: [c], outcomesByListing: { [c.listing_id!]: soldOutcome() } })).rows[0];
+    expect(won.links.some((l) => l.label === "Đẩy truyền thông")).toBe(false);
+    // Phễu riêng của tài sản luôn có, kể cả đã bán (Phase M5).
+    expect(won.links).toContainEqual({
+      label: "Hiệu quả truyền thông",
+      href: `/chu-tai-san/hieu-qua-quang-cao?tai-san=${won.claim!.listing_id}`,
+    });
+  });
+
   it("tin chờ xác nhận vào 'Sàn tìm thấy', không vào bảng", () => {
     const c = claim({ status: "pending_confirmation", confidence_score: 0.72 }, { auction_date: "2026-10-15" });
     const { rows, claimRows } = buildOwnerAssets(input({ claims: [c] }));

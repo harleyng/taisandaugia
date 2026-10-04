@@ -30,6 +30,10 @@ export const OWNER_WS_REASON_MESSAGES: Record<string, string> = {
     "Vai trò này có quyền mà bạn không có. Bạn chỉ gán, mời hoặc chỉnh vai trò nằm trong quyền của mình.",
   exceeds_own_scope: "Phạm vi chi nhánh vượt quá phạm vi của bạn.",
 
+  // SĐT thành viên (migration 20261004120000)
+  invalid_phone: "Số điện thoại gồm 10 chữ số, bắt đầu bằng 0.",
+  phone_verified: "Thành viên đã xác thực số này bằng OTP — chỉ chính họ đổi được trong Hồ sơ cá nhân.",
+
   // Vai trò (migration 20260927170100)
   system_role: "Vai trò Trưởng đơn vị luôn toàn quyền — không sửa hoặc xoá được.",
   cannot_edit_own_role: "Bạn không thể tự chỉnh vai trò mình đang giữ.",

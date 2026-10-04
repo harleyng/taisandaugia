@@ -1,8 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Coins, UserCircle, KeyRound, Bell, LogOut, CreditCard, Building2, Layers, FileSignature } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Coins, UserCircle, KeyRound, Bell, CreditCard, Building2, Layers, FileSignature } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCredits } from "@/hooks/useCredits";
+import { useMyOwnerSpacesPendingTotal } from "@/hooks/useMyOwnerSpaces";
 
 export type ProfileTab =
   | "profile"
@@ -35,14 +35,17 @@ const NAV: { key: ProfileTab; label: string; icon: typeof UserCircle }[] = [
 
 export const ProfileSidebar = ({ activeTab, onChange, name, email, avatarUrl, onLogout }: Props) => {
   const { balance } = useCredits();
+  // Huy hiệu "Tài sản của tôi": tài sản sàn tìm thấy đang chờ xác nhận ở mọi Trạm.
+  const myAssetsPending = useMyOwnerSpacesPendingTotal();
+  const badges: Partial<Record<ProfileTab, number>> = { "my-assets": myAssetsPending };
   const initials = name ? name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "U";
 
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block lg:col-span-3">
+      <aside className="hidden lg:block">
         <div className="sticky top-24 space-y-3">
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-xl bg-card p-4 shadow-card">
             <div className="flex items-center gap-3 mb-3">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={avatarUrl || undefined} />
@@ -65,7 +68,7 @@ export const ProfileSidebar = ({ activeTab, onChange, name, email, avatarUrl, on
             </button>
           </div>
 
-          <nav className="rounded-xl border border-border bg-card p-2">
+          <nav className="flex flex-col gap-0.5 rounded-xl bg-card p-2 shadow-card">
             {NAV.map(({ key, label, icon: Icon }) => {
               const active = activeTab === key;
               return (
@@ -79,21 +82,25 @@ export const ProfileSidebar = ({ activeTab, onChange, name, email, avatarUrl, on
                       : "text-foreground hover:bg-muted"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-4 w-4 shrink-0 opacity-85" />
                   {label}
+                  {!!badges[key] && (
+                    <em className="ml-auto rounded-full bg-warning px-[7px] text-[11px] font-bold not-italic tabular-nums text-primary-foreground">
+                      {badges[key]}
+                    </em>
+                  )}
                 </button>
               );
             })}
           </nav>
 
-          <Button
-            variant="outline"
+          <button
+            type="button"
             onClick={onLogout}
-            className="w-full text-destructive hover:text-destructive hover:bg-destructive/5"
+            className="h-[38px] w-full rounded-lg bg-card text-[13.5px] font-semibold text-destructive shadow-card transition-colors hover:bg-destructive/5"
           >
-            <LogOut className="mr-2 h-4 w-4" />
             Đăng xuất
-          </Button>
+          </button>
         </div>
       </aside>
 
@@ -115,6 +122,11 @@ export const ProfileSidebar = ({ activeTab, onChange, name, email, avatarUrl, on
               >
                 <Icon className="h-3.5 w-3.5" />
                 {label}
+                {!!badges[key] && (
+                  <em className="rounded-full bg-warning px-1.5 text-[11px] font-bold not-italic tabular-nums text-primary-foreground">
+                    {badges[key]}
+                  </em>
+                )}
               </button>
             );
           })}

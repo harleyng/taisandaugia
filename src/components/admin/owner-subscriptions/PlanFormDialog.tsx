@@ -15,11 +15,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useUpsertOwnerSubPlan } from "@/hooks/useAdminOwnerSubscriptions";
+import { useOwnerSubBenefitCatalog } from "@/hooks/useOwnerSubscriptionPlans";
+import { benefitLineValid } from "@/lib/ownerSubscription/benefits";
 import { PLAN_TIER_LABELS } from "@/lib/ownerSubscription/catalog";
 import { OVERAGE_HINTS, OVERAGE_LABELS } from "@/lib/ownerSubscription/status";
-import type { EntitlementInput, OverageMode, OwnerSubPlan, PlanBenefit, PlanTier } from "@/lib/ownerSubscription/types";
+import type { BenefitLineInput, OverageMode, OwnerSubPlan, PlanTier } from "@/lib/ownerSubscription/types";
 import { BenefitLinesEditor } from "./BenefitLinesEditor";
-import { EntitlementLinesEditor } from "./EntitlementLinesEditor";
 import { VndInput } from "./VndInput";
 
 interface Props {
@@ -35,6 +36,7 @@ const Req = () => <span className="text-destructive">*</span>;
 /** Thêm / sửa một gói trong danh mục gói dịch vụ. */
 export function PlanFormDialog({ open, onOpenChange, plan, nextSortOrder }: Props) {
   const save = useUpsertOwnerSubPlan();
+  const { data: catalog = [], isLoading: catalogLoading } = useOwnerSubBenefitCatalog();
   const [name, setName] = useState("");
   const [fitLine, setFitLine] = useState("");
   const [highlightLine, setHighlightLine] = useState("");
@@ -44,8 +46,7 @@ export function PlanFormDialog({ open, onOpenChange, plan, nextSortOrder }: Prop
   const [featured, setFeatured] = useState(false);
   const [active, setActive] = useState(true);
   const [sortOrder, setSortOrder] = useState(nextSortOrder);
-  const [lines, setLines] = useState<EntitlementInput[]>([]);
-  const [benefits, setBenefits] = useState<PlanBenefit[]>([]);
+  const [benefits, setBenefits] = useState<BenefitLineInput[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -58,13 +59,16 @@ export function PlanFormDialog({ open, onOpenChange, plan, nextSortOrder }: Prop
     setFeatured(plan?.is_featured ?? false);
     setActive(plan?.is_active ?? true);
     setSortOrder(plan?.sort_order ?? nextSortOrder);
-    setLines(plan?.entitlements ?? [{ variant_key: "scan_3d_owner", monthly_quota: 10 }]);
-    setBenefits(plan?.benefits ?? []);
+    setBenefits(
+      plan?.benefits.map((l) => ({ benefit_key: l.benefit_key, quota: l.quota, cycle: l.cycle })) ??
+        [{ benefit_key: "scan_3d_owner", quota: 10, cycle: "month" }],
+    );
   }, [open, plan, nextSortOrder]);
 
   const nameOk = name.trim().length >= 2 && name.trim().length <= 60;
-  const benefitsOk = benefits.every((b) => b.group.trim() && b.label.trim() && b.value.trim());
-  const valid = nameOk && price > 0 && lines.length > 0 && benefitsOk;
+  const defs = new Map(catalog.map((d) => [d.key, d]));
+  const benefitsOk = benefits.every((l) => benefitLineValid(l, defs.get(l.benefit_key)));
+  const valid = nameOk && price > 0 && benefits.length > 0 && benefitsOk;
 
   const onSave = () =>
     save.mutate(
@@ -79,8 +83,11 @@ export function PlanFormDialog({ open, onOpenChange, plan, nextSortOrder }: Prop
         isFeatured: featured,
         isActive: active,
         sortOrder,
-        entitlements: lines,
-        benefits: benefits.map((b) => ({ group: b.group.trim(), label: b.label.trim(), value: b.value.trim() })),
+        benefits: benefits.map((l) => ({
+          benefit_key: l.benefit_key,
+          quota: l.quota,
+          cycle: defs.get(l.benefit_key)?.kind === "quota" ? l.cycle : null,
+        })),
       },
       { onSuccess: () => onOpenChange(false) },
     );
@@ -142,20 +149,27 @@ export function PlanFormDialog({ open, onOpenChange, plan, nextSortOrder }: Prop
           </div>
 
           <div className="space-y-2">
-            <Label>Tính năng tính hạn mức <Req /></Label>
-            <p className="text-xs text-muted-foreground">Hệ thống kiểm hạn mức này mỗi tháng (làm mới ngày 01, giờ Việt Nam).</p>
-            <EntitlementLinesEditor value={lines} onChange={setLines} />
-            {lines.length === 0 && <p className="text-xs text-destructive">Chọn ít nhất một tính năng.</p>}
+            <Label>Quyền lợi trong gói <Req /></Label>
+            <p className="text-xs text-muted-foreground">
+              Chọn từ danh mục quyền lợi, đặt hạn mức và chu kỳ làm mới cho từng dòng (theo lịch, giờ Việt Nam).
+            </p>
+            {catalogLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Đang tải danh mục quyền lợi…
+              </div>
+            ) : (
+              <BenefitLinesEditor value={benefits} onChange={setBenefits} catalog={catalog} />
+            )}
+            {benefits.length === 0 && <p className="text-xs text-destructive">Thêm ít nhất một quyền lợi.</p>}
+            {!benefitsOk && (
+              <p className="text-xs text-destructive">
+                Nhập hạn mức là số nguyên lớn hơn 0 (hoặc chọn Không giới hạn) và chọn chu kỳ cho mọi dòng.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label>Quyền lợi hiển thị</Label>
-            <BenefitLinesEditor value={benefits} onChange={setBenefits} />
-            {!benefitsOk && <p className="text-xs text-destructive">Điền đủ nhóm, quyền lợi và giá trị cho mỗi dòng.</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Khi hết hạn mức tháng <Req /></Label>
+            <Label>Khi hết hạn mức (quyền lợi hệ thống kiểm) <Req /></Label>
             <RadioGroup value={overage} onValueChange={(v) => setOverage(v as OverageMode)} className="gap-3">
               {(["credits", "block"] as const).map((m) => (
                 <label key={m} className="flex items-start gap-2.5 rounded-xl border p-3">

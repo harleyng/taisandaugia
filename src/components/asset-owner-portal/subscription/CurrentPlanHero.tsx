@@ -8,6 +8,7 @@ import {
   ownerSubscriptionCheckoutPath,
 } from "@/lib/ownerSubscription/paths";
 import type { OwnerSubscriptionStatus } from "@/lib/ownerSubscription/types";
+import { useOwnerSubPlans } from "@/hooks/useOwnerSubscriptionPlans";
 
 
 interface HeroState {
@@ -92,10 +93,13 @@ export function CurrentPlanHero({ sub }: { sub: OwnerSubscriptionStatus }) {
   const tier = sub.plan_tier ?? "standard";
   const dark = tier !== "basic";
   const s = heroState(sub);
+  // Gói chỉ gia hạn được khi admin còn mở nó cho Trạm (server cũng chặn: plan_not_available).
+  const { data: catalog } = useOwnerSubPlans(sub.plan_id ? sub.workspace_id : null);
+  const planOpen = !sub.plan_id || !catalog || catalog.plans.some((p) => p.id === sub.plan_id);
 
   // Gói danh mục gia hạn qua báo giá danh mục (giá hiện hành); gói riêng qua ?sub=.
   const checkoutPath = sub.plan_id
-    ? sub.is_owner && !sub.pending
+    ? sub.is_owner && !sub.pending && planOpen
       ? ownerSubPlanCheckoutPath(sub.workspace_id, sub.plan_id, sub.term_months)
       : null
     : sub.can_pay
@@ -105,6 +109,8 @@ export function CurrentPlanHero({ sub }: { sub: OwnerSubscriptionStatus }) {
     ? null
     : !sub.is_owner
       ? "Chỉ Trưởng đơn vị gia hạn / đổi gói."
+      : !planOpen
+        ? "Gói này không còn mở cho tổ chức — chọn gói khác hoặc liên hệ sàn."
       : !checkoutPath
         ? "Liên hệ sàn để gia hạn gói."
         : null;

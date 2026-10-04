@@ -7,9 +7,12 @@ export const ADMIN_AUTHENTICATION_PATH = "/admin/yeu-cau-dich-vu/giam-dinh";
 
 export const CERT_BUCKET = "asset-authentication-certs";
 
-/** Trang thanh toán VNPay cho một đơn giám định; thanh toán xong quay về hồ sơ. */
+/** Tab "Giám định" trên trang hồ sơ của người bán. */
+export const ownerAuthenticationPath = (postingId: string) => `${ownerPostingPath(postingId)}?tab=giam-dinh`;
+
+/** Trang thanh toán VNPay cho một đơn giám định; thanh toán xong quay về tab giám định. */
 export function authenticationCheckoutPath(orderId: string, postingId: string): string {
-  const sp = new URLSearchParams({ gd_order: orderId, return: ownerPostingPath(postingId) });
+  const sp = new URLSearchParams({ gd_order: orderId, return: ownerAuthenticationPath(postingId) });
   return `/payment/vnpay?${sp.toString()}`;
 }
 

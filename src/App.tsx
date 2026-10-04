@@ -47,7 +47,9 @@ const AdminServiceRequestsPage = lazy(() => import("./pages/admin/service-reques
 const AdminVrTourOrderDetail = lazy(() => import("./pages/admin/vr-tour/AdminVrTourOrderDetail"));
 const AdminAuthenticationOrderDetail = lazy(() => import("./pages/admin/authentication/AdminAuthenticationOrderDetail"));
 const AdminLegalConsultationDetail = lazy(() => import("./pages/admin/legal-consult/AdminLegalConsultationDetail"));
+const AdminValuationOrderDetail = lazy(() => import("./pages/admin/valuation/AdminValuationOrderDetail"));
 const AdminAuctionConsultationDetail = lazy(() => import("./pages/admin/auction-consult/AdminAuctionConsultationDetail"));
+const AdminMarketingOrderDetail = lazy(() => import("./pages/admin/marketing-orders/AdminMarketingOrderDetail"));
 const AdminAssetOwnerKYCDetail = lazy(() => import("./pages/admin/AdminAssetOwnerKYCDetail"));
 const AdminArticlesPage = lazy(() => import("./pages/admin/AdminArticlesPage"));
 const AdminArticleEditor = lazy(() => import("./pages/admin/AdminArticleEditor"));
@@ -139,6 +141,9 @@ const OrgRoleDetailPage = lazy(() => import("./pages/portal/to-chuc/OrgRoleDetai
 const InviteAcceptPage = lazy(() => import("./pages/InviteAcceptPage"));
 const OwnerInviteAcceptPage = lazy(() => import("./pages/OwnerInviteAcceptPage"));
 const SharedOwnerReportPage = lazy(() => import("./pages/SharedOwnerReportPage"));
+const TrackingLinkRedirectPage = lazy(() => import("./pages/TrackingLinkRedirectPage"));
+const SharedPostingPage = lazy(() => import("./pages/SharedPostingPage"));
+const SharedPostingPrintPage = lazy(() => import("./pages/SharedPostingPrintPage"));
 
 // Secondary public pages — lazy
 const CompanyDetail = lazy(() => import("./pages/CompanyDetail"));
@@ -156,10 +161,12 @@ const OwnerSubscriptionPage = lazy(() => import("./pages/chu-tai-san/OwnerSubscr
 const OwnerSubscriptionPlansPage = lazy(() => import("./pages/chu-tai-san/OwnerSubscriptionPlansPage"));
 const OwnerMembersPage = lazy(() => import("./pages/chu-tai-san/OwnerMembersPage"));
 const OwnerRolesPage = lazy(() => import("./pages/chu-tai-san/OwnerRolesPage"));
+const OwnerAuditLogPage = lazy(() => import("./pages/chu-tai-san/OwnerAuditLogPage"));
 const OwnerRoleDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerRoleDetailPage"));
 const OwnerLinksPage = lazy(() => import("./pages/chu-tai-san/OwnerLinksPage"));
 const OwnerOutcomesPage = lazy(() => import("./pages/chu-tai-san/OwnerOutcomesPage"));
 const OwnerCashFlowPage = lazy(() => import("./pages/chu-tai-san/OwnerCashFlowPage"));
+const OwnerPartnersPage = lazy(() => import("./pages/chu-tai-san/OwnerPartnersPage"));
 const OwnerCollectionsPage = lazy(() => import("./pages/chu-tai-san/OwnerCollectionsPage"));
 const OwnerTargetsPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetsPage"));
 const OwnerTargetDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetDetailPage"));
@@ -170,6 +177,13 @@ const OwnerPeriodicReportPrintPage = lazy(() => import("./pages/chu-tai-san/Owne
 const OwnerPostingPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerPostingPrintPage"));
 const OwnerSaleContractDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerSaleContractDetailPage"));
 const OwnerContractsPage = lazy(() => import("./pages/chu-tai-san/OwnerContractsPage"));
+const OwnerMarketingPage = lazy(() => import("./pages/chu-tai-san/OwnerMarketingPage"));
+const OwnerMarketingCampaignFormPage = lazy(() => import("./pages/chu-tai-san/OwnerMarketingCampaignFormPage"));
+const OwnerMarketingCampaignDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerMarketingCampaignDetailPage"));
+const OwnerMarketingOrderDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerMarketingOrderDetailPage"));
+const OwnerShareLinkDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerShareLinkDetailPage"));
+const OwnerAdPerformancePage = lazy(() => import("./pages/chu-tai-san/OwnerAdPerformancePage"));
+const OwnerMarketingDataFlowPage = lazy(() => import("./pages/chu-tai-san/OwnerMarketingDataFlowPage"));
 const OwnerConsignmentContractPage = lazy(() => import("./pages/chu-tai-san/OwnerConsignmentContractPage"));
 const OwnerServiceContractPage = lazy(() => import("./pages/chu-tai-san/OwnerServiceContractPage"));
 const OwnerConsignmentsPage = lazy(() => import("./pages/chu-tai-san/OwnerConsignmentsPage"));
@@ -215,6 +229,12 @@ function RedirectServiceRequestId({ kind }: { kind: string }) {
 function RedirectOwnerSaleContractId() {
   const { id } = useParams<{ id: string }>()
   return <Navigate to={`/chu-tai-san/hop-dong/mua-ban/${id}`} replace />
+}
+
+// Chi tiết gói của Trạm chuyển từ /admin/goi-thue-bao/:id sang menu con "Áp dụng gói".
+function RedirectOwnerSubscriptionId() {
+  const { workspaceId } = useParams<{ workspaceId: string }>()
+  return <Navigate to={`/admin/goi-thue-bao/ap-dung/${workspaceId}`} replace />
 }
 
 function RedirectNhanSuId() {
@@ -314,6 +334,11 @@ const App = () => (
               <Route path="/loi-moi-chu-tai-san/:token" element={<OwnerInviteAcceptPage />} />
               {/* Báo cáo định kỳ chia sẻ qua link chỉ đọc — công khai, không cần đăng nhập */}
               <Route path="/r/:token" element={<SharedOwnerReportPage />} />
+              {/* Link theo dõi của Truyền thông — công khai, đếm lượt mở rồi chuyển tới trang tin */}
+              <Route path="/l/:code" element={<TrackingLinkRedirectPage />} />
+              {/* Hồ sơ online — link công khai của hồ sơ số hoá, ngân hàng gửi khách qua kênh riêng */}
+              <Route path="/hs/:code" element={<SharedPostingPage />} />
+              <Route path="/hs/:code/in" element={<SharedPostingPrintPage />} />
 
               {/* Redirects: old ho-so-du-tuyen paths → portal */}
               <Route path="/ho-so-du-tuyen" element={<Navigate to="/portal/ho-so-du-tuyen" replace />} />
@@ -344,7 +369,16 @@ const App = () => (
                   <Route path="tai-san" element={<OwnerAssetsPage />} />
                   <Route path="ket-qua" element={<OwnerOutcomesPage />} />
                   <Route path="dong-tien" element={<OwnerCashFlowPage />} />
+                  <Route path="doi-tac" element={<OwnerPartnersPage />} />
                   <Route path="thu-tien" element={<OwnerCollectionsPage />} />
+                  <Route path="truyen-thong" element={<OwnerMarketingPage />} />
+                  <Route path="truyen-thong/du-lieu" element={<OwnerMarketingDataFlowPage />} />
+                  <Route path="truyen-thong/giao-viec/:id" element={<OwnerMarketingOrderDetailPage />} />
+                  <Route path="truyen-thong/link-theo-doi/:linkId" element={<OwnerShareLinkDetailPage />} />
+                  <Route path="truyen-thong/chien-dich/moi" element={<OwnerMarketingCampaignFormPage />} />
+                  <Route path="truyen-thong/chien-dich/:id" element={<OwnerMarketingCampaignDetailPage />} />
+                  <Route path="truyen-thong/chien-dich/:id/sua" element={<OwnerMarketingCampaignFormPage />} />
+                  <Route path="hieu-qua-quang-cao" element={<OwnerAdPerformancePage />} />
                   <Route path="chi-tieu" element={<OwnerTargetsPage />} />
                   <Route path="chi-tieu/moi" element={<OwnerTargetFormPage />} />
                   <Route path="chi-tieu/:id" element={<OwnerTargetDetailPage />} />
@@ -368,6 +402,7 @@ const App = () => (
                   <Route path="vai-tro" element={<OwnerRolesPage />} />
                   <Route path="vai-tro/:id" element={<OwnerRoleDetailPage />} />
                   <Route path="lien-ket" element={<OwnerLinksPage />} />
+                  <Route path="nhat-ky" element={<OwnerAuditLogPage />} />
                   <Route path="bao-cao" element={<OwnerReportPage />} />
                   <Route path="goi-thue-bao" element={<OwnerSubscriptionPage />} />
                   <Route path="goi-thue-bao/cac-goi" element={<OwnerSubscriptionPlansPage />} />
@@ -673,6 +708,14 @@ const App = () => (
                     }
                   />
                   <Route
+                    path="yeu-cau-dich-vu/tham-dinh/:id"
+                    element={
+                      <AdminPermissionRoute module="tham-dinh-gia">
+                        <AdminValuationOrderDetail />
+                      </AdminPermissionRoute>
+                    }
+                  />
+                  <Route
                     path="yeu-cau-dich-vu/tu-van-phap-ly/:id"
                     element={
                       <AdminPermissionRoute module="tu-van-phap-ly">
@@ -685,6 +728,14 @@ const App = () => (
                     element={
                       <AdminPermissionRoute module="tu-van-dau-gia">
                         <AdminAuctionConsultationDetail />
+                      </AdminPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="yeu-cau-dich-vu/truyen-thong/:id"
+                    element={
+                      <AdminPermissionRoute module="don-truyen-thong">
+                        <AdminMarketingOrderDetail />
                       </AdminPermissionRoute>
                     }
                   />
@@ -721,9 +772,12 @@ const App = () => (
                   <Route path="doi-tac/:id" element={<AdminPermissionRoute module="nha-cung-cap"><AdminSupplierDetail /></AdminPermissionRoute>} />
                   <Route path="dich-vu" element={<AdminPermissionRoute module="dich-vu"><AdminServicesPage /></AdminPermissionRoute>} />
                   <Route path="don-hang" element={<AdminPermissionRoute module="don-hang"><AdminOrdersPage /></AdminPermissionRoute>} />
-                  <Route path="goi-thue-bao" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionsPage /></AdminPermissionRoute>} />
+                  {/* Gói thuê bao — 2 menu con: Danh mục gói + Áp dụng gói (gói của từng Trạm) */}
+                  <Route path="goi-thue-bao" element={<Navigate to="/admin/goi-thue-bao/ap-dung" replace />} />
                   <Route path="goi-thue-bao/danh-muc" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubPlansPage /></AdminPermissionRoute>} />
-                  <Route path="goi-thue-bao/:workspaceId" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionDetail /></AdminPermissionRoute>} />
+                  <Route path="goi-thue-bao/ap-dung" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionsPage /></AdminPermissionRoute>} />
+                  <Route path="goi-thue-bao/ap-dung/:workspaceId" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionDetail /></AdminPermissionRoute>} />
+                  <Route path="goi-thue-bao/:workspaceId" element={<RedirectOwnerSubscriptionId />} />
                   <Route path="doi-tac-tren-san" element={<AdminPartnersPage />} />
                   <Route path="hien-thi-tren-san" element={<Navigate to="/admin/doi-tac-tren-san" replace />} />
                   {/* Pháp lý & Đấu giá — hợp đồng (chỉ đọc) + mẫu hợp đồng có phiên bản */}

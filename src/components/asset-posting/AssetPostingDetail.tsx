@@ -16,17 +16,28 @@ import { PostingDetailHeader } from "./detail/PostingDetailHeader";
 import { ExportPostingPdfButton } from "./detail/ExportPostingPdfButton";
 import { PostingFlowStrip } from "./detail/PostingFlowStrip";
 import { PostingOverviewTab } from "./detail/PostingOverviewTab";
-import { PostingLegalTab } from "./detail/PostingLegalTab";
+import { PostingOnlineTab } from "./detail/PostingOnlineTab";
 import { useLegalPendingCount } from "./detail/useLegalPendingCount";
-import { PostingAuctionTab } from "./detail/PostingAuctionTab";
+import {
+  PostingAuctionServiceTab,
+  PostingAuthenticationServiceTab,
+  PostingLegalServiceTab,
+  PostingValuationServiceTab,
+} from "./detail/PostingServiceTabs";
 
-type PostingTab = "thong-tin" | "phap-ly" | "tu-van-dau-gia";
+type PostingTab = "thong-tin" | "ho-so-online" | "phap-ly" | "dau-gia" | "tham-dinh" | "giam-dinh";
 
 const TABS: { value: PostingTab; label: string }[] = [
   { value: "thong-tin", label: "Thông tin tài sản" },
-  { value: "phap-ly", label: "Tư vấn pháp lý" },
-  { value: "tu-van-dau-gia", label: "Tư vấn đấu giá" },
+  { value: "ho-so-online", label: "Hồ sơ online" },
+  { value: "dau-gia", label: "Đấu giá" },
+  { value: "phap-ly", label: "Pháp lý" },
+  { value: "tham-dinh", label: "Thẩm định giá" },
+  { value: "giam-dinh", label: "Giám định" },
 ];
+
+/** Link cũ: tab "Tư vấn đấu giá" nay là "Đấu giá"; tab "Hồ sơ" (điểm tin cậy) đã bỏ. */
+const LEGACY_TAB: Record<string, PostingTab> = { "tu-van-dau-gia": "dau-gia", "ho-so": "thong-tin" };
 
 /** Còn sửa được bằng wizard: trước khi gửi cho bất kỳ tổ chức nào (sửa sau đó là đổi nội dung đã được báo giá). */
 const EDITABLE: readonly DigitizeStage[] = ["draft", "review", "rejected", "ready"];
@@ -41,7 +52,9 @@ interface AssetPostingDetailProps {
 
 /**
  * Chi tiết một hồ sơ số hoá (thiết kế "So Hoa Tai San - Danh sach & Chi tiet"): đầu
- * trang + dải tiến trình 4 bước với MỘT việc tiếp theo, rồi 3 tab.
+ * trang + dải tiến trình 4 bước với MỘT việc tiếp theo, rồi 6 tab: Thông tin · Hồ sơ online · Đấu giá ·
+ * Pháp lý · Thẩm định giá · Giám định (3 dịch vụ chọn "Đối tác riêng" hoặc "Dịch vụ của sàn"; Đấu giá
+ * chỉ qua sàn).
  *
  * Báo giá và hợp đồng dịch vụ nằm ở menu "Ký gửi đấu giá" — nút ở dải tiến trình dẫn
  * sang; link cũ `?tab=bao-gia` chuyển thẳng tới đó. Tab nằm trên `?tab=` để gửi link
@@ -58,10 +71,22 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
   const legalPending = useLegalPendingCount(postingId);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const param = searchParams.get("tab");
+  const rawParam = searchParams.get("tab");
+  const param = (rawParam && LEGACY_TAB[rawParam]) ?? rawParam;
   const tab: PostingTab = TABS.some((t) => t.value === param) ? (param as PostingTab) : "thong-tin";
+  // replace: đổi tab không nên đẻ thêm một bước back cho mỗi lần bấm.
+  const setTab = (v: string) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (v === "thong-tin") next.delete("tab");
+        else next.set("tab", v);
+        return next;
+      },
+      { replace: true },
+    );
 
-  if (param === "bao-gia") return <Navigate to={ownerConsignmentPath(postingId)} replace />;
+  if (rawParam === "bao-gia") return <Navigate to={ownerConsignmentPath(postingId)} replace />;
 
   if (isLoading) {
     return (
@@ -141,22 +166,7 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
 
         <AuthenticationOutcomeNotice postingId={posting.id} />
 
-        <Tabs
-          value={tab}
-          onValueChange={(v) =>
-            // replace: đổi tab không nên đẻ thêm một bước back cho mỗi lần bấm.
-            setSearchParams(
-              (prev) => {
-                const next = new URLSearchParams(prev);
-                if (v === "thong-tin") next.delete("tab");
-                else next.set("tab", v);
-                return next;
-              },
-              { replace: true },
-            )
-          }
-          className="pt-2"
-        >
+        <Tabs value={tab} onValueChange={setTab} className="pt-2">
           <OwnerTabsList aria-label="Nội dung hồ sơ" className="mb-[18px]">
             {TABS.map((t) => (
               <OwnerTabsTrigger
@@ -173,11 +183,28 @@ export function AssetPostingDetail({ postingId, onBack }: AssetPostingDetailProp
           <TabsContent value="thong-tin" className="mt-0">
             <PostingOverviewTab posting={posting} locked={locked} />
           </TabsContent>
-          <TabsContent value="phap-ly" className="mt-0">
-            <PostingLegalTab posting={posting} locked={locked} />
+          <TabsContent value="ho-so-online" className="mt-0">
+            <PostingOnlineTab posting={posting} />
           </TabsContent>
-          <TabsContent value="tu-van-dau-gia" className="mt-0">
-            <PostingAuctionTab posting={posting} locked={locked} />
+          <TabsContent value="phap-ly" className="mt-0">
+            <PostingLegalServiceTab posting={posting} locked={locked} />
+          </TabsContent>
+          <TabsContent value="dau-gia" className="mt-0">
+            <PostingAuctionServiceTab
+              posting={posting}
+              locked={locked}
+              sentCount={requests.length}
+              quotedCount={requests.filter((r) => r.status === "quoted" || r.status === "selected").length}
+              viaBroker={!!brokerRequest}
+              orgName={org?.name ?? null}
+              onOpenConsignment={HAS_CONSIGNMENT.includes(status.stage) ? openConsignment : undefined}
+            />
+          </TabsContent>
+          <TabsContent value="tham-dinh" className="mt-0">
+            <PostingValuationServiceTab posting={posting} locked={locked} />
+          </TabsContent>
+          <TabsContent value="giam-dinh" className="mt-0">
+            <PostingAuthenticationServiceTab posting={posting} locked={locked} />
           </TabsContent>
         </Tabs>
       </div>

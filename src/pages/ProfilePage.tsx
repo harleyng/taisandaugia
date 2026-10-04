@@ -89,10 +89,10 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-muted/60">
       <Header />
       <main className="flex-1 container py-6 md:py-8">
-        <div className="lg:grid lg:grid-cols-12 lg:gap-6">
+        <div className="lg:grid lg:grid-cols-[272px_minmax(0,1fr)] lg:items-start lg:gap-6">
           <ProfileSidebar
             activeTab={highlightedTab}
             onChange={setActiveTab}
@@ -102,7 +102,7 @@ const ProfilePage = () => {
             onLogout={handleLogout}
           />
 
-          <div className="lg:col-span-9">
+          <div className="min-w-0">
             {activeTab === "profile" && (
               <ProfileInfoTab
                 name={name}
@@ -117,7 +117,7 @@ const ProfilePage = () => {
             {activeTab === "password" && <PasswordTab />}
             {activeTab === "notifications" && <NotificationsTab />}
             {activeTab === "company" && <CompanyTab />}
-            {activeTab === "my-assets" && <MyAssetsTab userId={userId} />}
+            {activeTab === "my-assets" && <MyAssetsTab />}
             {activeTab === "auction-contracts" && <BiddingContractsTab />}
           </div>
         </div>

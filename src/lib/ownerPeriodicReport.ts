@@ -25,6 +25,7 @@ import {
   type TargetPeriodType,
 } from "@/lib/ownerTargets";
 import { ownerCanIn, type OwnerWsAccessCtx } from "@/lib/ownerWorkspace/roles";
+import { mapMarketingFunnel, type MarketingFunnel } from "@/lib/ownerMarketing/funnel";
 
 // ─── Bản ghi báo cáo ─────────────────────────────────────────────────────────
 
@@ -318,6 +319,11 @@ export interface ReportPayload {
   money: ReportMoney;
   stuck: ReportStuck;
   plan: ReportPlan;
+  /**
+   * "Hiệu quả truyền thông" (Phase M5, owner_mkt_funnel_core cùng kỳ + phạm vi). null = báo cáo
+   * chốt trước khi có phần này.
+   */
+  marketing: MarketingFunnel | null;
   /** Bản nháp: ghép từ cột của bản ghi. Đã chốt: đóng băng trong payload. */
   notes: ReportNotes;
   people: ReportPeople;
@@ -541,6 +547,7 @@ export function mapReportPayload(raw: unknown): ReportPayload | null {
     money: mapMoney(p.money),
     stuck: mapStuck(p.stuck),
     plan: mapPlan(p.plan),
+    marketing: mapMarketingFunnel(p.marketing),
     notes: { officer: str(notes.officer), plan: str(notes.plan) },
     people: { preparedBy: str(people.prepared_by), finalizedBy: str(people.finalized_by) },
     finalizedAt: str(p.finalized_at),

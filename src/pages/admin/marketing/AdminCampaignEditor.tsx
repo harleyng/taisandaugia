@@ -20,6 +20,7 @@ import {
   type CampaignUpsert,
 } from "@/hooks/useCampaigns";
 import { useAudiencePreview } from "@/hooks/useAudiencePreview";
+import { useMktOrderPrefill } from "@/hooks/useMktOrderPrefill";
 import { campaignDefaults, campaignSchema, type CampaignFormValues } from "@/lib/marketing/campaignSchema";
 import { campaignSectionStatus, isEditable, type CampaignSection } from "@/lib/marketing/campaignStatus";
 import { DEFAULT_AUDIENCE_SPEC, normalizeSpec } from "@/lib/marketing/audienceCriteria";
@@ -35,6 +36,8 @@ export default function AdminCampaignEditor() {
   const fromId = searchParams.get("from");
   const isCopy = !isEdit && !!fromId;
   const sourceId = isEdit ? id : (fromId ?? undefined);
+  // Mở từ đơn "Giao việc cho sàn" (/new?mkt_order=:id): điền sẵn từ đơn + tin, lưu xong gắn lại vào đơn.
+  const mkt = useMktOrderPrefill(!isEdit && !isCopy ? searchParams.get("mkt_order") : null);
 
   const { data: source, isLoading: loadingSource } = useCampaign(sourceId);
   const upsert = useUpsertCampaign();
@@ -70,6 +73,16 @@ export default function AdminCampaignEditor() {
     setSpec(normalizeSpec(source.audience_spec));
     setHydrated(true);
   }, [source, hydrated, isEdit, isCopy, form, navigate]);
+
+  const [mktHydrated, setMktHydrated] = useState(false);
+  useEffect(() => {
+    if (!mkt.prefill || mkt.loading || mktHydrated) return;
+    const e = mkt.prefill.email;
+    form.reset({ ...campaignDefaults, name: e.name, notes: e.notes, subject: e.subject, preview_text: e.preview_text });
+    setContent(e.content_html);
+    setSpec(e.audience);
+    setMktHydrated(true);
+  }, [mkt.prefill, mkt.loading, mktHydrated, form]);
 
   const preview = useAudiencePreview(spec);
 
@@ -123,6 +136,7 @@ export default function AdminCampaignEditor() {
     try {
       const saved = await upsert.mutateAsync(buildPayload("draft"));
       toast.success("Đã lưu nháp");
+      if (await mkt.linkBack("campaign", saved.id)) return;
       navigate(`/admin/marketing/email/${saved.id}`);
     } catch (e: unknown) {
       toast.error(`Lưu thất bại: ${e instanceof Error ? e.message : "Lỗi không xác định"}`);
@@ -147,6 +161,7 @@ export default function AdminCampaignEditor() {
           ? `Đã lên lịch gửi tới ${res.count.toLocaleString("vi-VN")} người`
           : `Đã gửi tới ${res.count.toLocaleString("vi-VN")} người`,
       );
+      if (await mkt.linkBack("campaign", saved.id)) return;
       navigate(`/admin/marketing/email/${saved.id}`);
     } catch (e: unknown) {
       if (e instanceof EmptyAudienceError) {
@@ -159,7 +174,7 @@ export default function AdminCampaignEditor() {
 
   const scheduled = form.watch("schedule_type") === "scheduled";
 
-  if ((isEdit || isCopy) && loadingSource) {
+  if (((isEdit || isCopy) && loadingSource) || mkt.loading) {
     return (
       <div className="p-6 space-y-4">
         <Skeleton className="h-8 w-56" />
@@ -177,7 +192,13 @@ export default function AdminCampaignEditor() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="flex-1 text-xl font-semibold text-foreground">
-          {isEdit ? "Chỉnh sửa chiến dịch" : isCopy ? "Sao chép chiến dịch" : "Tạo chiến dịch email"}
+          {isEdit
+            ? "Chỉnh sửa chiến dịch"
+            : isCopy
+              ? "Sao chép chiến dịch"
+              : mkt.prefill
+                ? `Tạo chiến dịch email từ đơn ${mkt.prefill.order.code}`
+                : "Tạo chiến dịch email"}
         </h1>
       </div>
 

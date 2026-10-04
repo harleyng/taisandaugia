@@ -8,17 +8,74 @@ export type SubStatus = SubStoredStatus | "expired" | "scheduled";
 
 export type OverageMode = "block" | "credits";
 
-export type SubVariantKey = "scan_3d_owner" | "report_portfolio_owner";
+/** Quyền lợi hệ thống KIỂM hạn mức (source 'enforced' — key trùng service_variants). */
+export type SubVariantKey = "scan_3d_owner" | "report_portfolio_owner" | "priority_listing";
 
-export interface SubLine {
-  variant_key: SubVariantKey;
-  name: string;
+// ─── Danh mục quyền lợi CỐ ĐỊNH (migration 20261001300000_owner_sub_benefit_catalog.sql) ──
+
+/** Chu kỳ làm mới hạn mức: theo lịch giờ VN; 'term' = cả kỳ gói đã trả, không làm mới. */
+export type BenefitCycle = "day" | "week" | "month" | "quarter" | "year" | "term";
+/** 'quota' = hạn mức + chu kỳ; 'level' = một mức số, càng nhỏ càng tốt (giờ phản hồi). */
+export type BenefitKind = "quota" | "level";
+/** 'enforced' = hệ thống chặn / trừ credit; 'live' = đếm thật, không chặn; 'display' = chỉ hiển thị. */
+export type BenefitSource = "enforced" | "live" | "display";
+
+/** Một dòng của owner_sub_benefits — chỉ đọc, đổi danh mục = viết migration. */
+export interface SubBenefitDef {
+  key: string;
+  group_name: string;
+  label: string;
+  unit: string;
+  kind: BenefitKind;
+  /** Chỉ dạng 'level': "Phản hồi trong {n} giờ". */
+  level_format: string | null;
+  source: BenefitSource;
+  default_cycle: BenefitCycle | null;
+  sort_order: number;
+}
+
+/** Giá trị đủ để viết chữ một dòng quyền lợi ("20 hồ sơ / tháng"). */
+export interface BenefitValue {
+  kind: BenefitKind;
+  unit: string;
+  level_format: string | null;
+  /** null = không giới hạn (dạng 'quota'). */
+  quota: number | null;
+  /** null với dạng 'level'. */
+  cycle: BenefitCycle | null;
+}
+
+/** Dòng quyền lợi của gói danh mục, kèm định nghĩa trong danh mục. THỨ TỰ = thứ tự lên thẻ. */
+export interface PlanBenefitLine {
+  benefit_key: string;
+  quota: number | null;
+  cycle: BenefitCycle | null;
+  sort_order: number;
+  benefit: SubBenefitDef;
+}
+
+/** Dữ liệu gửi admin_owner_sub_plan_upsert (p_benefits), theo thứ tự hiển thị. */
+export interface BenefitLineInput {
+  benefit_key: string;
+  quota: number | null;
+  cycle: BenefitCycle | null;
+}
+
+/** Một dòng quyền lợi của gói Trạm kèm lượt dùng trong cửa sổ hiện tại (_owner_sub_lines). */
+export interface SubLine extends BenefitValue {
+  benefit_key: string;
+  group: string;
+  label: string;
+  source: BenefitSource;
   credit_cost: number | null;
-  /** null = không giới hạn. */
-  monthly_quota: number | null;
+  /** Có số lượt dùng để lên thẻ Hạn mức (enforced / live / display đã có số giữ chỗ). */
+  tracked: boolean;
   used: number;
-  /** null = không giới hạn. */
+  /** null = không giới hạn hoặc dạng 'level'. */
   remaining: number | null;
+  window_start: string | null;
+  /** Ngày làm mới kế tiếp; null với 'term' / 'level'. */
+  resets_on: string | null;
 }
 
 /** owner_subscription_status(p_workspace_id) — null khi Trạm chưa có gói (hoặc gói còn nháp). */
@@ -63,19 +120,6 @@ export interface SubPendingSwitch {
 
 export type PlanTier = "basic" | "standard" | "premium";
 
-/** Dòng quyền lợi admin tự nhập — CHỈ hiển thị, hệ thống không kiểm. */
-export interface PlanBenefit {
-  group: string;
-  label: string;
-  value: string;
-}
-
-export interface PlanEntitlement {
-  variant_key: SubVariantKey;
-  /** null = không giới hạn. */
-  monthly_quota: number | null;
-}
-
 export interface OwnerSubPlan {
   id: string;
   name: string;
@@ -87,8 +131,10 @@ export interface OwnerSubPlan {
   is_featured: boolean;
   is_active: boolean;
   sort_order: number;
-  benefits: PlanBenefit[];
-  entitlements: PlanEntitlement[];
+  /** Dòng quyền lợi theo thứ tự hiển thị (8 dòng đầu lên thẻ gói). */
+  benefits: PlanBenefitLine[];
+  /** Chỉ có ở màn admin: các Trạm được dùng gói (gói không có Trạm nào = ẩn với chủ tài sản). */
+  workspace_ids?: string[];
 }
 
 export interface OwnerSubTermOption {
@@ -178,11 +224,10 @@ export interface AdminOwnerSubRow {
   price_vnd: number | null;
   term_months: number | null;
   overage_mode: OverageMode | null;
-}
-
-export interface EntitlementInput {
-  variant_key: SubVariantKey;
-  monthly_quota: number | null;
+  /** Gói danh mục hiện tại của Trạm (null = chưa có / gói riêng cũ). */
+  plan_id: string | null;
+  /** Các gói danh mục admin đã mở cho Trạm này. */
+  allowed_plan_ids: string[];
 }
 
 export type ActivationMethod = "bank_transfer" | "contract" | "complimentary" | "other";

@@ -19,7 +19,8 @@ export type ContractTemplateType =
   | "service:vr-tour"
   | "service:giam-dinh"
   | "service:tu-van-phap-ly"
-  | "service:tu-van-dau-gia";
+  | "service:tu-van-dau-gia"
+  | "service:tham-dinh";
 
 export type SlotValue = string | string[];
 export type ClauseMap = Record<string, SlotValue>;
@@ -154,6 +155,7 @@ export const TEMPLATE_TYPES: readonly TemplateTypeDef[] = [
   serviceDef("giam-dinh", "Hợp đồng dịch vụ giám định", "Giám định", "HDCU-GD-MAU"),
   serviceDef("tu-van-phap-ly", "Hợp đồng dịch vụ tư vấn pháp lý", "Tư vấn pháp lý", "HDCU-TVPL-MAU"),
   serviceDef("tu-van-dau-gia", "Hợp đồng dịch vụ tư vấn đấu giá", "Tư vấn đấu giá", "HDCU-TVDG-MAU"),
+  serviceDef("tham-dinh", "Hợp đồng dịch vụ thẩm định giá", "Thẩm định giá", "HDCU-TDG-MAU"),
 ];
 
 export const TEMPLATE_GROUP_LABELS: Record<TemplateTypeDef["group"], string> = {

@@ -55,3 +55,8 @@ CREATE TRIGGER asset_auction_consultations_require_contract
   BEFORE UPDATE OF paid_at ON public.asset_auction_consultations
   FOR EACH ROW WHEN (OLD.paid_at IS NULL AND NEW.paid_at IS NOT NULL)
   EXECUTE FUNCTION public.service_order_require_contract('tu-van-dau-gia');
+
+CREATE TRIGGER asset_valuation_orders_require_contract
+  BEFORE UPDATE OF paid_at ON public.asset_valuation_orders
+  FOR EACH ROW WHEN (OLD.paid_at IS NULL AND NEW.paid_at IS NOT NULL)
+  EXECUTE FUNCTION public.service_order_require_contract('tham-dinh');

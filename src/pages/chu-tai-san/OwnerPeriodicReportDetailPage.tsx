@@ -18,6 +18,7 @@ import { ReportInsightCard } from "@/components/asset-owner-portal/periodic-repo
 import { ReportDetailsSection } from "@/components/asset-owner-portal/periodic-report/ReportDetailsSection";
 import { ReportDraftPanel, ReportFinalPanel } from "@/components/asset-owner-portal/periodic-report/ReportSendPanel";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
+import { useOwnerAuditTrack } from "@/hooks/useOwnerAuditLog";
 import { useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
 import {
   useDeleteReportDraft,
@@ -57,6 +58,7 @@ const OwnerPeriodicReportDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { memberships, isLoading: wsLoading } = useOwnerWorkspace();
+  const track = useOwnerAuditTrack();
   const { data: report, isLoading: reportLoading, isError: reportError } = useOwnerReport(id);
   const { payload, isLoading: payloadLoading, isError: payloadError, refetch } = useOwnerReportPayload(report);
   const { data: branchOptions = [] } = useWorkspaceBranchOptions(report?.workspaceId ?? null);
@@ -162,6 +164,7 @@ const OwnerPeriodicReportDetailPage = () => {
     if (!payload) return;
     const name = reportFileName(payload, "xlsx");
     downloadReportXlsx(payload, report.status, isDraft ? name.replace(/\.xlsx$/, "-ban-nhap.xlsx") : name);
+    track({ action: "export", title: "Báo cáo định kỳ", meta: { draft: isDraft } });
   };
   const onPrint = () => window.open(`${reportPrintHref(report.id)}?auto=1`, "_blank", "noopener");
 

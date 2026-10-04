@@ -7,6 +7,7 @@ import { useVrTourOrder } from "@/hooks/useVrTourOrders";
 import { useAuthenticationOrder } from "@/hooks/useAuthenticationOrders";
 import { useLegalConsultation } from "@/hooks/useLegalConsultations";
 import { useAuctionConsultation } from "@/hooks/useAuctionConsultations";
+import { useValuationOrder } from "@/hooks/useValuationOrders";
 import { qk } from "@/lib/queryKeys";
 import { saveBlob } from "@/lib/pdf/saveBlob";
 import {
@@ -92,7 +93,7 @@ export function currentServiceContract(
 }
 
 /**
- * Một đơn dịch vụ bất kỳ, chuẩn hoá cho hộp thoại đồng ý. Gọi đủ 4 hook (luật hook)
+ * Một đơn dịch vụ bất kỳ, chuẩn hoá cho hộp thoại đồng ý. Gọi đủ 5 hook (luật hook)
  * nhưng chỉ bật đúng loại đang cần.
  */
 export function useServiceOrder(kind: ServiceKindKey, orderId: string | null | undefined) {
@@ -100,7 +101,8 @@ export function useServiceOrder(kind: ServiceKindKey, orderId: string | null | u
   const gd = useAuthenticationOrder(kind === "giam-dinh" ? orderId : null);
   const tvpl = useLegalConsultation(kind === "tu-van-phap-ly" ? orderId : null);
   const tvdg = useAuctionConsultation(kind === "tu-van-dau-gia" ? orderId : null);
-  const q = { "vr-tour": vr, "giam-dinh": gd, "tu-van-phap-ly": tvpl, "tu-van-dau-gia": tvdg }[kind];
+  const tdg = useValuationOrder(kind === "tham-dinh" ? orderId : null);
+  const q = { "vr-tour": vr, "giam-dinh": gd, "tu-van-phap-ly": tvpl, "tu-van-dau-gia": tvdg, "tham-dinh": tdg }[kind];
   const row = q.data as
     | (Omit<ServiceOrderForContract, "kind"> & { user_id: string; expert_name?: string | null })
     | null

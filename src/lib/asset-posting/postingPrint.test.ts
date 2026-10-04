@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AssetPosting } from "@/types/asset-posting";
 import {
+  areaOf,
   auctionNeedsDeclared,
   commissionLabel,
   declarationRows,
@@ -8,6 +9,7 @@ import {
   galleryLayout,
   legalDeclared,
   postingDocs,
+  specRows,
   statusBand,
   verificationCode,
 } from "./postingPrint";
@@ -86,5 +88,21 @@ describe("định dạng", () => {
       ["Giấy tờ sở hữu 1", "PDF", "Giấy tờ sở hữu"],
       ["Tài liệu bổ sung 1", "JPG", "Giấy tờ khác"],
     ]);
+  });
+});
+
+describe("specRows / areaOf — nguồn chung cho bản in và Hồ sơ online", () => {
+  it("nhận payload công khai (chỉ child_slug + delta_fields), bỏ ô trống", () => {
+    const rows = specRows({ child_slug: "nha-pho", delta_fields: { land_area: 120, floor_area: "" } });
+    expect(rows[0]).toEqual({ k: "Diện tích đất", v: `${(120).toLocaleString("vi-VN")} m²` });
+    expect(rows.some((r) => r.k === "Diện tích sàn")).toBe(false);
+  });
+
+  it("diện tích: area trước, rồi land_area; chưa khai ⇒ null", () => {
+    expect(areaOf({ child_slug: "dat-o", delta_fields: { area: 80 } })).toBe("80 m²");
+    expect(areaOf({ child_slug: "nha-pho", delta_fields: { land_area: 95 } })).toBe("95 m²");
+    expect(areaOf({ child_slug: "nha-pho", delta_fields: {} })).toBeNull();
+    expect(areaOf({ child_slug: "cong-cu", delta_fields: { quantity: 3 } })).toBeNull();
+    expect(areaOf({ child_slug: "khong-co", delta_fields: null })).toBeNull();
   });
 });

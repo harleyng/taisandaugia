@@ -27,6 +27,7 @@ import { DemandUpsellBanner } from "@/components/demand/DemandUpsellBanner";
 import { DemandEmptyMatch } from "@/components/demand/DemandEmptyMatch";
 import { DemandStatusBadge } from "@/components/demand/DemandStatusBadge";
 import { qk } from "@/lib/queryKeys";
+import { isFeaturedNow } from "@/lib/listings/featured";
 
 type SortMode = "newest" | "price-asc" | "price-desc" | "upcoming";
 
@@ -178,7 +179,13 @@ const Listings = () => {
       });
     }
 
+    const now = Date.now();
     result.sort((a, b) => {
+      // Mặc định (mới nhất): tin đang nổi bật (gói chủ tài sản mua) lên đầu.
+      if (sortMode === "newest") {
+        const fa = isFeaturedNow(a, now);
+        if (fa !== isFeaturedNow(b, now)) return fa ? -1 : 1;
+      }
       if (sortMode === "price-asc") return a.price - b.price;
       if (sortMode === "price-desc") return b.price - a.price;
       if (sortMode === "upcoming") {
@@ -413,6 +420,7 @@ const Listings = () => {
                       registrationDeadline={caString(ca.registration_deadline ?? ca.document_sale_end)}
                       sessionStatus={listing._sessionStatus}
                       categorySlug={listing.property_type_slug}
+                      highlighted={isFeaturedNow(listing)}
                       viewMode="grid"
                       winPrice={caNumber(ca.win_price ?? ca.winning_price)}
                       orgName={orgName}

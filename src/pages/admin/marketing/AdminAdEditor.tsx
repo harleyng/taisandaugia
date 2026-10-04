@@ -16,6 +16,7 @@ import {
 } from "@/hooks/useAdvertisements";
 import { adSectionStatus, isEditable, type AdSection } from "@/lib/advertising/adStatus";
 import { defaultAdForm, type AdFormState } from "@/lib/advertising/adForm";
+import { useMktOrderPrefill } from "@/hooks/useMktOrderPrefill";
 import type { AdPosition, AdStatus, AdvertisementUpsert } from "@/types/advertising";
 
 export default function AdminAdEditor() {
@@ -27,6 +28,8 @@ export default function AdminAdEditor() {
   const fromId = searchParams.get("from");
   const isCopy = !isEdit && !!fromId;
   const sourceId = isEdit ? id : fromId ?? undefined;
+  // Mở từ đơn "Giao việc cho sàn" (/new?mkt_order=:id): điền tên + đích bấm, lưu xong gắn lại vào đơn.
+  const mkt = useMktOrderPrefill(!isEdit && !isCopy ? searchParams.get("mkt_order") : null);
 
   const { data: source, isLoading: loadingSource } = useAdvertisement(sourceId);
   const upsert = useUpsertAdvertisement();
@@ -64,6 +67,13 @@ export default function AdminAdEditor() {
     });
     setHydrated(true);
   }, [source, hydrated, isEdit, isCopy, navigate]);
+
+  const [mktHydrated, setMktHydrated] = useState(false);
+  useEffect(() => {
+    if (!mkt.prefill || mkt.loading || mktHydrated) return;
+    setForm((f) => ({ ...f, name: mkt.prefill!.ad.name, nav_type: "link", nav_url: mkt.prefill!.ad.nav_url }));
+    setMktHydrated(true);
+  }, [mkt.prefill, mkt.loading, mktHydrated]);
 
   const status = adSectionStatus({
     name: form.name,
@@ -116,6 +126,7 @@ export default function AdminAdEditor() {
     try {
       const saved = await upsert.mutateAsync(buildPayload(statusValue));
       toast.success(okMsg);
+      if (await mkt.linkBack("advertisement", saved.id)) return;
       navigate(`/admin/marketing/quang-cao/${saved.id}`);
     } catch (e) {
       if (isUniquePositionError(e)) toast.error((e as Error).message);
@@ -140,7 +151,7 @@ export default function AdminAdEditor() {
     );
   };
 
-  if ((isEdit || isCopy) && loadingSource) {
+  if (((isEdit || isCopy) && loadingSource) || mkt.loading) {
     return (
       <div className="p-6 space-y-4">
         <Skeleton className="h-8 w-56" />
@@ -157,7 +168,13 @@ export default function AdminAdEditor() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="flex-1 text-xl font-semibold text-foreground">
-          {isEdit ? "Chỉnh sửa chiến dịch" : isCopy ? "Sao chép chiến dịch" : "Tạo chiến dịch"}
+          {isEdit
+            ? "Chỉnh sửa chiến dịch"
+            : isCopy
+              ? "Sao chép chiến dịch"
+              : mkt.prefill
+                ? `Tạo banner từ đơn ${mkt.prefill.order.code}`
+                : "Tạo chiến dịch"}
         </h1>
       </div>
 

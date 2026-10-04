@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { AlertCircle, Check, ChevronDown } from "lucide-react";
 import type { DeltaFieldDescriptor } from "@/constants/asset-delta-fields";
 import { filled } from "./wizardSchema";
+import { INPUT_BASE, borderClass } from "./fieldStyles";
 
 // Atoms cho wizard số hoá — port từ thiết kế "So Hoa Tai San" sang Tailwind token.
 
@@ -42,12 +43,6 @@ export function Field({ label, req, help, err, unit, ok, suggestion, children }:
     </div>
   );
 }
-
-const INPUT_BASE =
-  "w-full bg-background border-[1.5px] rounded-[10px] px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-[3px] focus:ring-primary/15 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed";
-
-const borderClass = (err?: string, ok?: boolean) =>
-  err ? "border-destructive bg-destructive/5" : ok ? "border-success/50" : "border-input";
 
 interface TextFieldProps {
   label: string;
@@ -299,20 +294,24 @@ export function WideRadio({
   on,
   onClick,
   className = "",
+  disabled,
   children,
 }: {
   on: boolean;
   onClick: () => void;
   /** Thêm lớp cho thẻ — dùng "h-full" khi xếp các lựa chọn thành hàng ngang trong grid. */
   className?: string;
+  disabled?: boolean;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex gap-3 items-start text-left border-[1.5px] rounded-xl p-3.5 transition ${
-        on ? "border-primary bg-primary/5" : "border-border hover:border-primary"
+      disabled={disabled}
+      aria-pressed={on}
+      className={`w-full flex gap-3 items-start text-left border-[1.5px] rounded-xl p-3.5 transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        on ? "border-primary bg-primary/5" : "border-border enabled:hover:border-primary"
       } ${className}`}
     >
       <span

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { qk } from "@/lib/queryKeys";
+import { attributeBiddingContract } from "@/lib/analytics/mktAttribution";
 import { contractErrorMessage } from "@/lib/biddingContracts/errors";
 import type { StartContractArgs } from "@/lib/biddingContracts/identityForm";
 import type { LotPaymentStatus } from "@/types/auction-bidding";
@@ -159,7 +160,11 @@ export function useStartBiddingContract() {
       if (error) throw error;
       return data as unknown as StartContractResult;
     },
-    onSuccess: () => invalidate(),
+    onSuccess: (data) => {
+      // Khách tới từ link truyền thông của chủ tài sản ⇒ gắn nguồn vào hồ sơ (Phase M5).
+      if (data?.contract_id) attributeBiddingContract(data.contract_id);
+      invalidate();
+    },
     onError: (err) => toast.error(contractErrorMessage(err)),
   });
 }

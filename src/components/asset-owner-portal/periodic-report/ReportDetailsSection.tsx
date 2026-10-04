@@ -14,7 +14,7 @@ export function ReportDetailsSection({ payload, status }: { payload: ReportPaylo
         <span>
           <span className="block text-[15px] font-semibold text-foreground">Chi tiết số liệu</span>
           <span className="block text-[12.5px] text-muted-foreground">
-            Chỉ tiêu, kết quả từng phiên, tiền thu, tồn đọng và lịch kỳ tới — giống bản PDF
+            Chỉ tiêu, kết quả từng phiên, tiền thu, tồn đọng, lịch kỳ tới và truyền thông — giống bản PDF
           </span>
         </span>
         <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />

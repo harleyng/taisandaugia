@@ -61,6 +61,8 @@ describe("mapReportPayload", () => {
     expect(p.plan.nextPeriod?.start).toBe("2026-10-01");
     expect(p.plan.scheduled[0].source).toBe("platform");
     expect(p.people).toEqual({ preparedBy: "Nguyễn Văn A", finalizedBy: "Trần Thị B" });
+    expect(p.marketing?.totals.registrations).toBe(2);
+    expect(p.marketing?.byAsset[0]).toMatchObject({ assetCode: "3F9A12BC", assetId: null, registrationsUnattributed: 3 });
   });
 
   it("drops unknown source labels and narrows unknown values instead of trusting them", () => {
@@ -82,6 +84,8 @@ describe("mapReportPayload", () => {
     expect(p.stuck.rule).toEqual({ minRounds: 3, maxDays: 90 });
     expect(p.plan.nextPeriod).toBeNull();
     expect(p.notes).toEqual({ officer: null, plan: null });
+    // Báo cáo chốt trước Phase M5 không có phần truyền thông.
+    expect(p.marketing).toBeNull();
   });
 
   it("uses the draft's own notes on top of live numbers", () => {

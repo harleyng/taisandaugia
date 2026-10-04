@@ -5,6 +5,12 @@ import { ASSET_DECLARATION_VERSION } from "@/constants/terms";
 import type { NewAssetPosting } from "@/hooks/useAssetPosting";
 import type { ExtractedField } from "@/lib/aiMediaExtraction";
 import type { AssetBriefInput } from "@/lib/assetBrief";
+import {
+  dossierDraftDefaults,
+  dossierDraftSchema,
+  rowsToDraft,
+  type DossierRowLike,
+} from "@/lib/dossier/draft";
 import type { MatchCriteria } from "@/lib/orgMatching";
 import type { AssetPosting } from "@/types/asset-posting";
 import type { Json } from "@/integrations/supabase/types";
@@ -73,6 +79,13 @@ export const wizardSchema = z
     imageUrls: z.array(z.string()),
     videoUrls: z.array(z.string()),
     docUrls: z.array(z.string()),
+
+    /**
+     * Đối tác của 3 dịch vụ — pháp lý (bước 3), thẩm định + tổ chức đấu giá (bước 4): mỗi
+     * dịch vụ "Đối tác riêng" hoặc "Dịch vụ của sàn". KHÔNG nằm trên asset_postings mà ở
+     * asset_posting_dossier_items (ghi sau mỗi lần lưu hồ sơ). Không có luật bắt buộc.
+     */
+    dossier: dossierDraftSchema,
   })
   .superRefine((v, ctx) => {
     if (v.wantsAuction === "yes" && v.pricingMode === "self" && (!v.startingPrice || Number(v.startingPrice) <= 0)) {
@@ -118,6 +131,7 @@ export const wizardDefaults: WizardValues = {
   imageUrls: [],
   videoUrls: [],
   docUrls: [],
+  dossier: dossierDraftDefaults,
 };
 
 /**
@@ -417,13 +431,19 @@ function buildDeclaration(v: WizardValues): Json | null {
 /**
  * Hồ sơ đã lưu → giá trị form, để mở lại bản nháp.
  *
- * Chiều ngược của buildPostingPayload. Ba chỗ mất mát dữ liệu là CỐ Ý:
- *  · wantsAuction suy từ chosen_org_id/starting_price — DB không lưu ý định này.
+ * Chiều ngược của buildPostingPayload (+ các dòng asset_posting_dossier_items nếu có).
+ * Ba chỗ mất mát dữ liệu là CỐ Ý:
+ *  · wantsAuction suy từ chosen_org_id/starting_price/đã chọn nguồn cho tổ chức đấu giá
+ *    — DB không lưu ý định này.
  *  · declarationAccepted/Name đọc lại từ bản cam kết đã ký (nếu có).
  *  · has_dispute… là boolean|null ở DB nhưng ""|"yes"|"no" ở form.
  */
-export function postingToWizardValues(p: AssetPosting): WizardValues {
+export function postingToWizardValues(p: AssetPosting, dossierRows: readonly DossierRowLike[] = []): WizardValues {
   const yn = (b: boolean | null): "" | "yes" | "no" => (b === null ? "" : b ? "yes" : "no");
+  const auctionChosen = dossierRows.some(
+    (r) => r.kind === "auction" && (r.source === "marketplace" || r.source === "external_partner"),
+  );
+  const wantsAuction = p.chosen_org_id || p.starting_price !== null || auctionChosen ? "yes" : "";
   return {
     parentSlug: p.parent_slug,
     childSlug: p.child_slug,
@@ -443,7 +463,7 @@ export function postingToWizardValues(p: AssetPosting): WizardValues {
     hasMortgage: yn(p.has_mortgage),
     isSeized: yn(p.is_seized),
     legalNotes: p.legal_notes ?? "",
-    wantsAuction: p.chosen_org_id || p.starting_price !== null ? "yes" : "",
+    wantsAuction,
     // Hồ sơ cũ chỉ lưu MỘT tổ chức trên asset_postings.chosen_org_id; quan hệ
     // nhiều-tổ-chức nằm ở asset_service_requests (không đọc lại vào nháp).
     orgMode: p.chosen_org_id ? "self" : "",
@@ -456,6 +476,8 @@ export function postingToWizardValues(p: AssetPosting): WizardValues {
     imageUrls: p.image_urls ?? [],
     videoUrls: p.video_urls ?? [],
     docUrls: p.doc_urls ?? [],
+    // Hồ sơ chưa có dòng tổ chức đấu giá mà muốn đấu giá ⇒ luồng cũ = "Dịch vụ của sàn".
+    dossier: rowsToDraft(dossierRows, { auction: wantsAuction === "yes" ? "marketplace" : "" }),
   };
 }
 

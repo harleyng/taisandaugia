@@ -136,7 +136,12 @@
       "Bash(ls ~/Library/Caches/ms-playwright 2>/dev/null | head; ls /Applications | grep -i \"Google Chrome\" | head -2)",
       "Read(//Users/m116gb/Library/Caches/ms-playwright/**)",
       "Bash(grep -oiE \"'[a-z0-9_-]{3,40}'\")",
-      "Bash(md5 src/components/asset-posting/wizardSchema.ts)"
+      "Bash(md5 src/components/asset-posting/wizardSchema.ts)",
+      "Bash(./q.sh \"select owner_mkt_funnel_core\\('4ca4be7b-34df-4cdd-b0b5-368d0cb78ae3', current_date - 30, current_date, null, null, false\\)->'totals'\" -A -t)",
+      "Bash(./q.sh \"select count\\(*\\) filter \\(where legacy_code is not null\\) legacy, count\\(*\\) total, \\(select count\\(*\\) from posting_share_events\\) ev from posting_share_links\" -A -t)",
+      "Bash(./q.sh -f /private/tmp/claude-501/-Users-m116gb-Downloads-Agency-taisandaugia/051c3364-e9c3-4292-a325-e5b2258eeab6/scratchpad/rpc_check.sql -A -t)",
+      "Bash(grep -v \"^$\\\\|set_config\\\\|^{\")",
+      "Bash(./q.sh -f /private/tmp/claude-501/-Users-m116gb-Downloads-Agency-taisandaugia/051c3364-e9c3-4292-a325-e5b2258eeab6/scratchpad/rpc_check2.sql -A -t)"
     ],
     "additionalDirectories": [
       "/tmp",

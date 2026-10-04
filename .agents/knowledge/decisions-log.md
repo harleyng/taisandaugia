@@ -5,6 +5,174 @@
 
 ---
 
+## 2026-10-04 — Gộp link theo dõi + Hồ sơ online thành MỘT loại link
+
+**Context:** người dùng thấy ba thứ "link" (link chiến dịch, Link theo dõi `/l/`, Hồ sơ online `/hs/`) gây rối; thực chất hai bảng — `owner_mkt_links` (chỉ tin trên sàn) và `posting_share_links` (chỉ hồ sơ số hoá).
+**Decision:**
+- Một khái niệm "Hồ sơ online": `posting_share_links` trỏ hồ sơ HOẶC tin; chiến dịch tạo link loại này; menu "Link theo dõi" thành trang tổng hợp; mỗi link có trang chi tiết + biểu đồ theo ngày.
+- `owner_mkt_links` chép sang GIỮ id (cookie / khoá ngoại ghi nhận nguồn khỏi phải đổi), `/l/` chuyển sang `/hs/`. Chiến dịch dùng hai mảng `listing_ids` + `posting_ids` (không đổi dòng cũ).
+- Biểu đồ không trục kép (luật dataviz) — tỷ lệ chuyển đổi ở tooltip + dải số.
+**Consequences:** mig `20261004210000`–`210300` ĐÃ ÁP (psql, 04/10; `210300` sửa `owner_mkt_posting_facts` khi hồ sơ chưa có phiên). Phễu tin khớp snapshot trước khi áp; chỉ thêm 2 link hồ sơ có sẵn. Demo `scripts/seed-mkt-demo.py` đã seed lại trên bảng mới. Link `/l/` đã gửi nay mở trang Hồ sơ online thay vì `/listings`. Luật: business-rules § "Link chia sẻ HỢP NHẤT".
+
+
+## 2026-10-04 — Nhật ký hoạt động ghi đăng nhập / đăng xuất ở server
+
+**Context:** người dùng yêu cầu audit log phải ghi đăng nhập và đăng xuất. Trước đó chỉ có `login` = "Truy cập" do client tự gửi một lần / phiên trình duyệt (giả được, không phải đăng nhập thật) và không có đăng xuất — mà sau `signOut` client không còn JWT để gọi RPC.
+**Decision:** trigger `AFTER INSERT OR DELETE` trên `auth.sessions` (postgres có quyền TRIGGER; cùng cách `on_auth_user_created`), SECURITY DEFINER, đặt tạm `request.jwt.claim.sub` để `owner_audit_write` nhận đúng người làm rồi trả lại. Ghi vào mọi Trạm active + tenant Cá nhân; bỏ qua người ngoài cổng và xoá phiên do xoá tài khoản. Giữ mã `login` (đổi nghĩa thành đăng nhập thật) + thêm `logout`; client thôi gửi `login` và RPC không nhận nữa. Dòng cũ phân biệt bằng `meta.source`. Thêm tab lọc "Đăng nhập / đăng xuất".
+**Consequences:** không có phương thức đăng nhập (mật khẩu/OTP/Google) — `mfa_amr_claims` chèn sau phiên. Đổi mật khẩu (GoTrue thu hồi phiên khác) cũng hiện là "Đăng xuất". Phiên chỉ "hết hạn" khi bật timebox/inactivity; mặc định đóng tab không sinh đăng xuất. Mig `20261004200000` ĐÃ ÁP (psql), không đổi types. Luật: business-rules § "Nhật ký hoạt động Trạm Điều Hành".
+
+## 2026-10-04 — Tách Thẩm định giá ↔ Giám định: 3 dịch vụ của sàn cho chủ tài sản
+
+**Context:** tab "Thẩm định" gộp thẩm định giá + giám định; nhánh "Dịch vụ của sàn" thực chất đặt đơn GIÁM ĐỊNH, không có luồng thẩm định giá thật. Người dùng muốn 3 dịch vụ riêng: Thẩm định giá · Giám định · Tư vấn pháp lý.
+**Decision:**
+- Người dùng chốt: thẩm định giá qua sàn = luồng đơn đầy đủ (báo giá → HDCU → VNPay → chứng thư → hoa hồng); Giám định GIỮ Đối tác riêng; tab + khối wizard riêng (`?tab=tham-dinh`, `?tab=giam-dinh`; `steps/ValuationGroup` + `steps/AuthenticationGroup` thay `AppraisalGroup`).
+- Bảng `asset_valuation_orders` (tên `valuation` — `appraisal` đã mang 2 nghĩa khác), module `tham-dinh-gia`, hub kind / HDCU `tham-dinh`, mig `20261004160000`/`160100`/`160200` ĐÃ ÁP (psql), types.ts thêm tay (gen types 403).
+- Dịch vụ id cố định `a1d90000-…0001` tra theo id — KHÔNG dùng dịch vụ CRM `5e4c0001` (seed demo, không dòng HĐ ⇒ `resolve_contract_terms` rỗng).
+- Kết quả sàn SUY RA lúc đọc, không ghi dòng dossier (FK `service_request_id` sai bảng + sẽ đè lựa chọn đối tác riêng).
+- Dossier thêm `kind='authentication'` (+ `auth_verdict`, `certificate_no`); dòng `appraisal/marketplace` cũ chuyển sang `authentication` (prod: 0 dòng).
+- `useServiceRequests` đổi mảng query theo chỉ số sang Record theo loại.
+**Consequences:** cổng HDCU `supabase/pending/service_contract_payment_gate.sql` đã có trigger cho bảng mới — áp cùng lúc. Giá gói / tỉ lệ 15% / đơn vị là GIỮ CHỖ. Chưa thử UI trong trình duyệt. Luật: `business-rules.md` mục "Thẩm định giá qua sàn".
+
+## 2026-10-02 — Truyền thông Phase M6: bộ demo ngân hàng
+
+**Context:** `docs/owner-marketing-plan.md` M6 — chạy được kịch bản A4 (15 phút) không màn nào trống; tab Hiệu quả của Trạm demo chưa có link / đơn nào.
+**Decision:**
+- Người dùng chốt: seed vào Trạm có sẵn 4ca4be7b (secsosoo) thay vì Trạm "Ngân hàng Demo" mới; phiên [DEMO] của Bảo Tín là VĨNH VIỄN (đăng ký tới 15/12/2026; `--teardown` giữ, `--with-session` mới gỡ); tin công khai ghi chú minh hoạ ở đầu mô tả (không đổi tiêu đề).
+- Tự quyết: chi nhánh + pháp nhân HƯ CẤU "Ngân hàng Demo – Chi nhánh Quận 7" (không gán tin giả cho ngân hàng thật); seed là script Python (`scripts/seed-mkt-demo.py`, mẫu của seed-owner-demo.py) chạy RPC thật, ngày tương đối hôm nay; nhãn "Dữ liệu minh hoạ" theo cờ Trạm `is_demo` (mig `20261002170000`) thay vì gắn từng con số; xoá dòng doanh thu `orders` của đơn banner demo; xoá dòng `owner_audit_log` do giao dịch seed ghi (thao tác script không phải của người dùng).
+- "< 3 đăng ký" chỉ biết được trên sàn ⇒ RPC đếm `owner_listing_registrations`; tài sản ngoài sàn tính 0.
+**Consequences:** demo script `docs/owner-marketing-demo.md`; chạy lại seed trước mỗi buổi demo (duyệt / thanh toán trong demo làm đổi dữ liệu). Rule: business-rules § "Truyền thông — Bộ demo ngân hàng". Types thêm tay (gen types 403).
+
+## 2026-10-02 — Truyền thông Phase M5: phễu + báo cáo định kỳ
+
+**Context:** `docs/owner-marketing-plan.md` M5 — đo kênh nào mang người mua tới, khớp số giữa tab, từng tài sản và báo cáo định kỳ.
+**Decision:**
+- Mig `20261002150000` (áp psql): MỘT hàm `owner_mkt_funnel_core` cho cả tab (`owner_mkt_funnel`) lẫn `owner_build_report_payload.marketing` (thân chép bản LIVE, chỉ đổi RETURN) ⇒ khớp số theo cấu trúc, không theo kỷ luật.
+- Ghi nhận nguồn kiểm ở SERVER: `analytics_events` + `mkt_link_id/listing_id` qua trigger xác nhận (bảng anon INSERT được ⇒ không tin client); `auction_bidding_contracts.mkt_link_id` qua RPC riêng thay vì đổi chữ ký `start_bidding_contract`.
+- Không có trang chi tiết tài sản trên sàn ⇒ "tab Truyền thông của tài sản" = tab Hiệu quả lọc `?tai-san=` + link ở popup Tài sản.
+- "Người xem" cộng dồn theo link (không khử trùng chéo kênh) để bảng kênh / nguồn / tài sản cộng ra đúng tổng.
+**Consequences:** sự kiện `save_asset` nay được ghi cho MỌI lượt lưu (trước đây nhãn có nhưng không ai ghi). Rule: business-rules § "Truyền thông — Phễu & ghi nhận nguồn". Types thêm tay (gen types 403).
+
+## 2026-10-02 — Nhật ký hoạt động Trạm Điều Hành (audit log)
+
+**Context:** Chủ tài sản cần xem mọi hoạt động trong cổng (tìm + lọc), với nhiều tầng quyền xem.
+**Decision:**
+- Mig `20261002120000` (áp qua psql): `owner_audit_log` chỉ ghi thêm, giữ vĩnh viễn; bắt thay đổi bằng MỘT trigger chung thay vì sửa ~40 RPC; lượt xem / truy cập / xuất / in qua `owner_audit_track`.
+- Người dùng chốt: 4 tầng (mine / branch / workspace / hq) + module mới `nhat-ky` (view, share=Xuất Excel); ghi CẢ lượt xem trang; giữ vĩnh viễn.
+- Tự quyết: gộp sửa liên tiếp 10 phút (autosave wizard); Thành viên/Vai trò chỉ Trưởng đơn vị xem; không lộ tên người ngoài Trạm; không dựng lại lịch sử cũ từ các nhật ký riêng lẻ.
+- UI: `/chu-tai-san/nhat-ky` (`OwnerAuditLogPage`, `components/asset-owner-portal/audit/`, `lib/ownerAudit.ts`), nav Thiết lập không gắn module.
+**Consequences:** bảng mới của cổng chủ tài sản phải gắn trigger `owner_audit_row`; nút xuất/in mới phải gọi `track`. Types thêm tay (gen types 403). Rule: business-rules § "Nhật ký hoạt động Trạm Điều Hành".
+
+## 2026-10-02 — Truyền thông Phase M4: Giao việc cho sàn
+
+**Context:** `docs/owner-marketing-plan.md` M4 — Trạm đặt sàn làm truyền thông (nổi bật, MXH, banner, trọn gói) và theo dõi tới khi xong; truyền thông tới người mua trên sàn đang hoãn.
+**Decision:**
+- Mig `20261002110000`: `owner_mkt_orders` (client chỉ SELECT) + RPC `owner_mkt_order_*`, `pay_owner_mkt_order`, `admin_mkt_order_*`; module admin `don-truyen-thong`; loại `truyen-thong` trong hàng đợi gộp.
+- Gói giá cố định TRẢ NGAY lúc đặt (gói dịch vụ → credit) thay vì thêm bước "chờ trả" — đặt và trừ tiền trong một giao dịch, không có đơn treo chưa trả.
+- Tin nổi bật dùng quyền lợi có sẵn `priority_listing` ("Tin đăng ưu tiên", chuyển sang `enforced`, phiên gói dịch vụ đồng ý) thay vì thêm quyền lợi mới trùng nghĩa.
+- Doanh thu `orders` chỉ cho đơn VND, ghi lúc hoàn tất (credit / gói đã là doanh thu lúc nạp/trả). `mkt_email_owner` không seed.
+- Không tự tạo link theo dõi cho đơn MXH (trigger link do M2 sở hữu) — admin dán link bài khi hoàn tất.
+- `ServiceKindKey` giữ 4 loại HDCU; thêm `ServiceRequestKindKey` cho hàng đợi (bảng ánh xạ hợp đồng dịch vụ khoá theo kiểu cũ).
+**Consequences:** `listings.featured_until` + trigger chỉ admin đổi cờ nổi bật; `/listings` + trang chủ đọc cờ. Hết hạn nổi bật không tự tắt cờ (đọc lúc hiển thị) — báo cáo admin "Tin nổi bật" vẫn đếm cờ thô.
+
+## 2026-10-02 — Truyền thông Phase M2: chiến dịch xuất + duyệt hai người
+
+**Context:** `docs/owner-marketing-plan.md` M2 — cán bộ soạn nội dung cho 1..n tài sản, Trưởng đơn vị duyệt, rồi xuất kèm link theo dõi. Ngân hàng sợ nội dung lệch thông báo đấu giá và cần kiểm soát bốn mắt.
+**Decision:**
+- Mig `20261002100000`: `owner_mkt_campaigns` + `owner_mkt_audit`, client chỉ SELECT; 8 RPC `owner_mkt_*` trả `{ok, reason}`.
+- Dữ kiện dựng ở SQL (`owner_mkt_listing_facts`), client không bao giờ gửi; `drafts` chỉ nhận khoá whitelist ⇒ "không sửa được dữ kiện" là luật server, không chỉ UI.
+- Văn bản xuất = mô tả (sửa được) + khối dữ kiện + link; mô tả gợi ý dựng từ loại/diện tích/vị trí, KHÔNG từ `listings.description`.
+- Phạm vi chi nhánh xét TỪNG tài sản (`owner_mkt_can`), không dựa `branch_id` của chiến dịch (chỉ để lọc).
+- Thêm ngoài prompt: `owner_mkt_delete` (nháp chưa gửi duyệt), `owner_mkt_log_export`, `owner_mkt_preview_facts`, cảnh báo dữ kiện đổi sau duyệt.
+**Consequences:** Trigger link M1 đã thay (bỏ kiểm `create` khi có `campaign_id`) — thay lại thì đọc bản LIVE. M4 (`owner_mkt_orders.owner_mkt_campaign_id`) FK tới bảng này. Phễu đầy đủ ở M5; tab "Truyền thông" trong chi tiết tài sản chưa làm (đã có `?tai-san=` để mở trình soạn chọn sẵn).
+
+## 2026-10-01 — Gói dịch vụ: danh mục quyền lợi cố định + hạn mức / chu kỳ từng dòng
+
+**Context:** Quyền lợi gói là chữ tự do (nhóm · nhãn · giá trị), tách khỏi 2 "tính năng tính hạn mức" luôn theo tháng; so sánh gói phải đoán số từ chữ, lượt dùng khớp theo nhãn (đổi nhãn là mất). Người dùng: danh mục quyền lợi cố định trong DB, không có màn sửa; admin thêm quyền lợi vào gói và đặt hạn mức + thời gian "linh hoạt nhất".
+**Decision:**
+- Người dùng chọn: "thời gian" = **chu kỳ làm mới** (ngày/tuần/tháng/quý/năm/cả kỳ), KHÔNG làm cửa sổ hiệu lực; **gộp** 2 tính năng kiểm vào chung danh mục.
+- Một bảng dòng (`owner_subscription_plan_entitlements` / `owner_subscription_entitlements`: `benefit_key, quota, cycle, sort_order`) thay cho entitlements + cột `benefits` JSONB (đã chuyển 57 dòng chữ cũ rồi XOÁ cột).
+- Sổ lượt dùng lưu NGÀY (`used_on`) thay tháng; cửa sổ tính lúc đọc ⇒ đổi chu kỳ không cần di dữ liệu.
+- Dạng `level` riêng cho giờ phản hồi (số nhỏ = tốt) thay vì mẹo viết "Phản hồi trong 48 giờ" cho parser.
+- Gỡ `owner_sub_supported_variants`, `owner_sub_benefit_usage`, `admin_owner_sub_upsert`, `admin_owner_sub_activate(p_sub_id…)`.
+**Consequences:** Gói Trạm đang chạy được chép đủ dòng hiển thị (trước đọc thẳng từ gói danh mục) ⇒ sửa gói danh mục chỉ áp từ lần mua / gia hạn sau, đúng luật cũ. 22 quyền lợi `display`/`live` vẫn KHÔNG chặn — muốn kiểm thì đổi `source='enforced'` + nối `_owner_sub_consume` + mở `ref_type` (phiên M4 truyền thông đã làm vậy cho `priority_listing`). `gen types` vẫn exit 1 im lặng ⇒ types.ts sửa tay.
+
+## 2026-10-01 — Hồ sơ hoàn chỉnh Phase 4: huy hiệu công khai
+
+**Context:** `docs/owner-dossier-plan.md` Phase 4 — người mua và tổ chức đấu giá cần thấy hồ sơ đáng tin. Hồ sơ số hoá lộ ra công khai ở 3 nơi: lô phiên `/sessions/:id` (`auction_session_items.asset_posting_id`), Hồ sơ online `/hs/:code`, hộp thư `/portal/yeu-cau-ky-gui`. `/listings` lấy từ bảng `listings`, không nối với hồ sơ.
+**Decision:**
+- Mig `20261001310000`: 2 RPC bọc `get_public_dossier_trust`, không mở thêm cột — gom theo lô (`get_public_dossier_trusts`) và theo mã link (`get_shared_posting_dossier_trust`, vì payload chia sẻ không có posting_id; không gọi lại `get_shared_posting` để khỏi đếm thêm lượt xem).
+- D2 giữ mặc định (chủ bật từng hồ sơ). Thêm: link chia sẻ tắt "hiện giá" ⇒ ẩn luôn giá thẩm định.
+- Công khai KHÔNG hiện điểm, chỉ nhãn mức; mức Cơ bản và phần chưa đạt không hiện (huy hiệu để khoe, không để bêu).
+- `/lang-nghe` bỏ qua có chủ đích: hồ sơ làng nghề là hồ sơ giới thiệu, không phải tài sản đấu giá.
+**Consequences:** Hiện chưa hồ sơ thật nào đạt "Đầy đủ" (DB chưa có dòng dossier) ⇒ chưa thấy huy hiệu trên site tới khi chủ nhập. Chưa có: lọc/sắp theo mức trên `/sessions`, huy hiệu ở thẻ danh sách phiên, trang in `/hs/:code/in`, `AddSessionItemDialog`.
+
+## 2026-10-01 — Hồ sơ hoàn chỉnh Phase 2: "Hồ sơ dịch vụ" trong wizard số hoá
+
+**Context:** `docs/owner-dossier-plan.md` Phase 2 — chủ có đối tác riêng phải hoàn tất wizard mà không dùng dịch vụ sàn, và luồng RFQ cũ phải giữ nguyên.
+**Decision:**
+- "Tìm qua sàn" không có state riêng — ánh xạ vào `pricingMode`/`orgMode` qua patch trong `dossier/dossierWizard.ts`, để hai điều khiển (hàng nguồn mới + radio cũ) không lệch nhau.
+- Thẩm định qua sàn chỉ khi tổ chức đấu giá cũng qua sàn — sàn định giá NẰM TRONG báo giá đấu giá, không có dịch vụ thẩm định độc lập.
+- Ghi `asset_posting_dossier_items` sau mỗi lần lưu hồ sơ (trong lượt tự lưu nên `settle()` chờ cả bước này); phần đối tác nhập dở thì bỏ qua, không xoá.
+- Field components controlled, không phụ thuộc useForm — Phase 3 dùng lại trong hộp thoại.
+**Consequences:** Mở lại nháp nay giữ được `wantsAuction` khi phần tổ chức là "Tìm qua sàn". Tệp chứng cứ gỡ khỏi danh sách không bị xoá khỏi storage. `AssetPostingWizard.tsx` ~350 dòng (vượt 300 từ trước) — nên tách tiếp.
+
+## 2026-10-01 — Hồ sơ hoàn chỉnh Phase 5: "Đối tác của tôi" (bảng điểm đối tác)
+
+**Context:** `docs/owner-dossier-plan.md` Phase 5 / §A7 bảo join dossier với `owner_asset_outcomes_resolved`, nhưng hàm đó theo TIN đã khớp, dossier theo HỒ SƠ và không có cầu hồ sơ → tin.
+**Decision:**
+- Mig `20261001250000`: `owner_partner_scorecard` tự gom kết quả theo hồ sơ (lô trên sàn có `asset_posting_id` + `owner_asset_outcomes.asset_posting_id`), không cộng hai nguồn; helper `partner_name_key` (bật `unaccent`) và `outcome_reason_is_legal` (từ khoá, vì lý do là chữ tự do).
+- D3 giữ mặc định: bảng điểm không đổi điểm tin cậy. Ngưỡng ≥ 3 áp ở client, server trả `assets_with_outcome`.
+- Nav dùng quyền `phan-tich` thay vì thêm module (đổi danh mục quyền = đổi SQL + bản sao client). Icon `BookUser` thay `Handshake` (đã là "Ký gửi đấu giá").
+- Query key nằm dưới `owner-asset-outcomes` ⇒ khai/sửa kết quả tự làm mới.
+**Consequences:** Hiện chưa UI nào ghi `owner_asset_outcomes.asset_posting_id` ⇒ đối tác chỉ có kết quả khi hồ sơ lên phiên trên sàn. Cần cho chủ khai kết quả theo hồ sơ (hoặc nối hồ sơ ↔ tin) để bảng điểm đầy dữ liệu. Chỉ tính `external_partner`, chưa so với đối tác qua sàn.
+
+## 2026-10-01 — Hồ sơ hoàn chỉnh Phase 3: tab "Hồ sơ", huy hiệu danh sách, mục in
+
+**Context:** `docs/owner-dossier-plan.md` Phase 3 — chủ tài sản xem/hoàn thiện hồ sơ sau khi gửi và thấy điểm ở mọi nơi làm việc. Danh sách có thể vài trăm hồ sơ; RPC điểm của Phase 1 chỉ nhận MỘT hồ sơ.
+**Decision:**
+- Thêm RPC `asset_postings_dossier_levels(uuid[])` (mig `20261001240000`) bọc `_dossier_trust_compute` — tránh N lượt gọi mỗi trang; plan nói chỉ P1/P5 có migration nhưng đây là phần bổ sung thuần đọc, không đổi luật điểm.
+- Dùng chung `dossier/fields/*`, `lib/dossier/draft.ts`, `useDossierItems` của Phase 2 (chạy song song cùng checkout) — hộp thoại lưu một phần bằng `kinds:[kind]`.
+- Hộp thoại không prefill `starting_price` (review guard); gợi ý mục giấy tờ / tự khai / ảnh mở wizard khi hồ sơ còn sửa được, "Chờ sàn duyệt" chỉ là chữ.
+- Bản in thêm mục 06 "Hồ sơ & điểm tin cậy", mức chứng cứ in thành chữ. Bản in Hồ sơ online công khai KHÔNG đổi (Phase 4).
+**Consequences:** `types.ts` thêm tay chữ ký RPC mới (gen types vẫn 403). Tệp chứng cứ bị gỡ khỏi danh sách vẫn nằm trong storage (không xoá) — dọn rác là việc sau.
+
+## 2026-10-01 — Hồ sơ online M0: link công khai `/hs/:code` cho hồ sơ số hoá
+
+**Context:** `docs/owner-marketing-plan.md` M0. Ngân hàng không đưa danh sách khách cho sàn ⇒ cán bộ gửi trang hồ sơ qua kênh RIÊNG; sàn chỉ đếm, không biết ai xem.
+**Decision:**
+- Bảng `posting_share_links/events/follows` + RPC (mig `20261001100000`). Quyền mới `so-hoa:share` cấp đúng các vai trò có `so-hoa:update` (STAFF mặc định có).
+- Payload công khai = DANH SÁCH TRẮNG `posting_share_public_keys()` (self-check bằng link thử trên hồ sơ thật). Không giấy tờ / cam kết / thù lao / id / bộ đếm.
+- Cột `code` không cấp SELECT; mã chỉ trả qua `owner_posting_share_links` cho người có `share`.
+- D1–D3 của plan: giá ẩn trừ khi link bật hoặc đã có phiên công bố; follow cần đăng nhập; chỉ hồ sơ đã duyệt — kiểm lại LÚC MỞ (sửa hồ sơ ⇒ link tạm `unavailable`).
+- OG preview: `middleware.ts` (Vercel Routing Middleware) trả CHÍNH index.html đã chèn thẻ og:* — không trả trang rút gọn vì trình duyệt trong app Zalo cũng có "Zalo" trong UA.
+**Consequences:** Phải đặt `OG_SUPABASE_URL` + `OG_SUPABASE_ANON_KEY` trên Vercel, thiếu thì preview là thẻ chung. Gửi thông báo cho người theo dõi, gom nhiều tài sản / 1 link, logo đơn vị = phase sau.
+
+## 2026-10-01 — Truyền thông M1: module `truyen-thong` + link theo dõi `/l/:code`
+
+**Context:** `docs/owner-marketing-plan.md` M1. Ngân hàng không đưa danh sách khách ra ngoài ⇒ cán bộ gửi qua kênh riêng, sàn cần đo kênh nào mang khách về.
+**Decision:**
+- Module quyền `truyen-thong` (Tác nghiệp, 6 thao tác; `finalize`="Duyệt", `share`="Gửi / xuất"). Seed: STAFF view/create/update, VIEWER view, vai trò tự tạo KHÔNG cấp (ít quyền nhất).
+- `owner_mkt_links` + `owner_mkt_link_hits`; mã / chi nhánh / bộ đếm do server ghi (quyền cột); lượt mở chỉ qua RPC anon, không IP, thành viên không tính, chặn trùng 60 giây. Chỉ tin đã nhận mới gắn link (hồ sơ số hoá ⇒ M0).
+- `src/lib/brand.ts` dùng chung với M0 (B6). `types.ts` thêm tay (gen types 403).
+- `20261001214152` làm rơi `so-hoa:share` của M0 (song song) ⇒ vá `20261001230000` gộp danh mục (48/32/15).
+**Consequences:** M2 thêm FK `campaign_id` và đổi tab mặc định sang "Chiến dịch". Nên có "Ngừng link" thay vì xoá trước M5 để giữ lịch sử phễu.
+
+## 2026-10-01 — Gói dịch vụ: admin tạo gói rồi chọn Trạm được dùng (bỏ gói riêng từng Trạm)
+
+**Context:** Admin vẫn cấu hình được gói riêng NGAY TRÊN gói của từng Trạm (tên/giá/hạn mức), còn danh mục gói thì mọi Trạm đều thấy. Người dùng muốn: tạo gói một lần, rồi gán cho các chủ tài sản.
+**Decision:** Không làm thực thể "nhóm" — mỗi gói có danh sách Trạm (`owner_subscription_plan_workspaces`). Gán = cho thấy (Trạm tự mua; admin kích hoạt tay một Trạm với gói đã mở qua `admin_owner_sub_plan_activate`). Gói không có Trạm = ẩn. Sửa gói áp dụng từ lần gia hạn sau (giữ hành vi cũ). Thu quyền `admin_owner_sub_upsert` / `admin_owner_sub_activate(p_sub_id…)`, `set_status` chỉ còn huỷ; xoá `SubscriptionSettingsForm`. Backfill: Trạm đang dùng gói được giữ gói đó, Trạm demo `4ca4be7b` mở cả 3 gói. Mig `20261001120000` áp qua psql (timestamp `…100000` đã bị phiên khác dùng).
+**Consequences:** Luồng trả gói riêng `?sub=` (`owner_subscription_quote` / `pay_owner_subscription`) không còn đường tạo dữ liệu mới — dọn sau. Trạm ngoài demo thấy danh mục rỗng ("Cần hạn mức riêng?") tới khi admin mở gói.
+
+## 2026-10-01 — Hồ sơ hoàn chỉnh: điểm tin cậy tính lúc đọc, kết quả qua sàn suy ra (Phase 1 owner-dossier-plan)
+
+**Context:** Ngân hàng/AMC có sẵn đối tác thẩm định/pháp lý/tổ chức đấu giá nên kẹt ở bước "tìm qua sàn". `docs/owner-dossier-plan.md` cho họ tự nhập kết quả đối tác → điểm tin cậy 0–100. Khảo sát: tư vấn pháp lý LÀ dịch vụ độc lập (`asset_legal_consultations`); thẩm định giá CHỈ là scope `tham_dinh_gia` trong báo giá; không có cờ "công khai" trên hồ sơ.
+**Decision:**
+- Bảng phụ `asset_posting_dossier_items` (UNIQUE posting+kind) + bucket private `posting-dossier-evidence` `{posting}/{kind}/…`; RLS đọc = RLS hồ sơ cha, ghi = `owner_posting_can(…,'so-hoa','update')`. Mig `20261001220000` áp qua psql; timestamp đổi vì phiên khác đã dùng `20261001100000`.
+- Điểm CHỈ ở SQL `_dossier_trust_compute` (hằng `c_*`), bọc bởi `asset_posting_dossier_trust` (raise 42501) và `get_public_dossier_trust` (anon; approved & chưa huỷ; lọc tệp/đối tác/gợi ý; giá thẩm định chỉ khi bật).
+- Qua sàn suy ra lúc đọc, lấy điểm cao hơn: pháp lý = tư vấn `completed/superseded` (20) · tổ chức = request `selected/accepted` (15) · thẩm định = `pricing_mode='appraisal'` + báo giá đã chọn có `tham_dinh_gia` (10, partial — người dùng chốt). Chứng thư `expired` KHÔNG đủ cho "Hoàn chỉnh".
+- `types.ts` thêm tay (gen types 403); `src/lib/dossier/types.ts` giữ kiểu + nhãn.
+**Consequences:** Đổi trọng số = sửa hằng SQL + bảng ở business-rules. Luật nhóm "cam kết" nhân bản `getProofMode` SQL↔TS. Phase 2/3 cần `useStorageUpload` nhận tiền tố `{posting_id}/{kind}` (đang ép `{uid}/…`).
+
 ## 2026-09-30 — Bản đồ làng nghề /lang-nghe lấy dữ liệu từ luồng Số hoá của chủ tài sản
 
 **Context:** Người mua/khách vãng lai cần xem bản đồ Việt Nam các làng nghề (ảnh sản phẩm tròn → bấm mở VR tour). Bản đầu làm bảng `craft_villages` do admin quản lý; người dùng đổi hướng: làng nghề là CHỦ TÀI SẢN tự số hoá + đặt VR và tự chọn công khai hồ sơ. Chốt: loại tổ chức mới (không phải nhánh KYC thứ 3), VR = dịch vụ VR tour đối tác sẵn có, lên bản đồ = chủ bật + admin đã duyệt, bỏ bảng admin.

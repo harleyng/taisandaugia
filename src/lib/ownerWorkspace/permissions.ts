@@ -1,7 +1,9 @@
 // Danh mục quyền của Trạm Điều Hành (cổng chủ tài sản) — ma trận module × thao tác.
 //
 // BẢN SAO phía client của owner_ws_permission_catalog() + owner_ws_default_role_permissions()
-// (migration 20260927170000). Đổi ở SQL thì đổi cả ở đây — permissions.test.ts giữ
+// (migration 20260927170000; so-hoa:share thêm ở 20261001100000; truyen-thong ở 20261001214152,
+// bản gộp 20261001230000; nhat-ky ở 20261002120000). Đổi ở SQL thì đổi cả ở đây — đọc bản ĐANG CHẠY (pg_get_functiondef)
+// trước khi thay hàm danh mục. permissions.test.ts giữ
 // số lượng khớp. Mã module là KHOÁ LƯU TRONG DB (owner_ws_role_permissions, RLS, RPC):
 // không đổi tên.
 //
@@ -20,13 +22,15 @@ export type OwnerModule =
   | "ky-gui"
   | "hop-dong-mua-ban"
   | "thu-tien"
+  | "truyen-thong"
   | "phan-tich"
   | "dong-tien"
   | "bao-cao-dinh-ky"
   | "chi-nhanh"
   | "thanh-vien"
   | "vai-tro"
-  | "lien-ket";
+  | "lien-ket"
+  | "nhat-ky";
 
 export interface OwnerModuleDef {
   module: OwnerModule;
@@ -82,9 +86,9 @@ export const OWNER_MODULE_DEFINITIONS: OwnerModuleDef[] = [
     module: "so-hoa",
     label: "Số hoá tài sản",
     category: "tac-nghiep",
-    actions: ["view", "create", "update"],
-    actionLabels: { update: "Sửa & dịch vụ" },
-    hint: "Hồ sơ số hoá và dịch vụ gắn thêm (3D, VR, giám định, tư vấn).",
+    actions: ["view", "create", "update", "share"],
+    actionLabels: { update: "Sửa & dịch vụ", share: "Chia sẻ hồ sơ" },
+    hint: "Hồ sơ số hoá, dịch vụ gắn thêm (3D, VR, giám định, tư vấn) và link Hồ sơ online gửi khách.",
   },
   {
     module: "ky-gui",
@@ -107,6 +111,14 @@ export const OWNER_MODULE_DEFINITIONS: OwnerModuleDef[] = [
     actions: ["view", "create", "update", "delete"],
     actionLabels: { create: "Ghi thu" },
     hint: "Sổ thu chi, hạn thanh toán, người trúng bỏ cọc.",
+  },
+  {
+    module: "truyen-thong",
+    label: "Truyền thông",
+    category: "tac-nghiep",
+    actions: ["view", "create", "update", "delete", "finalize", "share"],
+    actionLabels: { finalize: "Duyệt", share: "Gửi / xuất" },
+    hint: "Link theo dõi, chiến dịch quảng bá tài sản và việc giao cho sàn. Duyệt = người thứ hai kiểm trước khi gửi.",
   },
   { module: "phan-tich", label: "Phân tích danh mục", category: "phan-tich", actions: ["view"] },
   { module: "dong-tien", label: "Dòng tiền", category: "phan-tich", actions: ["view"] },
@@ -138,6 +150,14 @@ export const OWNER_MODULE_DEFINITIONS: OwnerModuleDef[] = [
     category: "thiet-lap",
     actions: ["view", "update"],
     hint: "Liên kết trụ sở ↔ chi nhánh.",
+  },
+  {
+    module: "nhat-ky",
+    label: "Nhật ký hoạt động",
+    category: "thiet-lap",
+    actions: ["view", "share"],
+    actionLabels: { view: "Xem của mọi người", share: "Xuất Excel" },
+    hint: "Không có quyền này vẫn xem được thao tác của chính mình. Người bị giới hạn chi nhánh chỉ thấy chi nhánh của mình; nhật ký Thành viên / Vai trò chỉ Trưởng đơn vị xem.",
   },
 ];
 
@@ -235,10 +255,11 @@ export const STAFF_DEFAULT_MATRIX: OwnerPermissionMatrix = {
   "chi-tieu": ["view"],
   "tai-san": ["view", "update"],
   "ket-qua": ["view", "update", "delete"],
-  "so-hoa": ["view", "create", "update"],
+  "so-hoa": ["view", "create", "update", "share"],
   "ky-gui": ["view", "create", "update"],
   "hop-dong-mua-ban": ["view", "update"],
   "thu-tien": ["view", "create", "update", "delete"],
+  "truyen-thong": ["view", "create", "update"],
   "phan-tich": ["view"],
   "dong-tien": ["view"],
   "bao-cao-dinh-ky": ["view", "create", "update", "delete"],
@@ -248,7 +269,7 @@ export const STAFF_DEFAULT_MATRIX: OwnerPermissionMatrix = {
   "lien-ket": ["view"],
 };
 
-/** Bản sao owner_ws_default_role_permissions('VIEWER'). */
+/** Bản sao owner_ws_default_role_permissions('VIEWER') — mọi "Xem" trừ Nhật ký (Trưởng đơn vị tự cấp). */
 export const VIEWER_DEFAULT_MATRIX: OwnerPermissionMatrix = Object.fromEntries(
-  OWNER_MODULE_DEFINITIONS.map((d) => [d.module, ["view"] as OwnerAction[]]),
+  OWNER_MODULE_DEFINITIONS.filter((d) => d.module !== "nhat-ky").map((d) => [d.module, ["view"] as OwnerAction[]]),
 );

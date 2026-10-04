@@ -136,6 +136,33 @@ export const RAW_REPORT_PAYLOAD: Record<string, unknown> = {
     ],
     stuck_unscheduled: 1,
   },
+  marketing: {
+    period: { from: "2026-09-01", to: "2026-09-30" },
+    attribution_days: 30,
+    totals: {
+      assets: 2, links: 3, orders: 1, sent: 1200, opened: 300, clicks: 95, visitors: 70, saves: 6,
+      registrations: 2, participants: 5, outcomes: 1, sold: 1, sold_value: 3000000000,
+      priced_sold_value: 3000000000, priced_starting_value: 2500000000,
+    },
+    unattributed: { saves: 1, registrations: 3 },
+    by_channel: [
+      { kind: "link", key: "zalo", items: 2, sent: 0, opened: 0, clicks: 40, visitors: 30, saves: 5, registrations: 2 },
+      { kind: "platform", key: "mkt_full_owner", items: 1, sent: 1200, opened: 300, clicks: 55, visitors: 55, saves: 0, registrations: 0 },
+    ],
+    by_source: [
+      { key: "self_serve", items: 2, sent: 0, opened: 0, clicks: 40, visitors: 30, saves: 5, registrations: 2 },
+      { key: "platform", items: 1, sent: 1200, opened: 300, clicks: 55, visitors: 55, saves: 0, registrations: 0 },
+    ],
+    // Như payload của link chia sẻ: khoá listing_id đã bị lọc.
+    by_asset: [
+      {
+        asset_code: "3F9A12BC", title: "Nhà phố Quận 7", branch_name: "Chi nhánh Hà Nội", links: 2, orders: 1,
+        sent: 1200, opened: 300, clicks: 95, visitors: 70, saves: 6, saves_unattributed: 1, registrations: 2,
+        registrations_unattributed: 3, participants: 5, outcome: "sold", outcome_date: "2026-09-13",
+        price: 3000000000, starting_price: 2500000000,
+      },
+    ],
+  },
   notes: { officer: "Đã làm việc với tổ chức đấu giá.", plan: null },
   people: { prepared_by: "Nguyễn Văn A", finalized_by: "Trần Thị B" },
   finalized_at: "2026-10-01T02:00:00+00:00",

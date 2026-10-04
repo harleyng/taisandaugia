@@ -5,6 +5,9 @@ import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useOwnerPulse } from "@/hooks/useOwnerPulse";
 import { useOwnerTargetProgress } from "@/hooks/useOwnerTargets";
 import { useOwnerOutcomesOverview } from "@/hooks/useOwnerOutcomesOverview";
+import { useOwnerListingRegistrations } from "@/hooks/useOwnerListingRegistrations";
+import { pushCandidateNote, pushMarketingCandidates } from "@/lib/ownerMarketing/pushCandidates";
+import { NEW_CAMPAIGN_HREF } from "@/lib/ownerMarketing/routes";
 import { useUrlFilterState } from "@/hooks/useUrlFilterState";
 import { todayIso } from "@/lib/ownerOutcomeReport";
 import {
@@ -80,8 +83,11 @@ function useOwnerTodoSources(assetInScope: (assetOwnerId: string | null) => bool
  * gì ngoài danh sách claim chờ xác nhận.
  */
 export function useOwnerOverview() {
-  const { workspaceId, isLoading: workspaceLoading } = useOwnerWorkspace();
+  const { workspaceId, isLoading: workspaceLoading, can } = useOwnerWorkspace();
   const pulse = useOwnerPulse();
+  // "Đẩy truyền thông" chỉ hiện cho người soạn được chiến dịch.
+  const canPush = can("truyen-thong", "create");
+  const registrations = useOwnerListingRegistrations(workspaceId, canPush);
   const targets = useOwnerTargetProgress();
   const outcomes = useOwnerOutcomesOverview(workspaceId);
   const today = useMemo(() => todayIso(), []);
@@ -164,13 +170,24 @@ export function useOwnerOverview() {
       amount: l.price,
     }));
 
+    // Đẩy truyền thông: đã sắp sẵn — tài sản đứng đầu là lối vào trình soạn.
+    const push = canPush ? pushMarketingCandidates(listings, registrations.byListing, today) : [];
+    const pushSummary: TodoSummary = {
+      kind: "push_marketing",
+      count: push.length,
+      amount: push.reduce((n, c) => n + (c.price > 0 ? c.price : 0), 0),
+      oldestTitle: push[0] ? pushCandidateNote(push[0]) : null,
+      href: push[0] ? `${NEW_CAMPAIGN_HREF}?tai-san=${encodeURIComponent(push[0].listingId)}` : undefined,
+    };
+
     return [
       summarizeTodo("outcome_due", outcomeDue),
       summarizeTodo("awaiting_payment", awaitingPayment),
       summarizeTodo("pending_confirmation", pendingConfirmation),
       summarizeTodo("stuck", stuck),
+      pushSummary,
     ];
-  }, [todoSources, outcomeByListing, today]);
+  }, [todoSources, outcomeByListing, today, canPush, listings, registrations.byListing]);
 
   const calendar = useMemo(() => upcomingCalendar(listings, today), [listings, today]);
 
@@ -194,7 +211,7 @@ export function useOwnerOverview() {
     loading: {
       target: targets.isLoading,
       analysis: outcomes.isLoading || pulse.isLoading,
-      todo: todoSources.isLoading || outcomes.isLoading,
+      todo: todoSources.isLoading || outcomes.isLoading || registrations.isLoading,
       calendar: pulse.isLoading,
     },
   };

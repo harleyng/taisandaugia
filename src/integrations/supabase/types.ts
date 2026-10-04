@@ -384,6 +384,8 @@ export type Database = {
           event_type: string
           feature_key: string | null
           id: string
+          listing_id: string | null
+          mkt_link_id: string | null
           os: string | null
           path: string | null
           province: string | null
@@ -398,6 +400,8 @@ export type Database = {
           event_type: string
           feature_key?: string | null
           id?: string
+          listing_id?: string | null
+          mkt_link_id?: string | null
           os?: string | null
           path?: string | null
           province?: string | null
@@ -412,6 +416,8 @@ export type Database = {
           event_type?: string
           feature_key?: string | null
           id?: string
+          listing_id?: string | null
+          mkt_link_id?: string | null
           os?: string | null
           path?: string | null
           province?: string | null
@@ -419,7 +425,22 @@ export type Database = {
           session_id?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_mkt_link_id_fkey"
+            columns: ["mkt_link_id"]
+            isOneToOne: false
+            referencedRelation: "owner_mkt_links"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       article_categories: {
         Row: {
@@ -1826,6 +1847,7 @@ export type Database = {
           branch_names: string[]
           created_at: string
           id: string
+          is_demo: boolean
           last_matched_at: string | null
           match_scope: string
           org_kyc_id: string
@@ -1842,6 +1864,7 @@ export type Database = {
           branch_names?: string[]
           created_at?: string
           id?: string
+          is_demo?: boolean
           last_matched_at?: string | null
           match_scope?: string
           org_kyc_id: string
@@ -1858,6 +1881,7 @@ export type Database = {
           branch_names?: string[]
           created_at?: string
           id?: string
+          is_demo?: boolean
           last_matched_at?: string | null
           match_scope?: string
           org_kyc_id?: string
@@ -1952,6 +1976,124 @@ export type Database = {
             columns: ["parent_owner_id"]
             isOneToOne: false
             referencedRelation: "asset_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_posting_dossier_items: {
+        Row: {
+          appraised_value: number | null
+          auth_verdict: string | null
+          certificate_no: string | null
+          created_at: string
+          created_by: string
+          evidence_urls: string[]
+          id: string
+          issued_at: string | null
+          kind: string
+          legal_conclusion: string | null
+          legal_summary: string | null
+          partner_name: string | null
+          partner_id: string | null
+          partner_org_id: string | null
+          planned_auction_date: string | null
+          posting_id: string
+          service_request_id: string | null
+          show_appraised_value: boolean
+          source: string
+          updated_at: string
+          valid_until: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          appraised_value?: number | null
+          auth_verdict?: string | null
+          certificate_no?: string | null
+          created_at?: string
+          created_by?: string
+          evidence_urls?: string[]
+          id?: string
+          issued_at?: string | null
+          kind: string
+          legal_conclusion?: string | null
+          legal_summary?: string | null
+          partner_name?: string | null
+          partner_id?: string | null
+          partner_org_id?: string | null
+          planned_auction_date?: string | null
+          posting_id: string
+          service_request_id?: string | null
+          show_appraised_value?: boolean
+          source: string
+          updated_at?: string
+          valid_until?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          appraised_value?: number | null
+          auth_verdict?: string | null
+          certificate_no?: string | null
+          created_at?: string
+          created_by?: string
+          evidence_urls?: string[]
+          id?: string
+          issued_at?: string | null
+          kind?: string
+          legal_conclusion?: string | null
+          legal_summary?: string | null
+          partner_name?: string | null
+          partner_id?: string | null
+          partner_org_id?: string | null
+          planned_auction_date?: string | null
+          posting_id?: string
+          service_request_id?: string | null
+          show_appraised_value?: boolean
+          source?: string
+          updated_at?: string
+          valid_until?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_posting_dossier_items_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "owner_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_posting_dossier_items_posting_id_fkey"
+            columns: ["posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_posting_dossier_items_partner_org_id_fkey"
+            columns: ["partner_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_posting_dossier_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_posting_dossier_items_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "asset_service_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_posting_dossier_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -2264,6 +2406,168 @@ export type Database = {
           },
         ]
       }
+      asset_valuation_orders: {
+        Row: {
+          appraised_value: number | null
+          asset_posting_id: string
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          certificate_no: string | null
+          certificate_path: string | null
+          code: string
+          commission_order_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          expert_name: string | null
+          id: string
+          method: string | null
+          package_name: string
+          paid_at: string | null
+          parent_slug: string | null
+          partner_name: string | null
+          payment_txn_ref: string | null
+          posting_title: string
+          purpose: string
+          quote_expires_at: string | null
+          quote_note: string | null
+          quoted_at: string | null
+          quoted_by: string | null
+          quoted_price: number | null
+          request_note: string | null
+          review_started_at: string | null
+          service_variant_id: string
+          site_address: string | null
+          status: string
+          summary: string | null
+          superseded_at: string | null
+          supplier_id: string | null
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+          valuation_date: string | null
+        }
+        Insert: {
+          appraised_value?: number | null
+          asset_posting_id: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          certificate_no?: string | null
+          certificate_path?: string | null
+          code?: string
+          commission_order_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          expert_name?: string | null
+          id?: string
+          method?: string | null
+          package_name: string
+          paid_at?: string | null
+          parent_slug?: string | null
+          partner_name?: string | null
+          payment_txn_ref?: string | null
+          posting_title: string
+          purpose?: string
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          review_started_at?: string | null
+          service_variant_id: string
+          site_address?: string | null
+          status?: string
+          summary?: string | null
+          superseded_at?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+          valuation_date?: string | null
+        }
+        Update: {
+          appraised_value?: number | null
+          asset_posting_id?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          certificate_no?: string | null
+          certificate_path?: string | null
+          code?: string
+          commission_order_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          expert_name?: string | null
+          id?: string
+          method?: string | null
+          package_name?: string
+          paid_at?: string | null
+          parent_slug?: string | null
+          partner_name?: string | null
+          payment_txn_ref?: string | null
+          posting_title?: string
+          purpose?: string
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          request_note?: string | null
+          review_started_at?: string | null
+          service_variant_id?: string
+          site_address?: string | null
+          status?: string
+          summary?: string | null
+          superseded_at?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+          valuation_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_valuation_orders_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_valuation_orders_commission_order_id_fkey"
+            columns: ["commission_order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_valuation_orders_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_valuation_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_valuation_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_vr_tour_orders: {
         Row: {
           appointment_at: string | null
@@ -2442,6 +2746,7 @@ export type Database = {
           hold_expires_at: string | null
           id: string
           id_number: string
+          mkt_link_id: string | null
           id_type: string
           identity_source: string
           order_id: string | null
@@ -2475,6 +2780,7 @@ export type Database = {
           hold_expires_at?: string | null
           id?: string
           id_number: string
+          mkt_link_id?: string | null
           id_type: string
           identity_source?: string
           order_id?: string | null
@@ -2508,6 +2814,7 @@ export type Database = {
           hold_expires_at?: string | null
           id?: string
           id_number?: string
+          mkt_link_id?: string | null
           id_type?: string
           identity_source?: string
           order_id?: string | null
@@ -5105,6 +5412,7 @@ export type Database = {
           expected_move_in_date: string | null
           facade_width: number | null
           featured: boolean | null
+          featured_until: string | null
           fire_protection: boolean | null
           floor_load: number | null
           floor_number: number | null
@@ -5157,6 +5465,7 @@ export type Database = {
           expected_move_in_date?: string | null
           facade_width?: number | null
           featured?: boolean | null
+          featured_until?: string | null
           fire_protection?: boolean | null
           floor_load?: number | null
           floor_number?: number | null
@@ -5209,6 +5518,7 @@ export type Database = {
           expected_move_in_date?: string | null
           facade_width?: number | null
           featured?: boolean | null
+          featured_until?: string | null
           fire_protection?: boolean | null
           floor_load?: number | null
           floor_number?: number | null
@@ -7909,6 +8219,648 @@ export type Database = {
           },
         ]
       }
+      owner_mkt_audit: {
+        Row: {
+          action: string
+          actor: string | null
+          campaign_id: string
+          created_at: string
+          detail: Json
+          id: number
+          note: string | null
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          campaign_id: string
+          created_at?: string
+          detail?: Json
+          id?: never
+          note?: string | null
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          campaign_id?: string
+          created_at?: string
+          detail?: Json
+          id?: never
+          note?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_mkt_audit_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_audit_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "owner_mkt_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_audit_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_partners: {
+        Row: {
+          auction_org_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          name: string
+          name_key: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          auction_org_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind: string
+          name: string
+          name_key?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          auction_org_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          name?: string
+          name_key?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_partners_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_partners_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_mkt_campaigns: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          audience_spec: Json
+          branch_id: string | null
+          channels: string[]
+          clicked_count: number
+          created_at: string
+          created_by: string | null
+          drafts: Json
+          eligible_count: number | null
+          facts_snapshot: Json
+          id: string
+          listing_ids: string[]
+          posting_ids: string[]
+          mode: string
+          name: string
+          notes: string | null
+          opened_count: number
+          recipient_count: number | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_reason: string | null
+          schedule_type: string
+          scheduled_at: string | null
+          sent_at: string | null
+          sent_channels: Json
+          sent_count: number
+          skipped_cap_count: number | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          audience_spec?: Json
+          branch_id?: string | null
+          channels?: string[]
+          clicked_count?: number
+          created_at?: string
+          created_by?: string | null
+          drafts?: Json
+          eligible_count?: number | null
+          facts_snapshot?: Json
+          id?: string
+          listing_ids?: string[]
+          posting_ids?: string[]
+          mode?: string
+          name: string
+          notes?: string | null
+          opened_count?: number
+          recipient_count?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_reason?: string | null
+          schedule_type?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_channels?: Json
+          sent_count?: number
+          skipped_cap_count?: number | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          audience_spec?: Json
+          branch_id?: string | null
+          channels?: string[]
+          clicked_count?: number
+          created_at?: string
+          created_by?: string | null
+          drafts?: Json
+          eligible_count?: number | null
+          facts_snapshot?: Json
+          id?: string
+          listing_ids?: string[]
+          posting_ids?: string[]
+          mode?: string
+          name?: string
+          notes?: string | null
+          opened_count?: number
+          recipient_count?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_reason?: string | null
+          schedule_type?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_channels?: Json
+          sent_count?: number
+          skipped_cap_count?: number | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_mkt_campaigns_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_campaigns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_campaigns_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_campaigns_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_campaigns_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_mkt_link_hits: {
+        Row: {
+          created_at: string
+          device: string | null
+          id: number
+          link_id: string
+          session_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device?: string | null
+          id?: never
+          link_id: string
+          session_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device?: string | null
+          id?: never
+          link_id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_mkt_link_hits_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "owner_mkt_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_mkt_links: {
+        Row: {
+          branch_id: string | null
+          campaign_id: string | null
+          channel: string
+          code: string
+          created_at: string
+          created_by: string | null
+          hit_count: number
+          id: string
+          label: string
+          last_hit_at: string | null
+          listing_id: string
+          unique_hit_count: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          campaign_id?: string | null
+          channel: string
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          hit_count?: number
+          id?: string
+          label: string
+          last_hit_at?: string | null
+          listing_id: string
+          unique_hit_count?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          campaign_id?: string | null
+          channel?: string
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          hit_count?: number
+          id?: string
+          label?: string
+          last_hit_at?: string | null
+          listing_id?: string
+          unique_hit_count?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_mkt_links_campaign_fk"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "owner_mkt_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_links_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_links_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_mkt_orders: {
+        Row: {
+          advertisement_id: string | null
+          assignee: string | null
+          branch_id: string | null
+          brief: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          code: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          credit_cost: number | null
+          credit_transaction_id: string | null
+          featured_from: string | null
+          featured_until: string | null
+          goal: string
+          id: string
+          listing_id: string | null
+          listing_title: string
+          marketing_campaign_id: string | null
+          owner_mkt_campaign_id: string | null
+          package_name: string
+          paid_at: string | null
+          paid_by: string | null
+          payment_method: string | null
+          payment_txn_ref: string | null
+          post_url: string | null
+          post_metrics: Json | null
+          pricing: string
+          quote_expires_at: string | null
+          quote_note: string | null
+          quoted_at: string | null
+          quoted_by: string | null
+          quoted_price: number | null
+          refund_note: string | null
+          refunded_at: string | null
+          result_note: string | null
+          result_summary: Json | null
+          revenue_order_id: string | null
+          service_variant_id: string
+          started_at: string | null
+          status: string
+          subscription_usage_id: string | null
+          updated_at: string
+          variant_key: string
+          workspace_id: string
+          workspace_name: string
+        }
+        Insert: {
+          advertisement_id?: string | null
+          assignee?: string | null
+          branch_id?: string | null
+          brief?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number | null
+          credit_transaction_id?: string | null
+          featured_from?: string | null
+          featured_until?: string | null
+          goal: string
+          id?: string
+          listing_id?: string | null
+          listing_title: string
+          marketing_campaign_id?: string | null
+          owner_mkt_campaign_id?: string | null
+          package_name: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_method?: string | null
+          payment_txn_ref?: string | null
+          post_url?: string | null
+          post_metrics?: Json | null
+          pricing: string
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          refund_note?: string | null
+          refunded_at?: string | null
+          result_note?: string | null
+          result_summary?: Json | null
+          revenue_order_id?: string | null
+          service_variant_id: string
+          started_at?: string | null
+          status?: string
+          subscription_usage_id?: string | null
+          updated_at?: string
+          variant_key: string
+          workspace_id: string
+          workspace_name: string
+        }
+        Update: {
+          advertisement_id?: string | null
+          assignee?: string | null
+          branch_id?: string | null
+          brief?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          code?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number | null
+          credit_transaction_id?: string | null
+          featured_from?: string | null
+          featured_until?: string | null
+          goal?: string
+          id?: string
+          listing_id?: string | null
+          listing_title?: string
+          marketing_campaign_id?: string | null
+          owner_mkt_campaign_id?: string | null
+          package_name?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_method?: string | null
+          payment_txn_ref?: string | null
+          post_url?: string | null
+          post_metrics?: Json | null
+          pricing?: string
+          quote_expires_at?: string | null
+          quote_note?: string | null
+          quoted_at?: string | null
+          quoted_by?: string | null
+          quoted_price?: number | null
+          refund_note?: string | null
+          refunded_at?: string | null
+          result_note?: string | null
+          result_summary?: Json | null
+          revenue_order_id?: string | null
+          service_variant_id?: string
+          started_at?: string | null
+          status?: string
+          subscription_usage_id?: string | null
+          updated_at?: string
+          variant_key?: string
+          workspace_id?: string
+          workspace_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_mkt_orders_advertisement_id_fkey"
+            columns: ["advertisement_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_credit_transaction_id_fkey"
+            columns: ["credit_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "credit_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_marketing_campaign_id_fkey"
+            columns: ["marketing_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_owner_mkt_campaign_id_fkey"
+            columns: ["owner_mkt_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "owner_mkt_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_quoted_by_fkey"
+            columns: ["quoted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_revenue_order_id_fkey"
+            columns: ["revenue_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_service_variant_id_fkey"
+            columns: ["service_variant_id"]
+            isOneToOne: false
+            referencedRelation: "service_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_subscription_usage_id_fkey"
+            columns: ["subscription_usage_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_usage"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_orders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_report_snapshots: {
         Row: {
           branch_id: string | null
@@ -8062,24 +9014,66 @@ export type Database = {
           },
         ]
       }
-      owner_subscription_entitlements: {
+      owner_sub_benefits: {
         Row: {
-          created_at: string
-          monthly_quota: number | null
-          subscription_id: string
-          variant_key: string
+          default_cycle: string | null
+          group_name: string
+          key: string
+          kind: string
+          label: string
+          level_format: string | null
+          sort_order: number
+          source: string
+          unit: string
         }
         Insert: {
-          created_at?: string
-          monthly_quota?: number | null
-          subscription_id: string
-          variant_key: string
+          default_cycle?: string | null
+          group_name: string
+          key: string
+          kind: string
+          label: string
+          level_format?: string | null
+          sort_order: number
+          source: string
+          unit: string
         }
         Update: {
+          default_cycle?: string | null
+          group_name?: string
+          key?: string
+          kind?: string
+          label?: string
+          level_format?: string | null
+          sort_order?: number
+          source?: string
+          unit?: string
+        }
+        Relationships: []
+      }
+      owner_subscription_entitlements: {
+        Row: {
+          cycle: string | null
+          created_at: string
+          quota: number | null
+          sort_order: number
+          subscription_id: string
+          benefit_key: string
+        }
+        Insert: {
+          cycle?: string | null
           created_at?: string
-          monthly_quota?: number | null
+          quota?: number | null
+          sort_order?: number
+          subscription_id: string
+          benefit_key: string
+        }
+        Update: {
+          cycle?: string | null
+          created_at?: string
+          quota?: number | null
+          sort_order?: number
           subscription_id?: string
-          variant_key?: string
+          benefit_key?: string
         }
         Relationships: [
           {
@@ -8090,11 +9084,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "owner_subscription_entitlements_variant_key_fkey"
-            columns: ["variant_key"]
+            foreignKeyName: "owner_sub_ent_benefit_fkey"
+            columns: ["benefit_key"]
             isOneToOne: false
-            referencedRelation: "service_variants"
-            referencedColumns: ["variant_key"]
+            referencedRelation: "owner_sub_benefits"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -8135,19 +9129,25 @@ export type Database = {
       }
       owner_subscription_plan_entitlements: {
         Row: {
-          monthly_quota: number | null
+          cycle: string | null
+          quota: number | null
+          sort_order: number
           plan_id: string
-          variant_key: string
+          benefit_key: string
         }
         Insert: {
-          monthly_quota?: number | null
+          cycle?: string | null
+          quota?: number | null
+          sort_order?: number
           plan_id: string
-          variant_key: string
+          benefit_key: string
         }
         Update: {
-          monthly_quota?: number | null
+          cycle?: string | null
+          quota?: number | null
+          sort_order?: number
           plan_id?: string
-          variant_key?: string
+          benefit_key?: string
         }
         Relationships: [
           {
@@ -8158,17 +9158,52 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "owner_subscription_plan_entitlements_variant_key_fkey"
-            columns: ["variant_key"]
+            foreignKeyName: "owner_sub_plan_ent_benefit_fkey"
+            columns: ["benefit_key"]
             isOneToOne: false
-            referencedRelation: "service_variants"
-            referencedColumns: ["variant_key"]
+            referencedRelation: "owner_sub_benefits"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      owner_subscription_plan_workspaces: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          plan_id: string
+          workspace_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          plan_id: string
+          workspace_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          plan_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_subscription_plan_workspaces_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_subscription_plan_workspaces_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
       owner_subscription_plans: {
         Row: {
-          benefits: Json
           created_at: string
           created_by: string | null
           fit_line: string | null
@@ -8185,7 +9220,6 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
-          benefits?: Json
           created_at?: string
           created_by?: string | null
           fit_line?: string | null
@@ -8202,7 +9236,6 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
-          benefits?: Json
           created_at?: string
           created_by?: string | null
           fit_line?: string | null
@@ -8342,47 +9375,54 @@ export type Database = {
       owner_subscription_usage: {
         Row: {
           actor_id: string | null
+          benefit_key: string
           created_at: string
           id: string
           note: string | null
-          period_month: string
           qty: number
           ref_id: string | null
           ref_type: string
           reverses_id: string | null
           subscription_id: string
-          variant_key: string
+          used_on: string
           workspace_id: string
         }
         Insert: {
           actor_id?: string | null
+          benefit_key: string
           created_at?: string
           id?: string
           note?: string | null
-          period_month: string
           qty: number
           ref_id?: string | null
           ref_type: string
           reverses_id?: string | null
           subscription_id: string
-          variant_key: string
+          used_on: string
           workspace_id: string
         }
         Update: {
           actor_id?: string | null
+          benefit_key?: string
           created_at?: string
           id?: string
           note?: string | null
-          period_month?: string
           qty?: number
           ref_id?: string | null
           ref_type?: string
           reverses_id?: string | null
           subscription_id?: string
-          variant_key?: string
+          used_on?: string
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "owner_sub_usage_benefit_fkey"
+            columns: ["benefit_key"]
+            isOneToOne: false
+            referencedRelation: "owner_sub_benefits"
+            referencedColumns: ["key"]
+          },
           {
             foreignKeyName: "owner_subscription_usage_reverses_id_fkey"
             columns: ["reverses_id"]
@@ -8966,6 +10006,202 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posting_share_events: {
+        Row: {
+          created_at: string
+          device: string | null
+          event: string
+          id: string
+          link_id: string
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          device?: string | null
+          event: string
+          id?: string
+          link_id: string
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          device?: string | null
+          event?: string
+          id?: string
+          link_id?: string
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posting_share_events_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "posting_share_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posting_share_follows: {
+        Row: {
+          created_at: string
+          id: string
+          link_id: string | null
+          posting_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link_id?: string | null
+          posting_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link_id?: string | null
+          posting_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posting_share_follows_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "posting_share_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posting_share_follows_posting_id_fkey"
+            columns: ["posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posting_share_follows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posting_share_links: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          cta_call_count: number
+          cta_dossier_count: number
+          cta_follow_count: number
+          cta_pdf_count: number
+          expires_at: string | null
+          id: string
+          label: string
+          last_viewed_at: string | null
+          posting_id: string | null
+          revoked_at: string | null
+          sender_name: string | null
+          sender_phone: string | null
+          sender_user_id: string | null
+          show_exact_address: boolean
+          show_price: boolean
+          show_sender_contact: boolean
+          unique_view_count: number
+          updated_at: string
+          view_count: number
+          workspace_id: string | null
+          branch_id: string | null
+          campaign_id: string | null
+          channel: string
+          legacy_code: string | null
+          listing_id: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          cta_call_count?: number
+          cta_dossier_count?: number
+          cta_follow_count?: number
+          cta_pdf_count?: number
+          expires_at?: string | null
+          id?: string
+          label: string
+          last_viewed_at?: string | null
+          posting_id?: string | null
+          revoked_at?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          sender_user_id?: string | null
+          show_exact_address?: boolean
+          show_price?: boolean
+          show_sender_contact?: boolean
+          unique_view_count?: number
+          updated_at?: string
+          view_count?: number
+          workspace_id?: string | null
+          branch_id?: string | null
+          campaign_id?: string | null
+          channel?: string
+          legacy_code?: string | null
+          listing_id?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          cta_call_count?: number
+          cta_dossier_count?: number
+          cta_follow_count?: number
+          cta_pdf_count?: number
+          expires_at?: string | null
+          id?: string
+          label?: string
+          last_viewed_at?: string | null
+          posting_id?: string | null
+          revoked_at?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          sender_user_id?: string | null
+          show_exact_address?: boolean
+          show_price?: boolean
+          show_sender_contact?: boolean
+          unique_view_count?: number
+          updated_at?: string
+          view_count?: number
+          workspace_id?: string | null
+          branch_id?: string | null
+          campaign_id?: string | null
+          channel?: string
+          legacy_code?: string | null
+          listing_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posting_share_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posting_share_links_posting_id_fkey"
+            columns: ["posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posting_share_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -10668,6 +11904,37 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_mkt_order_cancel: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_mkt_order_complete: {
+        Args: { p_note: string; p_order_id: string; p_post_url: string }
+        Returns: Json
+      }
+      admin_mkt_order_link: {
+        Args: { p_kind: string; p_order_id: string; p_target: string }
+        Returns: Json
+      }
+      admin_mkt_order_quote: {
+        Args: {
+          p_note: string
+          p_order_id: string
+          p_price: number
+          p_valid_days: number
+        }
+        Returns: Json
+      }
+      admin_mkt_order_set_post_metrics: {
+        Args: {
+          p_clicks: number
+          p_engagements: number
+          p_order_id: string
+          p_reach: number
+        }
+        Returns: Json
+      }
+      admin_mkt_order_start: { Args: { p_order_id: string }; Returns: Json }
       admin_listings_report: {
         Args: {
           _from: string
@@ -10712,22 +11979,26 @@ export type Database = {
           id: string
         }[]
       }
-      admin_owner_sub_activate: {
+      admin_owner_sub_plan_activate: {
         Args: {
           p_amount_vnd: number
           p_method: string
           p_months: number
           p_note: string
           p_paid_on: string
+          p_plan_id: string
           p_starts_on: string
-          p_sub_id: string
+          p_workspace_id: string
         }
+        Returns: Json
+      }
+      admin_owner_sub_plan_set_workspaces: {
+        Args: { p_plan_id: string; p_workspace_ids: string[] }
         Returns: Json
       }
       admin_owner_sub_plan_upsert: {
         Args: {
           p_benefits: Json
-          p_entitlements: Json
           p_fit_line: string
           p_highlight_line: string
           p_is_active: boolean
@@ -10749,18 +12020,6 @@ export type Database = {
         Args: { p_options: Json }
         Returns: Json
       }
-      admin_owner_sub_upsert: {
-        Args: {
-          p_entitlements: Json
-          p_note: string
-          p_overage_mode: string
-          p_plan_name: string
-          p_price_vnd: number
-          p_term_months: number
-          p_workspace_id: string
-        }
-        Returns: Json
-      }
       admin_owner_subscription_list: {
         Args: never
         Returns: {
@@ -10771,7 +12030,9 @@ export type Database = {
           overage_mode: string
           owner_email: string
           owner_name: string
+          allowed_plan_ids: string[]
           parent_name: string
+          plan_id: string
           plan_name: string
           price_vnd: number
           starts_on: string
@@ -10842,6 +12103,67 @@ export type Database = {
           _valid_days?: number
         }
         Returns: Json
+      }
+      _valuation_service_id: { Args: never; Returns: string }
+      admin_cancel_valuation: {
+        Args: { _order_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_complete_valuation: {
+        Args: {
+          _certificate_no: string
+          _certificate_path: string
+          _method: string
+          _order_id: string
+          _summary: string
+          _valid_until: string
+          _valuation_date: string
+          _value: number
+        }
+        Returns: Json
+      }
+      admin_quote_valuation: {
+        Args: {
+          _expert_name: string
+          _note: string
+          _order_id: string
+          _price: number
+          _supplier_id: string
+          _valid_days?: number
+        }
+        Returns: Json
+      }
+      admin_start_valuation: { Args: { _order_id: string }; Returns: Json }
+      owner_cancel_valuation: { Args: { _order_id: string }; Returns: Json }
+      owner_request_valuation: {
+        Args: {
+          _note: string
+          _posting_id: string
+          _purpose: string
+          _site_address: string
+        }
+        Returns: Json
+      }
+      pay_valuation_order: {
+        Args: { _expected_amount: number; _order_id: string; _txn_ref: string }
+        Returns: Json
+      }
+      valuation_cert_readable: { Args: { _name: string }; Returns: boolean }
+      valuation_package: {
+        Args: never
+        Returns: {
+          from_price: number
+          name: string
+          variant_id: string
+          variant_key: string
+        }[]
+      }
+      valuation_partners: {
+        Args: never
+        Returns: {
+          name: string
+          supplier_id: string
+        }[]
       }
       admin_quote_legal_consult: {
         Args: {
@@ -10972,6 +12294,18 @@ export type Database = {
         Returns: Json
       }
       asset_parent_slug: { Args: { _slug: string }; Returns: string }
+      asset_posting_dossier_trust: {
+        Args: { p_posting_id: string }
+        Returns: Json
+      }
+      asset_postings_dossier_levels: {
+        Args: { p_posting_ids: string[] }
+        Returns: {
+          level: string
+          posting_id: string
+          score: number
+        }[]
+      }
       asset_posting_selection_locked: {
         Args: { _posting_id: string }
         Returns: boolean
@@ -11264,6 +12598,33 @@ export type Database = {
         }
         Returns: Json
       }
+      create_share_link: {
+        Args: {
+          p_channel: string
+          p_expires_in_days: number
+          p_label: string
+          p_listing_id: string
+          p_posting_id: string
+          p_sender_user_id: string
+          p_show_exact_address: boolean
+          p_show_price: boolean
+          p_show_sender_contact: boolean
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      create_posting_share_link: {
+        Args: {
+          p_expires_in_days: number
+          p_label: string
+          p_posting_id: string
+          p_show_exact_address: boolean
+          p_show_price: boolean
+          p_sender_user_id?: string
+          p_show_sender_contact: boolean
+        }
+        Returns: Json
+      }
       credit_fallback_service_id: { Args: never; Returns: string }
       fail_asset_3d_scan: {
         Args: {
@@ -11274,6 +12635,7 @@ export type Database = {
         }
         Returns: Json
       }
+      follow_shared_posting: { Args: { p_code: string }; Returns: Json }
       format_asset_posting_code: { Args: { _n: number }; Returns: string }
       get_listing_save_counts: {
         Args: { listing_ids: string[] }
@@ -11283,7 +12645,26 @@ export type Database = {
         }[]
       }
       get_org_invite_preview: { Args: { _token: string }; Returns: Json }
+      get_public_dossier_trust: {
+        Args: { p_posting_id: string }
+        Returns: Json
+      }
+      get_public_dossier_trusts: {
+        Args: { p_posting_ids: string[] }
+        Returns: {
+          posting_id: string
+          trust: Json
+        }[]
+      }
       get_shared_owner_report: { Args: { p_token: string }; Returns: Json }
+      get_shared_posting_dossier_trust: {
+        Args: { p_code: string }
+        Returns: Json
+      }
+      get_shared_posting: {
+        Args: { p_code: string; p_device?: string; p_visitor_id: string }
+        Returns: Json
+      }
       get_user_email: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -11360,6 +12741,10 @@ export type Database = {
       }
       mark_asset_3d_processing: {
         Args: { _job_id: string; _lot_id: string; _scan_id: string }
+        Returns: Json
+      }
+      mkt_attribute_bidding_contract: {
+        Args: { p_contract_id: string; p_link_id: string }
         Returns: Json
       }
       mock_partner_deliver_asset_3d_scan: {
@@ -11680,6 +13065,7 @@ export type Database = {
         Args: { _lot_id: string; _reason: string }
         Returns: Json
       }
+      outcome_reason_is_legal: { Args: { p_reason: string }; Returns: boolean }
       outreach_apply_generation: {
         Args: {
           _fields: Json
@@ -11777,6 +13163,28 @@ export type Database = {
           resolved_price: number
           sources: Json
         }[]
+      }
+      owner_audit_list: {
+        Args: {
+          p_filters?: Json
+          p_limit?: number
+          p_offset?: number
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      owner_audit_scope: { Args: { p_workspace_id: string }; Returns: Json }
+      owner_audit_track: {
+        Args: {
+          p_action: string
+          p_entity_id?: string
+          p_entity_type?: string
+          p_meta?: Json
+          p_module?: string
+          p_path?: string
+          p_workspace_id: string
+        }
+        Returns: Json
       }
       owner_benchmark_metric: {
         Args: {
@@ -11882,6 +13290,86 @@ export type Database = {
         Args: { p_rows: Json; p_workspace_id: string }
         Returns: Json
       }
+      owner_listing_registrations: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          listing_id: string
+          registrations: number
+        }[]
+      }
+      owner_mkt_approve: {
+        Args: { p_campaign_id: string; p_note: string }
+        Returns: Json
+      }
+      owner_mkt_delete: { Args: { p_campaign_id: string }; Returns: Json }
+      owner_mkt_funnel: {
+        Args: {
+          p_listing_id?: string
+          p_period_end: string
+          p_period_start: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      owner_mkt_log_export: {
+        Args: { p_campaign_id: string; p_kind: string }
+        Returns: Json
+      }
+      owner_mkt_mark_sent: {
+        Args: { p_campaign_id: string; p_channel: string; p_note: string }
+        Returns: Json
+      }
+      owner_mkt_order_benefit_key: {
+        Args: { p_variant_key: string }
+        Returns: string
+      }
+      owner_mkt_order_cancel: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: Json
+      }
+      owner_mkt_order_create: {
+        Args: {
+          p_brief: string
+          p_goal: string
+          p_listing_id: string
+          p_variant_key: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      owner_mkt_order_impact: { Args: { p_order_id: string }; Returns: Json }
+      owner_mkt_order_results: { Args: { p_order_id: string }; Returns: Json }
+      owner_mkt_order_variant_keys: { Args: never; Returns: string[] }
+      owner_mkt_preview_facts: {
+        Args: { p_listing_ids: string[]; p_posting_ids: string[]; p_workspace_id: string }
+        Returns: Json
+      }
+      owner_mkt_campaign_series: {
+        Args: { p_campaign_id: string; p_device: string; p_from: string; p_to: string }
+        Returns: Json
+      }
+      owner_mkt_reject: {
+        Args: { p_campaign_id: string; p_reason: string }
+        Returns: Json
+      }
+      owner_mkt_save_draft: {
+        Args: {
+          p_campaign_id: string
+          p_channels: string[]
+          p_drafts: Json
+          p_listing_ids: string[]
+          p_name: string
+          p_notes: string
+          p_posting_ids: string[]
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      owner_mkt_submit: { Args: { p_campaign_id: string }; Returns: Json }
+      owner_mkt_track_hit: {
+        Args: { p_code: string; p_device: string; p_session_id: string }
+        Returns: Json
+      }
       owner_outcome_disagrees: {
         Args: {
           d1: string
@@ -11971,6 +13459,34 @@ export type Database = {
             Args: { p_action: string; p_module: string; p_posting_id: string }
             Returns: boolean
           }
+      owner_partner_ensure: {
+        Args: {
+          p_auction_org_id?: string
+          p_kind: string
+          p_name: string
+          p_workspace_id: string | null
+        }
+        Returns: Database["public"]["Tables"]["owner_partners"]["Row"]
+      }
+      owner_partner_scorecard: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          asset_list: Json
+          assets: number
+          assets_with_outcome: number
+          avg_participants: number
+          avg_rounds_to_sell: number
+          kind: string
+          legal_issue_assets: number
+          median_deviation: number
+          partner_key: string
+          partner_name: string
+          partner_org_id: string
+          sold_assets: number
+          success_rate: number
+          unsold_2plus_rate: number
+        }[]
+      }
       owner_posting_file_owner_ok: {
         Args: {
           p_creator: string
@@ -12003,6 +13519,16 @@ export type Database = {
             }
             Returns: boolean
           }
+      owner_posting_share_links: { Args: { p_posting_id: string }; Returns: Json }
+      owner_share_link_detail: { Args: { p_link_id: string }; Returns: Json }
+      owner_share_link_series: {
+        Args: { p_device: string; p_from: string; p_link_id: string; p_to: string }
+        Returns: Json
+      }
+      owner_share_links: {
+        Args: { p_campaign_id?: string; p_workspace_id: string }
+        Returns: Json
+      }
       owner_report_new_share_token: { Args: never; Returns: string }
       owner_report_public_payload: { Args: { p: Json }; Returns: Json }
       owner_report_recovery: {
@@ -12138,11 +13664,14 @@ export type Database = {
         Args: { p_discount_pct: number; p_monthly: number; p_months: number }
         Returns: number
       }
+      owner_sub_plan_visible: {
+        Args: { p_is_active: boolean; p_plan_id: string }
+        Returns: boolean
+      }
       owner_sub_plan_quote: {
         Args: { p_months: number; p_plan_id: string; p_workspace_id: string }
         Returns: Json
       }
-      owner_sub_supported_variants: { Args: never; Returns: string[] }
       owner_sub_term_end: {
         Args: { p_months: number; p_start: string }
         Returns: string
@@ -12252,6 +13781,8 @@ export type Database = {
           is_owner: boolean
           joined_at: string
           member_id: string
+          phone: string
+          phone_verified: boolean
           role: string
           role_id: string
           role_name: string
@@ -12311,6 +13842,10 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: undefined
       }
+      owner_ws_set_member_phone: {
+        Args: { p_member_id: string; p_phone: string }
+        Returns: Json
+      }
       owner_ws_set_role_permissions: {
         Args: { p_permissions: Json; p_role_id: string }
         Returns: Json
@@ -12354,6 +13889,7 @@ export type Database = {
         Args: { p_user_id: string; p_workspace_id: string }
         Returns: boolean
       }
+      partner_name_key: { Args: { p_name: string }; Returns: string }
       pay_auction_consult: {
         Args: {
           _consultation_id: string
@@ -12378,6 +13914,10 @@ export type Database = {
         }
         Returns: Json
       }
+      pay_owner_mkt_order: {
+        Args: { p_expected_amount: number; p_order_id: string; p_txn_ref: string }
+        Returns: Json
+      }
       pay_owner_sub_plan: {
         Args: {
           p_expected_amount: number
@@ -12397,6 +13937,11 @@ export type Database = {
         Returns: Json
       }
       personnel_folder_org: { Args: { _name: string }; Returns: string }
+      posting_share_senders: { Args: { p_posting_id: string }; Returns: Json }
+      share_link_senders: {
+        Args: { p_posting_id: string; p_workspace_id: string }
+        Returns: Json
+      }
       place_bid: {
         Args: { _amount: number; _lot_id: string; _nonce: string }
         Returns: Json
@@ -12538,6 +14083,9 @@ export type Database = {
         Args: { _membership_id: string }
         Returns: undefined
       }
+      resolve_legacy_share_link: { Args: { p_code: string }; Returns: Json }
+      revoke_posting_share_link: { Args: { p_link_id: string }; Returns: Json }
+      revoke_share_link: { Args: { p_link_id: string }; Returns: Json }
       rotate_org_invite: {
         Args: { _days?: number; _membership_id: string }
         Returns: Json
@@ -12682,10 +14230,46 @@ export type Database = {
         Args: { _contract_id: string }
         Returns: undefined
       }
+      track_posting_share_event: {
+        Args: {
+          p_code: string
+          p_device?: string
+          p_event: string
+          p_visitor_id: string
+        }
+        Returns: Json
+      }
       try_timestamptz: { Args: { _t: string }; Returns: string }
       unlock_tool_showcase: {
         Args: { _id: string; _password: string }
         Returns: string
+      }
+      update_share_link: {
+        Args: {
+          p_change_expiry: boolean
+          p_channel: string
+          p_expires_in_days: number
+          p_label: string
+          p_link_id: string
+          p_sender_user_id: string
+          p_show_exact_address: boolean
+          p_show_price: boolean
+          p_show_sender_contact: boolean
+        }
+        Returns: Json
+      }
+      update_posting_share_link: {
+        Args: {
+          p_change_expiry: boolean
+          p_expires_in_days: number
+          p_label: string
+          p_link_id: string
+          p_show_exact_address: boolean
+          p_show_price: boolean
+          p_sender_user_id?: string
+          p_show_sender_contact: boolean
+        }
+        Returns: Json
       }
       user_in_auction_org: {
         Args: { _auction_org_id: string }

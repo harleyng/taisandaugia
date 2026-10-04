@@ -14,6 +14,7 @@ import { OwnerInvitesCard } from "@/components/asset-owner-portal/members/OwnerI
 import { InviteOwnerMemberDialog } from "@/components/asset-owner-portal/members/InviteOwnerMemberDialog";
 import { EditOwnerMemberDialog } from "@/components/asset-owner-portal/members/EditOwnerMemberDialog";
 import { RemoveOwnerMemberDialog } from "@/components/asset-owner-portal/members/RemoveOwnerMemberDialog";
+import { MemberPhoneDialog } from "@/components/asset-owner-portal/members/MemberPhoneDialog";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useUrlFilterState } from "@/hooks/useUrlFilterState";
 import {
@@ -53,6 +54,7 @@ const OwnerMembersPage = () => {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<OwnerWorkspaceMember | null>(null);
   const [removeTarget, setRemoveTarget] = useState<OwnerWorkspaceMember | null>(null);
+  const [phoneTarget, setPhoneTarget] = useState<OwnerWorkspaceMember | null>(null);
 
   if (wsLoading) {
     return (
@@ -151,6 +153,7 @@ const OwnerMembersPage = () => {
                 canRemove={canRemoveMember}
                 viewerIsOwner={isOwner}
                 onEdit={setEditTarget}
+                onEditPhone={setPhoneTarget}
                 onRemove={setRemoveTarget}
               />
             )}
@@ -186,6 +189,9 @@ const OwnerMembersPage = () => {
           workspaceId={workspaceId}
           branches={branches}
         />
+      )}
+      {canEditMember && (
+        <MemberPhoneDialog member={phoneTarget} onClose={() => setPhoneTarget(null)} workspaceId={workspaceId} />
       )}
       {canRemoveMember && (
         <RemoveOwnerMemberDialog

@@ -8,11 +8,10 @@ import { fetchOwnerSubCatalog } from "@/hooks/useOwnerSubscriptionPlans";
 import type {
   ActivationMethod,
   AdminOwnerSubRow,
-  EntitlementInput,
+  BenefitLineInput,
   OverageMode,
   OwnerSubscriptionStatus,
   OwnerSubTermOption,
-  PlanBenefit,
   PlanTier,
 } from "@/lib/ownerSubscription/types";
 
@@ -52,8 +51,8 @@ export interface AdminSubEvent {
 
 export interface AdminSubUsage {
   id: string;
-  variant_key: string;
-  period_month: string;
+  benefit_key: string;
+  used_on: string;
   qty: number;
   ref_type: string;
   ref_id: string | null;
@@ -77,7 +76,6 @@ export interface AdminSubDetail {
     note: string | null;
     cancel_reason: string | null;
   } | null;
-  entitlements: EntitlementInput[];
   /** Trạng thái hiệu lực + số đã dùng tháng này (cùng RPC với cổng chủ tài sản). */
   status: OwnerSubscriptionStatus | null;
   terms: AdminSubTerm[];
@@ -100,11 +98,10 @@ export function useAdminOwnerSubscriptionDetail(workspaceId: string | null | und
         .maybeSingle();
       if (error) throw error;
       if (!sub) {
-        return { sub: null, entitlements: [], status: null, terms: [], events: [], usage: [], actors: {} };
+        return { sub: null, status: null, terms: [], events: [], usage: [], actors: {} };
       }
 
-      const [ents, terms, events, usage, status] = await Promise.all([
-        supabase.from("owner_subscription_entitlements").select("variant_key, monthly_quota").eq("subscription_id", sub.id),
+      const [terms, events, usage, status] = await Promise.all([
         supabase
           .from("owner_subscription_terms")
           .select("id, starts_on, ends_on, months, amount_vnd, source, method, paid_on, note, created_at, order:orders(code)")
@@ -118,13 +115,13 @@ export function useAdminOwnerSubscriptionDetail(workspaceId: string | null | und
           .limit(200),
         supabase
           .from("owner_subscription_usage")
-          .select("id, variant_key, period_month, qty, ref_type, ref_id, reverses_id, actor_id, note, created_at")
+          .select("id, benefit_key, used_on, qty, ref_type, ref_id, reverses_id, actor_id, note, created_at")
           .eq("subscription_id", sub.id)
           .order("created_at", { ascending: false })
           .limit(500),
         supabase.rpc("owner_subscription_status", { p_workspace_id: workspaceId! }),
       ]);
-      for (const r of [ents, terms, events, usage, status]) if (r.error) throw r.error;
+      for (const r of [terms, events, usage, status]) if (r.error) throw r.error;
 
       const actorIds = [
         ...new Set(
@@ -139,7 +136,6 @@ export function useAdminOwnerSubscriptionDetail(workspaceId: string | null | und
 
       return {
         sub: sub as AdminSubDetail["sub"],
-        entitlements: (ents.data ?? []) as EntitlementInput[],
         status: (status.data ?? null) as unknown as OwnerSubscriptionStatus | null,
         terms: (terms.data ?? []) as unknown as AdminSubTerm[],
         events: (events.data ?? []) as unknown as AdminSubEvent[],
@@ -158,69 +154,32 @@ function useInvalidateSubs() {
   };
 }
 
-export interface UpsertSubInput {
-  workspaceId: string;
-  planName: string;
-  priceVnd: number;
-  termMonths: number;
-  overageMode: OverageMode;
-  entitlements: EntitlementInput[];
-  note: string;
-}
-
-export function useUpsertOwnerSubscription() {
+/** Huỷ gói của một Trạm (bắt buộc lý do). Cấu hình gói chỉ còn sửa ở danh mục. */
+export function useCancelOwnerSubscription() {
   const invalidate = useInvalidateSubs();
   return useMutation({
-    mutationFn: async (input: UpsertSubInput) => {
-      const { data, error } = await supabase.rpc("admin_owner_sub_upsert", {
-        p_workspace_id: input.workspaceId,
-        p_plan_name: input.planName,
-        p_price_vnd: input.priceVnd,
-        p_term_months: input.termMonths,
-        p_overage_mode: input.overageMode,
-        p_entitlements: input.entitlements as unknown as Json,
-        p_note: input.note,
+    mutationFn: async (args: { subId: string; reason: string }) => {
+      const { data, error } = await supabase.rpc("admin_owner_sub_set_status", {
+        p_sub_id: args.subId,
+        p_status: "cancelled",
+        p_reason: args.reason,
       });
       if (error) throw error;
       return unwrapSubRpc(data);
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Đã lưu cấu hình gói");
+      toast.success("Đã huỷ gói");
     },
     onError: (err) => toast.error(subErrorMessage(err)),
   });
 }
 
-const STATUS_TOASTS: Record<string, string> = {
-  offered: "Đã gửi chào gói cho tổ chức",
-  draft: "Đã thu hồi gói về nháp",
-  cancelled: "Đã huỷ gói",
-};
-
-export function useSetOwnerSubscriptionStatus() {
-  const invalidate = useInvalidateSubs();
-  return useMutation({
-    mutationFn: async (args: { subId: string; status: "offered" | "draft" | "cancelled"; reason?: string }) => {
-      const { data, error } = await supabase.rpc("admin_owner_sub_set_status", {
-        p_sub_id: args.subId,
-        p_status: args.status,
-        p_reason: args.reason ?? "",
-      });
-      if (error) throw error;
-      return unwrapSubRpc(data);
-    },
-    onSuccess: (_d, args) => {
-      invalidate();
-      toast.success(STATUS_TOASTS[args.status] ?? "Đã cập nhật");
-    },
-    onError: (err) => toast.error(subErrorMessage(err)),
-  });
-}
-
-export interface ActivateSubInput {
-  subId: string;
+export interface ActivatePlanInput {
+  workspaceId: string;
+  planId: string;
   months: number;
+  /** Chỉ dùng khi gói hiệu lực ngay (Trạm chưa có gói / hết hạn / đã huỷ). */
   startsOn: string | null;
   amountVnd: number;
   method: ActivationMethod;
@@ -228,12 +187,14 @@ export interface ActivateSubInput {
   note: string;
 }
 
-export function useActivateOwnerSubscription() {
+/** Kích hoạt / gia hạn TAY theo một gói danh mục đã mở cho Trạm. */
+export function useActivateOwnerSubPlan() {
   const invalidate = useInvalidateSubs();
   return useMutation({
-    mutationFn: async (input: ActivateSubInput) => {
-      const { data, error } = await supabase.rpc("admin_owner_sub_activate", {
-        p_sub_id: input.subId,
+    mutationFn: async (input: ActivatePlanInput) => {
+      const { data, error } = await supabase.rpc("admin_owner_sub_plan_activate", {
+        p_workspace_id: input.workspaceId,
+        p_plan_id: input.planId,
         p_months: input.months,
         p_starts_on: input.startsOn as string,
         p_amount_vnd: input.amountVnd,
@@ -244,9 +205,9 @@ export function useActivateOwnerSubscription() {
       if (error) throw error;
       return unwrapSubRpc(data);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       invalidate();
-      toast.success("Đã kích hoạt / gia hạn gói");
+      toast.success(data.effect === "next_term" ? "Đã ghi kỳ mới — gói mới áp dụng từ kỳ sau" : "Đã kích hoạt / gia hạn gói");
     },
     onError: (err) => toast.error(subErrorMessage(err)),
   });
@@ -258,7 +219,7 @@ export function useActivateOwnerSubscription() {
 export function useAdminOwnerSubPlans() {
   return useQuery({
     queryKey: qk.adminOwnerSubscriptions.plans,
-    queryFn: () => fetchOwnerSubCatalog(false),
+    queryFn: () => fetchOwnerSubCatalog({ admin: true }),
   });
 }
 
@@ -268,6 +229,28 @@ function useInvalidatePlans() {
     queryClient.invalidateQueries({ queryKey: qk.adminOwnerSubscriptions.plans });
     queryClient.invalidateQueries({ queryKey: qk.ownerSubscription.plans });
   };
+}
+
+/** Chọn các Trạm được dùng gói — THAY TOÀN BỘ danh sách. */
+export function useSetPlanWorkspaces() {
+  const invalidate = useInvalidatePlans();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { planId: string; workspaceIds: string[] }) => {
+      const { data, error } = await supabase.rpc("admin_owner_sub_plan_set_workspaces", {
+        p_plan_id: args.planId,
+        p_workspace_ids: args.workspaceIds,
+      });
+      if (error) throw error;
+      return unwrapSubRpc(data);
+    },
+    onSuccess: (_d, args) => {
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: qk.adminOwnerSubscriptions.all });
+      toast.success(args.workspaceIds.length ? `Đã mở gói cho ${args.workspaceIds.length} tổ chức` : "Đã ẩn gói khỏi mọi tổ chức");
+    },
+    onError: (err) => toast.error(subErrorMessage(err)),
+  });
 }
 
 export interface UpsertPlanInput {
@@ -281,8 +264,8 @@ export interface UpsertPlanInput {
   isFeatured: boolean;
   isActive: boolean;
   sortOrder: number;
-  entitlements: EntitlementInput[];
-  benefits: PlanBenefit[];
+  /** Theo thứ tự hiển thị (8 dòng đầu lên thẻ gói). */
+  benefits: BenefitLineInput[];
 }
 
 export function useUpsertOwnerSubPlan() {
@@ -300,7 +283,6 @@ export function useUpsertOwnerSubPlan() {
         p_is_featured: input.isFeatured,
         p_is_active: input.isActive,
         p_sort_order: input.sortOrder,
-        p_entitlements: input.entitlements as unknown as Json,
         p_benefits: input.benefits as unknown as Json,
       });
       if (error) throw error;
@@ -308,7 +290,7 @@ export function useUpsertOwnerSubPlan() {
     },
     onSuccess: (_d, input) => {
       invalidate();
-      toast.success(input.planId ? "Đã lưu gói" : "Đã thêm gói vào danh mục");
+      toast.success(input.planId ? "Đã lưu gói" : "Đã thêm gói — bấm \"Chọn tổ chức\" để mở gói cho chủ tài sản");
     },
     onError: (err) => toast.error(subErrorMessage(err)),
   });

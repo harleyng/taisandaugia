@@ -2,7 +2,7 @@ import { AlertCircle, FileText, List, ShieldCheck } from "lucide-react";
 import { AssetDocUpload } from "../AssetDocUpload";
 import { Group, OptionalGroup, TextField, SegYesNo, Switch, Pill } from "../fields";
 import { OwnershipDeclaration } from "../OwnershipDeclaration";
-import { PostingLegalConsultCard } from "@/components/legal-consult/PostingLegalConsultCard";
+import { LegalSourceGroup } from "./LegalSourceGroup";
 import { getProofMode } from "@/constants/asset-posting-rules";
 import type { WizardValues } from "../wizardSchema";
 
@@ -22,7 +22,7 @@ const LEGAL_Q: { name: "hasDispute" | "hasMortgage" | "isSeized"; label: string 
   { name: "isSeized", label: "Tài sản có đang bị kê biên không?" },
 ];
 
-/** Bước 3: tư vấn pháp lý (banner, tuỳ chọn) + giấy tờ sở hữu + tình trạng pháp lý (3 câu) + ghi chú. */
+/** Bước 3: pháp lý (đối tác riêng / tư vấn của sàn, tuỳ chọn) + giấy tờ sở hữu + tình trạng pháp lý (3 câu) + ghi chú. */
 export function Step3LegalStatus({ f, up, errs, postingId, ensurePostingId }: StepProps) {
   const answered = LEGAL_Q.filter((q) => f[q.name]).length;
   // Chỉ bất động sản & xe cộ có giấy tờ đăng ký sở hữu; nhóm còn lại ký cam kết.
@@ -30,15 +30,9 @@ export function Step3LegalStatus({ f, up, errs, postingId, ensurePostingId }: St
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Banner dịch vụ đầu bước (thiết kế v3) — tuỳ chọn, không chặn "Tiếp tục" /
-          "Hoàn tất" (BR-CNS-01: kết quả chỉ tư vấn). Gửi yêu cầu tự lưu nháp. */}
-      <PostingLegalConsultCard
-        variant="banner"
-        postingId={postingId}
-        mode="owner"
-        resolvePostingId={ensurePostingId}
-        postingDocPaths={[...f.ownershipProofUrls, ...f.docUrls]}
-      />
+      {/* Dịch vụ Pháp lý — tuỳ chọn, không chặn "Tiếp tục" / "Hoàn tất" (BR-CNS-01: kết quả
+          chỉ tư vấn). Gửi yêu cầu / tải tệp tự lưu nháp. */}
+      <LegalSourceGroup f={f} up={up} postingId={postingId} ensurePostingId={ensurePostingId} />
 
       {proofMode === "documents" ? (
         <Group

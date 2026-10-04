@@ -1,19 +1,24 @@
-// Chuẩn hoá dòng của 4 bảng dịch vụ về một hình dạng cho danh sách gộp.
+// Chuẩn hoá dòng của các bảng dịch vụ về một hình dạng cho danh sách gộp.
 // Nhãn trạng thái & "việc tiếp theo" dùng lại logic sẵn có của từng loại — không nhân bản.
 
 import { tvplNextAction, tvplStatusLabel } from "@/lib/legalConsult/status";
 import { decisionLabel, tvdgNextAction, tvdgStatusLabel } from "@/lib/auctionConsult/status";
 import { gdMethodLabel, gdNextAction, gdStatusLabel, gdVerdictLabel } from "@/lib/authentication/status";
 import { vrNextAction, vrStatusLabel } from "@/lib/vrTour/status";
+import { purposeLabel, tdgNextAction, tdgStatusLabel } from "@/lib/valuation/status";
+import { formatVnd } from "@/lib/advertising/slug";
 import { serviceGroupOf, type ServiceGroupKey } from "@/lib/serviceRequests/groups";
-import type { ServiceKindKey } from "@/lib/serviceRequests/kinds";
+import type { ServiceRequestKindKey } from "@/lib/serviceRequests/kinds";
 import type { AdminLegalConsultation } from "@/hooks/useAdminLegalConsultations";
 import type { AdminAuctionConsultation } from "@/hooks/useAdminAuctionConsultations";
 import type { AdminAuthenticationOrder } from "@/hooks/useAdminAuthenticationOrders";
+import type { AdminValuationOrder } from "@/hooks/useAdminValuationOrders";
 import type { AdminVrTourOrder } from "@/hooks/useAdminVrTourOrders";
+import type { AdminMarketingOrder } from "@/hooks/useAdminMarketingOrders";
+import { adminNextAction, statusLabel as mktStatusLabel } from "@/lib/ownerMarketing/orders";
 
 export interface ServiceRequestRow {
-  kind: ServiceKindKey;
+  kind: ServiceRequestKindKey;
   id: string;
   code: string;
   postingTitle: string;
@@ -83,6 +88,26 @@ export function fromAuctionConsult(r: AdminAuctionConsultation, now = Date.now()
   };
 }
 
+export function fromValuation(r: AdminValuationOrder, now = Date.now()): ServiceRequestRow {
+  return {
+    kind: "tham-dinh",
+    id: r.id,
+    code: r.code,
+    postingTitle: r.posting_title,
+    variant: purposeLabel(r.purpose),
+    partnerName: r.partner_name,
+    expertName: r.expert_name,
+    quotedPrice: price(r.quoted_price),
+    status: r.status,
+    statusLabel: tdgStatusLabel(r.status),
+    group: serviceGroupOf(r.status),
+    nextAction: tdgNextAction(r),
+    resultLabel: r.appraised_value != null ? formatVnd(r.appraised_value) : null,
+    alert: quoteAlert(r.status, r.quote_expires_at, now),
+    createdAt: r.created_at,
+  };
+}
+
 export function fromAuthentication(r: AdminAuthenticationOrder, now = Date.now()): ServiceRequestRow {
   const overdueVisit = r.method === "on_site" && r.status === "item_pending" && isPast(r.appointment_at, now);
   return {
@@ -121,6 +146,34 @@ export function fromVrTour(r: AdminVrTourOrder, now = Date.now()): ServiceReques
     nextAction: vrNextAction(r.status, r.asset_postings?.review_status),
     resultLabel: null,
     alert: quoteAlert(r.status, r.quote_expires_at, now) ?? (overdueShoot ? "Đã qua lịch hẹn" : null),
+    createdAt: r.created_at,
+  };
+}
+
+export function fromMarketingOrder(r: AdminMarketingOrder, now = Date.now()): ServiceRequestRow {
+  // Gói giá cố định đã trả bằng credit / lượt gói ⇒ không có giá báo VND.
+  const paidNote =
+    r.payment_method === "subscription"
+      ? "Trả bằng gói dịch vụ"
+      : r.payment_method === "credits" && r.credit_cost
+        ? `Trả ${r.credit_cost.toLocaleString("en-US")} credit`
+        : null;
+  return {
+    kind: "truyen-thong",
+    id: r.id,
+    code: r.code,
+    postingTitle: r.listing_title,
+    variant: r.package_name,
+    // Chỗ "đối tác" hiện bên đặt — sàn tự làm, không có đối tác ngoài.
+    partnerName: r.workspace_name,
+    expertName: null,
+    quotedPrice: price(r.quoted_price),
+    status: r.status,
+    statusLabel: mktStatusLabel(r.status),
+    group: serviceGroupOf(r.status),
+    nextAction: adminNextAction(r, now),
+    resultLabel: paidNote,
+    alert: quoteAlert(r.status, r.quote_expires_at, now),
     createdAt: r.created_at,
   };
 }

@@ -15,6 +15,7 @@ import {
   CashFlowSkeleton,
 } from "@/components/asset-owner-portal/cash-flow/CashFlowPageStates";
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
+import { useOwnerAuditTrack } from "@/hooks/useOwnerAuditLog";
 import { useCashCanWrite, useOwnerCashFlow } from "@/hooks/useOwnerCashFlow";
 import { useUrlFilterState } from "@/hooks/useUrlFilterState";
 import { SCOPE_ALL, buildCashReportView, resolveScope, scopeData, untrackedSoldOf } from "@/lib/ownerCashFlow";
@@ -31,6 +32,7 @@ const DEFAULTS = { period: DEFAULT_OWNER_PERIOD, scope: SCOPE_ALL };
  */
 const OwnerCashFlowPage = () => {
   const { workspaceId, workspace, isLoading: wsLoading } = useOwnerWorkspace();
+  const track = useOwnerAuditTrack();
   const { data, isLoading, isError, refetch } = useOwnerCashFlow(workspaceId);
   const canWrite = useCashCanWrite(data);
 
@@ -51,6 +53,7 @@ const OwnerCashFlowPage = () => {
     if (!scoped || !view) return;
     const scopeName = multiUnit ? "Toàn hệ thống" : (scoped.units[0]?.name ?? "");
     downloadCashFlowXlsx(scoped, view, { periodId: f.period, scopeName }, `dong-tien-${f.period}.xlsx`);
+    track({ action: "export", title: "Dòng tiền", meta: { period: f.period, scope: scopeName } });
   };
 
   if (wsLoading || (workspaceId && isLoading)) return <CashFlowSkeleton />;

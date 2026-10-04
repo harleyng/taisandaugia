@@ -7,6 +7,7 @@ import {
   GitBranch,
   UploadCloud,
   BadgeCheck,
+  BookUser,
   CreditCard,
   FileSignature,
   Handshake,
@@ -16,9 +17,20 @@ import {
   Wallet,
   Target,
   ShieldCheck,
+  Megaphone,
+  History,
+  Send,
+  Link2,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react'
 import type { OwnerModule } from '@/lib/ownerWorkspace/permissions'
+import {
+  OWNER_AD_PERFORMANCE_HREF,
+  OWNER_MARKETING_TABS,
+  ownerMarketingTabHref,
+  type OwnerMarketingTab,
+} from '@/lib/ownerMarketing/routes'
 
 /** Loại số đếm động hiện cạnh mục nav — số trả về ở OwnerPortalSidebar. */
 export type OwnerCountBadgeKind =
@@ -38,6 +50,17 @@ export interface OwnerNavItem {
    * khi vai trò có quyền "Xem" ở ít nhất một module. Không có = luôn hiện (Tổng quan, Gói dịch vụ, Credit).
    */
   module?: OwnerModule | readonly OwnerModule[]
+  /**
+   * Mục con = các tab của trang (href dạng `<href>?tab=<giá trị>`); mục cha khi đó chỉ
+   * xổ/thu, không tự điều hướng. Mục con thừa quyền của mục cha.
+   */
+  children?: OwnerNavSubItem[]
+}
+
+export interface OwnerNavSubItem {
+  label: string
+  href: string
+  icon: LucideIcon
 }
 
 /** Nhóm nav theo nghiệp vụ (docs/owner-control-tower-plan.md §A6). */
@@ -47,6 +70,12 @@ export interface OwnerNavGroup {
   id: OwnerNavGroupId
   title: string
   items: OwnerNavItem[]
+}
+
+const MARKETING_TAB_ICONS: Record<OwnerMarketingTab, LucideIcon> = {
+  'chien-dich': Send,
+  'giao-viec': Handshake,
+  'link-theo-doi': Link2,
 }
 
 /** "Hợp đồng" gộp ký gửi (với tổ chức) · mua bán (với người trúng) · dịch vụ (với sàn). */
@@ -89,6 +118,18 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
         module: 'ky-gui',
       },
       {
+        // Quảng bá tài sản qua kênh RIÊNG của đơn vị (link theo dõi), chiến dịch, giao việc cho sàn.
+        label: 'Truyền thông',
+        icon: Megaphone,
+        href: '/chu-tai-san/truyen-thong',
+        module: 'truyen-thong',
+        children: OWNER_MARKETING_TABS.map((t) => ({
+          label: t.label,
+          href: ownerMarketingTabHref(t.value),
+          icon: MARKETING_TAB_ICONS[t.value],
+        })),
+      },
+      {
         // Ký gửi (với tổ chức) · mua bán (với người trúng) · dịch vụ (với sàn).
         label: 'Hợp đồng',
         icon: FileSignature,
@@ -105,6 +146,16 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
         countBadge: 'owner-awaiting-payment',
         module: 'thu-tien',
       },
+      {
+        // So đối tác tự nhập trong hồ sơ số hoá (thẩm định / pháp lý / tổ chức đấu giá) trên kết
+        // quả phiên. Nằm ở Tác nghiệp nhưng chỉ đọc nên vẫn dùng quyền "Xem" của Phân tích danh
+        // mục, không thêm module. Icon BookUser (không phải Handshake như plan §A8): Handshake đã
+        // là "Ký gửi đấu giá".
+        label: 'Đối tác của tôi',
+        icon: BookUser,
+        href: '/chu-tai-san/doi-tac',
+        module: 'phan-tich',
+      },
     ],
   },
   {
@@ -113,6 +164,14 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
     items: [
       { label: 'Phân tích danh mục', icon: BarChart2, href: '/chu-tai-san/bao-cao', module: 'phan-tich' },
       { label: 'Dòng tiền', icon: Wallet, href: '/chu-tai-san/dong-tien', module: 'dong-tien' },
+      {
+        // Phễu kênh quảng bá (trước là tab "Hiệu quả" của Truyền thông) — số đo của module
+        // truyen-thong nên vẫn theo quyền "Xem" của module đó, không thêm module.
+        label: 'Hiệu quả quảng cáo',
+        icon: BarChart3,
+        href: OWNER_AD_PERFORMANCE_HREF,
+        module: 'truyen-thong',
+      },
       { label: 'Báo cáo định kỳ', icon: FileBarChart, href: '/chu-tai-san/bao-cao-dinh-ky', module: 'bao-cao-dinh-ky' },
     ],
   },
@@ -129,6 +188,13 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
         href: '/chu-tai-san/lien-ket',
         countBadge: 'owner-link-requests',
         module: 'lien-ket',
+      },
+      {
+        // Không gắn module: ai cũng xem được thao tác của chính mình; nhat-ky:view mới
+        // thấy của người khác (tầng xem do RPC owner_audit_context quyết).
+        label: 'Nhật ký hoạt động',
+        icon: History,
+        href: '/chu-tai-san/nhat-ky',
       },
       { label: 'Gói dịch vụ', icon: BadgeCheck, href: '/chu-tai-san/goi-thue-bao' },
       { label: 'Credit', icon: CreditCard, href: '/chu-tai-san/credits' },
@@ -147,6 +213,24 @@ export function visibleOwnerNavGroups(
   return groups
     .map((g) => ({ ...g, items: g.items.filter((i) => !i.module || asList(i.module).some(canView)) }))
     .filter((g) => g.items.length > 0)
+}
+
+const tabOfHref = (href: string) => new URLSearchParams(href.split('?')[1] ?? '').get('tab')
+
+/** Đang ở trong trang của mục (kể cả trang con, vd. /truyen-thong/chien-dich/:id). */
+export const isInOwnerNavItem = (item: OwnerNavItem, pathname: string) =>
+  pathname === item.href || pathname.startsWith(`${item.href}/`)
+
+/**
+ * Mục con đang chọn: theo `?tab=` (không có ⇒ mục con đầu — tab mặc định của trang);
+ * trang con `<href>/<tab>/…` thuộc mục con cùng tên (chi tiết chiến dịch ⇒ "Chiến dịch").
+ * Trang con không trùng tab nào (vd. "Dữ liệu đi đâu") ⇒ không mục con nào sáng.
+ */
+export function activeOwnerNavChild(item: OwnerNavItem, pathname: string, search: string): string | null {
+  if (!item.children?.length || !isInOwnerNavItem(item, pathname)) return null
+  const sub = pathname.slice(item.href.length).split('/')[1]
+  const tab = sub || new URLSearchParams(search).get('tab') || tabOfHref(item.children[0].href)
+  return item.children.find((c) => tabOfHref(c.href) === tab)?.href ?? null
 }
 
 /**
@@ -170,7 +254,10 @@ export function ownerModulesForPath(pathname: string): readonly OwnerModule[] | 
     'ky-gui-dau-gia': ['ky-gui'],
     'hop-dong': CONTRACT_MODULES,
     'thu-tien': ['thu-tien'],
+    'truyen-thong': ['truyen-thong'],
+    'hieu-qua-quang-cao': ['truyen-thong'],
     'bao-cao': ['phan-tich'],
+    'doi-tac': ['phan-tich'],
     'dong-tien': ['dong-tien'],
     'bao-cao-dinh-ky': ['bao-cao-dinh-ky'],
     'chi-nhanh-amc': ['chi-nhanh'],

@@ -227,12 +227,13 @@ export function useOwnerWorkspace() {
     },
     [memberships, userId],
   );
-  /** Ba quyền của trang chi tiết hồ sơ (PostingAccessProvider): sửa / ký gửi / gửi tổ chức. */
+  /** Quyền của trang chi tiết hồ sơ (PostingAccessProvider): sửa / ký gửi / gửi tổ chức / chia sẻ. */
   const postingAccess = useCallback(
     (posting: PostingOwnership) => ({
       edit: canWritePosting(posting),
       consign: canWritePosting(posting, "ky-gui", "update"),
       consignCreate: canWritePosting(posting, "ky-gui", "create"),
+      share: canWritePosting(posting, "so-hoa", "share"),
     }),
     [canWritePosting],
   );

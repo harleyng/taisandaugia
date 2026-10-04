@@ -6,6 +6,7 @@ import { AUCTION_FORMAT_LABELS, type AuctionFormat } from "@/types/asset-posting
 import { groupNumber } from "../format";
 import { filled, signatureFilled, type Requirement, type WizardValues } from "../wizardSchema";
 import { getProofMode } from "@/constants/asset-posting-rules";
+import { ReviewDossierBlock } from "./ReviewDossierBlock";
 
 interface StepReviewProps {
   f: WizardValues;
@@ -121,6 +122,8 @@ export function StepReview({ f, jump, missing, chosenOrgNames = [] }: StepReview
           </>
         )}
       </Blk>
+
+      <ReviewDossierBlock draft={f.dossier} jump={jump} />
     </div>
   );
 }

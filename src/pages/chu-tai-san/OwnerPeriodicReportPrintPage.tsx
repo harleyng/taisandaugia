@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReportSheet } from "@/components/asset-owner-portal/periodic-report/ReportSheet";
 import { useOwnerReport, useOwnerReportPayload } from "@/hooks/useOwnerPeriodicReports";
+import { useOwnerAuditTrack } from "@/hooks/useOwnerAuditLog";
 import { todayIso } from "@/lib/ownerOutcomeReport";
 import { REPORTS_HREF, formatReportDay, reportHref, reportTitle } from "@/lib/ownerPeriodicReport";
 
@@ -21,6 +22,14 @@ const OwnerPeriodicReportPrintPage = () => {
   const printed = useRef(false);
 
   const title = report ? reportTitle(report.periodType, report.periodStart) : "Báo cáo định kỳ";
+
+  // Nhật ký: mở trang in / lưu PDF báo cáo (một lần mỗi lần mở trang).
+  const track = useOwnerAuditTrack();
+  const tracked = useRef(false);
+  useEffect(() => {
+    if (!payload || tracked.current) return;
+    tracked.current = track({ action: "print", title });
+  }, [payload, title, track]);
 
   useEffect(() => {
     const previous = document.title;

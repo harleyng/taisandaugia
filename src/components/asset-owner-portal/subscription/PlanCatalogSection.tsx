@@ -28,7 +28,7 @@ export function PlanCatalogSection({
   isOwner,
   showHeading,
 }: Props) {
-  const { data: catalog, isLoading } = useOwnerSubPlans();
+  const { data: catalog, isLoading } = useOwnerSubPlans(workspaceId);
   const [months, setMonths] = useState<number | null>(null);
 
   if (isLoading) {
@@ -65,7 +65,7 @@ export function PlanCatalogSection({
         isOwner={sub?.is_owner ?? isOwner}
         showHeading={showHeading}
       />
-      <SubscriptionFaq />
+      <SubscriptionFaq terms={terms} />
     </div>
   );
 }

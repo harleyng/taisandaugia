@@ -6,6 +6,9 @@ import { useAuthenticationOrder } from "@/hooks/useAuthenticationOrders";
 import { useLegalConsultation } from "@/hooks/useLegalConsultations";
 import { ownerLegalConsultPath } from "@/lib/legalConsult/paths";
 import { useAuctionConsultation } from "@/hooks/useAuctionConsultations";
+import { useValuationOrder } from "@/hooks/useValuationOrders";
+import { ownerValuationPath } from "@/lib/valuation/paths";
+import { ownerAuthenticationPath } from "@/lib/authentication/paths";
 import { currentServiceContract, useOrderServiceContracts } from "@/hooks/useServiceContracts";
 import type { ServiceKindKey } from "@/lib/serviceRequests/kinds";
 import { ownerAuctionConsultPath } from "@/lib/auctionConsult/paths";
@@ -15,6 +18,8 @@ import { useOwnerSubscriptionQuote } from "@/hooks/useOwnerSubscription";
 import { useOwnerSubPlanQuote } from "@/hooks/useOwnerSubscriptionPlans";
 import { OWNER_SUBSCRIPTION_PATH } from "@/lib/ownerSubscription/paths";
 import { formatSubDate } from "@/lib/ownerSubscription/status";
+import { useOwnerMarketingOrder } from "@/hooks/useOwnerMarketingOrders";
+import { isQuoteExpired as isMktQuoteExpired, ownerOrdersHref } from "@/lib/ownerMarketing/orders";
 
 /** Thứ đang được thanh toán trên trang VNPay mô phỏng. */
 export interface CheckoutItem {
@@ -43,9 +48,12 @@ interface CheckoutState {
  *   • ?gd_order=<id>        — đơn giám định; cùng quy tắc với VR tour.
  *   • ?tvpl_order=<id>      — lần tư vấn pháp lý; cùng quy tắc với VR tour.
  *   • ?tvdg_order=<id>      — yêu cầu tư vấn đấu giá; cùng quy tắc với VR tour.
+ *   • ?tdg_order=<id>       — đơn thẩm định giá; cùng quy tắc với VR tour.
  *   • ?sub=<id>             — gói thuê bao tổ chức chủ tài sản; chỉ Trưởng đơn vị trả được.
  *   • ?sub_plan=<id>&months=<n>&ws=<id> — gói trong danh mục gói dịch vụ; giá do server
  *     báo (owner_sub_plan_quote), số tiền gửi kèm để server từ chối nếu giá vừa đổi.
+ *   • ?mkt_order=<id>       — đơn "Giao việc cho sàn" (báo giá VND); thành viên có quyền
+ *     truyen-thong:share của Trạm trả được (server kiểm), không cần HDCU.
  */
 export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   const packageKey = params.get("package") || "";
@@ -60,19 +68,25 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   const tvpl = useLegalConsultation(tvplId || null);
   const tvdgId = params.get("tvdg_order") || "";
   const tvdg = useAuctionConsultation(tvdgId || null);
+  const tdgId = params.get("tdg_order") || "";
+  const tdg = useValuationOrder(tdgId || null);
   const subId = params.get("sub") || "";
   const subQuote = useOwnerSubscriptionQuote(subId || null);
   const subPlanId = params.get("sub_plan") || "";
   const subPlanMonths = Number(params.get("months")) || null;
   const subPlanWs = params.get("ws") || "";
   const planQuote = useOwnerSubPlanQuote(subPlanWs || null, subPlanId || null, subPlanMonths);
+  const mktOrderId = params.get("mkt_order") || "";
+  const mktOrder = useOwnerMarketingOrder(mktOrderId || null);
   // Đơn dịch vụ gắn hồ sơ số hoá: từ Phase 4 đồng nghiệp cùng không gian ĐỌC được
   // đơn (RLS theo hồ sơ), nhưng chỉ NGƯỜI GỬI yêu cầu thanh toán — _settle_* kiểm
   // user_id, trả trước rồi mới bị từ chối là mất tiền.
   const { userId } = useAuth();
   // Hợp đồng cung ứng dịch vụ (HDCU): phải ĐỒNG Ý báo giá hiện hành trước khi trả —
   // chưa đồng ý (mở link thẳng / báo giá vừa đổi) ⇒ không có gì để trả, quay về thẻ đơn.
-  const scKind: ServiceKindKey | null = tvdgId
+  const scKind: ServiceKindKey | null = tdgId
+    ? "tham-dinh"
+    : tvdgId
     ? "tu-van-dau-gia"
     : tvplId
       ? "tu-van-phap-ly"
@@ -81,7 +95,7 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
         : vrOrderId
           ? "vr-tour"
           : null;
-  const serviceContracts = useOrderServiceContracts(scKind, tvdgId || tvplId || gdOrderId || vrOrderId || null);
+  const serviceContracts = useOrderServiceContracts(scKind, tdgId || tvdgId || tvplId || gdOrderId || vrOrderId || null);
   const notAccepted = (o: { quoted_at: string | null; quoted_price: number | string | null }) =>
     !currentServiceContract(serviceContracts.data, {
       quoted_at: o.quoted_at,
@@ -107,6 +121,26 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
     };
   }
 
+  if (mktOrderId) {
+    const o = mktOrder.data;
+    const back = params.get("return") || ownerOrdersHref();
+    if (mktOrder.isLoading) return { loading: true, item: null, fallbackPath: back };
+    // Chưa báo giá / đã trả / hết hạn / ngoài Trạm (RLS trả null) ⇒ không có gì để trả.
+    if (!o || o.status !== "quoted" || o.quoted_price == null || isMktQuoteExpired(o)) {
+      return { loading: false, item: null, fallbackPath: back };
+    }
+    return {
+      loading: false,
+      fallbackPath: back,
+      item: {
+        ref: o.code,
+        label: `Truyền thông ${o.code} · ${o.package_name} · ${o.listing_title}`,
+        priceVnd: Number(o.quoted_price),
+        resultParams: { mkt_order: o.id, amount: String(o.quoted_price) },
+      },
+    };
+  }
+
   if (subId) {
     const q = subQuote.data;
     const back = params.get("return") || OWNER_SUBSCRIPTION_PATH;
@@ -121,6 +155,25 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
         label: `${q.plan_name} ${q.code} · ${q.workspace_name} · ${q.term_months} tháng (${formatSubDate(q.next_starts_on)} – ${formatSubDate(q.next_ends_on)})`,
         priceVnd: Number(q.price_vnd),
         resultParams: { sub: q.id, amount: String(q.price_vnd) },
+      },
+    };
+  }
+
+  if (tdgId) {
+    const o = tdg.data;
+    const back = params.get("return") || (o ? ownerValuationPath(o.asset_posting_id) : "/chu-tai-san/dang-tai-san");
+    if (tdg.isLoading || serviceContracts.isLoading) return { loading: true, item: null, fallbackPath: back };
+    if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId || notAccepted(o)) {
+      return { loading: false, item: null, fallbackPath: back };
+    }
+    return {
+      loading: false,
+      fallbackPath: back,
+      item: {
+        ref: o.code,
+        label: `Thẩm định giá ${o.code} · ${o.package_name} · ${o.partner_name ?? ""}`,
+        priceVnd: Number(o.quoted_price),
+        resultParams: { tdg_order: o.id, amount: String(o.quoted_price) },
       },
     };
   }
@@ -165,7 +218,7 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
 
   if (gdOrderId) {
     const o = gdOrder.data;
-    const back = params.get("return") || (o ? ownerPostingPath(o.asset_posting_id) : "/chu-tai-san/dang-tai-san");
+    const back = params.get("return") || (o ? ownerAuthenticationPath(o.asset_posting_id) : "/chu-tai-san/dang-tai-san");
     if (gdOrder.isLoading || serviceContracts.isLoading) return { loading: true, item: null, fallbackPath: back };
     if (!o || o.status !== "quoted" || o.quoted_price == null || isQuoteExpired(o) || o.user_id !== userId || notAccepted(o)) {
       return { loading: false, item: null, fallbackPath: back };

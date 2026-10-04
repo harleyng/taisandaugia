@@ -14,7 +14,9 @@ import { VrTourPaymentResult } from "@/components/payment/VrTourPaymentResult";
 import { OwnerSubscriptionPaymentResult } from "@/components/payment/OwnerSubscriptionPaymentResult";
 import { AuthenticationPaymentResult } from "@/components/payment/AuthenticationPaymentResult";
 import { LegalConsultPaymentResult } from "@/components/payment/LegalConsultPaymentResult";
+import { ValuationPaymentResult } from "@/components/payment/ValuationPaymentResult";
 import { AuctionConsultPaymentResult } from "@/components/payment/AuctionConsultPaymentResult";
+import { MarketingOrderPaymentResult } from "@/components/payment/MarketingOrderPaymentResult";
 
 const CreditPaymentResult = () => {
   const [params] = useSearchParams();
@@ -205,7 +207,7 @@ const CreditPaymentResult = () => {
 
 /**
  * Một trang kết quả cho ba loại giao dịch: gói credit (mặc định), hồ sơ tham
- * gia (?contract=), đơn VR tour (?vr_order=), đơn giám định (?gd_order=) tư vấn pháp lý (?tvpl_order=), tư vấn đấu giá (?tvdg_order=) và gói thuê bao tổ chức chủ tài sản (?sub=, gói danh mục ?sub_plan=). Tách component để luồng credit giữ nguyên từng dòng.
+ * gia (?contract=), đơn VR tour (?vr_order=), đơn giám định (?gd_order=) tư vấn pháp lý (?tvpl_order=), thẩm định giá (?tdg_order=), tư vấn đấu giá (?tvdg_order=), đơn truyền thông (?mkt_order=) và gói thuê bao tổ chức chủ tài sản (?sub=, gói danh mục ?sub_plan=). Tách component để luồng credit giữ nguyên từng dòng.
  */
 const PaymentResult = () => {
   const [params] = useSearchParams();
@@ -213,7 +215,9 @@ const PaymentResult = () => {
   if (params.get("vr_order")) return <VrTourPaymentResult />;
   if (params.get("gd_order")) return <AuthenticationPaymentResult />;
   if (params.get("tvpl_order")) return <LegalConsultPaymentResult />;
+  if (params.get("tdg_order")) return <ValuationPaymentResult />;
   if (params.get("tvdg_order")) return <AuctionConsultPaymentResult />;
+  if (params.get("mkt_order")) return <MarketingOrderPaymentResult />;
   return params.get("contract") ? <ContractPaymentResult /> : <CreditPaymentResult />;
 };
 

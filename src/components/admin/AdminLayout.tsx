@@ -35,6 +35,7 @@ import {
   FileStack,
   type LucideIcon,
   BadgeCheck,
+  LayoutGrid,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -53,6 +54,8 @@ interface NavItem {
   anyModules?: readonly string[];
   /** Nested sub-menu rendered indented beneath this item. */
   children?: NavItem[];
+  /** Parent is only a collapsible heading for its children — no page of its own. */
+  groupOnly?: boolean;
 }
 
 interface NavSection {
@@ -82,7 +85,17 @@ const NAV: NavSection[] = [
       { to: "/admin/co-hoi", label: "Cơ hội", icon: Target, module: "co-hoi" },
       { to: "/admin/khach-hang", label: "Khách hàng", icon: Users, module: "khach-hang" },
       { to: "/admin/don-hang", label: "Đơn hàng", icon: ClipboardList, module: "don-hang" },
-      { to: "/admin/goi-thue-bao", label: "Gói thuê bao", icon: BadgeCheck, module: "goi-thue-bao" },
+      {
+        to: "/admin/goi-thue-bao",
+        label: "Gói dịch vụ",
+        icon: BadgeCheck,
+        module: "goi-thue-bao",
+        groupOnly: true,
+        children: [
+          { to: "/admin/goi-thue-bao/danh-muc", label: "Danh mục gói", icon: LayoutGrid, module: "goi-thue-bao" },
+          { to: "/admin/goi-thue-bao/ap-dung", label: "Áp dụng gói", icon: Building2, module: "goi-thue-bao" },
+        ],
+      },
       { to: "/admin/doi-tac", label: "Đối tác", icon: Building2, module: "nha-cung-cap" },
     ],
   },
@@ -212,7 +225,7 @@ export default function AdminLayout() {
               )}
               <div className="space-y-0.5">
                 {section.items.map((item) => {
-                  const { to, label, icon: Icon, end, children } = item;
+                  const { to, label, icon: Icon, end, children, groupOnly } = item;
 
                   if (!children) {
                     return (
@@ -241,14 +254,25 @@ export default function AdminLayout() {
                           active ? "bg-sidebar-primary" : "hover:bg-sidebar-accent",
                         ].join(" ")}
                       >
-                        <NavLink
-                          to={to}
-                          end={end}
-                          className={`flex items-center gap-2.5 flex-1 min-w-0 px-3 py-2 text-sm font-medium ${textClass}`}
-                        >
-                          <Icon className="h-4 w-4 shrink-0" />
-                          {label}
-                        </NavLink>
+                        {groupOnly ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleMenu(to)}
+                            className={`flex items-center gap-2.5 flex-1 min-w-0 px-3 py-2 text-sm font-medium text-left ${textClass}`}
+                          >
+                            <Icon className="h-4 w-4 shrink-0" />
+                            {label}
+                          </button>
+                        ) : (
+                          <NavLink
+                            to={to}
+                            end={end}
+                            className={`flex items-center gap-2.5 flex-1 min-w-0 px-3 py-2 text-sm font-medium ${textClass}`}
+                          >
+                            <Icon className="h-4 w-4 shrink-0" />
+                            {label}
+                          </NavLink>
+                        )}
                         <button
                           type="button"
                           onClick={() => toggleMenu(to)}

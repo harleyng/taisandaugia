@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-10-01 — Hồ sơ online (M0): 3 cái bẫy
+
+- **Trình duyệt trong app Zalo có chữ "Zalo" trong User-Agent** — y như bot xem trước link của Zalo. Middleware OG mà trả trang rút gọn chỉ có thẻ meta thì người thật mở trong Zalo sẽ thấy trang trắng. `middleware.ts` trả index.html đã chèn thẻ, nên nhận nhầm vẫn chạy SPA.
+- **`posting_share_links.code` không có quyền SELECT** (giống `share_token` của báo cáo) ⇒ `select('*')` báo `permission denied`. Đọc mã qua RPC `owner_posting_share_links`.
+- **Ghi đè catalog quyền từ file migration cũ làm rơi quyền của phiên khác.** M1 tạo lại `owner_ws_permission_catalog()` từ bản 41 quyền ⇒ mất `so-hoa:share` (đã vá ở `20261001230000`). Sửa catalog / `owner_ws_default_role_permissions` thì luôn bắt đầu từ `pg_get_functiondef` của bản LIVE.
+
 ## 2026-09-26 — Dòng tiền (P15a): 4 cái bẫy
 
 - **Đừng ghi `paid_amount` / `paid_at` / `auction_fee` của `owner_asset_outcomes`.** Từ Phase 15a đó là tổng do trigger `owner_asset_outcomes_money` dựng từ sổ `owner_cash_events`; client ghi thẳng ⇒ P0001. Muốn đổi số đã thu: thêm / sửa / xoá một khoản thu chi (hoặc `owner_cash_settle`). Chỉ `payment_status = 'defaulted'` là cờ ghi tay.
@@ -407,4 +413,7 @@ Trang gửi `X-Frame-Options: SAMEORIGIN` / `frame-ancestors` ⇒ iframe chỉ h
 
 ## Hotlink ảnh Wikimedia trả 429
 `upload.wikimedia.org` (nhất là thumbnail cỡ lớn chưa cache) giới hạn tốc độ và chặn client "robot". Seed/ảnh công khai phải CHÉP về Storage (`asset-media`), không hotlink — xem `scripts/seed-craft-villages.py` (`fetch` có backoff).
+
+## Hàm danh mục dùng chung bị 2 migration song song ghi đè nhau
+`owner_ws_permission_catalog()` / `owner_ws_default_role_permissions()` là MỘT hàm `CREATE OR REPLACE`: hai phiên cùng thêm quyền từ bản cũ ⇒ bản áp sau làm rơi quyền của bản kia (01/10: M1 làm mất `so-hoa:share`, vá bằng `20261001230000`). Self-check đếm số dòng của chính migration vẫn qua. Trước khi thay hàm dùng chung: đọc bản ĐANG CHẠY (`pg_get_functiondef`) ngay lúc áp, và self-check "không còn dòng quyền ngoài danh mục". Cùng bẫy với file mới: kiểm file chưa tồn tại trước khi Write (phiên khác có thể vừa tạo — `src/lib/brand.ts`).
 

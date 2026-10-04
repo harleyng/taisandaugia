@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PostingPrintSheet } from "@/components/asset-posting/print/PostingPrintSheet";
 import { PRINT_FONTS_HREF } from "@/components/asset-posting/print/postingPrintCss";
 import { usePostingPrintData } from "@/hooks/usePostingPrintData";
+import { useOwnerAuditTrack } from "@/hooks/useOwnerAuditLog";
 import { OWNER_POSTINGS_PATH, ownerPostingPath } from "@/lib/asset-posting/paths";
 
 /** Font của thiết kế (Be Vietnam Pro + IBM Plex Mono) — chỉ nạp ở trang in. */
@@ -48,6 +49,14 @@ const OwnerPostingPrintPage = () => {
   const sheetRef = useRef<HTMLDivElement>(null);
   const printed = useRef(false);
   usePrintFonts();
+
+  // Nhật ký: mở trang in / lưu PDF hồ sơ (một lần mỗi lần mở trang).
+  const track = useOwnerAuditTrack();
+  const tracked = useRef(false);
+  useEffect(() => {
+    if (!data || tracked.current) return;
+    tracked.current = track({ action: "print", title: `Hồ sơ ${data.posting.code}` });
+  }, [data, track]);
 
   useEffect(() => {
     if (!data) return;

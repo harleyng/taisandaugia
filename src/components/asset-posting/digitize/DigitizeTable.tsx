@@ -87,7 +87,7 @@ export function DigitizeTable({ rows, hrefOf, marks, branchLabel, emptyText }: D
                         {branch ? ` · ${branch}` : ""}
                       </p>
                       {(has3d || hasVr || isAuth) && (
-                        <div className="mt-[5px] flex flex-wrap gap-[5px]">
+                        <div className="mt-[5px] flex flex-wrap items-center gap-[5px]">
                           {has3d && <Chip>3D</Chip>}
                           {hasVr && <Chip>VR tour</Chip>}
                           {isAuth && <Chip>Đã giám định</Chip>}

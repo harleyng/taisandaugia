@@ -106,11 +106,29 @@ export function formatFileSize(bytes: number | null | undefined): string | null 
   return `${(bytes / (1024 * 1024)).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} MB`;
 }
 
+/** Đủ để dựng thông số — bản in (hồ sơ đầy đủ) và trang Hồ sơ online (payload công khai) dùng chung. */
+export type SpecSource = { child_slug: string; delta_fields: Record<string, unknown> | null };
+
 /** Thông số đã khai (bỏ ô trống) — không còn ô nào thì in thẻ trống. */
-export function specRows(p: AssetPosting): { k: string; v: string }[] {
+export function specRows(p: SpecSource): { k: string; v: string }[] {
   return getDeltaFields(p.child_slug)
     .map((d) => ({ k: d.label, v: renderDeltaValue(d, p.delta_fields?.[d.key]) }))
     .filter((r) => r.v !== "—");
+}
+
+/** Khoá diện tích theo thứ tự ưu tiên — dòng tóm tắt ("120 m²") của Hồ sơ online / tin nhắn Zalo. */
+const AREA_KEYS = ["area", "land_area", "floor_area", "built_area"] as const;
+
+/** Diện tích đã khai đầu tiên, đã kèm đơn vị; chưa khai thì null. */
+export function areaOf(p: SpecSource): string | null {
+  const fields = getDeltaFields(p.child_slug);
+  for (const key of AREA_KEYS) {
+    const d = fields.find((f) => f.key === key);
+    if (!d) continue;
+    const v = renderDeltaValue(d, p.delta_fields?.[key]);
+    if (v !== "—") return v;
+  }
+  return null;
 }
 
 export const commissionLabel = (pct: number | null) =>

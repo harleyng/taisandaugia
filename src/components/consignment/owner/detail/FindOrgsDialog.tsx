@@ -11,13 +11,15 @@ interface FindOrgsDialogProps {
   sentOrgIds: Set<string>;
   /** Số tổ chức đang giữ hồ sơ — áp trần MAX_RFQ_ORGS. */
   activeCount: number;
+  /** Còn nhờ sàn được không (mỗi hồ sơ một yêu cầu chưa huỷ). */
+  allowBroker: boolean;
 }
 
 /**
  * "Tìm tổ chức khác": toàn bộ danh sách xếp hạng + bản mô tả gửi tổ chức — cùng
  * khối với bước cuối wizard số hoá, chỉ mở trong hộp thoại.
  */
-export function FindOrgsDialog({ open, onOpenChange, posting, sentOrgIds, activeCount }: FindOrgsDialogProps) {
+export function FindOrgsDialog({ open, onOpenChange, posting, sentOrgIds, activeCount, allowBroker }: FindOrgsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
@@ -32,6 +34,7 @@ export function FindOrgsDialog({ open, onOpenChange, posting, sentOrgIds, active
             briefInput={postingToBriefInput(posting)}
             alreadySentIds={sentOrgIds}
             activeCount={activeCount}
+            allowBroker={allowBroker}
             onSent={() => onOpenChange(false)}
             onSkip={() => onOpenChange(false)}
             skipLabel="Đóng"

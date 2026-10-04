@@ -218,7 +218,14 @@ export function stuckAsOf(assets: StuckHistoryInput[], day: string): number {
 
 // ─── Việc cần làm ────────────────────────────────────────────────────────────
 
-export const TODO_KINDS = ["outcome_due", "awaiting_payment", "pending_confirmation", "stuck"] as const;
+export const TODO_KINDS = [
+  "outcome_due",
+  "awaiting_payment",
+  "pending_confirmation",
+  "stuck",
+  // Phase M6 owner-marketing — luật ở src/lib/ownerMarketing/pushCandidates.ts.
+  "push_marketing",
+] as const;
 export type TodoKind = (typeof TODO_KINDS)[number];
 
 export interface TodoItem {
@@ -234,6 +241,8 @@ export interface TodoSummary {
   amount: number;
   /** Tên việc chờ lâu nhất (bỏ qua việc không rõ mốc) — dòng mô tả của nhóm. */
   oldestTitle: string | null;
+  /** Lối vào riêng của dòng (vd. mở sẵn trình soạn cho tài sản đứng đầu); không có = trang của loại việc. */
+  href?: string;
 }
 
 export function summarizeTodo(kind: TodoKind, items: TodoItem[]): TodoSummary {

@@ -3,26 +3,8 @@
 // planTermPrice là BẢN SAO của owner_sub_plan_price() (SQL, migration 20260928100000).
 // Giá thật khi thanh toán luôn do server tính lại (owner_sub_plan_quote).
 
-import { SUB_FEATURE_LABELS, SUPPORTED_SUB_VARIANTS } from "./status";
-import type { OwnerSubPlan, OwnerSubTermOption, PlanBenefit, PlanTier, SubVariantKey } from "./types";
-
-/** Nhóm hiển thị của tính năng tính hạn mức (thẻ Hạn mức + bảng so sánh). */
-export const SUB_FEATURE_GROUPS: Record<SubVariantKey, string> = {
-  scan_3d_owner: "Tài sản",
-  report_portfolio_owner: "Báo cáo",
-};
-
-/** Cụm danh từ trên thẻ gói: "10 lượt quét 3D / tháng". */
-export const SUB_FEATURE_PHRASES: Record<SubVariantKey, string> = {
-  scan_3d_owner: "lượt quét 3D",
-  report_portfolio_owner: "lượt xem báo cáo danh mục",
-};
-
-/** Đơn vị trong bảng so sánh: "10 lượt / tháng". */
-export const SUB_FEATURE_SHORT_UNITS: Record<SubVariantKey, string> = {
-  scan_3d_owner: "lượt",
-  report_portfolio_owner: "lượt xem",
-};
+import { benefitValueText, compareBenefitValue } from "./benefits";
+import type { BenefitValue, OwnerSubPlan, OwnerSubTermOption, PlanBenefitLine, PlanTier } from "./types";
 
 export const PLAN_TIER_LABELS: Record<PlanTier, string> = {
   basic: "Cơ bản (sáng)",
@@ -30,7 +12,7 @@ export const PLAN_TIER_LABELS: Record<PlanTier, string> = {
   premium: "Chuyên nghiệp (vàng kim)",
 };
 
-export const formatCount = (n: number) => n.toLocaleString("en-US");
+export { formatCount } from "./benefits";
 
 /** "25,650,000" — nhóm nghìn bằng dấu phẩy (quy ước tiền của cổng). */
 export const formatVndNumber = (n: number) => Math.round(n).toLocaleString("en-US");
@@ -45,35 +27,22 @@ export const sortPlans = (plans: OwnerSubPlan[]) => [...plans].sort((a, b) => a.
 export const activeTerms = (terms: OwnerSubTermOption[]) =>
   terms.filter((t) => t.is_active).sort((a, b) => a.months - b.months);
 
-/** Hạn mức một tính năng trong gói: undefined = không có, null = không giới hạn. */
-export function planQuota(plan: OwnerSubPlan, key: SubVariantKey): number | null | undefined {
-  const e = plan.entitlements.find((x) => x.variant_key === key);
-  return e ? e.monthly_quota : undefined;
-}
+const valueOf = (l: PlanBenefitLine): BenefitValue => ({
+  kind: l.benefit.kind,
+  unit: l.benefit.unit,
+  level_format: l.benefit.level_format,
+  quota: l.quota,
+  cycle: l.cycle,
+});
 
-const benefitKey = (b: Pick<PlanBenefit, "group" | "label">) => `${b.group.trim()}|${b.label.trim()}`;
+/** Chữ giá trị của một dòng quyền lợi trong gói: "20 hồ sơ / tháng". */
+export const planBenefitText = (l: PlanBenefitLine) => benefitValueText(valueOf(l));
 
-/**
- * Độ lớn gần đúng của một giá trị quyền lợi tự nhập để so "nâng lên": "Không giới hạn" = ∞,
- * "1,000 thư / tháng" = 1000; không đọc được số ⇒ null (chỉ so khác / giống).
- */
-export function benefitMagnitude(value: string | undefined): number | null {
-  if (value === undefined) return null;
-  const v = value.trim();
-  if (/^không giới hạn/i.test(v)) return Infinity;
-  const m = v.match(/^(\d[\d,.]*)/);
-  if (!m) return null;
-  const n = Number(m[1].replace(/[,.]/g, ""));
-  return Number.isFinite(n) ? n : null;
-}
-
-/** Giá trị B có tốt hơn A không (A undefined = gói kia không có dòng này). */
-function benefitImproved(prev: string | undefined, next: string): boolean {
-  if (prev === undefined) return true;
-  const a = benefitMagnitude(prev);
-  const b = benefitMagnitude(next);
-  if (a !== null && b !== null) return b > a;
-  return prev.trim() !== next.trim();
+/** `next` tốt hơn `prev` không. Không so được (cả kỳ ↔ theo lịch) ⇒ coi là khác khi chữ khác. */
+function improved(prev: PlanBenefitLine | undefined, next: PlanBenefitLine): boolean {
+  if (!prev) return true;
+  const d = compareBenefitValue(valueOf(prev), valueOf(next));
+  return d === null ? planBenefitText(prev) !== planBenefitText(next) : d > 0;
 }
 
 /** Thẻ gói chỉ hiện chừng này dòng đầu; phần còn lại xem ở bảng so sánh ngay dưới. */
@@ -89,47 +58,20 @@ export interface PlanCardLine {
   isNew: boolean;
 }
 
-function meteredLine(key: SubVariantKey, quota: number | null, isNew: boolean): PlanCardLine {
-  if (quota === null) {
-    return { key, before: `${SUB_FEATURE_LABELS[key]} `, strong: "không giới hạn", isNew };
-  }
-  return { key, strong: formatCount(quota), after: ` ${SUB_FEATURE_PHRASES[key]} / tháng`, isNew };
-}
-
-const benefitLine = (b: PlanBenefit, isNew: boolean): PlanCardLine => ({
-  key: benefitKey(b),
-  before: `${b.label}: `,
-  strong: b.value,
-  isNew,
-});
-
 /**
- * Dòng trên thẻ gói. Gói đầu tiên: mọi thứ gói có. Các gói sau: chỉ những gì NÂNG LÊN so
- * với gói liền trước ("Mọi thứ trong X, nâng lên:").
+ * Dòng trên thẻ gói, theo thứ tự admin xếp. Gói đầu tiên: mọi thứ gói có. Các gói sau: chỉ
+ * những gì NÂNG LÊN so với gói liền trước ("Mọi thứ trong X, nâng lên:").
  */
 export function planCardLines(prev: OwnerSubPlan | null, plan: OwnerSubPlan): PlanCardLine[] {
-  const lines: PlanCardLine[] = [];
-  for (const key of SUPPORTED_SUB_VARIANTS) {
-    const q = planQuota(plan, key);
-    if (q === undefined) continue;
-    if (!prev) {
-      lines.push(meteredLine(key, q, false));
-      continue;
-    }
-    const pq = planQuota(prev, key);
-    if (pq === null) continue;
-    if (pq === undefined || q === null || q > pq) lines.push(meteredLine(key, q, pq === undefined));
-  }
-  const prevBenefits = new Map((prev?.benefits ?? []).map((b) => [benefitKey(b), b.value]));
-  for (const b of plan.benefits) {
-    if (!prev) {
-      lines.push(benefitLine(b, false));
-      continue;
-    }
-    const pv = prevBenefits.get(benefitKey(b));
-    if (benefitImproved(pv, b.value)) lines.push(benefitLine(b, pv === undefined));
-  }
-  return lines;
+  const prevByKey = new Map((prev?.benefits ?? []).map((l) => [l.benefit_key, l]));
+  return plan.benefits
+    .filter((l) => !prev || improved(prevByKey.get(l.benefit_key), l))
+    .map((l) => ({
+      key: l.benefit_key,
+      before: `${l.benefit.label}: `,
+      strong: planBenefitText(l),
+      isNew: !!prev && !prevByKey.has(l.benefit_key),
+    }));
 }
 
 export type CompareCellKind = "no" | "value";
@@ -152,53 +94,32 @@ export interface CompareGroup {
   rows: CompareRow[];
 }
 
-const quotaText = (key: SubVariantKey, q: number | null | undefined) =>
-  q === undefined ? "—" : q === null ? "Không giới hạn" : `${formatCount(q)} ${SUB_FEATURE_SHORT_UNITS[key]} / tháng`;
-
 /**
- * Bảng so sánh: nhóm theo thứ tự xuất hiện; trong nhóm, tính năng tính hạn mức đứng trước,
- * rồi tới dòng quyền lợi (hợp của mọi gói, theo thứ tự gói). `currentId` = gói danh mục
- * đang dùng — ô tốt hơn gói đó được đánh dấu `up`.
+ * Bảng so sánh: hợp mọi dòng quyền lợi, thứ tự theo gói CAO nhất trước (gói cao thường liệt
+ * kê đủ mọi dòng), nhóm theo thứ tự xuất hiện. `currentId` = gói danh mục đang dùng — ô tốt
+ * hơn gói đó được đánh dấu `up`.
  */
 export function compareGroups(plans: OwnerSubPlan[], currentId: string | null): CompareGroup[] {
-  const groups = new Map<string, CompareRow[]>();
-  const push = (group: string, row: CompareRow) => {
-    if (!groups.has(group)) groups.set(group, []);
-    groups.get(group)!.push(row);
-  };
   const current = plans.find((p) => p.id === currentId) ?? null;
+  const lineOf = (p: OwnerSubPlan | null, key: string) => p?.benefits.find((l) => l.benefit_key === key);
 
-  for (const key of SUPPORTED_SUB_VARIANTS) {
-    if (!plans.some((p) => planQuota(p, key) !== undefined)) continue;
-    const cells: Record<string, CompareCell> = {};
-    const cq = current ? planQuota(current, key) : undefined;
-    for (const p of plans) {
-      const q = planQuota(p, key);
-      const up = !!current && p.id !== current.id && q !== undefined && cq !== null && (cq === undefined || q === null || q > cq);
-      cells[p.id] = { text: quotaText(key, q), kind: q === undefined ? "no" : "value", up };
-    }
-    push(SUB_FEATURE_GROUPS[key], { key, label: SUB_FEATURE_LABELS[key], cells });
-  }
+  const seen = new Map<string, PlanBenefitLine>();
+  for (const p of [...plans].reverse()) for (const l of p.benefits) if (!seen.has(l.benefit_key)) seen.set(l.benefit_key, l);
 
-  // Thứ tự dòng theo gói CAO nhất trước — gói cao thường liệt kê đủ mọi dòng.
-  const seen = new Map<string, PlanBenefit>();
-  for (const p of [...plans].reverse()) for (const b of p.benefits) if (!seen.has(benefitKey(b))) seen.set(benefitKey(b), b);
-  for (const [key, b] of seen) {
-    const valueOf = (p: OwnerSubPlan | null) => p?.benefits.find((x) => benefitKey(x) === key)?.value;
-    const cv = valueOf(current);
+  const groups = new Map<string, CompareRow[]>();
+  for (const [key, ref] of seen) {
+    const cur = lineOf(current, key);
     const cells: Record<string, CompareCell> = {};
     for (const p of plans) {
-      const v = valueOf(p);
-      // Chữ tự do không đọc được số ⇒ không khẳng định "tốt hơn".
-      const a = benefitMagnitude(cv);
-      const bm = benefitMagnitude(v);
-      const up = !!current && p.id !== current.id && v !== undefined
-        && (cv === undefined || (a !== null && bm !== null && bm > a));
-      cells[p.id] = { text: v ?? "—", kind: v === undefined ? "no" : "value", up };
+      const l = lineOf(p, key);
+      const d = l && cur ? compareBenefitValue(valueOf(cur), valueOf(l)) : null;
+      const up = !!current && p.id !== current.id && !!l && (!cur || (d !== null && d > 0));
+      cells[p.id] = { text: l ? planBenefitText(l) : "—", kind: l ? "value" : "no", up };
     }
-    push(b.group.trim(), { key, label: b.label, cells });
+    const group = ref.benefit.group_name;
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group)!.push({ key, label: ref.benefit.label, cells });
   }
-
   return [...groups].map(([group, rows]) => ({ group, rows }));
 }
 

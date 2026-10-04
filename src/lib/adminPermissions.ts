@@ -81,8 +81,8 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   { module: "co-hoi", label: "Cơ hội", category: "ban-hang", actions: ["view", "create", "update", "delete", "approve", "export"] },
   { module: "khach-hang", label: "Khách hàng", category: "ban-hang", actions: ["view", "create", "update", "delete", "export"] },
   { module: "don-hang", label: "Đơn hàng", category: "ban-hang", actions: ["view", "create", "update", "delete", "export"] },
-  // Gói thuê bao tổ chức chủ tài sản — cấu hình riêng từng Trạm, kích hoạt tay.
-  { module: "goi-thue-bao", label: "Gói thuê bao", category: "ban-hang", actions: ["view", "create", "update", "export"] },
+  // Gói dịch vụ (gói thuê bao) tổ chức chủ tài sản — cấu hình riêng từng Trạm, kích hoạt tay.
+  { module: "goi-thue-bao", label: "Gói dịch vụ", category: "ban-hang", actions: ["view", "create", "update", "export"] },
   // Sổ đăng ký công ty (bảng suppliers). Mã giữ "nha-cung-cap" —
   // "doi-tac" đã thuộc về module thẻ hiển thị trang chủ từ trước.
   { module: "nha-cung-cap", label: "Đối tác", category: "ban-hang", actions: ["view", "create", "update", "delete"] },
@@ -106,6 +106,12 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   // (20260915000030) — ĐỪNG đổi. Người có "view" đọc được hồ sơ + checklist của MỌI người bán (BR-CNS-02).
   { module: "tu-van-phap-ly", label: "Tư vấn pháp lý", category: "van-hanh", actions: ["view", "update", "export"] },
   { module: "tu-van-dau-gia", label: "Tư vấn đấu giá", category: "van-hanh", actions: ["view", "update", "export"] },
+  // Đơn thẩm định giá qua sàn (asset_valuation_orders). Mã nằm trong policy RLS + storage + các RPC
+  // admin_*_valuation (20261004160000) — ĐỪNG đổi.
+  { module: "tham-dinh-gia", label: "Thẩm định giá", category: "van-hanh", actions: ["view", "update", "export"] },
+  // Đơn "Giao việc cho sàn" của chủ tài sản (owner_mkt_orders). Mã nằm trong policy RLS + các RPC
+  // admin_mkt_order_* (20261002110000) — ĐỪNG đổi.
+  { module: "don-truyen-thong", label: "Đơn truyền thông", category: "van-hanh", actions: ["view", "update", "export"] },
   { module: "dich-vu", label: "Dịch vụ", category: "van-hanh", actions: ["view", "create", "update", "delete"] },
   { module: "cong-viec", label: "Công việc", category: "van-hanh", actions: ["view", "create", "update", "delete", "export"] },
   // Mã "lien-he" GIỮ NGUYÊN: Ticket thay thế hộp thư cũ nên kế thừa quyền đã cấp.

@@ -16,6 +16,8 @@ import { WIZARD_STEPS } from "./wizard/wizardSteps";
 import { WizardFooter } from "./wizard/WizardFooter";
 import { WizardDoneScreen } from "./wizard/WizardDoneScreen";
 import { canSaveDraft, useDraftAutosave } from "./wizard/useDraftAutosave";
+import { useWizardDossier } from "./wizard/useWizardDossier";
+import { PartnerScopeProvider } from "./partners/PartnerScope";
 import { useWizardAuthentication } from "./useWizardAuthentication";
 import { ownerConsignmentPath } from "@/lib/consignment/ownerConsignment";
 import { AuthenticationOutcomeNotice } from "@/components/authentication/AuthenticationOutcomeNotice";
@@ -69,19 +71,29 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   const form = useForm<WizardValues>({ resolver: zodResolver(wizardSchema), mode: "onTouched", defaultValues: wizardDefaults });
   const f = form.watch();
 
-  // Nạp bản nháp một lần khi mở lại (không có bước này thì "Lưu nháp" là bẫy).
+  // Nạp bản nháp một lần khi mở lại (không có bước này thì "Lưu nháp" là bẫy) — chờ cả
+  // các phần "Hồ sơ dịch vụ" (bảng riêng asset_posting_dossier_items).
   const { data: draft } = usePostingDetail(postingId);
+  const dossier = useWizardDossier(postingId);
+  const { rows: dossierRows, ready: dossierReady, markSynced, save: saveDossier } = dossier;
   const hydrated = useRef(false);
   useEffect(() => {
-    if (!draft?.posting || hydrated.current) return;
+    if (!draft?.posting || !dossierReady || hydrated.current) return;
     hydrated.current = true;
-    form.reset(postingToWizardValues(draft.posting));
-  }, [draft, form]);
+    const values = postingToWizardValues(draft.posting, dossierRows);
+    form.reset(values);
+    markSynced(draft.posting.id, values.dossier);
+  }, [draft, dossierReady, dossierRows, markSynced, form]);
 
   // Id hồ sơ đã có trong DB: nháp mở lại, HOẶC bản vừa lưu (tự lưu / "Thêm 3D"…). Mọi
   // lần lưu sau phải UPDATE dòng này. State thuần để "Số hoá tài sản khác" xoá được.
   const [savedId, setSavedId] = useState<string | null>(postingId);
-  const autosave = useDraftAutosave(form, savedId, useCallback((id: string) => setSavedId(id), []));
+  const autosave = useDraftAutosave(
+    form,
+    savedId,
+    useCallback((id: string) => setSavedId(id), []),
+    useCallback((id: string, v: WizardValues) => saveDossier(id, v.dossier), [saveDossier]),
+  );
 
   const up = (patch: Partial<WizardValues>) => {
     Object.entries(patch).forEach(([k, v]) => form.setValue(k as keyof WizardValues, v as never, { shouldValidate: false }));
@@ -147,6 +159,7 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
       });
       setSavedId(saved);
       autosave.markSaved(saved);
+      await saveDossier(saved, v.dossier);
       return saved;
     } catch {
       return null; // useCreatePosting đã toast lỗi
@@ -198,7 +211,8 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
       { posting: buildPostingPayload(f), status: "active", postingId: id ?? undefined },
       {
         onError: () => autosave.setEnabled(true),
-        onSuccess: ({ postingId: pid }) => {
+        onSuccess: async ({ postingId: pid }) => {
+          await dossier.saveOnFinish(pid, f.dossier);
           const wants = canConsign && f.wantsAuction === "yes";
           if (wants && f.orgMode === "self" && chosenResults.length > 0) {
             send.mutate(
@@ -225,6 +239,7 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
     form.reset(wizardDefaults);
     ai.reset();
     autosave.reset();
+    dossier.reset();
     autosave.setEnabled(true);
     setSavedId(null);
     setShown({});
@@ -249,90 +264,95 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   const s = WIZARD_STEPS[step - 1];
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-muted">
-      <WizardTopBar
-        parentSlug={f.parentSlug}
-        childSlug={f.childSlug}
-        save={autosave.state}
-        onExit={phase === "done" ? finishNav : exit}
-        onSaveExit={phase === "wizard" ? saveExit : undefined}
-        savingExit={savingExit}
-      />
+    // Danh bạ đối tác riêng theo phạm vi của hồ sơ (Trạm / cá nhân) — nháp cũ theo bản lưu.
+    <PartnerScopeProvider workspaceId={draft?.posting ? draft.posting.workspace_id : workspaceId}>
+      <div className="fixed inset-0 z-50 flex flex-col bg-muted">
+        <WizardTopBar
+          parentSlug={f.parentSlug}
+          childSlug={f.childSlug}
+          save={autosave.state}
+          onExit={phase === "done" ? finishNav : exit}
+          onSaveExit={phase === "wizard" ? saveExit : undefined}
+          savingExit={savingExit}
+        />
 
-      <div ref={scroller} className="flex-1 overflow-y-auto">
-        {phase === "done" ? (
-          <WizardDoneScreen
-            title={f.title}
-            sentOrgNames={sentOrgNames}
-            sentToPlatform={sentToPlatform}
-            onTrack={finishedId ? () => navigate(ownerConsignmentPath(finishedId)) : undefined}
-            onView={finishNav}
-            onAnother={resetWizard}
+        <div ref={scroller} className="flex-1 overflow-y-auto">
+          {phase === "done" ? (
+            <WizardDoneScreen
+              title={f.title}
+              sentOrgNames={sentOrgNames}
+              sentToPlatform={sentToPlatform}
+              onTrack={finishedId ? () => navigate(ownerConsignmentPath(finishedId)) : undefined}
+              onView={finishNav}
+              onAnother={resetWizard}
+            />
+          ) : (
+            <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-start gap-6 px-3.5 pb-[120px] pt-5 sm:px-6 sm:pt-8 md:grid-cols-[190px_minmax(0,1fr)] lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-10">
+              <WizardNav step={step} go={go} reqs={reqs} sections={sections} />
+              <main className="flex min-w-0 flex-col gap-3">
+                <h1 className="mb-1.5 text-[22px] font-bold tracking-tight text-foreground">{s.title}</h1>
+
+                {/* Hồ sơ bị trả về nháp vì kết luận giám định tiêu cực: lý do phải hiện ngay đây (BR-GD-02). */}
+                {savedId && <AuthenticationOutcomeNotice postingId={savedId} />}
+
+                {step === 2 ? (
+                  <StepInfo
+                    f={f}
+                    up={up}
+                    reqs={reqs}
+                    showErr={!!shown[2]}
+                    ai={ai}
+                    postingId={savedId}
+                    ensurePostingId={ensureDraft}
+                  />
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {step === 1 && <Step1AssetType f={f} up={up} errs={errs} />}
+                    {step === 3 && <Step3LegalStatus f={f} up={up} errs={errs} postingId={savedId} ensurePostingId={ensureDraft} />}
+                    {step === 4 && (
+                      <Step4AuctionNeeds
+                        f={f}
+                        up={up}
+                        errs={errs}
+                        orgResults={orgResults}
+                        orgLoading={orgLoading}
+                        postingId={savedId}
+                        ensurePostingId={ensureDraft}
+                        gdReasons={gd.reasons}
+                        gdLotReason={gd.lotReason}
+                        canConsign={canConsign}
+                      />
+                    )}
+                    {step === 5 && (
+                      <StepReview f={f} jump={go} missing={missing} chosenOrgNames={chosenOrgNames} />
+                    )}
+                  </div>
+                )}
+              </main>
+            </div>
+          )}
+        </div>
+
+        {phase === "wizard" && (
+          <WizardFooter
+            step={step}
+            onBack={() => go(step - 1)}
+            onExit={exit}
+            onNext={next}
+            stepMissing={stepMissing}
+            finishButton={
+              <button
+                type="button"
+                onClick={() => void finish()}
+                disabled={!!missing.length || busy}
+                className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-[9px] bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted-foreground/40"
+              >
+                {busy ? <Loader2 className="h-[15px] w-[15px] animate-spin" /> : <Check className="h-[15px] w-[15px]" />} {finishLabel}
+              </button>
+            }
           />
-        ) : (
-          <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-start gap-6 px-3.5 pb-[120px] pt-5 sm:px-6 sm:pt-8 md:grid-cols-[190px_minmax(0,1fr)] lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-10">
-            <WizardNav step={step} go={go} reqs={reqs} sections={sections} />
-            <main className="flex min-w-0 flex-col gap-3">
-              <h1 className="mb-1.5 text-[22px] font-bold tracking-tight text-foreground">{s.title}</h1>
-
-              {/* Hồ sơ bị trả về nháp vì kết luận giám định tiêu cực: lý do phải hiện ngay đây (BR-GD-02). */}
-              {savedId && <AuthenticationOutcomeNotice postingId={savedId} />}
-
-              {step === 2 ? (
-                <StepInfo
-                  f={f}
-                  up={up}
-                  reqs={reqs}
-                  showErr={!!shown[2]}
-                  ai={ai}
-                  postingId={savedId}
-                  ensurePostingId={ensureDraft}
-                />
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {step === 1 && <Step1AssetType f={f} up={up} errs={errs} />}
-                  {step === 3 && <Step3LegalStatus f={f} up={up} errs={errs} postingId={savedId} ensurePostingId={ensureDraft} />}
-                  {step === 4 && (
-                    <Step4AuctionNeeds
-                      f={f}
-                      up={up}
-                      errs={errs}
-                      orgResults={orgResults}
-                      orgLoading={orgLoading}
-                      postingId={savedId}
-                      ensurePostingId={ensureDraft}
-                      gdReasons={gd.reasons}
-                      gdLotReason={gd.lotReason}
-                      canConsign={canConsign}
-                    />
-                  )}
-                  {step === 5 && <StepReview f={f} jump={go} missing={missing} chosenOrgNames={chosenOrgNames} />}
-                </div>
-              )}
-            </main>
-          </div>
         )}
       </div>
-
-      {phase === "wizard" && (
-        <WizardFooter
-          step={step}
-          onBack={() => go(step - 1)}
-          onExit={exit}
-          onNext={next}
-          stepMissing={stepMissing}
-          finishButton={
-            <button
-              type="button"
-              onClick={() => void finish()}
-              disabled={!!missing.length || busy}
-              className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-[9px] bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted-foreground/40"
-            >
-              {busy ? <Loader2 className="h-[15px] w-[15px] animate-spin" /> : <Check className="h-[15px] w-[15px]" />} {finishLabel}
-            </button>
-          }
-        />
-      )}
-    </div>
+    </PartnerScopeProvider>
   );
 }

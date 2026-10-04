@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DetailHero } from "@/components/shared/DetailHero";
-import { serviceKind, serviceRequestListPath, type ServiceKindKey } from "@/lib/serviceRequests/kinds";
+import { serviceKind, serviceRequestListPath, type ServiceRequestKindKey } from "@/lib/serviceRequests/kinds";
 import { ServiceStatusBadge } from "./DetailSection";
 
 export interface ServiceDetailTab {
@@ -30,7 +30,7 @@ export function ServiceDetailShell({
   tabs = [],
   children,
 }: {
-  kind: ServiceKindKey;
+  kind: ServiceRequestKindKey;
   isLoading: boolean;
   found: boolean;
   notFoundText: string;

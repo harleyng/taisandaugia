@@ -7,7 +7,7 @@ export const SERVICE_GROUPS: readonly { key: ServiceGroupKey; label: string; sta
   { key: "cho-bao-gia", label: "Chờ báo giá", statuses: ["requested"] },
   { key: "cho-thanh-toan", label: "Chờ thanh toán", statuses: ["quoted"] },
   // VR "delivered" còn chờ sàn duyệt & gắn lô nên vẫn là việc đang làm.
-  { key: "dang-thuc-hien", label: "Đang thực hiện", statuses: ["paid", "scheduled", "item_pending", "in_review", "delivered"] },
+  { key: "dang-thuc-hien", label: "Đang thực hiện", statuses: ["paid", "scheduled", "item_pending", "in_review", "in_progress", "delivered"] },
   { key: "hoan-tat", label: "Hoàn tất", statuses: ["completed", "attached", "superseded"] },
   { key: "da-huy", label: "Đã huỷ", statuses: ["cancelled"] },
 ];
@@ -24,6 +24,7 @@ export const SERVICE_STATUS_TONE: Record<string, string> = {
   scheduled: "bg-primary/10 text-primary",
   item_pending: "bg-primary/10 text-primary",
   in_review: "bg-warning/10 text-warning",
+  in_progress: "bg-primary/10 text-primary",
   delivered: "bg-warning/10 text-warning",
   attached: "bg-success/10 text-success",
   completed: "bg-success/10 text-success",

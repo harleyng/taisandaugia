@@ -25,7 +25,7 @@ interface PostingAuthenticationCardProps {
   requiredReasons?: AuthenticationRequiredReason[];
   /** Lý do admin ghi khi đánh dấu lô bắt buộc. */
   lotReason?: string | null;
-  /** "banner": banner "Thẩm định" gọn ở bước 4 của wizard số hoá (thiết kế v3). */
+  /** "banner": banner gọn trong khối "Thẩm định" ở bước 4 của wizard số hoá. */
   variant?: "card" | "banner";
 }
 
@@ -64,8 +64,8 @@ export function PostingAuthenticationCard({
       <>
         <ServiceBanner
           icon={<BadgeCheck />}
-          title="Thẩm định"
-          desc="Chứng thư giám định độc lập giúp tăng mức xác minh của lô"
+          title="Giám định qua sàn"
+          desc="Chứng thư giám định độc lập của đối tác sàn giúp tăng mức xác minh của lô"
           badge={
             required && !authentic ? (
               <span className="rounded-md bg-warning/10 px-1.5 py-0.5 text-[11px] font-semibold text-warning">Bắt buộc</span>

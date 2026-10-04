@@ -3,8 +3,9 @@ import type { PostingPrintData } from "@/hooks/usePostingPrintData";
 import { POSTING_PRINT_CSS } from "./postingPrintCss";
 import { PrintCover } from "./PrintCover";
 import { PrintLegalStatusSection, PrintSpecsSection } from "./PrintAssetSections";
-import { PrintAuctionConsultSection, PrintLegalReviewSection } from "./PrintConsultSections";
+import { PrintLegalReviewSection } from "./PrintConsultSections";
 import { PrintMediaSection, PrintVerifyBox } from "./PrintMediaSection";
+import { PrintAppraisalSection } from "./PrintAppraisalSection";
 
 interface PostingPrintSheetProps {
   data: PostingPrintData;
@@ -47,7 +48,7 @@ export function PostingPrintSheet({ data, exportedAt }: PostingPrintSheetProps) 
                   <PrintLegalStatusSection data={data} />
                   <PrintLegalReviewSection data={data} />
                   <PrintMediaSection data={data} />
-                  <PrintAuctionConsultSection data={data} />
+                  <PrintAppraisalSection data={data} />
                   <PrintVerifyBox data={data} />
                 </div>
               </td>

@@ -10,6 +10,7 @@ import { MARGIN, themeOf } from "@/lib/personnel/dossier-pdf/theme";
 import { fmtDate } from "@/lib/personnel/dossier-pdf/primitives";
 import { formatVnd } from "@/lib/advertising/slug";
 import { gdMethodLabel } from "@/lib/authentication/status";
+import { purposeLabel } from "@/lib/valuation/status";
 import { slotList, slotText } from "@/lib/contracts/templates/resolve";
 import type {
   ServiceContractTerms,
@@ -116,7 +117,8 @@ function serviceRows(kind: ServiceKindKey, terms: ServiceContractTerms): Array<[
     ["Tài sản", val(terms.posting_title)],
   ];
   if (kind === "giam-dinh" && typeof extra.method === "string") rows.push(["Phương thức", gdMethodLabel(extra.method)]);
-  if ((kind === "vr-tour" || kind === "giam-dinh") && typeof extra.site_address === "string" && extra.site_address.trim()) {
+  if (kind === "tham-dinh" && typeof extra.purpose === "string") rows.push(["Mục đích thẩm định", purposeLabel(extra.purpose)]);
+  if ((kind === "vr-tour" || kind === "giam-dinh" || kind === "tham-dinh") && typeof extra.site_address === "string" && extra.site_address.trim()) {
     rows.push(["Địa điểm", extra.site_address]);
   }
   return rows;

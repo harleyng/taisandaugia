@@ -34,6 +34,8 @@ export interface AuctionCardProps {
   /** @deprecated số lượt quan tâm — không còn hiển thị */
   saveCount?: number;
   viewsCount?: number;
+  /** Tin đang nổi bật (gói "Tin nổi bật" chủ tài sản mua — isFeaturedNow). */
+  highlighted?: boolean;
 }
 
 
@@ -55,6 +57,15 @@ function getCategoryLabel(categorySlug: string, subCategorySlug?: string, fullPa
   return categorySlug;
 }
 
+/** Nhãn "Nổi bật" góc dưới ảnh — màu nhấn (accent) của sàn. */
+function FeaturedBadge() {
+  return (
+    <Badge className="absolute bottom-2 left-2 border-0 bg-accent text-xs font-semibold text-accent-foreground hover:bg-accent">
+      Nổi bật
+    </Badge>
+  );
+}
+
 function getOrgInitials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").slice(0, 3).toUpperCase();
 }
@@ -63,7 +74,7 @@ export const AuctionCard = memo(function AuctionCard({
   id, imageUrl, title, address, startingPrice, priceUnit = "TOTAL",
   stepPrice, depositAmount, auctionDate, registrationDeadline, sessionStatus, categorySlug,
   subCategorySlug, viewMode = "grid", variant = "default",
-  countdown, orgName, orgId, winPrice, isSaved, onToggleSave, saveCount, viewsCount,
+  countdown, orgName, orgId, winPrice, isSaved, onToggleSave, saveCount, viewsCount, highlighted,
 }: AuctionCardProps) {
   const guardedNavigate = useAuthGuardedNavigate();
   const orgClick = orgId ? guardedNavigate(`/auction-org/${orgId}`) : undefined;
@@ -90,6 +101,7 @@ export const AuctionCard = memo(function AuctionCard({
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
           <SessionStatusBadge status={sessionStatus} className="absolute top-2 left-2 text-xs" />
+          {highlighted && <FeaturedBadge />}
         </div>
         <div className="flex-1 py-3 pr-4 flex flex-col justify-between">
           <div>
@@ -146,6 +158,7 @@ export const AuctionCard = memo(function AuctionCard({
             </div>
           )}
           <SessionStatusBadge status={sessionStatus} className="absolute top-3 left-3 text-xs" />
+          {highlighted && <FeaturedBadge />}
           {countdown && (
             <Badge className="absolute top-3 right-3 bg-slate-800/80 hover:bg-slate-800/80 text-white border-0 text-xs font-medium backdrop-blur-sm flex items-center gap-1.5">
               <Hourglass className="h-3 w-3" strokeWidth={1.5} />
@@ -241,6 +254,7 @@ export const AuctionCard = memo(function AuctionCard({
           </div>
         )}
         <SessionStatusBadge status={sessionStatus} className="absolute top-2 left-2 text-xs" />
+        {highlighted && <FeaturedBadge />}
       </div>
       <div className="p-3 md:p-4 flex flex-col flex-1">
         <h3 className="font-bold text-sm md:text-base text-foreground leading-snug mb-0.5 line-clamp-1 group-hover:text-primary transition-colors">

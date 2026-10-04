@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useSetOwnerSubscriptionStatus } from "@/hooks/useAdminOwnerSubscriptions";
+import { useCancelOwnerSubscription } from "@/hooks/useAdminOwnerSubscriptions";
 
 interface Props {
   open: boolean;
@@ -21,7 +21,7 @@ interface Props {
 
 /** Huỷ gói: thành viên trả credit lại ngay. Không hoàn tiền tự động — xử lý tay. */
 export function CancelSubscriptionDialog({ open, onOpenChange, subId }: Props) {
-  const setStatus = useSetOwnerSubscriptionStatus();
+  const cancel = useCancelOwnerSubscription();
   const [reason, setReason] = useState("");
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function CancelSubscriptionDialog({ open, onOpenChange, subId }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Huỷ gói thuê bao?</DialogTitle>
+          <DialogTitle>Huỷ gói dịch vụ?</DialogTitle>
           <DialogDescription>
             Thành viên Trạm quay về trả credit ngay lập tức. Hệ thống không tự hoàn tiền phần còn lại của kỳ — xử lý hoàn tiền (nếu có) ngoài hệ thống.
           </DialogDescription>
@@ -47,12 +47,12 @@ export function CancelSubscriptionDialog({ open, onOpenChange, subId }: Props) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>Đóng</Button>
           <Button
             variant="destructive"
-            disabled={!valid || setStatus.isPending}
+            disabled={!valid || cancel.isPending}
             onClick={() =>
-              setStatus.mutate({ subId, status: "cancelled", reason: reason.trim() }, { onSuccess: () => onOpenChange(false) })
+              cancel.mutate({ subId, reason: reason.trim() }, { onSuccess: () => onOpenChange(false) })
             }
           >
-            {setStatus.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+            {cancel.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             Huỷ gói
           </Button>
         </DialogFooter>

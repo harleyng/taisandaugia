@@ -9,17 +9,28 @@ import { useOwnerConsignmentSummary, usePostingContracts } from "@/hooks/useCons
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useWorkspaceBranchOptions } from "@/hooks/useOwnerWorkspaceMembers";
 import { useLegalConsultItems, usePostingLegalConsultations } from "@/hooks/useLegalConsultations";
-import { useAuctionConsultProposal, usePostingAuctionConsultations } from "@/hooks/useAuctionConsultations";
 import { summarizeScans, usePostingScans } from "@/hooks/useAsset3dScans";
 import { usePostingVrOrders } from "@/hooks/useVrTourOrders";
 import { usePostingAuthenticationOrders } from "@/hooks/useAuthenticationOrders";
+import { useDossierItems } from "@/hooks/useDossierItems";
+import { usePostingValuationOrders } from "@/hooks/useValuationOrders";
+import { summarizeValuations } from "@/lib/valuation/status";
 import { digitizeStatusOf } from "@/lib/asset-posting/digitizeStatus";
 import { summarizeConsultations } from "@/lib/legalConsult/status";
-import { summarizeAuctionConsultations } from "@/lib/auctionConsult/status";
 import { summarizeVrOrders } from "@/lib/vrTour/status";
 import { summarizeGdOrders } from "@/lib/authentication/status";
 import { LEGAL_DOC_BUCKET } from "@/lib/legalConsult/paths";
 import type { AssetPosting } from "@/types/asset-posting";
+
+/** Kết quả thẩm định giá in ở mục 05 — từ đơn của sàn hoặc đối tác riêng của chủ. */
+export interface PrintAppraisal {
+  source: "platform" | "external";
+  partnerName: string | null;
+  value: number;
+  issuedAt: string | null;
+  validUntil: string | null;
+  certificateNo: string | null;
+}
 
 /** Dung lượng từng giấy tờ (bytes) theo đường dẫn — liệt kê theo thư mục, lỗi thì bỏ trống. */
 function useDocSizes(paths: string[]) {
@@ -81,13 +92,11 @@ export function usePostingPrintData(postingId: string | undefined) {
   const legal = summarizeConsultations(legalRows.data ?? []);
   const legalItems = useLegalConsultItems(legal.current?.id);
 
-  const auctionRows = usePostingAuctionConsultations(id);
-  const auction = summarizeAuctionConsultations(auctionRows.data ?? []);
-  const proposal = useAuctionConsultProposal(auction.current?.id);
-
   const scans = usePostingScans(id);
   const vrOrders = usePostingVrOrders(id);
   const gdOrders = usePostingAuthenticationOrders(id);
+  const dossierItems = useDossierItems(id);
+  const tdgOrders = usePostingValuationOrders(id);
 
   const docPaths = [...(posting?.ownership_proof_urls ?? []), ...(posting?.doc_urls ?? [])];
   const docSizes = useDocSizes(docPaths);
@@ -96,12 +105,12 @@ export function usePostingPrintData(postingId: string | undefined) {
     detail.isLoading ||
     contractsLoading ||
     legalRows.isLoading ||
-    auctionRows.isLoading ||
     (!!legal.current && legalItems.isLoading) ||
-    (!!auction.current && proposal.isLoading) ||
     scans.isLoading ||
     vrOrders.isLoading ||
     gdOrders.isLoading ||
+    dossierItems.isLoading ||
+    tdgOrders.isLoading ||
     workspaceName.isLoading ||
     (docPaths.length > 0 && docSizes.isLoading);
 
@@ -118,6 +127,30 @@ export function usePostingPrintData(postingId: string | undefined) {
   const s3 = summarizeScans(scans.data ?? []);
   const vr = summarizeVrOrders(vrOrders.data ?? []);
   const gd = summarizeGdOrders(gdOrders.data ?? []);
+  const tdg = summarizeValuations(tdgOrders.data ?? []).current;
+  const appRow = dossierItems.data?.find((r) => r.kind === "appraisal") ?? null;
+  const external: PrintAppraisal | null =
+    appRow?.source === "external_partner" && appRow.appraised_value != null
+      ? {
+          source: "external",
+          partnerName: appRow.partner_name,
+          value: Number(appRow.appraised_value),
+          issuedAt: appRow.issued_at,
+          validUntil: appRow.valid_until,
+          certificateNo: null,
+        }
+      : null;
+  const platform: PrintAppraisal | null =
+    tdg?.appraised_value != null
+      ? {
+          source: "platform",
+          partnerName: tdg.partner_name,
+          value: Number(tdg.appraised_value),
+          issuedAt: tdg.valuation_date,
+          validUntil: tdg.valid_until,
+          certificateNo: tdg.certificate_no,
+        }
+      : null;
 
   return {
     isLoading,
@@ -130,7 +163,8 @@ export function usePostingPrintData(postingId: string | undefined) {
         : (personalName ?? posting.ownership_declaration?.name ?? null),
       docSizes: docSizes.data ?? {},
       legal: { current: legal.current, active: !!legal.active, items: legalItems.data ?? [] },
-      auction: { current: auction.current, proposal: proposal.data ?? null },
+      /** Kết quả thẩm định giá — theo nguồn chủ đã chọn, thiếu thì lấy nguồn còn lại; chưa có thì không in mục. */
+      appraisal: (appRow?.source === "external_partner" ? (external ?? platform) : (platform ?? external)) as PrintAppraisal | null,
       // Có dịch vụ = thẻ media "has"; url null ⇒ QR trỏ về trang hồ sơ (vd. chứng thư ở bucket private).
       media: {
         model3d: { has: !!s3.current, url: s3.current?.model_url ?? null },

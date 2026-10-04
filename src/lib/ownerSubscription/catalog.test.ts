@@ -1,12 +1,25 @@
 import { describe, expect, it } from "vitest";
-import {
-  benefitMagnitude,
-  compareGroups,
-  planCardLines,
-  planCta,
-  planTermPrice,
-} from "./catalog";
-import type { OwnerSubPlan } from "./types";
+import { compareGroups, planCardLines, planCta, planTermPrice } from "./catalog";
+import type { BenefitCycle, OwnerSubPlan, PlanBenefitLine, SubBenefitDef } from "./types";
+
+const DEFS: Record<string, SubBenefitDef> = {
+  scan_3d_owner: { key: "scan_3d_owner", group_name: "Tài sản", label: "Quét 3D tài sản", unit: "lượt quét", kind: "quota", level_format: null, source: "enforced", default_cycle: "month", sort_order: 10 },
+  report_portfolio_owner: { key: "report_portfolio_owner", group_name: "Báo cáo", label: "Báo cáo danh mục tuỳ chỉnh", unit: "lượt xem", kind: "quota", level_format: null, source: "enforced", default_cycle: "month", sort_order: 110 },
+  digitize_posting: { key: "digitize_posting", group_name: "Tài sản", label: "Số hoá hồ sơ", unit: "hồ sơ", kind: "quota", level_format: null, source: "live", default_cycle: "month", sort_order: 20 },
+  market_report: { key: "market_report", group_name: "Báo cáo", label: "Báo cáo thị trường", unit: "lượt xem", kind: "quota", level_format: null, source: "display", default_cycle: "month", sort_order: 120 },
+  members: { key: "members", group_name: "Tổ chức", label: "Thành viên", unit: "người", kind: "quota", level_format: null, source: "live", default_cycle: "term", sort_order: 310 },
+  support_response: { key: "support_response", group_name: "Hỗ trợ", label: "Hỗ trợ ưu tiên", unit: "giờ", kind: "level", level_format: "Phản hồi trong {n} giờ", source: "display", default_cycle: null, sort_order: 510 },
+};
+
+/** [khoá, hạn mức, chu kỳ?] — chu kỳ mặc định theo danh mục. */
+const lines = (...rows: [string, number | null, BenefitCycle?][]): PlanBenefitLine[] =>
+  rows.map(([key, quota, cycle], i) => ({
+    benefit_key: key,
+    quota,
+    cycle: DEFS[key].kind === "level" ? null : cycle ?? DEFS[key].default_cycle,
+    sort_order: i + 1,
+    benefit: DEFS[key],
+  }));
 
 const plan = (over: Partial<OwnerSubPlan> & Pick<OwnerSubPlan, "id" | "name" | "sort_order">): OwnerSubPlan => ({
   fit_line: null,
@@ -17,31 +30,23 @@ const plan = (over: Partial<OwnerSubPlan> & Pick<OwnerSubPlan, "id" | "name" | "
   is_featured: false,
   is_active: true,
   benefits: [],
-  entitlements: [],
   ...over,
 });
 
 const basic = plan({
   id: "b", name: "Cơ bản", sort_order: 1, tier: "basic", monthly_price_vnd: 2_500_000,
-  entitlements: [{ variant_key: "scan_3d_owner", monthly_quota: 5 }, { variant_key: "report_portfolio_owner", monthly_quota: 20 }],
-  benefits: [
-    { group: "Tài sản", label: "Số hoá hồ sơ", value: "20 hồ sơ / tháng" },
-    { group: "Tổ chức", label: "Thành viên", value: "5 người" },
-  ],
+  benefits: lines(["scan_3d_owner", 5], ["report_portfolio_owner", 20], ["digitize_posting", 20], ["members", 5], ["support_response", 48]),
 });
 const std = plan({
   id: "s", name: "Tiêu chuẩn", sort_order: 2, monthly_price_vnd: 4_500_000,
-  entitlements: [{ variant_key: "scan_3d_owner", monthly_quota: 10 }, { variant_key: "report_portfolio_owner", monthly_quota: null }],
-  benefits: [
-    { group: "Tài sản", label: "Số hoá hồ sơ", value: "50 hồ sơ / tháng" },
-    { group: "Báo cáo", label: "Báo cáo thị trường", value: "10 lượt xem / tháng" },
-    { group: "Tổ chức", label: "Thành viên", value: "5 người" },
-  ],
+  benefits: lines(
+    ["scan_3d_owner", 10], ["report_portfolio_owner", null], ["digitize_posting", 50],
+    ["market_report", 10], ["members", 5], ["support_response", 8],
+  ),
 });
 const pro = plan({
   id: "p", name: "Chuyên nghiệp", sort_order: 3, tier: "premium", monthly_price_vnd: 9_000_000,
-  entitlements: [{ variant_key: "scan_3d_owner", monthly_quota: 30 }, { variant_key: "report_portfolio_owner", monthly_quota: null }],
-  benefits: [{ group: "Tài sản", label: "Số hoá hồ sơ", value: "Không giới hạn" }],
+  benefits: lines(["scan_3d_owner", 30], ["report_portfolio_owner", null], ["digitize_posting", null], ["support_response", 2]),
 });
 const plans = [basic, std, pro];
 
@@ -54,55 +59,65 @@ describe("planTermPrice — bản sao owner_sub_plan_price", () => {
   });
 });
 
-describe("benefitMagnitude", () => {
-  it("đọc số đầu dòng, 'Không giới hạn' = ∞, chữ tự do = null", () => {
-    expect(benefitMagnitude("1,000 thư / tháng")).toBe(1000);
-    expect(benefitMagnitude("Không giới hạn")).toBe(Infinity);
-    expect(benefitMagnitude("Hỗ trợ ưu tiên")).toBeNull();
-    expect(benefitMagnitude(undefined)).toBeNull();
-  });
-});
-
 describe("planCardLines", () => {
-  it("gói đầu liệt kê mọi thứ", () => {
-    const lines = planCardLines(null, basic);
-    expect(lines.map((l) => l.strong)).toEqual(["5", "20", "20 hồ sơ / tháng", "5 người"]);
-    expect(lines.every((l) => !l.isNew)).toBe(true);
+  it("gói đầu liệt kê mọi thứ theo thứ tự admin xếp", () => {
+    const l = planCardLines(null, basic);
+    expect(l.map((x) => x.strong)).toEqual([
+      "5 lượt quét / tháng",
+      "20 lượt xem / tháng",
+      "20 hồ sơ / tháng",
+      "5 người",
+      "Phản hồi trong 48 giờ",
+    ]);
+    expect(l[0].before).toBe("Quét 3D tài sản: ");
+    expect(l.every((x) => !x.isNew)).toBe(true);
   });
 
-  it("gói sau chỉ hiện dòng nâng lên; dòng gói trước không có là MỚI", () => {
-    const lines = planCardLines(basic, std);
-    expect(lines.map((l) => l.key)).toEqual([
+  it("gói sau chỉ hiện dòng nâng lên; dòng gói trước không có là MỚI; giờ phản hồi nhỏ hơn là nâng", () => {
+    const l = planCardLines(basic, std);
+    expect(l.map((x) => x.key)).toEqual([
       "scan_3d_owner",
       "report_portfolio_owner",
-      "Tài sản|Số hoá hồ sơ",
-      "Báo cáo|Báo cáo thị trường",
+      "digitize_posting",
+      "market_report",
+      "support_response",
     ]);
-    expect(lines.find((l) => l.key === "report_portfolio_owner")?.strong).toBe("không giới hạn");
-    expect(lines.find((l) => l.key === "Báo cáo|Báo cáo thị trường")?.isNew).toBe(true);
+    expect(l.find((x) => x.key === "report_portfolio_owner")?.strong).toBe("Không giới hạn");
+    expect(l.find((x) => x.key === "market_report")?.isNew).toBe(true);
   });
 
   it("đã không giới hạn ở gói trước ⇒ không lặp lại", () => {
-    expect(planCardLines(std, pro).map((l) => l.key)).toEqual(["scan_3d_owner", "Tài sản|Số hoá hồ sơ"]);
+    expect(planCardLines(std, pro).map((x) => x.key)).toEqual(["scan_3d_owner", "digitize_posting", "support_response"]);
+  });
+
+  it("chu kỳ khác nhau quy về mỗi tháng; cả kỳ ↔ theo lịch thì so theo chữ", () => {
+    const weekly = plan({ id: "w", name: "Tuần", sort_order: 9, benefits: lines(["scan_3d_owner", 2, "week"]) });
+    const monthly = plan({ id: "m", name: "Tháng", sort_order: 8, benefits: lines(["scan_3d_owner", 10, "month"]) });
+    expect(planCardLines(monthly, weekly)).toEqual([]); // 2/tuần ≈ 8.7/tháng < 10
+    const term = plan({ id: "t", name: "Kỳ", sort_order: 10, benefits: lines(["scan_3d_owner", 10, "term"]) });
+    expect(planCardLines(monthly, term).map((x) => x.strong)).toEqual(["10 lượt quét"]);
   });
 });
 
 describe("compareGroups", () => {
-  it("nhóm theo thứ tự xuất hiện, tính năng hạn mức trước dòng quyền lợi", () => {
+  it("nhóm theo thứ tự xuất hiện của gói cao nhất trước", () => {
     const groups = compareGroups(plans, null);
-    expect(groups.map((g) => g.group)).toEqual(["Tài sản", "Báo cáo", "Tổ chức"]);
+    expect(groups.map((g) => g.group)).toEqual(["Tài sản", "Báo cáo", "Hỗ trợ", "Tổ chức"]);
     expect(groups[0].rows.map((r) => r.label)).toEqual(["Quét 3D tài sản", "Số hoá hồ sơ"]);
-    expect(groups[2].rows[0].cells.p).toEqual({ text: "—", kind: "no", up: false });
-    expect(groups[0].rows[0].cells.s.text).toBe("10 lượt / tháng");
+    expect(groups[3].rows[0].cells.p).toEqual({ text: "—", kind: "no", up: false });
+    expect(groups[0].rows[0].cells.s.text).toBe("10 lượt quét / tháng");
   });
 
   it("đánh dấu ô tốt hơn gói hiện tại", () => {
-    const [assets, reports] = compareGroups(plans, "s");
+    const [assets, reports, support] = compareGroups(plans, "s");
     expect(assets.rows[0].cells.p.up).toBe(true);
     expect(assets.rows[0].cells.b.up).toBe(false);
     expect(assets.rows[0].cells.s.up).toBe(false);
     // Báo cáo danh mục: gói hiện tại đã không giới hạn ⇒ không gì hơn.
     expect(reports.rows[0].cells.p.up).toBe(false);
+    // Giờ phản hồi: 2 giờ tốt hơn 8 giờ, 48 giờ thì không.
+    expect(support.rows[0].cells.p.up).toBe(true);
+    expect(support.rows[0].cells.b.up).toBe(false);
   });
 });
 

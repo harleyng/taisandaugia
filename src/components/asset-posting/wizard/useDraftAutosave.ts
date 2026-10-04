@@ -20,6 +20,8 @@ export function useDraftAutosave(
   form: UseFormReturn<WizardValues>,
   savedId: string | null,
   onSaved: (id: string) => void,
+  /** Chạy sau mỗi lần lưu thành công, TRONG lượt đang bay (settle() chờ cả bước này). */
+  afterSave?: (id: string, v: WizardValues) => Promise<unknown>,
 ) {
   const create = useCreatePosting();
   // Hàm hẹn giờ gọi bản mới nhất — useMutation trả object mới mỗi lần render.
@@ -27,6 +29,8 @@ export function useDraftAutosave(
   mutateRef.current = create.mutateAsync;
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
+  const afterSaveRef = useRef(afterSave);
+  afterSaveRef.current = afterSave;
   const [state, setState] = useState<DraftSaveState>({ kind: "idle" });
   const idRef = useRef(savedId);
   const timer = useRef<number | null>(null);
@@ -55,9 +59,10 @@ export function useDraftAutosave(
     setState({ kind: "saving" });
     inFlight.current = mutateRef
       .current({ posting: buildPostingPayload(v), status: "draft", postingId: idRef.current ?? undefined, silent: true })
-      .then(({ postingId }) => {
+      .then(async ({ postingId }) => {
         idRef.current = postingId;
         onSavedRef.current(postingId);
+        await afterSaveRef.current?.(postingId, v);
         setState({ kind: "saved", at: new Date() });
       })
       .catch(() => setState({ kind: "error" }))

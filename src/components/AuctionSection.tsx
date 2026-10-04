@@ -10,6 +10,7 @@ import { useAssetActions } from "@/hooks/useAssetActions";
 import { useListingSaveCounts } from "@/hooks/useListingSaveCounts";
 import auctionBg from "@/assets/auction-bg.png";
 import { caNumber, caString, getShortLocation, toAuctionListing, type ListingCustomAttributes } from "@/types/listing";
+import { isFeaturedNow } from "@/lib/listings/featured";
 
 const getCountdown = (auctionTime: string): string | null => {
   const diff = new Date(auctionTime).getTime() - Date.now();
@@ -24,14 +25,26 @@ export const AuctionSection = () => {
   const { data: auctions = [], isLoading } = useQuery({
     queryKey: ["upcoming-auctions"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("listings")
-        .select("*")
-        .eq("status", "ACTIVE")
-        .order("created_at", { ascending: false })
-        .limit(6);
-      if (error) throw error;
-      return (data ?? []).map(toAuctionListing);
+      // Tin đang nổi bật (gói chủ tài sản mua) đứng trước 6 tin mới nhất, không lặp.
+      const nowIso = new Date().toISOString();
+      const [latest, featured] = await Promise.all([
+        supabase.from("listings").select("*").eq("status", "ACTIVE").order("created_at", { ascending: false }).limit(6),
+        supabase
+          .from("listings")
+          .select("*")
+          .eq("status", "ACTIVE")
+          .eq("featured", true)
+          .or(`featured_until.is.null,featured_until.gt.${nowIso}`)
+          .order("featured_until", { ascending: false })
+          .limit(6),
+      ]);
+      if (latest.error) throw latest.error;
+      if (featured.error) throw featured.error;
+      const seen = new Set<string>();
+      return [...(featured.data ?? []), ...(latest.data ?? [])]
+        .filter((l) => !seen.has(l.id) && seen.add(l.id))
+        .slice(0, 6)
+        .map(toAuctionListing);
     },
   });
 
@@ -162,6 +175,7 @@ export const AuctionSection = () => {
                   sessionStatus="registration_open"
                   categorySlug={item.property_type_slug}
                   variant="featured"
+                  highlighted={isFeaturedNow(item)}
                   countdown={countdown}
                   orgName={orgName}
                   orgId={item.auction_org_id}

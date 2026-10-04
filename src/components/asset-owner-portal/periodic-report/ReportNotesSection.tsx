@@ -6,7 +6,7 @@ import { formatReportDay, type ReportPayload } from "@/lib/ownerPeriodicReport";
 export function ReportNotesSection({ payload, status }: { payload: ReportPayload; status: "draft" | "final" }) {
   const { notes, people, finalizedAt } = payload;
   return (
-    <SectionCard title="6. Ghi chú của cán bộ" icon={MessageSquareText} className="break-inside-avoid">
+    <SectionCard title="7. Ghi chú của cán bộ" icon={MessageSquareText} className="break-inside-avoid">
       <div className="space-y-4">
         {notes.officer ? (
           <p className="whitespace-pre-wrap text-sm text-foreground">{notes.officer}</p>

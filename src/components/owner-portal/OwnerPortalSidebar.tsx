@@ -1,7 +1,14 @@
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { useMemo } from 'react'
-import { OWNER_NAV_GROUPS, visibleOwnerNavGroups, type OwnerCountBadgeKind } from './owner-nav-config'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  OWNER_NAV_GROUPS,
+  activeOwnerNavChild,
+  isInOwnerNavItem,
+  visibleOwnerNavGroups,
+  type OwnerCountBadgeKind,
+  type OwnerNavItem,
+} from './owner-nav-config'
 import { useOwnerConsignmentSummary } from '@/hooks/useConsignmentContract'
 import { useOwnerContractActionCount } from '@/hooks/useOwnerContracts'
 import { usePendingClaimCount } from '@/hooks/useAssetOwnerWorkspace'
@@ -11,7 +18,8 @@ import { usePendingLinkRequestCount } from '@/hooks/useOwnerWorkspaceLinks'
 import { useOwnerPortalName } from '@/hooks/useOwnerPortalName'
 import { OwnerWorkspaceSwitcher } from './OwnerWorkspaceSwitcher'
 import { OwnerPortalAccountMenu } from './OwnerPortalAccountMenu'
-import { Home } from 'lucide-react'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { ChevronDown, ChevronRight, Home } from 'lucide-react'
 
 interface Props {
   onNavigate?: () => void
@@ -39,6 +47,17 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
   // Tài sản: tin sàn tìm thấy chờ xác nhận (tab "Sàn tìm thấy").
   const { data: foundClaimCount = 0 } = usePendingClaimCount(workspaceId)
 
+  // Mục có mục con (Truyền thông): mở sẵn khi đang ở trong trang của nó, và tự mở lại
+  // mỗi lần đi vào từ chỗ khác (link trên Tổng quan…); người dùng vẫn thu lại được.
+  const location = useLocation()
+  const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
+  const currentParent = OWNER_NAV_GROUPS.flatMap((g) => g.items).find(
+    (i) => i.children && isInOwnerNavItem(i, location.pathname),
+  )?.href
+  useEffect(() => {
+    if (currentParent) setOpenItems((prev) => ({ ...prev, [currentParent]: true }))
+  }, [currentParent])
+
   // Số hồ sơ đang chờ chủ tài sản làm gì đó (chọn báo giá, bổ sung địa chỉ,
   // xác nhận hợp đồng). Luật nằm ở RPC owner_consignment_summary.
   const badgeCount = (kind?: OwnerCountBadgeKind) =>
@@ -64,6 +83,95 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
             : kind === 'owner-found-claims'
               ? `${count} tin sàn tìm thấy chờ bạn xác nhận`
               : `${count} hồ sơ cần bạn xử lý`
+
+  const itemClass = (active: boolean) =>
+    cn(
+      'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+      active
+        ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+        : 'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+    )
+
+  const countPill = (item: OwnerNavItem) => {
+    const count = badgeCount(item.countBadge)
+    if (count <= 0) return null
+    return (
+      <span
+        className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-foreground"
+        aria-label={badgeLabel(item.countBadge, count)}
+      >
+        {count}
+      </span>
+    )
+  }
+
+  const renderItem = (item: OwnerNavItem) => {
+    if (!item.children?.length) {
+      return (
+        <NavLink
+          key={item.href}
+          to={item.href}
+          onClick={onNavigate}
+          className={({ isActive }) => itemClass(isActive)}
+        >
+          <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+          {countPill(item)}
+        </NavLink>
+      )
+    }
+
+    // Mục con là tab (?tab=) — NavLink không xét query (sẽ sáng cả 4) nên dùng Link + tự tính.
+    const activeChild = activeOwnerNavChild(item, location.pathname, location.search)
+    const isOpen = openItems[item.href] ?? false
+    return (
+      <Collapsible
+        key={item.href}
+        open={isOpen}
+        onOpenChange={(open) => setOpenItems((prev) => ({ ...prev, [item.href]: open }))}
+      >
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+              isInOwnerNavItem(item, location.pathname)
+                ? 'bg-sidebar-accent text-sidebar-foreground'
+                : 'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+            )}
+          >
+            <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+            {countPill(item)}
+            {isOpen ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/50" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/50" aria-hidden="true" />
+            )}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="ml-3 mt-0.5 space-y-0.5 border-l border-sidebar-border pl-3">
+            {item.children.map((child) => {
+              const active = child.href === activeChild
+              return (
+                <Link
+                  key={child.href}
+                  to={child.href}
+                  onClick={onNavigate}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(itemClass(active), 'py-1.5 font-normal', active && 'font-medium')}
+                >
+                  <child.icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} />
+                  <span className="min-w-0 flex-1 truncate">{child.label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    )
+  }
 
   return (
     <aside className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -98,35 +206,7 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
               {group.title}
             </p>
             <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const count = badgeCount(item.countBadge)
-                return (
-                  <NavLink
-                    key={item.href}
-                    to={item.href}
-                    onClick={onNavigate}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                          : 'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                      )
-                    }
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                    {count > 0 && (
-                      <span
-                        className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-foreground"
-                        aria-label={badgeLabel(item.countBadge, count)}
-                      >
-                        {count}
-                      </span>
-                    )}
-                  </NavLink>
-                )
-              })}
+              {group.items.map(renderItem)}
             </div>
           </div>
         ))}

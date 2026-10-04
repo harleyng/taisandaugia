@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { CheckCheck, ChevronRight, ClipboardCheck, Gavel, Hourglass, ListTodo, Wallet, type LucideIcon } from "lucide-react";
+import { CheckCheck, ChevronRight, ClipboardCheck, Gavel, Hourglass, ListTodo, Megaphone, Wallet, type LucideIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionCard } from "@/components/asset-owner-portal/ui/SectionCard";
 import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
 import { IconTile } from "@/components/asset-owner-portal/ui/IconTile";
 import type { TodoKind, TodoSummary } from "@/lib/ownerOverview";
 import { formatMoneyShort } from "@/utils/money";
+import { OWNER_MARKETING_HREF } from "@/lib/ownerMarketing/routes";
 
 /** Mỗi dòng chỉ là lối vào trang nơi việc được làm — không thao tác ngay trên Tổng quan. */
 const TODO_META: Record<TodoKind, { title: string; icon: LucideIcon; href: string; amountCaption: string }> = {
@@ -24,6 +25,8 @@ const TODO_META: Record<TodoKind, { title: string; icon: LucideIcon; href: strin
     amountCaption: "giá khởi điểm",
   },
   stuck: { title: "Tài sản tồn đọng", icon: Hourglass, href: "/chu-tai-san/tai-san", amountCaption: "giá khởi điểm" },
+  // Dòng này mang href riêng: trình soạn chiến dịch mở sẵn tài sản đứng đầu.
+  push_marketing: { title: "Đẩy truyền thông", icon: Megaphone, href: OWNER_MARKETING_HREF, amountCaption: "giá khởi điểm" },
 };
 
 function TodoRow({ summary }: { summary: TodoSummary }) {
@@ -33,7 +36,7 @@ function TodoRow({ summary }: { summary: TodoSummary }) {
     <li>
       <button
         type="button"
-        onClick={() => navigate(meta.href)}
+        onClick={() => navigate(summary.href ?? meta.href)}
         className="flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <IconTile icon={meta.icon} tone="muted" />

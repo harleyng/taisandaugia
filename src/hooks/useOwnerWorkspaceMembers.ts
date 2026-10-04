@@ -18,6 +18,10 @@ export interface OwnerWorkspaceMember {
   isOwner: boolean;
   branchScope: string[] | null;
   joinedAt: string | null;
+  /** SĐT trong hồ sơ cá nhân (agent_info.basic.phone); null = chưa có. */
+  phone: string | null;
+  /** Chủ tài khoản đã xác thực OTP — người khác không sửa được nữa. */
+  phoneVerified: boolean;
 }
 
 export interface OwnerWorkspaceInvite {
@@ -58,6 +62,8 @@ export function useOwnerWorkspaceMembers(workspaceId: string | null) {
         isOwner: row.is_owner,
         branchScope: row.branch_scope,
         joinedAt: row.joined_at,
+        phone: row.phone,
+        phoneVerified: row.phone_verified,
       }));
     },
   });
@@ -156,6 +162,29 @@ export function useRemoveOwnerMember(workspaceId: string | null) {
       assertOwnerWsRpcOk(data);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: qk.ownerWorkspace.all(workspaceId) }),
+  });
+}
+
+/**
+ * Bổ sung / sửa SĐT trong hồ sơ của một thành viên khác (thanh-vien:update). Server từ chối
+ * SĐT chủ tài khoản đã xác thực và SĐT của chính mình (sửa ở Hồ sơ cá nhân, có OTP).
+ */
+export function useSetOwnerMemberPhone(workspaceId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { memberId: string; phone: string }) => {
+      const { data, error } = await supabase.rpc("owner_ws_set_member_phone", {
+        p_member_id: input.memberId,
+        p_phone: input.phone,
+      });
+      if (error) throw error;
+      assertOwnerWsRpcOk(data);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: qk.ownerWorkspace.members(workspaceId) });
+      // Ô "Người gửi" của link chia sẻ đọc SĐT này.
+      queryClient.invalidateQueries({ queryKey: ["posting-share"] });
+    },
   });
 }
 

@@ -22,6 +22,7 @@ describe("buildReportWorkbook", () => {
     expect(rowsOf(wb.Sheets["Tiền thu"])).toHaveLength(1 + payload.money.items.length);
     expect(rowsOf(wb.Sheets["Tồn đọng"])).toHaveLength(1 + payload.stuck.items.length);
     expect(rowsOf(wb.Sheets["Kế hoạch kỳ tới"])).toHaveLength(1 + payload.plan.scheduled.length);
+    expect(rowsOf(wb.Sheets["Truyền thông"])).toHaveLength(1 + payload.marketing!.byAsset.length);
   });
 
   it("keeps money as numbers with thousands grouping and labels every row's source", () => {
@@ -39,6 +40,16 @@ describe("buildReportWorkbook", () => {
       const header = rowsOf(wb.Sheets[name])[0].map(String).join(" | ").toLowerCase();
       expect(header).not.toMatch(/\bid\b|workspace|uuid/);
     }
+  });
+
+  it("summarises the marketing funnel, and says so when a report predates it", () => {
+    const summary = rowsOf(wb.Sheets["Tổng quan"]).map((r) => r.join(" "));
+    expect(summary).toContain("6. Hiệu quả truyền thông");
+    expect(summary).toContain("Đăng ký tham gia 2");
+    expect(summary).toContain("Giá trúng / giá khởi điểm (%) 120");
+    const old = buildReportWorkbook({ ...payload, marketing: null }, "final");
+    expect(rowsOf(old.Sheets["Tổng quan"]).map((r) => r.join(" "))).toContain("Ghi chú Báo cáo chốt trước khi có phần này");
+    expect(rowsOf(old.Sheets["Truyền thông"])).toHaveLength(1);
   });
 
   it("marks drafts in the summary", () => {

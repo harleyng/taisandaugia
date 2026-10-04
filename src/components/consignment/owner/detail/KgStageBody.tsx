@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { format, parseISO } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { MAX_RFQ_ORGS } from "@/constants/asset-posting-rules";
 import type { KgStatus } from "@/lib/consignment/ownerConsignmentView";
 import { isLiveServiceRequest, type AssetBrokerRequest, type AssetPosting } from "@/types/asset-posting";
@@ -13,6 +13,7 @@ import { SuggestOrgsCard } from "./SuggestOrgsCard";
 import { BrokerStatusCard } from "./BrokerStatusCard";
 import { ChosenQuoteCard } from "./ChosenQuoteCard";
 import { FindOrgsDialog } from "./FindOrgsDialog";
+import { BrokerRequestDialog } from "./BrokerRequestDialog";
 
 const OPEN_BROKER: readonly AssetBrokerRequest["status"][] = ["pending", "sourcing", "quoted"];
 const DECIDED = ["selected", "accepted"];
@@ -42,6 +43,7 @@ export function KgStageBody({
   onCancelBroker,
 }: KgStageBodyProps) {
   const [findingMore, setFindingMore] = useState(false);
+  const [brokering, setBrokering] = useState(false);
   // Quyền ký gửi (gửi tổ chức, nhờ sàn, chọn báo giá) — từ PostingAccessProvider của trang.
   const canConsign = usePostingCanConsign();
   // Gửi thêm tổ chức / gửi lần đầu = ky-gui:create; chọn báo giá / huỷ = ky-gui:update.
@@ -50,6 +52,9 @@ export function KgStageBody({
   const sentOrgIds = new Set(requests.map((r) => r.auction_org_id));
   const liveCount = requests.filter((r) => isLiveServiceRequest(r.status)).length;
   const brokerOpen = !!broker && OPEN_BROKER.includes(broker.status);
+  // Nhờ sàn LUÔN là một lối, kể cả khi đã tự gửi tổ chức — chỉ chặn khi hồ sơ đã
+  // có yêu cầu nhờ sàn chưa huỷ (DB: idx_abr_one_open, mỗi hồ sơ một yêu cầu).
+  const canBroker = !broker || broker.status === "cancelled";
   const quotes = requests.filter((r) => r.status === "quoted");
   const others = requests.filter((r) => r.status !== "quoted" && !DECIDED.includes(r.status));
   const waiting = requests.filter((r) => r.status === "sent" || r.status === "seen");
@@ -59,24 +64,50 @@ export function KgStageBody({
   // Gửi thêm khi đang chờ / đã có báo giá — thiết kế không vẽ, nhưng bỏ đi là mất
   // đường lấy thêm báo giá cho tới khi mọi tổ chức trả lời.
   const left = MAX_RFQ_ORGS - liveCount;
+  const addOrgs = canSend && sendable && !brokerOpen && !selected && left > 0;
+  const askBroker = canSend && sendable && canBroker && !selected;
   const topUp =
-    canSend && sendable && !brokerOpen && !selected && left > 0 ? (
-      <button
-        type="button"
-        onClick={() => setFindingMore(true)}
-        className="inline-flex items-center gap-1 text-[13px] font-semibold text-primary hover:underline"
-      >
-        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-        Gửi thêm tổ chức · còn {left} suất
-      </button>
+    addOrgs || askBroker ? (
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        {addOrgs && (
+          <button
+            type="button"
+            onClick={() => setFindingMore(true)}
+            className="inline-flex items-center gap-1 text-[13px] font-semibold text-primary hover:underline"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            Gửi thêm tổ chức · còn {left} suất
+          </button>
+        )}
+        {askBroker && (
+          <button
+            type="button"
+            onClick={() => setBrokering(true)}
+            className="inline-flex items-center gap-1 text-[13px] font-semibold text-primary hover:underline"
+          >
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+            Nhờ sàn chọn giúp
+          </button>
+        )}
+      </div>
     ) : undefined;
+
+  const brokerCard = broker && brokerOpen && (
+    <BrokerStatusCard
+      broker={broker}
+      contactedCount={requests.filter((r) => r.broker_request_id === broker.id).length}
+      canCancel={canConsign}
+      isCancelling={isCancellingBroker}
+      onCancel={onCancelBroker}
+    />
+  );
 
   const send = canSend && sendable ? (
     <SuggestOrgsCard
       posting={p}
       sentOrgIds={sentOrgIds}
       activeCount={liveCount}
-      allowBroker={liveCount === 0 && !brokerOpen}
+      allowBroker={canBroker}
     />
   ) : (
     <EmptyServiceCard
@@ -97,6 +128,7 @@ export function KgStageBody({
       body = (
         <>
           <QuoteCompareCard posting={p} quotes={quotes} canPick={canConsign} isPicking={isPicking} onPick={onPick} />
+          {brokerCard}
           <OrgRequestRows title="Tổ chức khác" requests={others} recordOf={recordOf} footer={topUp} />
         </>
       );
@@ -124,14 +156,16 @@ export function KgStageBody({
       );
       break;
     case "nho_san":
-      body = broker && (
-        <BrokerStatusCard
-          broker={broker}
-          contactedCount={requests.filter((r) => r.broker_request_id === broker.id).length}
-          canCancel={canConsign}
-          isCancelling={isCancellingBroker}
-          onCancel={onCancelBroker}
-        />
+      // Tổ chức chủ tài sản tự gửi trước khi nhờ sàn vẫn phải thấy được.
+      body = (
+        <>
+          {brokerCard}
+          <OrgRequestRows
+            title="Tổ chức bạn đã gửi"
+            requests={others.filter((r) => r.broker_request_id !== broker?.id)}
+            recordOf={recordOf}
+          />
+        </>
       );
       break;
     case "da_chon":
@@ -153,7 +187,9 @@ export function KgStageBody({
         posting={p}
         sentOrgIds={sentOrgIds}
         activeCount={liveCount}
+        allowBroker={canBroker}
       />
+      <BrokerRequestDialog open={brokering} onOpenChange={setBrokering} postingId={p.id} />
     </>
   );
 }

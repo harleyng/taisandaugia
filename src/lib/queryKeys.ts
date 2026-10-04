@@ -138,6 +138,14 @@ export const qk = {
     catalog: ["legal-consult-catalog"] as const,
   },
 
+  valuation: {
+    all: ["valuation-orders"] as const,
+    byPosting: (postingId?: string | null) => ["valuation-orders", "posting", postingId] as const,
+    detail: (id?: string | null) => ["valuation-orders", "detail", id] as const,
+    adminList: ["valuation-orders", "admin-list"] as const,
+    catalog: ["valuation-catalog"] as const,
+  },
+
   auctionConsult: {
     all: ["auction-consultations"] as const,
     byPosting: (postingId?: string | null) => ["auction-consultations", "posting", postingId] as const,
@@ -372,6 +380,11 @@ export const qk = {
    *  thao tác khai kết quả / ghi thu chi đã invalidate key đó là đủ. */
   ownerCashFlow: (workspaceId?: string | null, includeLinked = true) =>
     ["owner-asset-outcomes", workspaceId, "cash-flow", includeLinked] as const,
+  /** "Đối tác của tôi" — RPC owner_partner_scorecard (owner-dossier-plan Phase 5). Nằm DƯỚI
+   *  ownerAssetOutcomes nên khai / sửa kết quả là đủ làm mới; dữ liệu đối tác (dossier) đổi ở
+   *  trang khác ⇒ trang này tự tải lại khi mở (staleTime mặc định 0). */
+  ownerPartnerScorecard: (workspaceId?: string | null) =>
+    ["owner-asset-outcomes", workspaceId, "partner-scorecard"] as const,
   /** Số đã thu của các bản ghi tự khai (thẻ "Chờ thu tiền" ở Nhịp đập) — mọi thao tác thu tiền invalidate key này. */
   ownerOutcomePayments: (workspaceId?: string | null) =>
     ["owner-outcome-payments", workspaceId] as const,
@@ -414,6 +427,49 @@ export const qk = {
     linkRequests: (workspaceId?: string | null) => ["owner-ws", workspaceId, "link-requests"] as const,
     /** So sánh ẩn danh với các chi nhánh cùng hệ thống (RPC owner_ws_benchmark). */
     benchmark: (workspaceId?: string | null) => ["owner-ws", workspaceId, "benchmark"] as const,
+  },
+
+  /** Nhật ký hoạt động Trạm Điều Hành (RPC owner_audit_*) — tenantKey = workspaceId | "personal".
+   *  Không mutation nào invalidate: trang luôn tải lại khi mở (staleTime 0). */
+  ownerAudit: {
+    all: (tenantKey?: string | null) => ["owner-audit", tenantKey] as const,
+    scope: (tenantKey?: string | null) => ["owner-audit", tenantKey, "scope"] as const,
+    list: (tenantKey: string | null | undefined, filters: Record<string, unknown>, page: number) =>
+      ["owner-audit", tenantKey, "list", filters, page] as const,
+  },
+
+  /** Truyền thông của Trạm (docs/owner-marketing-plan.md) — nằm dưới ownerWorkspace.all(ws). */
+  ownerMarketing: {
+    /** Gốc của mọi khoá chiến dịch (Phase M2) — invalidate gốc ⇒ danh sách + chi tiết + nhật ký. */
+    campaigns: (workspaceId?: string | null) => ["owner-ws", workspaceId, "mkt-campaigns"] as const,
+    campaign: (workspaceId: string | null | undefined, id: string | undefined) =>
+      ["owner-ws", workspaceId, "mkt-campaigns", id] as const,
+    campaignAudit: (workspaceId: string | null | undefined, id: string | undefined) =>
+      ["owner-ws", workspaceId, "mkt-campaigns", id, "audit"] as const,
+    /** Dữ kiện hiện tại của các tài sản đang chọn trong trình soạn (khoá "listing:id" / "posting:id"). */
+    campaignFacts: (workspaceId: string | null | undefined, assetKeys: readonly string[]) =>
+      ["owner-ws", workspaceId, "mkt-campaign-facts", ...assetKeys] as const,
+    /** Gốc đơn "Giao việc cho sàn" (Phase M4) — invalidate gốc ⇒ danh sách + số liệu từng đơn. */
+    orders: (workspaceId?: string | null) => ["owner-ws", workspaceId, "mkt-orders"] as const,
+    orderResults: (workspaceId: string | null | undefined, id: string | undefined) =>
+      ["owner-ws", workspaceId, "mkt-orders", id, "results"] as const,
+    /** Tác động lên tài sản trong thời gian sàn chạy (owner_mkt_order_impact). */
+    orderImpact: (workspaceId: string | null | undefined, id: string | undefined) =>
+      ["owner-ws", workspaceId, "mkt-orders", id, "impact"] as const,
+    /** Tin Trạm đã nhận kèm trạng thái tin — đặt gói truyền thông. */
+    orderAssets: (workspaceId?: string | null) => ["owner-ws", workspaceId, "mkt-order-assets"] as const,
+    /** Danh mục gói (service_variants category marketing_owner) — dùng chung mọi Trạm. */
+    packages: ["mkt-order-packages"] as const,
+    /** Phễu Phase M5 (owner_mkt_funnel) theo kỳ, cả đơn vị hoặc một tài sản. */
+    funnel: (workspaceId: string | null | undefined, from: string, to: string, listingId: string | null) =>
+      ["owner-ws", workspaceId, "mkt-funnel", from, to, listingId ?? "all"] as const,
+  },
+
+  /** Đơn truyền thông phía admin (/admin/yeu-cau-dich-vu/truyen-thong). */
+  adminMktOrders: {
+    all: ["admin-mkt-orders"] as const,
+    detail: (id?: string | null) => ["admin-mkt-orders", "detail", id] as const,
+    results: (id?: string | null) => ["admin-mkt-orders", "results", id] as const,
   },
 
   // ─── CRM ─────────────────────────────────────────────────────────────────
@@ -469,8 +525,12 @@ export const qk = {
     all: ["owner-subscription"] as const,
     byWorkspace: (workspaceId?: string | null) => ["owner-subscription", workspaceId] as const,
     quote: (subId?: string | null) => ["owner-subscription", "quote", subId] as const,
-    /** Danh mục gói đang bán + các kỳ (3 / 6 / 12 tháng). */
+    /** Danh mục quyền lợi CỐ ĐỊNH (owner_sub_benefits) — chỉ đổi bằng migration. */
+    benefitCatalog: ["owner-subscription", "benefit-catalog"] as const,
+    /** Danh mục gói đang bán + các kỳ (3 / 6 / 12 tháng). Invalidate `plans` phủ mọi Trạm. */
     plans: ["owner-subscription", "plans"] as const,
+    /** Danh mục gói admin đã mở cho một Trạm. */
+    plansFor: (workspaceId?: string | null) => ["owner-subscription", "plans", workspaceId] as const,
     planQuote: (workspaceId?: string | null, planId?: string | null, months?: number | null) =>
       ["owner-subscription", "plan-quote", workspaceId, planId, months] as const,
   },
@@ -501,6 +561,42 @@ export const qk = {
     /** "public" đứng sau nên `all` phủ được — xem LUẬT PREFIX ở đầu file. */
     public: ["craft-villages", "public"] as const,
     mapState: (postingId?: string | null) => ["craft-villages", "map-state", postingId] as const,
+  },
+  // ─── Hồ sơ online (link công khai /hs/:code của hồ sơ số hoá) ─────────────
+  postingShare: {
+    /** Link của MỘT hồ sơ ở cổng chủ tài sản (RPC owner_posting_share_links). */
+    links: (postingId?: string | null) => ["posting-share", "links", postingId] as const,
+    /** Người gửi chọn được cho một đích: hồ sơ (id hồ sơ) hoặc tin (id Trạm) — RPC share_link_senders. */
+    senders: (targetKey?: string | null) => ["posting-share", "senders", targetKey] as const,
+    /** Trang công khai /hs/:code (RPC get_shared_posting — mỗi lần gọi có thể là một lượt xem). */
+    shared: (code?: string | null) => ["posting-share", "shared", code] as const,
+  },
+  // ─── Link Hồ sơ online phía chủ tài sản (tổng hợp / chi tiết / chuỗi ngày) ─
+  // Gốc riêng "share-links" (không chung "posting-share") ⇒ làm mới số liệu không chạm trang
+  // công khai đang mở (mỗi lần tải lại trang công khai có thể là một lượt xem).
+  shareLinks: {
+    all: ["share-links"] as const,
+    workspace: (workspaceId?: string | null, campaignId?: string | null) =>
+      ["share-links", "workspace", workspaceId, campaignId ?? null] as const,
+    detail: (linkId?: string | null) => ["share-links", "detail", linkId] as const,
+    series: (linkId?: string | null, from?: string | null, to?: string | null, device?: string | null) =>
+      ["share-links", "series", linkId, from, to, device] as const,
+    campaignSeries: (campaignId?: string | null, from?: string | null, to?: string | null, device?: string | null) =>
+      ["share-links", "campaign-series", campaignId, from, to, device] as const,
+    assets: (workspaceId?: string | null) => ["share-links", "assets", workspaceId] as const,
+  },
+
+  // ─── Phần dịch vụ của hồ sơ số hoá (pháp lý / đấu giá / thẩm định) ─────────
+  postingDossier: {
+    all: ["posting-dossier"] as const,
+    items: (postingId?: string | null) => ["posting-dossier", "items", postingId] as const,
+  },
+
+  // ─── Đối tác riêng của chủ tài sản (owner_partners) ──────────────────────
+  ownerPartners: {
+    all: ["owner-partners"] as const,
+    /** Mọi loại đối tác của một phạm vi — workspaceId hoặc "personal". */
+    list: (scope: string) => ["owner-partners", scope] as const,
   },
 
   // ─── Công cụ đấu giá ─────────────────────────────────────────────────────

@@ -33,22 +33,27 @@ $$;
 DROP FUNCTION public.owner_ws_list_members(UUID);
 CREATE FUNCTION public.owner_ws_list_members(p_workspace_id UUID)
 RETURNS TABLE (
-  member_id    UUID,
-  user_id      UUID,
-  full_name    TEXT,
-  email        TEXT,
-  role_id      UUID,
-  role_name    TEXT,
-  is_owner     BOOLEAN,
-  branch_scope UUID[],
-  status       TEXT,
-  joined_at    TIMESTAMPTZ
+  member_id      UUID,
+  user_id        UUID,
+  full_name      TEXT,
+  email          TEXT,
+  role_id        UUID,
+  role_name      TEXT,
+  is_owner       BOOLEAN,
+  branch_scope   UUID[],
+  status         TEXT,
+  joined_at      TIMESTAMPTZ,
+  phone          TEXT,
+  phone_verified BOOLEAN
 )
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
   SELECT m.id, m.user_id, p.name, p.email,
          r.id, r.name, COALESCE(r.is_system, false),
-         m.branch_scope, m.status, m.joined_at
+         m.branch_scope, m.status, m.joined_at,
+         public.profile_contact_phone(p.agent_info),
+         public.profile_contact_phone(p.agent_info) IS NOT NULL
+           AND COALESCE((p.agent_info #>> '{basic,phone_verified}')::BOOLEAN, false)
     FROM public.asset_owner_workspace_members m
     JOIN public.profiles p ON p.id = m.user_id
     LEFT JOIN public.owner_ws_roles r ON r.id = m.role_id

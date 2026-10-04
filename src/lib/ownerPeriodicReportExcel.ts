@@ -1,5 +1,5 @@
 // Xuất Excel cho báo cáo định kỳ (docs/owner-control-tower-plan.md Phase 10).
-// Cùng cấu trúc với trang in: "Tổng quan" (6 phần của §A5) + 4 sheet chi tiết.
+// Cùng cấu trúc với trang in: "Tổng quan" (các phần của §A5 + Hiệu quả truyền thông) + 5 sheet chi tiết.
 // Tiền là SỐ (định dạng #,##0 — nhóm nghìn bằng dấu phẩy) để trụ sở cộng / lọc được;
 // mọi dòng mang cột "Nguồn" (§A3). Không có cột id nào.
 
@@ -13,8 +13,16 @@ import {
   reportTitle,
   type ReportPayload,
 } from "@/lib/ownerPeriodicReport";
+import {
+  assetPriceRatioPct,
+  FUNNEL_SOURCE_LABEL,
+  funnelChannelLabel,
+  funnelStages,
+  priceRatioPct,
+  UNATTRIBUTED_LABEL,
+} from "@/lib/ownerMarketing/funnel";
 
-export const REPORT_SHEETS = ["Tổng quan", "Kết quả phiên", "Tiền thu", "Tồn đọng", "Kế hoạch kỳ tới"] as const;
+export const REPORT_SHEETS = ["Tổng quan", "Kết quả phiên", "Tiền thu", "Tồn đọng", "Kế hoạch kỳ tới", "Truyền thông"] as const;
 
 type Cell = string | number | null;
 
@@ -216,7 +224,30 @@ function summarySheet(p: ReportPayload, status: "draft" | "final"): XLSX.WorkShe
   b.field("Tài sản tồn đọng chưa có lịch đấu lại", plan.stuckUnscheduled);
   b.field("Kế hoạch của đơn vị", p.notes.plan ?? "");
 
-  b.section("6. Ghi chú của cán bộ");
+  b.section("6. Hiệu quả truyền thông");
+  const mk = p.marketing;
+  if (!mk) {
+    b.field("Ghi chú", "Báo cáo chốt trước khi có phần này");
+  } else {
+    b.field("Tài sản đang truyền thông", mk.totals.assets);
+    for (const s of funnelStages(mk.totals)) b.field(s.label, s.value);
+    const ratio = priceRatioPct(mk.totals);
+    if (ratio !== null) b.field("Giá trúng / giá khởi điểm (%)", ratio);
+    b.field(`Lượt lưu — ${UNATTRIBUTED_LABEL.toLowerCase()}`, mk.unattributed.saves);
+    b.field(`Đăng ký — ${UNATTRIBUTED_LABEL.toLowerCase()}`, mk.unattributed.registrations);
+    const breakdown = [
+      ...mk.bySource.map((r) => [FUNNEL_SOURCE_LABEL[r.key], "Nguồn", r.sent, r.clicks, r.visitors, r.saves, r.registrations]),
+      ...mk.byChannel.map((r) => [funnelChannelLabel(r), "Kênh", r.sent, r.clicks, r.visitors, r.saves, r.registrations]),
+    ] as Cell[][];
+    if (breakdown.length) {
+      b.table(
+        [{ label: "Nguồn / kênh" }, { label: "Loại" }, { label: "Gửi" }, { label: "Bấm" }, { label: "Xem" }, { label: "Lưu" }, { label: "Đăng ký" }],
+        breakdown,
+      );
+    }
+  }
+
+  b.section("7. Ghi chú của cán bộ");
   b.field("Ghi chú", p.notes.officer ?? "");
 
   return b.build();
@@ -346,6 +377,47 @@ export function buildReportWorkbook(p: ReportPayload, status: "draft" | "final")
       ]),
     ),
     REPORT_SHEETS[4],
+  );
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    tableSheet(
+      [
+        { label: "Mã tài sản", width: 12 },
+        { label: "Tài sản", width: 44 },
+        { label: "Chi nhánh", width: 28 },
+        { label: "Gửi", width: 10 },
+        { label: "Bấm", width: 10 },
+        { label: "Xem", width: 10 },
+        { label: "Lưu (qua link)", width: 14 },
+        { label: "Lưu (không rõ nguồn)", width: 18 },
+        { label: "Đăng ký (qua link)", width: 16 },
+        { label: "Đăng ký (không rõ nguồn)", width: 22 },
+        { label: "Người tham gia", width: 14 },
+        { label: "Kết quả", width: 14 },
+        { label: "Ngày", width: 12 },
+        { label: "Giá trúng (₫)", width: 18, money: true },
+        { label: "Giá trúng / KĐ (%)", width: 16 },
+      ],
+      (p.marketing?.byAsset ?? []).map((a) => [
+        a.assetCode ?? "",
+        a.title,
+        a.branchName ?? "",
+        a.sent,
+        a.clicks,
+        a.visitors,
+        a.saves,
+        a.savesUnattributed,
+        a.registrations,
+        a.registrationsUnattributed,
+        a.participants,
+        a.outcome ? OUTCOME_KIND_LABEL[a.outcome] : "",
+        day(a.outcomeDate),
+        money(a.outcome === "sold" ? a.price : null),
+        assetPriceRatioPct(a),
+      ]),
+    ),
+    REPORT_SHEETS[5],
   );
 
   return wb;

@@ -4,6 +4,7 @@ import { ReportResultsSection } from "./ReportResultsSection";
 import { ReportMoneySection } from "./ReportMoneySection";
 import { ReportStuckSection } from "./ReportStuckSection";
 import { ReportPlanSection } from "./ReportPlanSection";
+import { ReportMarketingSection } from "./ReportMarketingSection";
 import { ReportNotesSection } from "./ReportNotesSection";
 import type { ReportVariant } from "./ReportTable";
 
@@ -18,7 +19,7 @@ interface ReportDocumentProps {
 }
 
 /**
- * Nội dung báo cáo định kỳ theo 6 phần của §A5, dùng chung cho trang chi tiết, trang
+ * Nội dung báo cáo định kỳ theo các phần của §A5 (+ Hiệu quả truyền thông, Phase M5), dùng chung cho trang chi tiết, trang
  * in A4 và (Phase 11) link chia sẻ /r/:token. Chỉ hiển thị — mọi số đã tính ở server.
  * L1 (đã thu) → L3 (ô chỉ số) → L4 (bảng chi tiết, kèm nguồn từng dòng).
  */
@@ -35,6 +36,7 @@ export function ReportDocument({ payload, status, variant = "screen", showHero =
       <ReportMoneySection payload={payload} variant={variant} />
       <ReportStuckSection payload={payload} variant={variant} />
       <ReportPlanSection payload={payload} variant={variant} />
+      <ReportMarketingSection payload={payload} variant={variant} />
       {showNotes && <ReportNotesSection payload={payload} status={status} />}
     </div>
   );

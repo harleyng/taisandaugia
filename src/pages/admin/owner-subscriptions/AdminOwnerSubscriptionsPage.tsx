@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, LayoutGrid, Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,9 +15,7 @@ type Filter = "all" | "none" | SubStatus;
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "Tất cả" },
   { key: "active", label: "Đang hiệu lực" },
-  { key: "offered", label: "Chờ thanh toán" },
   { key: "expired", label: "Hết hạn" },
-  { key: "draft", label: "Nháp" },
   { key: "cancelled", label: "Đã huỷ" },
   { key: "none", label: "Chưa có gói" },
 ];
@@ -35,7 +33,7 @@ const matches = (row: AdminOwnerSubRow, f: Filter) => {
   return row.status === f;
 };
 
-/** /admin/goi-thue-bao — mọi Trạm tổ chức chủ tài sản và gói thuê bao của từng Trạm. */
+/** /admin/goi-thue-bao/ap-dung — mọi Trạm tổ chức chủ tài sản và gói thuê bao của từng Trạm. */
 export default function AdminOwnerSubscriptionsPage() {
   const navigate = useNavigate();
   const { data: rows, isLoading } = useAdminOwnerSubscriptionList();
@@ -62,14 +60,11 @@ export default function AdminOwnerSubscriptionsPage() {
     <div className="p-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Gói thuê bao</h1>
+          <h1 className="text-xl font-semibold text-foreground">Áp dụng gói</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Gói theo kỳ cho tổ chức chủ tài sản thay cho credit — Trạm tự mua gói trong danh mục, hoặc sàn cấu hình gói riêng cho từng Trạm. Chủ tài sản cá nhân vẫn dùng credit.
+            Gói theo kỳ cho tổ chức chủ tài sản thay cho credit. Sàn tạo gói trong danh mục rồi chọn tổ chức được dùng; Trạm tự mua gói đã mở cho mình, hoặc sàn kích hoạt tay. Chủ tài sản cá nhân vẫn dùng credit.
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate("/admin/goi-thue-bao/danh-muc")}>
-          <LayoutGrid className="mr-1.5 h-4 w-4" /> Danh mục gói
-        </Button>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -101,6 +96,7 @@ export default function AdminOwnerSubscriptionsPage() {
               <th className="px-4 py-3 font-medium">Trạng thái</th>
               <th className="px-4 py-3 font-medium">Hiệu lực</th>
               <th className="px-4 py-3 text-right font-medium">Giá / kỳ</th>
+              <th className="px-4 py-3 text-right font-medium">Gói được dùng</th>
               <th className="w-8 px-2 py-3" />
             </tr>
           </thead>
@@ -108,19 +104,19 @@ export default function AdminOwnerSubscriptionsPage() {
             {isLoading &&
               Array.from({ length: 4 }).map((_, i) => (
                 <tr key={i} className="border-t">
-                  <td colSpan={7} className="px-4 py-3"><Skeleton className="h-5 w-full" /></td>
+                  <td colSpan={8} className="px-4 py-3"><Skeleton className="h-5 w-full" /></td>
                 </tr>
               ))}
             {!isLoading && filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Không có Trạm nào khớp bộ lọc.</td>
+                <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Không có Trạm nào khớp bộ lọc.</td>
               </tr>
             )}
             {filtered.map((r) => (
               <tr
                 key={r.workspace_id}
                 className="cursor-pointer border-t hover:bg-muted/30"
-                onClick={() => navigate(`/admin/goi-thue-bao/${r.workspace_id}`)}
+                onClick={() => navigate(`/admin/goi-thue-bao/ap-dung/${r.workspace_id}`)}
               >
                 <td className="px-4 py-3">
                   <div className="font-medium text-foreground">{r.workspace_name}</div>
@@ -148,6 +144,9 @@ export default function AdminOwnerSubscriptionsPage() {
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                   {r.subscription_id ? formatMoneyFull(r.price_vnd) : "—"}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {r.allowed_plan_ids?.length ? r.allowed_plan_ids.length : <span className="text-muted-foreground">0</span>}
                 </td>
                 <td className="px-2 py-3 text-muted-foreground"><ChevronRight className="h-4 w-4" /></td>
               </tr>

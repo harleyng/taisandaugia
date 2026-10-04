@@ -5,6 +5,7 @@ import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { qk } from "@/lib/queryKeys";
+import { trackAssetSaved } from "@/lib/analytics/mktAttribution";
 
 const EMPTY_SET: Set<string> = new Set();
 
@@ -105,6 +106,8 @@ export function useAssetActions() {
       await upsertAction(listingId, val);
 
       if (val) {
+        // Sau khi dòng đã lưu: server đối chiếu dòng này để ghi nhận link truyền thông (M5).
+        if (uid) trackAssetSaved(listingId, uid);
         // Auto-bật master switch thông báo khi follow tài sản đầu tiên
         await ensureNotificationsEnabled();
       }

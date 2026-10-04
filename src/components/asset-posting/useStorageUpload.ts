@@ -19,6 +19,12 @@ interface UseStorageUploadOptions {
   returns: "url" | "path";
   /** Nhãn trong toast, vd "ảnh" | "video" | "tài liệu". */
   label: string;
+  /**
+   * Thư mục gốc thay cho `{uid}` — vd id hồ sơ cho bucket `posting-dossier-evidence`
+   * (`{posting_id}/{kind}/…`, policy kiểm quyền theo hồ sơ chứ không theo người tải).
+   * Có thể truyền lúc gọi `upload(files, { root })` khi id hồ sơ chỉ có sau khi tự lưu nháp.
+   */
+  root?: string;
 }
 
 /**
@@ -39,13 +45,13 @@ const newId = () =>
  * bị BỎ QUA chứ không làm hỏng cả lượt — người dùng chọn 5 ảnh mà 1 ảnh quá
  * nặng thì 4 ảnh kia vẫn lên.
  */
-export function useStorageUpload({ bucket, maxSize, folder, returns, label }: UseStorageUploadOptions) {
+export function useStorageUpload({ bucket, maxSize, folder, returns, label, root }: UseStorageUploadOptions) {
   const { userId } = useAuth();
   const [uploading, setUploading] = useState(false);
 
   const maxMb = Math.round(maxSize / (1024 * 1024));
 
-  const upload = async (files: FileList | File[]): Promise<string[]> => {
+  const upload = async (files: FileList | File[], opts: { root?: string } = {}): Promise<string[]> => {
     if (!userId) {
       toast.error(`Bạn cần đăng nhập để tải ${label}.`);
       return [];
@@ -59,7 +65,8 @@ export function useStorageUpload({ bucket, maxSize, folder, returns, label }: Us
           continue;
         }
         const ext = file.name.split(".").pop() ?? "bin";
-        const path = folder ? `${userId}/${folder}/${newId()}.${ext}` : `${userId}/${newId()}.${ext}`;
+        const base = opts.root ?? root ?? userId;
+        const path = folder ? `${base}/${folder}/${newId()}.${ext}` : `${base}/${newId()}.${ext}`;
         const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
         if (error) {
           toast.error(`Lỗi tải ${file.name}: ${error.message}`);

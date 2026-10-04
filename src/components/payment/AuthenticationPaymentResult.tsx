@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePayAuthenticationOrder } from "@/hooks/useAuthenticationOrders";
 import { gdErrorMessage } from "@/lib/authentication/errors";
-import { ownerPostingPath } from "@/lib/vrTour/paths";
+import { ownerAuthenticationPath } from "@/lib/authentication/paths";
 
 /**
  * /payment-result?gd_order=…&amount=… — ghi nhận thanh toán đơn giám định.
@@ -41,7 +41,7 @@ export function AuthenticationPaymentResult() {
     mutate({ orderId, txnRef, expectedAmount: amount });
   }, [authLoading, userId, status, orderId, txnRef, amount, mutate]);
 
-  const postingPath = returnPath || (data?.posting_id ? ownerPostingPath(data.posting_id) : "/chu-tai-san/dang-tai-san");
+  const postingPath = returnPath || (data?.posting_id ? ownerAuthenticationPath(data.posting_id) : "/chu-tai-san/dang-tai-san");
 
   const failure = (title: string, message: string) => (
     <>

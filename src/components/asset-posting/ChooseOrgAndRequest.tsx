@@ -23,7 +23,7 @@ interface ChooseOrgAndRequestProps {
   /**
    * Tổ chức đã nhận yêu cầu cho hồ sơ này — KHÔNG gửi lại được (UNIQUE ở DB),
    * kể cả khi đã từ chối. Có phần tử = đang GỬI THÊM, không phải gửi lần đầu:
-   * hai tình huống nói khác nhau và chỉ lần đầu mới được chọn lối "nhờ sàn".
+   * hai tình huống nói khác nhau.
    */
   alreadySentIds?: Set<string>;
   /**
@@ -32,6 +32,11 @@ interface ChooseOrgAndRequestProps {
    * không còn chiếm chỗ nào.
    */
   activeCount?: number;
+  /**
+   * Còn nhờ sàn được không — DB chỉ cho một yêu cầu chưa huỷ mỗi hồ sơ
+   * (idx_abr_one_open). Mặc định có: lối "nhờ sàn" LUÔN hiện, kể cả khi đã tự gửi.
+   */
+  allowBroker?: boolean;
   /** Đã gửi xong — orgNames rỗng nghĩa là nhờ sàn chọn giúp. */
   onSent: (orgNames: string[]) => void;
   /** Bỏ qua gửi yêu cầu (để sau). */
@@ -52,15 +57,16 @@ export function ChooseOrgAndRequest({
   briefInput,
   alreadySentIds,
   activeCount = 0,
+  allowBroker = true,
   onSent,
   onSkip,
   skipLabel = "Để sau",
 }: ChooseOrgAndRequestProps) {
-  // Gửi thêm cho một hồ sơ đã có yêu cầu thì chỉ còn một lối: chọn thêm tổ chức.
-  // Nhờ sàn lúc này sẽ đẻ ra hai luồng song song trên cùng hồ sơ, và thanh tiến
-  // trình "sàn đã gửi N tổ chức" sẽ đếm cả những tổ chức do chủ tài sản tự gửi.
   const topUp = !!alreadySentIds?.size;
+  // Nhờ sàn luôn là một lối, kể cả khi đã tự gửi vài tổ chức: sàn gửi thêm song
+  // song, và tiến độ nhờ sàn chỉ đếm yêu cầu mang broker_request_id của nó.
   const [lane, setLane] = useState<Lane>("self");
+  const platform = allowBroker && lane === "platform";
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   // Hai ô tách riêng: lời nhắn cho sàn là một câu mong muốn, còn nội dung gửi
   // tổ chức là cả bản mô tả tài sản. Dùng chung một state thì đổi lối là mang
@@ -76,7 +82,7 @@ export function ChooseOrgAndRequest({
   const busy = send.isPending || broker.isPending;
 
   const handleSend = () => {
-    if (!topUp && lane === "platform") {
+    if (platform) {
       broker.mutate(
         { postingId, note: brokerNote.trim() || undefined },
         { onSuccess: () => onSent([]) },
@@ -121,7 +127,7 @@ export function ChooseOrgAndRequest({
 
   return (
     <div className="space-y-5">
-      {!topUp && (
+      {allowBroker && (
         <div className="flex flex-col gap-2.5 sm:flex-row">
           <LaneButton
             value="self"
@@ -136,7 +142,7 @@ export function ChooseOrgAndRequest({
         </div>
       )}
 
-      {topUp || lane === "self" ? (
+      {!platform ? (
         <>
           {results.length > 0 && (
             <div className="flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-3">
@@ -166,7 +172,7 @@ export function ChooseOrgAndRequest({
             max={remaining}
             sentIds={alreadySentIds}
             onSwitchToPlatform={
-              topUp
+              !allowBroker
                 ? undefined
                 : () => {
                     setLane("platform");
@@ -183,7 +189,7 @@ export function ChooseOrgAndRequest({
         </ol>
       )}
 
-      {!topUp && lane === "platform" ? (
+      {platform ? (
         <div className="space-y-2">
           <Label htmlFor="request-message" className="text-sm">
             Lời nhắn cho sàn
@@ -212,14 +218,14 @@ export function ChooseOrgAndRequest({
       <div className="flex flex-col gap-3 sm:flex-row-reverse">
         <Button
           onClick={handleSend}
-          disabled={busy || ((topUp || lane === "self") && selectedIds.length === 0)}
+          disabled={busy || (!platform && selectedIds.length === 0)}
           className="flex-1 gap-2"
           size="lg"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           {busy
             ? "Đang gửi..."
-            : !topUp && lane === "platform"
+            : platform
               ? "Nhờ sàn chọn giúp"
               : `Gửi yêu cầu báo giá${selectedIds.length > 0 ? ` · ${selectedIds.length} tổ chức` : ""}`}
         </Button>

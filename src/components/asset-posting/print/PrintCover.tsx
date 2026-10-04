@@ -15,7 +15,7 @@ import {
   type ExpectedTimeline,
 } from "@/types/asset-posting";
 import type { PostingPrintData } from "@/hooks/usePostingPrintData";
-import { PrintEmpty, Slot } from "./printParts";
+import { CoverPhotos, PrintEmpty } from "./printParts";
 
 const PARENT_NAME: Record<string, string> = Object.fromEntries(ASSET_CATEGORIES.map((p) => [p.slug, p.name]));
 const CHILD_NAME: Record<string, string> = Object.fromEntries(
@@ -62,7 +62,7 @@ export function PrintCover({ data }: { data: PostingPrintData }) {
               <small>Vị trí</small>
               <One>{location}</One>
             </div>
-            <div>
+            <div style={{ gridColumn: "span 2" }}>
               <small>Chủ tài sản</small>
               <One>{ownerName ?? "—"}</One>
             </div>
@@ -74,14 +74,7 @@ export function PrintCover({ data }: { data: PostingPrintData }) {
             )}
           </div>
         </div>
-        <div className="pic">
-          <Slot src={photos[0]} placeholder="Ảnh chính" className="main" />
-          <div className="th">
-            {photos.length > 1 ? <Slot src={photos[1]} placeholder="Ảnh 2" /> : <div className="more">—</div>}
-            {photos.length > 2 ? <Slot src={photos[2]} placeholder="Ảnh 3" /> : <div className="more">—</div>}
-            <div className="more">{photos.length > 3 ? `+${photos.length - 3} ảnh` : "Thiếu ảnh"}</div>
-          </div>
-        </div>
+        <CoverPhotos photos={photos} />
       </div>
 
       {auctionNeedsDeclared(p) ? (

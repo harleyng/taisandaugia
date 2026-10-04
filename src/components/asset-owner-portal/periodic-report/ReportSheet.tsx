@@ -29,7 +29,7 @@ interface ReportSheetProps {
 }
 
 /**
- * Tờ báo cáo A4 (§A8.9): tiêu đề (đơn vị, kỳ, phạm vi, trạng thái) → 6 phần của báo cáo
+ * Tờ báo cáo A4 (§A8.9): tiêu đề (đơn vị, kỳ, phạm vi, trạng thái) → 7 phần của báo cáo
  * → chân trang có logo. Dùng chung cho trang in /chu-tai-san/bao-cao-dinh-ky/:id/in và
  * trang công khai /r/:token. Không có thanh công cụ — mỗi trang tự đặt ở trên.
  */

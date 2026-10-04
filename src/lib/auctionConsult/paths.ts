@@ -5,8 +5,8 @@ import { ownerPostingPath } from "@/lib/vrTour/paths";
 /** Gốc trang chi tiết trong menu gộp "Yêu cầu dịch vụ" (`${gốc}/${id}`). */
 export const ADMIN_AUCTION_CONSULT_PATH = "/admin/yeu-cau-dich-vu/tu-van-dau-gia";
 
-/** Tab "Tư vấn đấu giá" trên trang hồ sơ của người bán. */
-export const AUCTION_CONSULT_TAB = "tu-van-dau-gia";
+/** Tab "Đấu giá" (gồm tư vấn đấu giá) trên trang hồ sơ của người bán — link cũ ?tab=tu-van-dau-gia vẫn chuyển về đây. */
+export const AUCTION_CONSULT_TAB = "dau-gia";
 
 export const ownerAuctionConsultPath = (postingId: string) =>
   `${ownerPostingPath(postingId)}?tab=${AUCTION_CONSULT_TAB}`;

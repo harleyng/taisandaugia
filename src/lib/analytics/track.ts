@@ -79,8 +79,13 @@ function device(): DeviceInfo | null {
   return parseDevice(navigator.userAgent);
 }
 
+interface PageViewInput extends BaseEventInput {
+  /** Trang chi tiết tài sản — đếm lượt xem theo tài sản (kết quả đơn "Giao việc cho sàn"). */
+  listingId?: string | null;
+}
+
 /** Ghi 1 lượt xem trang. */
-export function trackPageView(path: string, opts: BaseEventInput = {}): void {
+export function trackPageView(path: string, opts: PageViewInput = {}): void {
   const d = device();
   void supabase
     .from("analytics_events")
@@ -89,6 +94,7 @@ export function trackPageView(path: string, opts: BaseEventInput = {}): void {
       user_id: opts.userId ?? currentUserId,
       event_type: "page_view",
       path,
+      listing_id: opts.listingId ?? null,
       device_type: d?.device_type ?? null,
       browser: d?.browser ?? null,
       os: d?.os ?? null,
@@ -99,8 +105,18 @@ export function trackPageView(path: string, opts: BaseEventInput = {}): void {
     });
 }
 
+interface FeatureEventInput extends BaseEventInput {
+  /** Tin của sự kiện (save_asset…). */
+  listingId?: string | null;
+  /**
+   * Link theo dõi đã đưa khách tới (cookie mkt_link_id). Server chỉ giữ khi xác nhận được
+   * (trigger analytics_events_mkt_guard) — gửi sai thì vẫn ghi sự kiện, bỏ link.
+   */
+  mktLinkId?: string | null;
+}
+
 /** Ghi 1 lượt dùng tính năng. `key` nên nằm trong FEATURE_EVENT_LABELS. */
-export function trackFeature(key: string, opts: BaseEventInput = {}): void {
+export function trackFeature(key: string, opts: FeatureEventInput = {}): void {
   const d = device();
   void supabase
     .from("analytics_events")
@@ -109,6 +125,8 @@ export function trackFeature(key: string, opts: BaseEventInput = {}): void {
       user_id: opts.userId ?? currentUserId,
       event_type: "feature",
       feature_key: key,
+      listing_id: opts.listingId ?? null,
+      mkt_link_id: opts.mktLinkId ?? null,
       device_type: d?.device_type ?? null,
       browser: d?.browser ?? null,
       os: d?.os ?? null,

@@ -7,11 +7,11 @@ import { PlanCatalogSection } from "@/components/asset-owner-portal/subscription
 import { useOwnerWorkspace } from "@/hooks/useOwnerWorkspace";
 import { useOwnerSubscription } from "@/hooks/useOwnerSubscription";
 
-const SUBSCRIPTION_SUBTITLE = "Mọi thành viên của Trạm dùng chung hạn mức trong gói, làm mới đầu mỗi tháng.";
+const SUBSCRIPTION_SUBTITLE = "Mọi thành viên của Trạm dùng chung hạn mức trong gói, làm mới theo chu kỳ của từng quyền lợi.";
 
 /**
  * /chu-tai-san/goi-thue-bao — "Gói dịch vụ" của Trạm đang chọn (design "Goi Dich Vu Chu Tai
- * San"): gói hiện tại + hạn mức tháng này. "Xem các gói khác" mở trang riêng
+ * San"): gói hiện tại + hạn mức hiện tại. "Xem các gói khác" mở trang riêng
  * (/goi-thue-bao/cac-goi); Trạm chưa có gói thì danh mục hiện ngay tại đây.
  * Tenant "Cá nhân" vẫn dùng credit (trang Credit).
  */

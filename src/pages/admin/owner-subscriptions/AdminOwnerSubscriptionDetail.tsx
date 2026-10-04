@@ -1,37 +1,41 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, BarChart3, History, Loader2, Send, Settings2, Undo2, XCircle, Zap } from "lucide-react";
+import { ArrowLeft, BarChart3, History, Package, XCircle, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHasAdminPermission } from "@/hooks/useAdminPermissions";
 import {
+  useAdminOwnerSubPlans,
   useAdminOwnerSubscriptionDetail,
   useAdminOwnerSubscriptionList,
-  useSetOwnerSubscriptionStatus,
 } from "@/hooks/useAdminOwnerSubscriptions";
 import { SubscriptionStatusBadge } from "@/components/owner-subscription/SubscriptionStatusBadge";
-import { SubscriptionSettingsForm } from "@/components/admin/owner-subscriptions/SubscriptionSettingsForm";
+import { SubscriptionPlanTab } from "@/components/admin/owner-subscriptions/SubscriptionPlanTab";
 import { SubscriptionUsageTab } from "@/components/admin/owner-subscriptions/SubscriptionUsageTab";
 import { SubscriptionHistoryTab } from "@/components/admin/owner-subscriptions/SubscriptionHistoryTab";
-import { ActivateSubscriptionDialog } from "@/components/admin/owner-subscriptions/ActivateSubscriptionDialog";
+import {
+  ActivateSubscriptionDialog,
+  type ActivateCurrentSub,
+} from "@/components/admin/owner-subscriptions/ActivateSubscriptionDialog";
 import { CancelSubscriptionDialog } from "@/components/admin/owner-subscriptions/CancelSubscriptionDialog";
+import { sortPlans } from "@/lib/ownerSubscription/catalog";
 import { formatSubDate } from "@/lib/ownerSubscription/status";
+import type { SubStatus } from "@/lib/ownerSubscription/types";
 import { formatMoneyFull } from "@/utils/money";
 
-type Tab = "cau-hinh" | "su-dung" | "lich-su";
+type Tab = "goi" | "su-dung" | "lich-su";
 
-/** /admin/goi-thue-bao/:workspaceId — cấu hình, kích hoạt, theo dõi gói của một Trạm. */
+/** /admin/goi-thue-bao/ap-dung/:workspaceId — gói của một Trạm: xem, kích hoạt tay theo gói danh mục, huỷ. */
 export default function AdminOwnerSubscriptionDetail() {
   const { workspaceId = "" } = useParams();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const tab = (params.get("tab") as Tab) || "cau-hinh";
+  const tab = (params.get("tab") as Tab) || "goi";
 
   const { data: list } = useAdminOwnerSubscriptionList();
   const { data: detail, isLoading } = useAdminOwnerSubscriptionDetail(workspaceId);
-  const setStatus = useSetOwnerSubscriptionStatus();
-  const canCreate = useHasAdminPermission("goi-thue-bao", "create");
+  const { data: catalog } = useAdminOwnerSubPlans();
   const canUpdate = useHasAdminPermission("goi-thue-bao", "update");
 
   const [activateOpen, setActivateOpen] = useState(false);
@@ -39,14 +43,35 @@ export default function AdminOwnerSubscriptionDetail() {
 
   const row = list?.find((r) => r.workspace_id === workspaceId);
   const sub = detail?.sub ?? null;
-  const effective = detail?.status?.status ?? (sub ? (sub.status as never) : null);
-  const canEdit = sub ? canUpdate : canCreate;
+  const effective = (detail?.status?.status ?? (sub ? sub.status : null)) as SubStatus | null;
+
+  const allowedPlans = useMemo(
+    () => sortPlans((catalog?.plans ?? []).filter((p) => p.workspace_ids?.includes(workspaceId))),
+    [catalog?.plans, workspaceId],
+  );
+  const activatablePlans = useMemo(() => allowedPlans.filter((p) => p.is_active), [allowedPlans]);
+  const current = useMemo<ActivateCurrentSub | null>(
+    () =>
+      sub
+        ? {
+            planId: detail?.status?.plan_id ?? null,
+            planName: sub.plan_name,
+            status: effective,
+            endsOn: sub.ends_on,
+            termMonths: sub.term_months,
+            hasPending: !!detail?.status?.pending,
+          }
+        : null,
+    [sub, detail?.status, effective],
+  );
+
+  const running = effective === "active" || effective === "scheduled";
 
   return (
     <div className="space-y-5 p-6">
       <div>
-        <Button variant="ghost" size="sm" className="-ml-2 mb-2" onClick={() => navigate("/admin/goi-thue-bao")}>
-          <ArrowLeft className="mr-1.5 h-4 w-4" /> Gói thuê bao
+        <Button variant="ghost" size="sm" className="-ml-2 mb-2" onClick={() => navigate("/admin/goi-thue-bao/ap-dung")}>
+          <ArrowLeft className="mr-1.5 h-4 w-4" /> Áp dụng gói
         </Button>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -59,30 +84,12 @@ export default function AdminOwnerSubscriptionDetail() {
               {row ? ` · ${row.member_count} thành viên` : ""}
             </p>
           </div>
-          {sub && canUpdate && (
+          {canUpdate && detail && (
             <div className="flex flex-wrap items-center gap-2">
-              {(sub.status === "draft" || sub.status === "cancelled") && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={setStatus.isPending}
-                  onClick={() => setStatus.mutate({ subId: sub.id, status: "offered" })}
-                >
-                  {setStatus.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
-                  Gửi chào gói
-                </Button>
-              )}
-              {sub.status === "offered" && (
-                <Button size="sm" variant="outline" disabled={setStatus.isPending} onClick={() => setStatus.mutate({ subId: sub.id, status: "draft" })}>
-                  <Undo2 className="mr-1.5 h-4 w-4" /> Thu hồi về nháp
-                </Button>
-              )}
-              {sub.status !== "cancelled" && (
-                <Button size="sm" onClick={() => setActivateOpen(true)}>
-                  <Zap className="mr-1.5 h-4 w-4" /> {sub.status === "active" ? "Gia hạn tay" : "Kích hoạt tay"}
-                </Button>
-              )}
-              {sub.status !== "cancelled" && (
+              <Button size="sm" onClick={() => setActivateOpen(true)}>
+                <Zap className="mr-1.5 h-4 w-4" /> {running ? "Gia hạn / đổi gói tay" : "Kích hoạt tay"}
+              </Button>
+              {sub && sub.status !== "cancelled" && (
                 <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setCancelOpen(true)}>
                   <XCircle className="mr-1.5 h-4 w-4" /> Huỷ gói
                 </Button>
@@ -100,37 +107,18 @@ export default function AdminOwnerSubscriptionDetail() {
           <Stat label="Lý do huỷ" value={sub.status === "cancelled" ? sub.cancel_reason ?? "—" : "—"} />
         </div>
       )}
-      {sub?.status === "draft" && (
-        <p className="rounded-xl bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
-          Gói đang là NHÁP — tổ chức chưa thấy. Bấm "Gửi chào gói" để Trưởng đơn vị thấy và thanh toán online, hoặc "Kích hoạt tay" nếu đã thu tiền ngoài hệ thống.
-        </p>
-      )}
-
-      {detail?.status?.plan_id && (
-        <p className="rounded-xl bg-primary/10 px-4 py-2.5 text-sm text-foreground">
-          Theo gói danh mục <span className="font-semibold">{detail.status.plan_name}</span> — Trạm tự mua qua trang Gói dịch vụ.
-          Sửa cấu hình ở đây chỉ áp cho Trạm này; lần gia hạn qua danh mục sẽ chép lại cấu hình của gói.
-        </p>
-      )}
-      {detail?.status?.pending && (
-        <p className="rounded-xl bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
-          Đã thanh toán đổi sang gói <span className="font-semibold text-foreground">{detail.status.pending.plan_name}</span>{" "}
-          ({detail.status.pending.months} tháng · {formatMoneyFull(detail.status.pending.price_vnd)}) — tự áp dụng từ{" "}
-          {formatSubDate(detail.status.pending.from)}.
-        </p>
-      )}
 
       {isLoading || !detail ? (
         <Skeleton className="h-64 w-full rounded-2xl" />
       ) : (
-        <Tabs value={tab} onValueChange={(v) => setParams(v === "cau-hinh" ? {} : { tab: v }, { replace: true })}>
+        <Tabs value={tab} onValueChange={(v) => setParams(v === "goi" ? {} : { tab: v }, { replace: true })}>
           <TabsList>
-            <TabsTrigger value="cau-hinh" className="gap-1.5"><Settings2 className="h-4 w-4" /> Cấu hình</TabsTrigger>
+            <TabsTrigger value="goi" className="gap-1.5"><Package className="h-4 w-4" /> Gói</TabsTrigger>
             <TabsTrigger value="su-dung" className="gap-1.5" disabled={!sub}><BarChart3 className="h-4 w-4" /> Sử dụng</TabsTrigger>
             <TabsTrigger value="lich-su" className="gap-1.5" disabled={!sub}><History className="h-4 w-4" /> Lịch sử</TabsTrigger>
           </TabsList>
-          <TabsContent value="cau-hinh" className="mt-4 rounded-2xl border bg-card p-5">
-            <SubscriptionSettingsForm workspaceId={workspaceId} detail={detail} canEdit={canEdit} />
+          <TabsContent value="goi" className="mt-4">
+            <SubscriptionPlanTab detail={detail} allowedPlans={allowedPlans} />
           </TabsContent>
           <TabsContent value="su-dung" className="mt-4">
             <SubscriptionUsageTab detail={detail} />
@@ -141,19 +129,15 @@ export default function AdminOwnerSubscriptionDetail() {
         </Tabs>
       )}
 
-      {sub && (
-        <>
-          <ActivateSubscriptionDialog
-            open={activateOpen}
-            onOpenChange={setActivateOpen}
-            subId={sub.id}
-            defaultMonths={sub.term_months}
-            defaultAmount={Number(sub.price_vnd)}
-            currentEndsOn={sub.status === "active" ? sub.ends_on : null}
-          />
-          <CancelSubscriptionDialog open={cancelOpen} onOpenChange={setCancelOpen} subId={sub.id} />
-        </>
-      )}
+      <ActivateSubscriptionDialog
+        open={activateOpen}
+        onOpenChange={setActivateOpen}
+        workspaceId={workspaceId}
+        plans={activatablePlans}
+        terms={catalog?.terms ?? []}
+        current={current}
+      />
+      {sub && <CancelSubscriptionDialog open={cancelOpen} onOpenChange={setCancelOpen} subId={sub.id} />}
     </div>
   );
 }

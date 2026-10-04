@@ -19,7 +19,7 @@ const FILTER_OPTIONS = {
 };
 
 /**
- * Yêu cầu dịch vụ — hàng đợi gộp tư vấn pháp lý, tư vấn đấu giá, giám định, VR tour.
+ * Yêu cầu dịch vụ — hàng đợi gộp tư vấn pháp lý, tư vấn đấu giá, giám định, VR tour, truyền thông.
  * Danh sách chung; thao tác vẫn nằm ở trang chi tiết riêng từng loại (admin làm THAY đối tác).
  */
 export default function AdminServiceRequestsPage() {
@@ -48,7 +48,7 @@ export default function AdminServiceRequestsPage() {
         <div>
           <h1 className="text-xl font-bold text-foreground">Yêu cầu dịch vụ</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Báo giá, điều phối đối tác và theo dõi kết quả tư vấn pháp lý, tư vấn đấu giá, giám định, VR tour
+            Báo giá, điều phối đối tác và theo dõi kết quả tư vấn pháp lý, tư vấn đấu giá, giám định, VR tour, truyền thông
           </p>
         </div>
         {!settings && (

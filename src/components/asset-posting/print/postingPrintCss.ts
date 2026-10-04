@@ -25,7 +25,7 @@ export const POSTING_PRINT_CSS = `
 /* ── vỏ trang (thay <doc-page size="a4" margin="0.6in">) ── */
 .hsp.desk{background:#f5f5f4;padding:48px 24px;min-height:100vh}
 .hsp .sheet{width:210mm;max-width:100%;margin:0 auto;background:#fff;box-shadow:0 2px 10px rgba(20,20,19,.12);border-radius:7px;padding:${MARGIN}}
-.hsp .frame{width:100%;border-collapse:collapse}
+.hsp .frame{width:100%;border-collapse:collapse;table-layout:fixed}
 .hsp .frame td,.hsp .frame th{padding:0;text-align:left;font-weight:inherit}
 @media print{
   .hsp.desk{background:none;padding:0;min-height:0}
@@ -72,9 +72,10 @@ export const POSTING_PRINT_CSS = `
 .hsp .facts b{font-size:10pt;font-weight:600}
 .hsp .cov .pic{display:grid;gap:6pt}
 .hsp .cov .main{aspect-ratio:4/3;border:3pt solid #fff;border-radius:9pt;box-shadow:0 10pt 24pt hsl(152 60% 5% / .35)}
-.hsp .cov .th{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6pt}
+.hsp .cov .th{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:6pt}
+.hsp .cov .th.n1{--n:1}.hsp .cov .th.n2{--n:2}.hsp .cov .th.n3{--n:3}.hsp .cov .th.n4{--n:4}
 .hsp .cov .th .slot{aspect-ratio:4/3;border:2pt solid hsl(0 0% 100% / .85)}
-.hsp .cov .th .more{aspect-ratio:4/3;border-radius:6pt;background:hsl(0 0% 100% / .12);border:1px dashed hsl(0 0% 100% / .4);display:grid;place-items:center;font-size:10pt;font-weight:600;color:#fff}
+.hsp .cov .th.n1 .slot{aspect-ratio:2/1}
 /* key numbers */
 .hsp .kn{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8pt;margin:14pt 0 4pt;break-inside:avoid}
 .hsp .kn>div{border-radius:9pt;padding:9pt 12pt;background:var(--bg);min-width:0;display:flex;flex-direction:column;gap:3pt}
@@ -82,6 +83,7 @@ export const POSTING_PRINT_CSS = `
 .hsp .kn small{font-size:8pt;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 .hsp .kn b{font-size:11pt;font-weight:700;font-variant-numeric:tabular-nums}
 .hsp .kn>div:first-child b{font-size:14pt;color:var(--pri)}
+.hsp .kn b.one{white-space:normal;overflow:visible}
 .hsp .kn b.mu{color:var(--ink3)!important;font-weight:500;font-size:11pt!important}
 .hsp .kn.e{display:block}
 /* sections */
@@ -102,7 +104,7 @@ export const POSTING_PRINT_CSS = `
 .hsp .tbl td{padding:7pt 10pt;border-bottom:1px solid var(--bd);vertical-align:middle}
 .hsp .tbl tr:last-child td{border-bottom:0}
 .hsp .tbl tr{break-inside:avoid}
-.hsp .tbl td.k{font-weight:600;width:34%;white-space:nowrap}
+.hsp .tbl td.k{font-weight:600;width:34%}
 .hsp .tbl td.n{color:var(--ink2)}
 .hsp .tbl td .note{display:block;font-size:8.5pt;color:var(--ink3)}
 .hsp .vt{display:inline-flex;align-items:center;gap:4pt;font-size:8.5pt;font-weight:600;white-space:nowrap;padding:2pt 8pt;border-radius:99px}

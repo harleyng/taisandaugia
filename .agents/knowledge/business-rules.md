@@ -115,26 +115,34 @@ Locking is a **real GoTrue ban** (`auth.admin.updateUserById(id, { ban_duration 
 
 Tổ chức chủ tài sản (= một `asset_owner_workspaces`) có thể trả **gói theo kỳ** thay cho credit. Chủ tài sản cá nhân và tenant "Cá nhân" **luôn** trả credit.
 
-- **Một gói / Trạm, cấu hình riêng** do admin đặt ở `/admin/goi-thue-bao` (module `goi-thue-bao`): tên, giá mỗi kỳ, số tháng (1–36), tính năng + hạn mức mỗi tháng, xử lý khi hết hạn mức.
-- **Tính năng tính theo gói** = `owner_sub_supported_variants()` (bản sao FE `SUPPORTED_SUB_VARIANTS`): `scan_3d_owner`, `report_portfolio_owner`. Tính năng không có trong gói ⇒ trả credit như cũ (không bị chặn). Dịch vụ VND (VR, giám định, TVPL, TVĐG) KHÔNG thuộc gói.
-- **Hạn mức** theo **tháng dương lịch giờ Việt Nam**, không cộng dồn; tháng đầu đủ hạn mức (không chia tỷ lệ). `monthly_quota` NULL = không giới hạn.
+- **Một gói / Trạm**, nhưng **cấu hình gói CHỈ nằm ở danh mục** (từ 2026-10-01 — xem "Gói chỉ mở cho Trạm được chọn" bên dưới). Dòng `owner_subscriptions` chỉ giữ bản chép hạn mức + kỳ + trạng thái; admin KHÔNG còn sửa tên / giá / hạn mức trên gói của một Trạm (`admin_owner_sub_upsert` đã thu quyền).
+- **Quyền lợi của gói = danh mục CỐ ĐỊNH `owner_sub_benefits`** (từ 2026-10-01, mig `20261001300000`): 25 quyền lợi, client chỉ đọc, **không có màn sửa — đổi danh mục = viết migration**. Admin thêm quyền lợi vào gói và đặt **hạn mức** (số nguyên > 0 hoặc NULL = không giới hạn) + **chu kỳ làm mới** từng dòng: `day` / `week` (thứ Hai) / `month` / `quarter` / `year` theo **lịch giờ VN**, `term` = cả kỳ đã trả (không làm mới). Dạng `level` (Hỗ trợ ưu tiên = giờ phản hồi, càng nhỏ càng tốt) chỉ có một số, không chu kỳ. Thứ tự dòng = thứ tự thẻ gói (8 dòng đầu).
+- **Ai kiểm:** `source='enforced'` (`scan_3d_owner`, `report_portfolio_owner`, `priority_listing` — key trùng `service_variants`; bản sao FE `SubVariantKey`) bị chặn / trừ credit qua `_owner_sub_consume`; `live` (Thành viên = số thành viên hiện tại, Số hoá hồ sơ = hồ sơ tạo trong cửa sổ) đếm thật nhưng KHÔNG chặn; `display` chỉ hiển thị (lượt dùng lấy từ bảng giữ chỗ `owner_subscription_benefit_usage` nếu có). Tính năng không có trong gói ⇒ trả credit như cũ. Dịch vụ VND (VR, giám định, TVPL, TVĐG) KHÔNG thuộc gói.
+- **Cửa sổ đếm** tính lúc đọc (`owner_sub_window`) từ ngày dùng `owner_subscription_usage.used_on` ⇒ đổi chu kỳ không mất dữ liệu; không cộng dồn; kỳ đầu đủ hạn mức (không chia tỷ lệ).
 - **Thứ tự trừ** ở mọi điểm: gói của Trạm (`_owner_sub_consume`) → hết hạn mức: `overage_mode='block'` (MẶC ĐỊNH) từ chối `quota_exhausted`, `'credits'` trừ credit → không thuộc gói: credit qua `_charge_owner_feature_credits` (chỗ duy nhất; Phase 15d đổi ví ở đây).
 - **Ai được bao:** thành viên **trực tiếp** đang hoạt động của Trạm, thao tác trên hồ sơ / báo cáo **của Trạm đó** (`asset_postings.workspace_id`). Trụ sở xem chi nhánh qua liên kết ⇒ trả credit; gói trụ sở KHÔNG bao chi nhánh.
-- **Trạng thái:** `draft` (tổ chức không thấy) → `offered` (thấy, trả được, chưa bao) → `active` (hiệu lực trong `[starts_on, ends_on]`; hiển thị `scheduled` / `expired` theo ngày) · `cancelled` (bắt buộc lý do; chào lại được). Chỉ thanh toán / kích hoạt tay mới đặt `active`.
-- **Thanh toán:** chỉ **Trưởng đơn vị** (vai trò OWNER) trả online qua VNPay mô phỏng (`pay_owner_subscription` → `_settle_owner_subscription`, idempotent theo `payment_claims`, `quote_changed` nếu admin đổi giá). Admin kích hoạt tay (`admin_owner_sub_activate`: chuyển khoản / hợp đồng / tặng). Gia hạn **nối tiếp** từ `ends_on + 1` khi còn hạn, hết hạn ⇒ từ hôm nay.
+- **Trạng thái:** `active` (hiệu lực trong `[starts_on, ends_on]`; hiển thị `scheduled` / `expired` theo ngày) · `cancelled` (bắt buộc lý do; mua / kích hoạt lại ⇒ hiệu lực ngay). Chỉ thanh toán / kích hoạt tay mới đặt `active`. `draft` / `offered` là di sản của gói riêng — `admin_owner_sub_set_status` nay chỉ nhận `→ cancelled`.
+- **Thanh toán:** chỉ **Trưởng đơn vị** (vai trò OWNER) trả online qua VNPay mô phỏng (`pay_owner_subscription` → `_settle_owner_subscription`, idempotent theo `payment_claims`, `quote_changed` nếu admin đổi giá). Admin kích hoạt tay theo một gói danh mục đã mở cho Trạm (`admin_owner_sub_plan_activate`: chuyển khoản / hợp đồng / tặng, số tháng 1–36, số tiền admin nhập — gợi ý theo giá danh mục). Gia hạn **nối tiếp** từ `ends_on + 1` khi còn hạn, hết hạn ⇒ từ hôm nay.
 - **Doanh thu:** mỗi kỳ trả tiền = một đơn `direct` (biến thể `owner_subscription`, `fulfilled`), ghi trọn kỳ lúc trả; kích hoạt 0 ₫ không sinh đơn. Huỷ không tự hoàn tiền.
-- **Sổ lượt dùng** `owner_subscription_usage` chỉ ghi thêm; hoàn lượt (quét 3D thất bại / quá hạn) = dòng đảo cùng `period_month`, không đụng credit. Sửa hạn mức có hiệu lực ngay; kỳ đã trả giữ bản chụp cấu hình (`owner_subscription_terms`).
+- **Sổ lượt dùng** `owner_subscription_usage` chỉ ghi thêm; hoàn lượt (quét 3D thất bại / quá hạn) = dòng đảo cùng `used_on` (trả về đúng cửa sổ đã trừ), không đụng credit. Sửa hạn mức có hiệu lực ngay; kỳ đã trả giữ bản chụp cấu hình (`owner_subscription_terms`).
 - Thành viên đọc gói qua RPC `owner_subscription_status` (không lộ ghi chú nội bộ); các bảng gói chỉ admin đọc, mọi ghi qua RPC.
 
 ### Danh mục gói dịch vụ (`owner_subscription_plans`, 2026-09-28)
 
 Bên cạnh gói riêng do admin cấu hình, sàn bán **danh mục gói** (Cơ bản / Tiêu chuẩn / Chuyên nghiệp…) để Trưởng đơn vị tự mua ở `/chu-tai-san/goi-thue-bao/cac-goi` ("Gói dịch vụ"). Admin quản lý ở `/admin/goi-thue-bao/danh-muc`.
-- **Gói danh mục:** giá **mỗi tháng** + hạn mức theo `owner_sub_supported_variants()` (hệ thống kiểm) + `benefits` = dòng quyền lợi admin tự nhập, **CHỈ HIỂN THỊ — hệ thống không kiểm** (chỉ ghi điều sàn thực sự cam kết). Nhiều nhất một gói "Phổ biến nhất".
+- **Gói danh mục:** giá **mỗi tháng** + ít nhất một dòng quyền lợi chọn từ danh mục cố định (`owner_subscription_plan_entitlements`: hạn mức + chu kỳ + thứ tự; xem trên). Chữ hiển thị sinh từ số + đơn vị ("20 hồ sơ / tháng"), không còn chữ tự do. Nhiều nhất một gói "Phổ biến nhất".
 - **Kỳ + chiết khấu** (`owner_subscription_term_options`, mặc định 3 / 6 / 12 tháng = 0 / 5 / 10%): giá kỳ = giá tháng × số tháng × (1 − %), làm tròn nghìn (`owner_sub_plan_price` ↔ `planTermPrice`).
 - **Hiệu lực một lượt mua** (`owner_sub_plan_quote`): chưa có gói / chờ thanh toán / nháp / huỷ / hết hạn ⇒ **ngay hôm nay**, thay cấu hình cũ; đang hiệu lực + CÙNG gói ⇒ **nối kỳ**, hạn mức cập nhật ngay theo gói hiện hành; đang hiệu lực + gói KHÁC (kể cả từ gói riêng) ⇒ trả tiền ngay, gói mới áp dụng **từ kỳ kế tiếp** (`ends_on + 1`). Chỉ **một** lần đổi gói chờ tại một thời điểm (`pending_exists`).
 - **Đổi gói chờ** lưu trên `owner_subscriptions.pending_*` và được **cuộn lười** (`_owner_sub_roll`) ở `_owner_sub_consume`, `owner_subscription_status`, báo giá và thanh toán — không có cron.
-- Sửa danh mục KHÔNG đổi gói Trạm đã mua; áp dụng từ lần mua / gia hạn sau. Admin sửa cấu hình một Trạm đang theo gói danh mục ⇒ chỉ Trạm đó đổi; lần gia hạn qua danh mục chép lại cấu hình gói.
-- Thanh toán: chỉ Trưởng đơn vị, VNPay mô phỏng (`pay_owner_sub_plan` → `_settle_owner_sub_plan`, idempotent theo mã giao dịch, `quote_changed` nếu giá đổi); mỗi lượt mua = một đơn `direct` `owner_subscription`.
+- Sửa danh mục KHÔNG đổi gói Trạm đã mua; áp dụng từ lần mua / gia hạn sau (lúc đó cấu hình gói được chép lại).
+- Thanh toán: chỉ Trưởng đơn vị, VNPay mô phỏng (`pay_owner_sub_plan` → `_settle_owner_sub_plan`, idempotent theo mã giao dịch, `quote_changed` nếu giá đổi); mỗi lượt mua = một đơn `direct` `owner_subscription`. Phần áp gói dùng chung với kích hoạt tay: `_owner_sub_plan_ensure` + `_owner_sub_plan_apply`.
+
+### Gói chỉ mở cho Trạm được chọn (`owner_subscription_plan_workspaces`, 2026-10-01)
+
+- Admin tạo gói ở danh mục rồi **chọn từng Trạm** được dùng ("Chọn tổ chức" → `admin_owner_sub_plan_set_workspaces`, thay toàn bộ danh sách). **Không có nhóm** — người dùng chốt chọn Trạm trực tiếp.
+- **Gán = cho thấy:** chỉ Trạm được chọn thấy gói trên trang Gói dịch vụ và tự mua; kích hoạt tay cũng chỉ chọn được gói đã mở. **Gói không có Trạm nào = ẩn** với mọi chủ tài sản (gói mới tạo mặc định ẩn).
+- Chặn ở server: `_owner_sub_plan_eval` trả `plan_not_available` (báo giá + thanh toán); RLS `owner_sub_plans_read` qua `owner_sub_plan_visible()` — gói đang bán & mở cho Trạm mình đọc được, HOẶC là gói hiện tại / chờ áp dụng của Trạm mình (để thẻ gói hiện tại còn quyền lợi). Danh mục FE lọc thêm bằng join `!inner` theo Trạm đang mở.
+- **Gỡ Trạm khỏi gói:** gói đang chạy giữ tới hết hạn; Trạm KHÔNG gia hạn / mua lại được gói đó (nút gia hạn ở hero bị thay bằng gợi ý chọn gói khác).
 
 ---
 
@@ -296,12 +304,12 @@ Roles are **per-organization and user-creatable** (`org_roles`, since `202608050
 
 ## Thành viên & vai trò không gian chủ tài sản (`asset_owner_workspace_members` + `owner_ws_roles`, 2026-09-27)
 
-A workspace (`asset_owner_workspaces`, "Trạm Điều Hành") has many members (`20260926000001`). The membership row IS the role assignment (`role_id` → `owner_ws_roles`, FK SET NULL). Since `20260927170000`/`…170100` each workspace has its **own roles + a module × action matrix** (`owner_ws_role_permissions`), managed at `/chu-tai-san/vai-tro`. Catalog = `owner_ws_permission_catalog()` (14 modules, 41 pairs); client mirror `src/lib/ownerWorkspace/permissions.ts` (+ `roles.ts` for `ownerCan / ownerCanIn / canWritePosting / roleWithinCaller`). Change SQL ⇒ change the mirror. Module codes are DB keys — never rename.
+A workspace (`asset_owner_workspaces`, "Trạm Điều Hành") has many members (`20260926000001`). The membership row IS the role assignment (`role_id` → `owner_ws_roles`, FK SET NULL). Since `20260927170000`/`…170100` each workspace has its **own roles + a module × action matrix** (`owner_ws_role_permissions`), managed at `/chu-tai-san/vai-tro`. Catalog = `owner_ws_permission_catalog()` (16 modules, 50 pairs since `20261002120000` — `so-hoa:share` (M0) + `truyen-thong` ×6 (M1) + `nhat-ky` view/share; `nhat-ky` is NOT in the STAFF/VIEWER seeds); replacing it = start from the LIVE `pg_get_functiondef`, never an older migration file; client mirror `src/lib/ownerWorkspace/permissions.ts` (+ `roles.ts` for `ownerCan / ownerCanIn / canWritePosting / roleWithinCaller`). Change SQL ⇒ change the mirror. Module codes are DB keys — never rename.
 
 | Role (seeded per workspace) | Notes |
 |---|---|
 | `OWNER` "Trưởng đơn vị" | `is_system`, no permission rows, full access, never branch-scoped, can't be edited / renamed / deleted |
-| `STAFF` "Cán bộ" | Seed = exactly the old `staff` rights (28 pairs). Editable; deletable when unused |
+| `STAFF` "Cán bộ" | Seed = the old `staff` rights (28) + `so-hoa:share` + `truyen-thong` view/create/update = 32 pairs. Editable; deletable when unused |
 | `VIEWER` "Người xem" | `view` on every module. Editable; deletable when unused |
 | custom (`CUSTOM_…` code, never shown) | Created by `owner_ws_create_role` (optionally copying a role) |
 
@@ -328,6 +336,7 @@ A workspace (`asset_owner_workspaces`, "Trạm Điều Hành") has many members 
 | `thanh-vien` create/update/delete | invite (+ read invites, revoke) / change role / remove |
 | `vai-tro` c/u/d | role RPCs (`owner_ws_create_role/update_role/delete_role/set_role_permissions`) — tables have **no write policies** |
 | `lien-ket` update | link request / respond / cancel / unlink |
+| `truyen-thong` create/update/delete | `owner_mkt_links` policies with the branch derived from the claim (M1); campaigns via `owner_mkt_can(ws, action, listing_ids)` = module right + branch scope of EVERY asset (M2). `finalize` = Duyệt / Từ chối chiến dịch; `share` = Đánh dấu đã gửi, tải bộ tư liệu (M2) + đặt gói sàn (M4). Custom roles were NOT granted it at rollout |
 | (not in matrix) | Tổng quan, Credit (personal wallet) |
 
 **Anti-escalation (non-OWNER callers, server-side):** may only assign / invite into / edit / delete roles whose permissions ⊆ their own (`owner_ws_role_within_user`), and branch scope ⊆ their own (`owner_ws_scope_within_user`); never edit their own role; only OWNER grants/revokes OWNER. Invites stay valid only while the inviter still holds `thanh-vien:create` and the role is still within their rights (checked at preview/accept); losing `thanh-vien:create` revokes their pending invites.
@@ -344,6 +353,17 @@ A workspace (`asset_owner_workspaces`, "Trạm Điều Hành") has many members 
 - Pages that need the workspace of a specific KYC (onboarding) match `workspace.org_kyc_id`, not the current selection.
 
 ---
+
+## Nhật ký hoạt động Trạm Điều Hành (`owner_audit_log`, 2026-10-02)
+
+`/chu-tai-san/nhat-ky`, migration `20261002120000`. Append-only, kept **forever**, no FK to the workspace. Client has NO table grant — read via `owner_audit_list` / `owner_audit_scope`, client events via `owner_audit_track`.
+
+- **Capture:** one trigger `owner_audit_row('<module>')` on ~30 owner-portal tables (postings + their service/contract children, claims, outcomes, cash events, mkt, reports, targets, branches, workspace, members, invites, roles, link requests, subscriptions). New owner table ⇒ attach the trigger + add a `CASE` branch (workspace / branch / label). Diff = `{col: [before, after]}`; `*_id`/`*_by`, timestamps, counters and tokens are dropped (`owner_audit_skip_key`). Trigger swallows its own errors (WARNING) — the log must never block a business write.
+- **Special cases:** claim bulk INSERT (matching) → 1 row per run; role permission rewrite → 1 `vai-tro` row with `permissions_added/removed`; same actor editing the same record within 10 min (not a status change) is MERGED into one row (`meta.edits`).
+- **Client events:** page view (dedup 10 min / path), `export` / `print` / `share` / `download` — via `trackOwnerAudit` / `useOwnerAuditTrack` (`src/hooks/useOwnerAuditLog.ts`). New export/print button ⇒ call `track(...)`.
+- **Login / logout (2026-10-04, mig `20261004200000`):** recorded SERVER-side by trigger `owner_audit_auth_session` on `auth.sessions` — INSERT = `login`, DELETE = `logout` (`meta.reason` `signout` | `expired`, `duration_seconds`). One row per active workspace membership + the personal tenant if the user has one (approved personal KYC or a personal posting); users outside the owner portal get nothing; session deletes cascading from an account delete are skipped. `entity_type='auth_sessions'`, `entity_id` = session id (pairs login↔logout); `meta.source='auth'`, `ip`, `user_agent`, `aal`. `owner_audit_track` REJECTS `login` from clients. Older `login` rows without `meta.source='auth'` were client-sent portal visits → shown as "Truy cập Trạm Điều Hành". Filter kind `sessions` = login+logout; `views` = page views only. Visibility: module NULL ⇒ `workspace`/`hq` viewers see everyone's sessions; `branch`/`mine` see only their own (no branch_id on session rows). The trigger MUST keep swallowing errors — a failure there would block sign-in.
+- **View layers (server-side, `owner_audit_context`):** `mine` = no `nhat-ky:view` → own actions only; `branch` = view + branch-scoped → rows whose `branch_id` is in scope (+ own); `workspace` = view, unscoped; `hq` = Trưởng đơn vị of the linked HQ, read-only, minus thanh-vien/vai-tro/lien-ket; `personal` tenant = own actions + actions on own personal dossiers. Always: only modules the viewer can "Xem"; `thanh-vien`/`vai-tro` rows Owner-only. Excel export needs `nhat-ky:share`.
+- Non-member actors are never named: shown as "Quản trị sàn" / "Đối tác" / "Hệ thống".
 
 ## Chi nhánh tự onboard — KYC rút gọn (`kyc_scope = 'branch'`, 2026-09-26)
 
@@ -930,7 +950,7 @@ giá (Điều 72), công chứng (chỉ ghi nhận), sổ thanh toán tổ chứ
 
 ## Hợp đồng cung ứng dịch vụ (HDCU) — đồng ý trước khi trả (2026-09-27)
 
-Bảng `service_contracts` (`20260927150002`) cho 4 dịch vụ trả tiền VND: VR tour · giám định · tư vấn pháp lý · tư vấn đấu giá (`service_kind` = slug `ServiceKindKey`). Mã `HDCU` — KHÔNG dùng HDDV (đó là tên hợp đồng dịch vụ **đấu giá** / ký gửi).
+Bảng `service_contracts` (`20260927150002`) cho 5 dịch vụ trả tiền VND: VR tour · giám định · tư vấn pháp lý · tư vấn đấu giá · thẩm định giá (`tham-dinh`, thêm ở `20261004160200`) (`service_kind` = slug `ServiceKindKey`). Mã `HDCU` — KHÔNG dùng HDDV (đó là tên hợp đồng dịch vụ **đấu giá** / ký gửi).
 
 - **Một dòng = một lần đồng ý cho MỘT báo giá** (`UNIQUE(service_kind, order_id, quoted_at)`). Admin báo giá lại ⇒ `quoted_at` đổi ⇒ lần đồng ý cũ hết hiệu lực (hiển thị "Đã báo giá lại"), phải đồng ý lại. "Hợp đồng hiện hành" của đơn = dòng khớp CẢ `quoted_at` VÀ `quoted_price` của đơn.
 - **Chỉ ghi thêm**: không policy ghi; trigger chặn UPDATE/DELETE kể cả SECURITY DEFINER. Không FK tới đơn (đa hình) — RPC đồng ý kiểm đơn có thật; `asset_posting_id` RESTRICT như 4 bảng đơn.
@@ -986,6 +1006,18 @@ Bảng `asset_authentication_orders` (`20260915000020`) + cổng (`…0021`); `l
 - **Mức xác minh (dẫn xuất, không lưu):** 0 · 1 chủ đã KYC · 2 hồ sơ `approved` · 3 chứng thư xác thực từ ảnh · 4 xác thực qua hiện vật/tại chỗ. SQL `asset_posting_verification_level` ↔ `lib/authentication/verificationLevel.ts`.
 - **Hoa hồng:** 1 dòng `orders` lúc có kết luận (mọi kết luận — dịch vụ đã làm), theo hợp đồng hiệu lực ngày đó; thiếu hợp đồng ⇒ `no_contract_terms`.
 - **Công khai:** chứng thư `authentic` hiển thị khi hồ sơ `approved` (trigger `asset_postings_authentication_sync_publish`, như VR) — KHÔNG cần bước "gắn lô" riêng. Đọc qua `public_session_lot_authentications(session)`; file đọc được bởi anon chỉ khi thuộc lô trong phiên công khai (`authentication_cert_readable`).
+- **Tab riêng (2026-10-04):** trang hồ sơ có tab "Giám định" (`?tab=giam-dinh`) TÁCH khỏi "Thẩm định giá" — Đối tác riêng (dòng dossier `kind='authentication'`) | Dịch vụ của sàn (đơn này). Kết luận của đối tác riêng chỉ tham khảo: KHÔNG thoả BR-GD-03, KHÔNG vào mức xác minh; bắt buộc giám định ⇒ khoá Đối tác riêng.
+
+## Thẩm định giá qua sàn (số hoá, bước 4 wizard + tab `?tab=tham-dinh`) — 2026-10-04
+
+Bảng `asset_valuation_orders` (`20261004160000`). Tên kỹ thuật `valuation` — `pricing_mode='appraisal'` là "nhờ tổ chức đấu giá định giá" (nằm trong báo giá ký gửi), dossier `kind='appraisal'` là kết quả của đối tác RIÊNG; ba thứ khác nhau. Đơn vị thẩm định chưa có tài khoản — admin thao tác thay (module `tham-dinh-gia`, `/admin/yeu-cau-dich-vu/tham-dinh/:id`). Mã đơn `TDG`.
+
+- **Vòng đời:** `requested` (mục đích `auction|mortgage|transfer|other` + địa chỉ khảo sát) → `quoted` (admin gán đơn vị có HĐ + thẩm định viên + giá) → HDCU (`service:tham-dinh`) → `paid` (VNPay mô phỏng, `?tdg_order=`) → `in_review` → `completed`. `cancelled` chỉ khi chưa trả. Thẩm định lại = đơn MỚI; kết quả cũ → `superseded`. ≤1 đang chạy, ≤1 `completed` mỗi hồ sơ.
+- **BR-TDG-01:** chứng thư PDF chỉ vào qua `admin_complete_valuation` (quyền `tham-dinh-gia:update`); RPC kiểm object CÓ THẬT trong bucket private `asset-valuation-certs` tại `{posting}/{order}/…`; storage INSERT chỉ quyền đó.
+- **BR-TDG-02:** SELECT = `owner_posting_can(posting,'read')` OR `tham-dinh-gia:view` OR `tai-san-tu-nguyen:view`; không policy ghi. Giá trị KHÔNG công khai (v1).
+- **BR-TDG-03:** không RPC/trigger nào ghi `asset_postings`, không cổng chặn. Kết quả KHÔNG ghi dòng dossier (`service_request_id` FK tới `asset_service_requests`, và sẽ đè lựa chọn đối tác riêng) — tab, bản in, wizard đọc thẳng bảng đơn. Wizard chỉ điền giá khởi điểm khi người bán bấm "Dùng … làm giá khởi điểm".
+- **BR-TDG-04:** 1 dòng `orders` lúc hoàn tất theo `resolve_contract_terms`; thiếu HĐ ⇒ `no_contract_terms`. Dịch vụ id CỐ ĐỊNH `a1d90000-…0001` (tra theo id, KHÔNG theo tên); KHÔNG dùng dịch vụ CRM `5e4c0001` (seed demo, không có dòng HĐ). Đối tác `50cc0001-…0002` "CTCP Thẩm định giá Miền Nam", HĐ `04/2026/HĐHT-TDG` 15%, gói `tdg_valuation` 3,000,000₫ — GIỮ CHỖ. Chạy lại seed CRM `20260719000004` sẽ vướng FK của HĐ này.
+- **BR-TDG-05:** `valid_until` mặc định `valuation_date + 6 tháng` (= `APPRAISAL_VALIDITY_MONTHS`); `valuation_date` không sau hôm nay (giờ VN).
 
 
 ## Tư vấn pháp lý (số hoá, bước 3 wizard + tab `?tab=phap-ly`)
@@ -1020,4 +1052,117 @@ Nguồn = hồ sơ số hoá của Trạm có `asset_owner_org_kyc.org_type = 'c
 - **Công khai những gì:** tiêu đề, mô tả, tỉnh, ≤6 ảnh, tên làng (= `primary_name` Trạm), sản phẩm chính, toạ độ ghim, VR (đơn `attached` + `published_at`). KHÔNG địa chỉ chi tiết, pháp lý, giá.
 - **VR** = đơn VR tour đối tác sẵn có; không có VR ⇒ vẫn lên bản đồ, dialog chỉ hiện ảnh.
 - Mọi bản đồ Việt Nam trên sàn phải ghi nhãn "Quần đảo Hoàng Sa (Việt Nam)" / "Quần đảo Trường Sa (Việt Nam)" — dùng `createVietnamMap` (`components/craft-villages/vietnamMap.ts`).
+
+
+## Hồ sơ hoàn chỉnh & điểm tin cậy (`asset_posting_dossier_items`, mig `20261001220000`)
+
+Kế hoạch: `docs/owner-dossier-plan.md`. Chủ (ngân hàng/AMC) tự nhập kết quả của **đối tác riêng** (thẩm định giá / giám định / pháp lý / tổ chức đấu giá) để hồ sơ "hoàn chỉnh, đáng tin" — không bán như "nhập liệu".
+
+- **3 dịch vụ của sàn cho chủ tài sản (2026-10-04):** Thẩm định giá (`?tab=tham-dinh`, `kind='appraisal'`) · Giám định (`?tab=giam-dinh`, `kind='authentication'`, mig `20261004160100`) · Tư vấn pháp lý (`?tab=phap-ly`, `kind='legal'`) — mỗi tab chọn Đối tác riêng | Dịch vụ của sàn (đơn `asset_valuation_orders` / `asset_authentication_orders` / `asset_legal_consultations`). Đấu giá CHỈ qua sàn. Trước đó thẩm định giá + giám định là MỘT dịch vụ; dòng `appraisal/marketplace` cũ (= giám định qua sàn) đã chuyển sang `authentication`.
+- **Nguồn mỗi phần (`kind` appraisal|legal|auction|authentication, ≤1 dòng/hồ sơ/phần):** `marketplace` "Tìm qua sàn" (luồng RFQ/tư vấn hiện có — KHÔNG đổi) · `external_partner` "Đã có đối tác" (đối tác + kết quả + tệp) · `none` "Chưa cần". CHECK: đối tác ngoài phải có `partner_org_id` hoặc `partner_name`; thẩm định phải có `appraised_value`; pháp lý phải có `legal_conclusion` (`clean`|`has_issues`); giám định phải có `auth_verdict` (`authentic|inconclusive|suspected_fake`, chỉ kind này được có) + `certificate_no` tuỳ ý. `_dossier_trust_compute` (UI đã gỡ) KHÔNG tính giám định.
+- **Mức chứng cứ:** `self` "Tự khai" (có dữ liệu, không tệp) · `document` "Có tài liệu" (≥1 tệp) · `platform` "Sàn xác nhận" (qua sàn / hồ sơ đã duyệt).
+- **Điểm (0–100) TÍNH LÚC ĐỌC trong SQL** `_dossier_trust_compute` (trọng số = hằng `c_*` đầu hàm) — frontend KHÔNG tính lại, không lưu điểm vào `asset_postings` (review guard):
+  | Mục | Max | Luật |
+  |---|--:|---|
+  | Giấy tờ sở hữu | 15 | nhóm "giấy tờ": ≥1 `ownership_proof_urls` = 15 · nhóm "cam kết" (`may-moc`,`hang-hoa`,`do-dung`,`thu-cong-my-nghe`,`co-vat-suu-tam` — nhân bản `getProofMode`): cam kết ký tên ≥2 từ = 10 (trần, luôn partial) |
+  | Tự khai pháp lý | 5 | đủ 3 câu `has_dispute`/`has_mortgage`/`is_seized` |
+  | Ý kiến pháp lý | 20 | kết luận = 10, + tệp = +10 · qua sàn: `asset_legal_consultations` `completed`/`superseded` = 20 |
+  | Thẩm định giá | 25 | giá trị + đối tác = 10, + chứng thư = +10, + còn hiệu lực = +5 · qua sàn: `pricing_mode='appraisal'` + báo giá đã chọn có scope `tham_dinh_gia` = 10 (partial) |
+  | Tổ chức đấu giá | 15 | tổ chức trong danh bạ = 10 / tự gõ tên = 5, + ngày HĐ hoặc ngày dự kiến = +5 · qua sàn: request `selected`/`accepted` = 15 |
+  | Hình ảnh & tài liệu | 10 | ≥ `MIN_IMAGES` ảnh = 5, + ≥1 `doc_urls` = +5 |
+  | Sàn đã duyệt | 10 | `review_status='approved'` |
+- **Qua sàn được SUY RA lúc đọc** bất kể dòng dossier ghi nguồn gì; lấy điểm CAO HƠN giữa qua sàn và tự nhập.
+- **Hiệu lực chứng thư:** `valid_until`, NULL ⇒ `issued_at + 6 tháng` (D4). Quá hạn ⇒ status `expired`, mất +5. "Sắp hết hạn" (≤30 ngày) chỉ là nhãn UI.
+- **Mức:** `basic` "Cơ bản" < 40 · `full` "Đầy đủ" ≥ 40 · `complete` "Hoàn chỉnh" ≥ 75 VÀ cả `appraisal` lẫn `legal_partner` ở `done`/`partial` (`expired` KHÔNG tính).
+- **Quyền:** SELECT = ai đọc được hồ sơ cha (RLS `asset_postings`); ghi = `owner_posting_can(posting,'so-hoa','update')`; `created_by` = người tạo; `workspace_id` chép từ hồ sơ (trigger). RPC chủ `asset_posting_dossier_trust` raise 42501 nếu không đọc được hồ sơ (admin `tai-san-tu-nguyen:view` được).
+- **Tệp:** bucket private `posting-dossier-evidence`, path `{posting_id}/{kind}/…`, PDF/JPG/PNG ≤10MB, không ghi đè (không policy UPDATE). Tệp và tên đối tác KHÔNG BAO GIỜ công khai.
+- **Công khai:** `get_public_dossier_trust` (anon) chỉ khi hồ sơ `approved` VÀ `status <> 'cancelled'`, ngoài ra NULL; trả mức, điểm, `{key,label,status,proof}` — không gợi ý, không đối tác, không tệp; `appraised_value` chỉ khi chủ bật `show_appraised_value` (mặc định tắt, D2).
+- **Hiển thị công khai (Phase 4, mig `20261001310000`):** mọi đường công khai đi QUA `get_public_dossier_trust` — `get_public_dossier_trusts(ids[])` (tối đa 200, bỏ qua hồ sơ chưa duyệt) cho lô của phiên `/sessions/:id` và hộp thư `/portal/yeu-cau-ky-gui`; `get_shared_posting_dossier_trust(code)` cho `/hs/:code` (kiểm link như `get_shared_posting`, KHÔNG đếm lượt xem, link tắt `show_price` ⇒ bỏ `appraised_value`). Huy hiệu chỉ "Hồ sơ hoàn chỉnh" (complete) / "Hồ sơ đầy đủ" (full), mức Cơ bản không hiện gì, KHÔNG hiện điểm. Checklist công khai chỉ liệt kê phần ĐÃ đạt (`done`/`partial`; `expired` không tính): "Đã thẩm định giá" / "Đã có ý kiến pháp lý" / "Có tổ chức đấu giá" + mức chứng cứ. Thẻ (lô, thẻ yêu cầu) chỉ mang huy hiệu; checklist ở khung chi tiết/popover. Tổ chức đấu giá xem đúng bản người mua thấy. Yêu cầu ký gửi gửi tới tổ chức khi hồ sơ còn chờ duyệt ⇒ chưa có huy hiệu (đúng cổng).
+- **Danh sách (Phase 3):** huy hiệu mức ở danh sách Số hoá + bảng Tài sản lấy từ `asset_postings_dossier_levels(uuid[])` (mig `20261001240000`) — MỘT lượt gọi cho cả danh sách (trần 500 id), id không đọc được bị bỏ qua lặng lẽ. Không gọi `asset_posting_dossier_trust` theo từng dòng.
+- **Sửa sau khi gửi (Phase 3):** tab "Hồ sơ" (`?tab=ho-so`) sửa từng phần qua `DossierItemDialog` → `useSyncDossierItems({kinds:[kind]})`; cần `so-hoa:update` (nút ẩn với người xem) và hồ sơ chưa huỷ — được sửa cả sau khi ký hợp đồng (cập nhật chứng thư). Hộp thoại KHÔNG điền `starting_price` từ giá thẩm định (đổi cột hồ sơ đã duyệt ⇒ review guard đẩy về chờ duyệt); chỉ wizard điền.
+- **Wizard bước 4 "Hồ sơ dịch vụ" (Phase 2):** state = trường `dossier` của form (`lib/dossier/draft.ts`), KHÔNG cột trên `asset_postings`; ghi bảng con SAU mỗi lần lưu hồ sơ (tự lưu / lưu thủ công / Hoàn tất) qua `useWizardDossier` — bỏ qua khi không đổi; nạp dòng lỗi ⇒ KHÔNG ghi (tránh xoá dữ liệu thật). Nguồn "" ⇒ xoá dòng; "Đã có đối tác" thiếu trường bắt buộc ⇒ KHÔNG ghi và KHÔNG xoá (cảnh báo ở bước 5 + toast khi Hoàn tất). Không thêm luật nào vào `requirements()`.
+  - "Dịch vụ của sàn" KHÔNG có state riêng trong form: pháp lý ⇔ `PostingLegalConsultCard`, thẩm định giá ⇔ `PostingValuationCard` (`steps/ValuationGroup`), giám định ⇔ `PostingAuthenticationCard` (`steps/AuthenticationGroup` — bắt buộc giám định ép nguồn sàn), tổ chức ⇔ `orgMode`/`chosenOrgs`/RFQ cũ. Nguồn thẩm định giá ĐỘC LẬP với `pricingMode`. Mọi thay đổi đi qua `dossier/dossierWizard.ts` (`sourcePatch`/`appraisalPatch`/`wantsAuctionPatch`). Muốn đấu giá ⇒ tổ chức mặc định "Tìm qua sàn". Tổ chức "Đã có đối tác" ⇒ xoá `orgMode`/`chosenOrgs` ⇒ Hoàn tất KHÔNG gửi RFQ.
+  - Giá thẩm định điền `startingPrice` khi trống hoặc còn bằng giá thẩm định cũ; `valid_until` tự theo ngày chứng thư +6 tháng tới khi sửa tay (`withIssuedAt`). Tệp tải NGAY vào `{posting_id}/{kind}/…` (tự lưu nháp để có id; `useStorageUpload` có `root`).
+- **Đối tác của tôi (Phase 5, `/chu-tai-san/doi-tac`, mig `20261001250000`):** RPC `owner_partner_scorecard(ws)` — `owner_ws_can(ws,'read')`, cán bộ có `branch_scope` chỉ thấy hồ sơ thuộc chi nhánh mình (hồ sơ không gắn chi nhánh = ngoài phạm vi); nav dùng quyền xem `phan-tich` (không thêm module).
+  - Chỉ tính phần `source='external_partner'`. Gom theo `partner_org_id`, không có thì `partner_name_key()` = trim + lower + unaccent + gộp khoảng trắng.
+  - Kết quả gom THEO HỒ SƠ từ lô trên sàn (`auction_session_items.asset_posting_id`) + `owner_asset_outcomes.asset_posting_id` — KHÔNG qua `owner_asset_outcomes_resolved` (hàm đó theo tin đã khớp, không có cầu hồ sơ → tin). Hai nguồn không cộng: số lượt = max; giá trúng và người tham gia ưu tiên phiên trên sàn.
+  - "Có kết quả" = sold/unsold/cancelled/withdrawn (hoãn không tính). Vướng pháp lý = lượt không bán có lý do khớp từ khoá pháp lý (`outcome_reason_is_legal`).
+  - Chỉ số hiện khi ≥ 3 hồ sơ có kết quả (`MIN_OUTCOMES_FOR_METRICS`), dưới ngưỡng "Chưa đủ dữ liệu". Riêng đối tác giám định: chỉ số là kết luận trên hồ sơ (`auth_verdict` trong `asset_list`) nên ngưỡng tính theo SỐ HỒ SƠ. D3: KHÔNG ảnh hưởng điểm tin cậy hồ sơ.
+
+## Link chia sẻ HỢP NHẤT = Hồ sơ online (mig `20261004210000`–`210300`, 04/10 — ĐÃ ÁP)
+
+MỌI link gửi khách của chủ tài sản là link Hồ sơ online `/hs/:code` (`posting_share_links`). Các mục "link theo dõi `/l/`" và "Hồ sơ online" bên dưới là lịch sử; khi lệch, mục này thắng.
+- **Đích:** đúng MỘT trong `posting_id` (hồ sơ số hoá đã duyệt, chưa huỷ) | `listing_id` (tin Trạm đã nhận — claim `auto_claimed`/`confirmed`, cần `workspace_id`). Thêm `channel` (7 kênh `MKT_CHANNELS`, form bắt buộc), `campaign_id` (link do duyệt chiến dịch), `branch_id` (hồ sơ: chi nhánh hồ sơ; tin: suy từ claim), `legacy_code` (mã `/l/` cũ).
+- **Quyền một chỗ** `share_link_can(posting, ws, branch, 'view'|'manage')`: hồ sơ = `so-hoa:view|share` HOẶC `truyen-thong:view|create`; tin = `truyen-thong:view|create`; luôn trong phạm vi chi nhánh. Mã chỉ trả cho người `manage` (link chiến dịch: thêm người có `truyen-thong:share` — để xuất bộ tư liệu).
+- **Trang công khai cho tin:** danh sách trắng như hồ sơ + `kind`, `listing_path`; KHÔNG mô tả tự do (lộ người vay), không pháp lý tự khai; giá phiên hoặc giá tổng của tin luôn hiện. "Theo dõi" = **Lưu tài sản** (`user_asset_actions` + `save_asset` gắn link qua guard). `get_shared_posting` trả `ref` = id link (NGOÀI payload) khi lượt mở được tính ⇒ trang ghi cookie `mkt_link_id` 30 ngày.
+- **Link `/l/` cũ:** chép sang bảng mới GIỮ id (khoá ngoại `analytics_events/auction_bidding_contracts.mkt_link_id` dời sang `posting_share_links`); `/l/<mã>` ⇒ `resolve_legacy_share_link` ⇒ `/hs/<mã mới>`. `owner_mkt_links`/`_hits` = kho lưu trữ chỉ đọc; `owner_mkt_track_hit` còn chạy cho client cũ (ghi vào `posting_share_events`).
+- **Chiến dịch:** `listing_ids` + `posting_ids` (tổng 1..20, hồ sơ trước khi gửi phải còn duyệt — `posting_not_available`). Duyệt ⇒ `share_link_insert` 1 link / tài sản × kênh (người gửi = người soạn nếu còn trong Trạm; ẩn giá hồ sơ chưa phiên, ẩn liên hệ). Dữ kiện hồ sơ (`owner_mkt_posting_facts`): giá / hạn CHỈ khi hồ sơ là lô phiên `published` còn hạn.
+- **Số liệu:** chuỗi ngày `owner_share_link_series` / `owner_mkt_campaign_series` (giờ VN, có ngày trống, > 120 ngày gom tuần, tối đa 366 ngày). Tỷ lệ chuyển đổi = người bấm "Mua hồ sơ" ÷ người xem (trần 100%). Phễu `owner_mkt_funnel_core` (chữ ký giữ nguyên, `p_listing_id` = id tài sản bất kỳ): lượt xem = sự kiện `view`; lưu = `save_asset` (tin) / `posting_share_follows` có `link_id` (hồ sơ, trừ thành viên); đăng ký qua `listing_id` hoặc `asset_posting_id` của lô. Kết quả phiên của HỒ SƠ chưa có nguồn chung ⇒ trống.
+- **UI:** tab "Hồ sơ online" của hồ sơ (`?tab=ho-so-online`); menu Truyền thông → "Link theo dõi" = TỔNG HỢP mọi link Trạm (`owner_share_links`, lọc kênh/nguồn/loại/trạng thái/chi nhánh/`tai-san`); chi tiết link `/chu-tai-san/truyen-thong/link-theo-doi/:id` (thông tin + Thống kê theo ngày + Cài đặt). Biểu đồ một trục (không trục kép): cột lượt xem + đường "Mua hồ sơ".
+
+## Truyền thông — link theo dõi `/l/:code` (`owner_mkt_links`, mig `20261001214152`, Phase M1)
+
+Plan: `docs/owner-marketing-plan.md`. Đơn vị gửi tài sản qua kênh RIÊNG (Zalo, SMS, app…); sàn chỉ đếm lượt mở ẩn danh — danh sách khách của ngân hàng không vào sàn.
+- **Tài sản gắn link được** = tin trên sàn Trạm đã nhận (`asset_owner_claims` `auto_claimed`/`confirmed`). Hồ sơ số hoá chưa lên sàn ⇒ "Hồ sơ online" `/hs/:code` (M0), không phải link này.
+- **Server quyết:** `code` (8 ký tự `[a-z0-9]`, bỏ 0 o 1 i l), `branch_id` (suy từ claim → `workspace_branches.asset_owner_id`), `created_by`, bộ đếm. Quyền cột: client chỉ INSERT `(workspace_id, listing_id, channel, label)`, UPDATE `(label)`. Trigger kiểm `truyen-thong:create` TRƯỚC khi tra claim (người ngoài không dò được tin của Trạm).
+- **Lượt mở** chỉ qua `owner_mkt_track_hit(code, session_id, device)` (anon): không IP; thành viên / trụ sở liên kết mở ⇒ không tính; cùng phiên + cùng link trong 60 giây ⇒ không tính; `unique_hit_count` = số phiên khác nhau (phiên rỗng / `s_ephemeral` tính là mới). Trả `{ok, link_id, listing_id, channel, code}` hoặc `not_found`.
+- **Chuyển hướng:** `/listings/:id?utm_source=<kênh>&utm_campaign=<mã>`; cookie bên thứ nhất `mkt_link_id` 30 ngày (lần chạm cuối thắng) — `readMktAttribution()` cho M5.
+- **Xoá link** (`truyen-thong:delete`) xoá luôn lượt mở (CASCADE) — UI cảnh báo. Gốc link ngắn: `VITE_SHORT_LINK_BASE_URL` (`src/lib/brand.ts`), mặc định origin.
+
+## Truyền thông — chiến dịch & duyệt hai người (`owner_mkt_campaigns`, mig `20261002100000`, Phase M2)
+
+Trang `/chu-tai-san/truyen-thong` (tab mặc định "Chiến dịch") · soạn `/chien-dich/moi(?tai-san=<listing>)` · `/chien-dich/:id(/sua)`.
+- **Chỉ chế độ xuất** (`mode='export'`): đơn vị tự gửi qua kênh riêng. `platform_email` có trong CHECK cho M3 (HOÃN) nhưng mọi RPC trả `mode_not_available`.
+- **Dữ kiện do SERVER dựng** (`owner_mkt_build_facts` → `facts_snapshot`, dựng lại khi lưu và khi gửi duyệt — người duyệt thấy đúng thứ sẽ xuất). Nguồn: phiên `published` chưa kết thúc chứa tin (sớm nhất) → tin `ACTIVE` có `custom_attributes.auction_time`/`registration_deadline` chưa qua → không thì `announced=false` và BỎ giá / đặt trước / bước giá / hạn / giờ (D4). Không bao giờ đọc `listings.description` hay `asset_owner_name` (có thể lộ người vay).
+- **`drafts` chỉ là phần mô tả**: khoá cố định `email{subject,body}`, `zalo|facebook|sms{body}`; khoá lạ ⇒ `drafts_invalid` (cách "sửa dữ kiện" bị chặn ở server). SMS ≤ 80 ký tự ASCII (phần mở đầu; giá/hạn/link ghép bởi `composeSms` ≤ 160). Văn bản xuất = mô tả + khối dữ kiện khoá + link theo dõi (`src/lib/ownerMarketing/composer.ts`).
+- **Trạng thái:** `draft → pending_approval → approved → sent`; `pending_approval → rejected` (lý do bắt buộc) → sửa ⇒ `draft`. Lưu được khi `draft|rejected`; xoá chỉ nháp CHƯA TỪNG gửi duyệt (`submitted_at IS NULL`).
+- **Maker–checker:** duyệt / từ chối cần `truyen-thong:finalize` trên mọi tài sản; người duyệt ∉ {`created_by`, `submitted_by`} trừ khi Trạm có đúng 1 thành viên `active` (`self_approval`). Gửi duyệt: `update`, hoặc người soạn có `create`.
+- **Duyệt ⇒ tạo link** `owner_mkt_links` 1 / tài sản × kênh (`campaign_id` set; trigger `owner_mkt_links_prepare` bỏ kiểm `create` khi `campaign_id` khác NULL — client không ghi được cột này). FK `campaign_id` ON DELETE SET NULL.
+- **Đánh dấu đã gửi** (`share`): mỗi kênh 1 lần (`sent_channels` jsonb), lần đầu ⇒ `sent`. Không kiểm cửa sổ đăng ký (B2.3). `owner_mkt_log_export(kit|flyer)` ghi nhật ký khi tải bộ tư liệu / in tờ rơi.
+- **Nhật ký** `owner_mkt_audit` chỉ ghi thêm (trigger chặn UPDATE), ghi TRONG cùng RPC. Bảng chiến dịch + nhật ký: client chỉ SELECT (thành viên `owner_ws_can read`), không policy ghi.
+- Dữ kiện đổi sau khi gửi duyệt ⇒ UI cảnh báo (`factsDiffer`) — nội dung vẫn theo bản đã duyệt; tạo chiến dịch mới để cập nhật.
+
+## Truyền thông — Giao việc cho sàn (`owner_mkt_orders`, mig `20261002110000`, Phase M4)
+
+Trạm đặt SÀN làm truyền thông cho một tin trên sàn đã nhận (`ACTIVE`). Owner: tab `/chu-tai-san/truyen-thong?tab=giao-viec` (trang KHÔNG bày thẻ gói: nút "Tạo đơn mới" → hộp "Chọn gói" → hộp đặt; `&dat=<listing>` mở hộp chọn gói với tin chọn sẵn — lối vào "Đẩy truyền thông" ở popup Tài sản). Admin: hàng đợi `/admin/yeu-cau-dich-vu` loại `truyen-thong`, chi tiết `/admin/yeu-cau-dich-vu/truyen-thong/:id`, module quyền `don-truyen-thong`.
+- **Gói** (category `marketing_owner`, giá credit là GIỮ CHỖ, sửa ở `/admin/dich-vu`): `mkt_featured_owner` 199 credit, `mkt_social_owner` 99 credit (service kind `credit`) · `mkt_banner_owner`, `mkt_full_owner` báo giá VND (kind `direct`). **`mkt_email_owner` KHÔNG seed/bán** (truyền thông tới người mua trên sàn HOÃN). **`mkt_social_owner` KHÔNG chào nữa (04/10)** — chỉ ẩn khỏi hộp chọn gói (`MKT_PICKABLE_PACKAGES`); server vẫn nhận, đơn cũ vẫn hiện/hoàn tất.
+- **Giá cố định = trả ngay khi đặt** (status `paid`, bỏ báo giá): `_owner_sub_consume` với quyền lợi `priority_listing` (chỉ tin nổi bật — nay `source='enforced'`) → hết lượt: `overage_mode='block'` ⇒ `quota_exhausted`, ngược lại `_charge_owner_feature_credits` ví người đặt (`insufficient` nếu thiếu). Đăng MXH chỉ credit.
+- **Báo giá:** `requested → admin_mkt_order_quote (giá > 0, 1–60 ngày) → quoted → pay_owner_mkt_order` (VNPay mô phỏng, `payment_claims`, idempotent theo txn; `quote_expired` / `quote_changed`). Không HDCU.
+- **Thực hiện:** `paid → admin_mkt_order_start → in_progress` (tin nổi bật: `listings.featured=true`, `featured_until = max(hạn cũ, now) + 7 ngày`) → `admin_mkt_order_complete` (ghi chú ≥ 5 ký tự; MXH bắt buộc `post_url`) → `completed`, đóng băng số liệu vào `result_summary`. Gắn chiến dịch email (chỉ gói trọn chiến dịch) / banner qua `admin_mkt_order_link`, từ trình soạn `?mkt_order=<id>`.
+- **Doanh thu:** chỉ đơn trả **VND** sinh 1 dòng `orders` (direct) LÚC HOÀN TẤT (`revenue_order_id`). Credit đã ghi lúc nạp, gói đã ghi lúc trả gói ⇒ không ghi lại.
+- **Huỷ:** chủ tự huỷ khi `requested|quoted` (lý do ≥ 5). Admin huỷ tới `paid`: hoàn lượt (`_owner_sub_reverse`) / credit (`owner_mkt_order_refund`) tự động; VND chỉ ghi `refund_note` (hoàn ngoài hệ thống). Đang làm thì không huỷ.
+- **Quyền:** đặt / huỷ / trả = `truyen-thong:share` trong phạm vi chi nhánh của tin (mặc định chỉ OWNER có). Đọc = thành viên Trạm. 1 đơn MỞ / tin × gói (`duplicate_open_order`). Chủ tài sản xem số liệu email/banner CHỈ dạng tổng qua `owner_mkt_order_results`.
+- **Tin nổi bật:** đang nổi bật = `featured AND (featured_until IS NULL OR > now())` (`isFeaturedNow`); trigger `listings_guard_featured` nuốt mọi thay đổi 2 cột này của người không phải ADMIN (kể cả INSERT). `/listings` (sắp xếp mặc định) + trang chủ đưa tin nổi bật lên đầu, nhãn "Nổi bật".
+
+## Truyền thông — Phễu & ghi nhận nguồn (mig `20261002150000`, Phase M5)
+
+Tab `/chu-tai-san/truyen-thong?tab=hieu-qua` (`&ky=` kỳ, `&tai-san=<listing>` lọc một tài sản — lối vào "Hiệu quả truyền thông" ở popup Tài sản; KHÔNG có trang chi tiết tài sản riêng) + phần "6. Hiệu quả truyền thông" của báo cáo định kỳ (Ghi chú cán bộ thành phần 7).
+- **Một nguồn số:** `owner_mkt_funnel_core` (nội bộ) — tab gọi `owner_mkt_funnel` (cần `truyen-thong:view`, lọc phạm vi chi nhánh người xem, kỳ ≤ 366 ngày); `owner_build_report_payload` thêm khoá `marketing` (cùng kỳ + chi nhánh báo cáo, đóng băng khi chốt). Cùng kỳ ⇒ cùng số. Không dữ liệu cá nhân; `/r/:token` cho qua khoá `marketing` (khoá `*_id` vẫn bị lọc).
+- **Ghi nhận nguồn = lần chạm cuối ≤ 30 ngày** (cookie `mkt_link_id` của `/l/:code`). Lưu: `trackAssetSaved` ghi `analytics_events` (`save_asset`, `listing_id`, `mkt_link_id`); trigger `analytics_events_mkt_guard` CHỈ giữ link khi người lưu đã đăng nhập, thật sự đang lưu đúng tin của link, không phải thành viên Trạm, chưa từng được ghi nhận lưu tin đó — sai thì bỏ link, vẫn ghi sự kiện. Đăng ký: `mkt_attribute_bidding_contract` sau `start_bidding_contract` (hồ sơ của chính mình, link thuộc tài sản trong phiên, không phải thành viên; lần gắn đầu thắng); chỉ TÍNH khi hồ sơ `paid` (theo `paid_at`).
+- **Tập tài sản:** "đang truyền thông" = tin Trạm đã nhận có link tạo trước cuối kỳ HOẶC đơn sàn làm đã trả trước cuối kỳ. Gửi/Mở = email + lượt hiển thị banner của đơn sàn làm (kênh riêng không đếm được người nhận); Bấm = lượt mở link + lượt bấm email/banner; Xem = phiên trình duyệt khác nhau theo TỪNG link (cộng dồn được) + lượt bấm email/banner; Người tham gia / Kết quả = của tài sản đang truyền thông có kết quả trong kỳ, mọi nguồn.
+- **Không xác định nguồn** = lượt lưu (`user_asset_actions` trong kỳ) / hồ sơ đã trả của phiên có tài sản đó, trừ phần mang link. Đơn sàn làm không quy được tới lượt lưu / đăng ký.
+- **Nguồn:** `self_serve` = link có `campaign_id` (chiến dịch M2) · `own_links` = link lẻ · `platform` = đơn "Giao việc cho sàn" (theo gói).
+
+## Truyền thông — Bộ demo ngân hàng (mig `20261002170000`, Phase M6)
+
+- **Trạm demo:** `asset_owner_workspaces.is_demo` (chỉ server ghi — `authenticated` chỉ có UPDATE theo cột `primary_name/abbreviations/branch_names`) ⇒ `OwnerPortalLayout` hiện `DemoDataBanner` "Dữ liệu minh hoạ" trên MỌI màn của Trạm đó. Seed `scripts/seed-mkt-demo.py` bật cờ cho 4ca4be7b, `--teardown` tắt.
+- **"Đẩy truyền thông" (Tổng quan → Việc cần làm, `pushMarketingCandidates`):** tài sản đã nhận (confirmed/auto_claimed), CHƯA BÁN, và (≥ 2 phiên đã qua — `listing_price_sessions` trước hôm nay — HOẶC còn ≤ 5 ngày tới hạn đăng ký mà < 3 hồ sơ đã thanh toán trên sàn). Số hồ sơ từ RPC `owner_listing_registrations(ws)` (chỉ phiên `published`, chưa chốt, chưa kết thúc; tài sản ngoài sàn = 0). Xếp: sắp hết hạn → còn phiên sắp tới → còn lại; dòng mở `/chu-tai-san/truyen-thong/chien-dich/moi?tai-san=<tài sản đứng đầu>`. Chỉ hiện cho người có `truyen-thong:create`; lọc theo "Đơn vị" như các việc khác.
+- **"Dữ liệu đi đâu"** `/chu-tai-san/truyen-thong/du-lieu` (`?muc=l0|l1|l2`): trang tĩnh, nội dung ở `src/lib/ownerMarketing/dataFlow.ts` (rà soát pháp lý sửa một chỗ), tên sàn từ `brand.ts`. Không gác module.
+- **Seed demo:** dữ liệu minh hoạ KHÔNG được vào doanh thu thật — seed xoá dòng `orders` mà `admin_mkt_order_complete` sinh ra; banner `is_test=true`; tin mở đầu bằng "Tin minh hoạ phục vụ trình diễn…"; tin gán pháp nhân HƯ CẤU (không gán ngân hàng thật). Mã tài sản = 8 ký tự đầu id ⇒ id seed phải khác nhau ở 8 ký tự đầu.
+
+## Hồ sơ online `/hs/:code` (`posting_share_links`, mig `20261001100000`, Phase M0)
+
+Link công khai của MỘT hồ sơ số hoá (`asset_postings`) để cán bộ gửi khách qua kênh riêng. Người nhận không cần tài khoản; đơn vị chỉ thấy số đếm.
+
+| Rule | Detail |
+|---|---|
+| Tạo / sửa / thu hồi | `so-hoa:share` + phạm vi chi nhánh (`owner_posting_can(id,'so-hoa','share')`; hồ sơ cá nhân = người tạo). RPC `create_/update_/revoke_posting_share_link`; lý do `not_approved \| posting_closed \| forbidden \| invalid_* \| sender_required \| too_many_links (100 link mở) \| revoked` |
+| Điều kiện (D3) | `review_status='approved'` và `status<>'cancelled'` — kiểm lúc tạo VÀ lúc mở (`unavailable` khi hồ sơ bị sửa về chờ duyệt / huỷ) |
+| Mã | 12 ký tự base64url (9 byte ngẫu nhiên). Cột `code` KHÔNG cấp SELECT ⇒ đọc qua `owner_posting_share_links` (chỉ người có `share` nhận mã; người xem thấy số liệu). Không `select('*')` bảng này |
+| Hạn | 7 / 30 / 90 ngày / không hết hạn (server nhận 1–365 hoặc null). Sửa có thể giữ nguyên hạn. Thu hồi = `not_found` (giống mã sai), giữ số liệu |
+| Payload (`get_shared_posting`, anon) | Danh sách trắng `posting_share_public_keys()`: title, category, location (phường/địa chỉ chỉ khi `show_exact_address`), description, specs, legal (4 cờ), ảnh/video, 3D/VR/giám định **đã `published_at`**, `starting_price` (chỉ khi `show_price` HOẶC có phiên `published` — D1), session (phiên công bố: tổ chức, lịch, giá hồ sơ, đặt trước, path `/sessions/:id`), owner_name (tên Trạm; cá nhân = null), sender (chỉ khi `show_sender_contact`), expires_at. KHÔNG: giấy tờ (bucket private), cam kết sở hữu, ghi chú pháp lý, cột duyệt, thù lao, id |
+| Đếm | Lượt xem chỉ người NGOÀI đơn vị (`owner_posting_can(id,'read')` false), visitor_id hợp lệ `[A-Za-z0-9_-]{8,64}`; tải lại trong 1 phút không cộng; `unique_view_count` theo visitor. Visitor `'crawler'` (OG) / `'print'` (bản in) không bao giờ đếm. CTA (`track_posting_share_event`): 1 lần / loại / visitor / link / phút; `cta_follow` chỉ ghi sự kiện — bộ đếm follow do `follow_shared_posting` (mỗi tài khoản 1 lần / hồ sơ) |
+| Người theo dõi | `posting_share_follows` own-rows; đơn vị KHÔNG đọc được ai — chỉ `cta_follow_count`. Gửi thông báo khi mở phiên: chưa làm |
+| Riêng tư | noindex trên trang + bản in; `AnalyticsTracker` ghi `/hs/:id`. Không lưu IP |
+| OG preview | `middleware.ts` gốc repo (matcher `/hs/:path*`): UA bot (facebookexternalhit, Zalo, Telegram…) ⇒ index.html chèn og:* từ RPC; env `OG_SUPABASE_URL`, `OG_SUPABASE_ANON_KEY` trên Vercel |
 

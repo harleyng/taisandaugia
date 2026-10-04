@@ -1,15 +1,14 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PostingModel3dCard } from "@/components/asset-3d/PostingModel3dCard";
 import { PostingVrTourCard } from "@/components/vr-tour/PostingVrTourCard";
-import { PostingAuthenticationSection } from "@/components/authentication/PostingAuthenticationSection";
 import type { AssetPosting } from "@/types/asset-posting";
 
-export type EnhanceKind = "3d" | "vr" | "gd";
+/** Thẩm định giá / giám định có tab riêng trên trang hồ sơ — không mở ở đây. */
+export type EnhanceKind = "3d" | "vr";
 
 const COPY: Record<EnhanceKind, { title: string; description: string }> = {
   "3d": { title: "Model 3D", description: "Quét 3D qua đối tác; model gắn vào hồ sơ và công khai khi hồ sơ được duyệt." },
   vr: { title: "VR tour", description: "Tham quan 360° do đối tác thực hiện — đặt dịch vụ, thanh toán và theo dõi đơn." },
-  gd: { title: "Giám định", description: "Chứng thư giám định chỉ do đối tác cấp. Đặt đơn, thanh toán và gửi hiện vật." },
 };
 
 interface EnhanceServiceDialogProps {
@@ -48,14 +47,6 @@ export function EnhanceServiceDialog({ kind, onClose, posting: p, locked }: Enha
               <PostingVrTourCard
                 postingId={p.id}
                 title={p.title}
-                reviewStatus={p.review_status}
-                mode="owner"
-                locked={locked}
-              />
-            )}
-            {kind === "gd" && (
-              <PostingAuthenticationSection
-                postingId={p.id}
                 reviewStatus={p.review_status}
                 mode="owner"
                 locked={locked}

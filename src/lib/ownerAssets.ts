@@ -20,6 +20,8 @@ import {
 import { claimToFacts, postingToFacts, type PipelinePostingRow } from "@/lib/ownerPipelineFacts";
 import type { ResolvedAssetOutcome } from "@/lib/ownerOutcomes";
 import type { AssetOwnerClaim } from "@/types/asset-owner";
+import { ownerOrdersHref } from "@/lib/ownerMarketing/orders";
+import { ownerMarketingPerformanceHref, ownerShareLinksHref } from "@/lib/ownerMarketing/routes";
 
 // ─── Nhóm giai đoạn (tab) ────────────────────────────────────────────────────
 
@@ -266,10 +268,24 @@ function claimBranch(claim: AssetOwnerClaim, byOwner: Record<string, string>): s
   return (claim.asset_owner_id && byOwner[claim.asset_owner_id]) || claim.matched_name || null;
 }
 
-function stageLinks(row: Pick<OwnerAssetRow, "kind" | "stage" | "href">): AssetLink[] {
+function stageLinks(row: Pick<OwnerAssetRow, "id" | "kind" | "stage" | "href" | "claim">): AssetLink[] {
   const links: AssetLink[] = [];
   const phase = STAGE_PHASE[row.stage];
-  if (row.kind === "posting") links.push({ label: "Hồ sơ số hoá", href: row.href });
+  // Tin đang trên sàn (đấu giá / chờ đấu lại) ⇒ đặt sàn đẩy truyền thông (Phase M4).
+  if (row.kind === "listing" && row.claim?.listing_id && (phase === "auc" || phase === "fail")) {
+    links.push({ label: "Đẩy truyền thông", href: ownerOrdersHref(row.claim.listing_id) });
+  }
+  // Link Hồ sơ online gửi khách + phễu truyền thông của riêng tài sản (Phase M5) — mọi tin trên
+  // sàn, kể cả đã bán; hồ sơ số hoá mở tab "Hồ sơ online" của hồ sơ.
+  if (row.kind === "listing" && row.claim?.listing_id) {
+    links.push({ label: "Hồ sơ online", href: ownerShareLinksHref(row.claim.listing_id) });
+    links.push({ label: "Hiệu quả truyền thông", href: ownerMarketingPerformanceHref(row.claim.listing_id) });
+  }
+  if (row.kind === "posting") {
+    links.push({ label: "Hồ sơ số hoá", href: row.href });
+    links.push({ label: "Hồ sơ online", href: `${row.href}?tab=ho-so-online` });
+    links.push({ label: "Hiệu quả truyền thông", href: ownerMarketingPerformanceHref(row.id) });
+  }
   if (phase === "auc" || phase === "fail" || row.stage === "trung") {
     links.push({ label: "Kết quả phiên", href: OWNER_ROUTES.outcomes });
   }

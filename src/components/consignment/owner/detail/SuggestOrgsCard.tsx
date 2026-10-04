@@ -23,7 +23,7 @@ interface SuggestOrgsCardProps {
   sentOrgIds: Set<string>;
   /** Tổ chức đang giữ hồ sơ — áp trần MAX_RFQ_ORGS. */
   activeCount: number;
-  /** Cho nhờ sàn: chỉ khi không còn yêu cầu nào sống (không đẻ hai luồng song song). */
+  /** Cho nhờ sàn: mọi lúc, trừ khi hồ sơ đã có yêu cầu nhờ sàn chưa huỷ (idx_abr_one_open). */
   allowBroker: boolean;
 }
 
@@ -153,6 +153,7 @@ export function SuggestOrgsCard({ posting, sentOrgIds, activeCount, allowBroker 
         posting={posting}
         sentOrgIds={sentOrgIds}
         activeCount={activeCount}
+        allowBroker={allowBroker}
       />
       <BrokerRequestDialog open={brokering} onOpenChange={setBrokering} postingId={posting.id} />
     </KgCard>

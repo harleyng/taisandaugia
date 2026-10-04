@@ -99,6 +99,8 @@ export interface AssetOwnerWorkspace {
   /** Trạm trụ sở đã được chấp nhận liên kết (Phase 14); cây đúng một cấp. */
   parent_workspace_id: string | null;
   parent_linked_at: string | null;
+  /** Trạm chứa dữ liệu minh hoạ (owner-marketing Phase M6). */
+  is_demo?: boolean;
   created_at: string;
   updated_at: string;
 }

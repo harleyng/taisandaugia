@@ -9,6 +9,7 @@ import { ownerPageTitle } from './owner-page-titles'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
 import { useOwnerPortalName } from '@/hooks/useOwnerPortalName'
+import { useOwnerPageViewTracker } from '@/hooks/useOwnerAuditLog'
 
 export function OwnerPortalLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -18,6 +19,8 @@ export function OwnerPortalLayout() {
   // kẻo trang đang nhập dở (vd. wizard số hoá) bị dựng lại.
   const { workspaceId, isLoading: wsLoading } = useOwnerWorkspace()
   const portalName = useOwnerPortalName()
+  // Nhật ký hoạt động: "Truy cập" một lần / phiên + lượt xem mỗi trang trong cổng.
+  useOwnerPageViewTracker()
   const settledWorkspace = useRef<string | null | undefined>(undefined)
   const [outletKey, setOutletKey] = useState('initial')
   useEffect(() => {

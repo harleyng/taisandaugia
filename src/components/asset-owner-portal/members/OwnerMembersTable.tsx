@@ -1,4 +1,5 @@
-import { MoreHorizontal, UserCog, UserMinus } from "lucide-react";
+import { MoreHorizontal, Phone, UserCog, UserMinus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,8 @@ interface Props {
   /** Người xem là Trưởng đơn vị — chỉ họ đụng được dòng Trưởng đơn vị. */
   viewerIsOwner: boolean;
   onEdit: (member: OwnerWorkspaceMember) => void;
+  /** thanh-vien:update ⇒ bổ sung / sửa SĐT chưa xác thực của người khác. */
+  onEditPhone: (member: OwnerWorkspaceMember) => void;
   onRemove: (member: OwnerWorkspaceMember) => void;
 }
 
@@ -43,8 +46,10 @@ export function OwnerMembersTable({
   canRemove,
   viewerIsOwner,
   onEdit,
+  onEditPhone,
   onRemove,
 }: Props) {
+  const navigate = useNavigate();
   return (
     <div className="text-sm">
       <div className={cn("hidden border-b pb-2 text-xs text-muted-foreground", GRID)}>
@@ -62,6 +67,7 @@ export function OwnerMembersTable({
           const touchable = !isMe && (!m.isOwner || viewerIsOwner);
           const showEdit = canEdit && touchable;
           const showRemove = canRemove && touchable;
+          const showPhone = showEdit && !m.phoneVerified;
           return (
             <li key={m.memberId} className={cn("relative flex flex-wrap items-center gap-x-3 gap-y-1.5 py-3", GRID)}>
               <div className="min-w-0 flex-1 basis-full pr-10 md:basis-auto md:pr-0">
@@ -74,6 +80,11 @@ export function OwnerMembersTable({
                   )}
                 </p>
                 {m.fullName && <p className="truncate text-xs text-muted-foreground">{m.email}</p>}
+                <MemberPhoneLine
+                  phone={m.phone}
+                  onAdd={showPhone ? () => onEditPhone(m) : isMe ? () => navigate("/profile") : undefined}
+                  addLabel={isMe ? "Bổ sung ở Hồ sơ cá nhân" : "Bổ sung"}
+                />
               </div>
 
               <div>
@@ -93,7 +104,7 @@ export function OwnerMembersTable({
 
               {/* Mobile: ghim góc phải dòng; desktop: cột cuối. */}
               <div className="absolute right-0 top-2 md:static md:justify-self-end">
-                {(showEdit || showRemove) && (
+                {(showEdit || showPhone || showRemove) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -111,6 +122,12 @@ export function OwnerMembersTable({
                         <DropdownMenuItem onClick={() => onEdit(m)}>
                           <UserCog className="mr-2 h-4 w-4" strokeWidth={1.5} />
                           Đổi vai trò / phạm vi
+                        </DropdownMenuItem>
+                      )}
+                      {showPhone && (
+                        <DropdownMenuItem onClick={() => onEditPhone(m)}>
+                          <Phone className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                          {m.phone ? "Sửa số điện thoại" : "Bổ sung số điện thoại"}
                         </DropdownMenuItem>
                       )}
                       {showRemove && (
@@ -131,5 +148,23 @@ export function OwnerMembersTable({
         })}
       </ul>
     </div>
+  );
+}
+
+/** SĐT trong hồ sơ — chưa có thì gợi ý bổ sung (người có quyền / chính mình qua Hồ sơ cá nhân). */
+function MemberPhoneLine({ phone, onAdd, addLabel }: { phone: string | null; onAdd?: () => void; addLabel: string }) {
+  if (phone) return <p className="truncate text-xs tabular-nums text-muted-foreground">{phone}</p>;
+  return (
+    <p className="text-xs text-muted-foreground">
+      Chưa có SĐT
+      {onAdd && (
+        <>
+          {" · "}
+          <button type="button" onClick={onAdd} className="font-medium text-primary hover:underline">
+            {addLabel}
+          </button>
+        </>
+      )}
+    </p>
   );
 }

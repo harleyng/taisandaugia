@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +54,7 @@ const OwnerAssetsPage = () => {
     outcomesByListing,
     loading: claimsLoading || outcomesLoading,
   });
+
 
   useEffect(() => {
     if (!userId) return;

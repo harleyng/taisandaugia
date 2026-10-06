@@ -527,17 +527,17 @@ export const qk = {
     quote: (subId?: string | null) => ["owner-subscription", "quote", subId] as const,
     /** Danh mục quyền lợi CỐ ĐỊNH (owner_sub_benefits) — chỉ đổi bằng migration. */
     benefitCatalog: ["owner-subscription", "benefit-catalog"] as const,
-    /** Danh mục gói đang bán + các kỳ (3 / 6 / 12 tháng). Invalidate `plans` phủ mọi Trạm. */
+    /** Danh mục gói đang bán + kỳ của bộ gói từng Trạm. Invalidate `plans` phủ mọi Trạm. */
     plans: ["owner-subscription", "plans"] as const,
-    /** Danh mục gói admin đã mở cho một Trạm. */
+    /** Danh mục gói của bộ gói một Trạm. */
     plansFor: (workspaceId?: string | null) => ["owner-subscription", "plans", workspaceId] as const,
     planQuote: (workspaceId?: string | null, planId?: string | null, months?: number | null) =>
       ["owner-subscription", "plan-quote", workspaceId, planId, months] as const,
   },
   adminOwnerSubscriptions: {
     all: ["admin-owner-subscriptions"] as const,
-    /** Danh mục gói (kể cả gói đã ngừng bán). */
-    plans: ["admin-owner-subscriptions", "plans"] as const,
+    /** Bộ gói (kể cả ngừng bán) + gói + thư viện kỳ mua. */
+    packages: ["admin-owner-subscriptions", "packages"] as const,
     detail: (workspaceId?: string | null) => ["admin-owner-subscriptions", workspaceId] as const,
   },
 

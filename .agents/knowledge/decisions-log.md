@@ -5,6 +5,12 @@
 
 ---
 
+## 2026-10-04 — Danh mục gói theo BỘ GÓI (design "Danh Muc Goi - Admin v3")
+
+**Context:** chọn Trạm theo TỪNG gói (01/10) + kỳ mua dùng chung không đủ cho bảng giá theo đối tượng (ngân hàng HĐ khung −15%, làng nghề kỳ 1 tháng…). Design v3 gom gói thành bộ.
+**Decision:** người dùng duyệt 4 điểm: (1) Trạm chưa gán thấy BỘ MẶC ĐỊNH — đảo luật 01/10 "gói không có Trạm = ẩn", nên cả 16 Trạm nay thấy 3 gói Đại trà; (2) một bộ không có hai kỳ trùng số tháng (giữ checkout `?months=`, không đổi chữ ký RPC thanh toán); (3) gói không xoá, "Phổ biến" theo bộ, bộ mặc định không ngừng bán; (4) đổi bộ / ngừng bán = không gia hạn, gói đang chạy giữ tới hết hạn. Lưu bộ gói một giao dịch (gói mới đi kèm); sửa gói của bộ đã có lưu ngay (như design). Xem trước dùng đúng `PlanCard` + `PlanCompareTable` của cổng chủ tài sản.
+**Consequences:** mig `20261004230000_owner_sub_packages` ĐÃ ÁP (psql + schema_migrations, 30 kịch bản SQL rollback PASS), types.ts sửa tay (gen types exit 1). `is_featured` bỏ khỏi bảng gói (cổng chủ tài sản vẫn nhận `is_featured` từ `owner_sub_catalog`). Drop bảng cũ chờ ở `supabase/pending/owner_sub_drop_legacy_catalog.sql`. Luật: business-rules § "Bộ gói".
+
 ## 2026-10-04 — Gộp link theo dõi + Hồ sơ online thành MỘT loại link
 
 **Context:** người dùng thấy ba thứ "link" (link chiến dịch, Link theo dõi `/l/`, Hồ sơ online `/hs/`) gây rối; thực chất hai bảng — `owner_mkt_links` (chỉ tin trên sàn) và `posting_share_links` (chỉ hồ sơ số hoá).

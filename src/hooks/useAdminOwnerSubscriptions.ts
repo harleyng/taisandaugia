@@ -4,15 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { qk } from "@/lib/queryKeys";
 import { subErrorMessage, unwrapSubRpc } from "@/lib/ownerSubscription/errors";
-import { fetchOwnerSubCatalog } from "@/hooks/useOwnerSubscriptionPlans";
+import { BENEFITS_SELECT, normalizePlan } from "@/hooks/useOwnerSubscriptionPlans";
+import { type PackageDraft, type PlanDraft, packagePlansPayload, planPayload } from "@/lib/ownerSubscription/packages";
 import type {
   ActivationMethod,
   AdminOwnerSubRow,
-  BenefitLineInput,
+  AdminSubPackage,
   OverageMode,
   OwnerSubscriptionStatus,
-  OwnerSubTermOption,
-  PlanTier,
+  SubTerm,
 } from "@/lib/ownerSubscription/types";
 
 /** Mọi Trạm tổ chức kèm gói (nếu có). Admin không đọc được bảng Trạm ⇒ đi qua RPC. */
@@ -213,102 +213,137 @@ export function useActivateOwnerSubPlan() {
   });
 }
 
-// ─── Danh mục gói dịch vụ ────────────────────────────────────────────────────
+// ─── Bộ gói + thư viện kỳ mua ────────────────────────────────────────────────
 
-/** Mọi gói (kể cả đã ngừng bán) + mọi kỳ — trang /admin/goi-thue-bao/danh-muc. */
-export function useAdminOwnerSubPlans() {
+export interface AdminSubCatalog {
+  /** Bộ mặc định đứng đầu, còn lại theo tên. */
+  packages: AdminSubPackage[];
+  /** Thư viện kỳ mua dùng chung. */
+  terms: SubTerm[];
+}
+
+/** Mọi bộ gói (kể cả ngừng bán) + gói + kỳ + Trạm được gán — màn Danh mục gói. */
+export function useAdminSubCatalog() {
   return useQuery({
-    queryKey: qk.adminOwnerSubscriptions.plans,
-    queryFn: () => fetchOwnerSubCatalog({ admin: true }),
+    queryKey: qk.adminOwnerSubscriptions.packages,
+    queryFn: async (): Promise<AdminSubCatalog> => {
+      const [pkgRes, planRes, ptRes, pwRes, termRes] = await Promise.all([
+        supabase.from("owner_sub_packages").select("*"),
+        supabase.from("owner_subscription_plans").select(`*, ${BENEFITS_SELECT}`).order("sort_order").order("created_at"),
+        supabase.from("owner_sub_package_terms").select("package_id, term_id"),
+        supabase.from("owner_sub_package_workspaces").select("package_id, workspace_id"),
+        supabase.from("owner_sub_term_library").select("id, months, discount_pct, note").order("months").order("discount_pct"),
+      ]);
+      for (const r of [pkgRes, planRes, ptRes, pwRes, termRes]) if (r.error) throw r.error;
+
+      const packages = (pkgRes.data ?? [])
+        .map((k) => ({
+          id: k.id,
+          name: k.name,
+          description: k.description,
+          is_default: k.is_default,
+          is_active: k.is_active,
+          featured_plan_id: k.featured_plan_id,
+          updated_at: k.updated_at,
+          plans: (planRes.data ?? [])
+            .filter((p) => p.package_id === k.id)
+            .map((p) => normalizePlan(p as unknown as Parameters<typeof normalizePlan>[0], p.id === k.featured_plan_id)),
+          term_ids: (ptRes.data ?? []).filter((t) => t.package_id === k.id).map((t) => t.term_id),
+          workspace_ids: (pwRes.data ?? []).filter((w) => w.package_id === k.id).map((w) => w.workspace_id),
+        }))
+        .sort((a, b) => Number(b.is_default) - Number(a.is_default) || a.name.localeCompare(b.name, "vi"));
+      const terms = (termRes.data ?? []).map((t) => ({ ...t, discount_pct: Number(t.discount_pct) }));
+      return { packages, terms };
+    },
   });
 }
 
-function useInvalidatePlans() {
+function useInvalidateCatalog() {
   const queryClient = useQueryClient();
   return () => {
-    queryClient.invalidateQueries({ queryKey: qk.adminOwnerSubscriptions.plans });
+    queryClient.invalidateQueries({ queryKey: qk.adminOwnerSubscriptions.all });
     queryClient.invalidateQueries({ queryKey: qk.ownerSubscription.plans });
   };
 }
 
-/** Chọn các Trạm được dùng gói — THAY TOÀN BỘ danh sách. */
-export function useSetPlanWorkspaces() {
-  const invalidate = useInvalidatePlans();
-  const queryClient = useQueryClient();
+/** Tạo / lưu bộ gói (thông tin, gói mới + thứ tự, "Phổ biến", kỳ, Trạm) — một giao dịch. */
+export function useSavePackage() {
+  const invalidate = useInvalidateCatalog();
   return useMutation({
-    mutationFn: async (args: { planId: string; workspaceIds: string[] }) => {
-      const { data, error } = await supabase.rpc("admin_owner_sub_plan_set_workspaces", {
-        p_plan_id: args.planId,
-        p_workspace_ids: args.workspaceIds,
+    mutationFn: async (d: PackageDraft) => {
+      const { data, error } = await supabase.rpc("admin_owner_sub_package_save", {
+        p_package_id: d.id as string,
+        p_name: d.name.trim(),
+        p_description: d.description.trim(),
+        p_is_active: d.is_active,
+        p_term_ids: d.term_ids,
+        p_workspace_ids: d.is_default ? [] : d.workspace_ids,
+        p_plans: packagePlansPayload(d) as unknown as Json,
       });
       if (error) throw error;
-      return unwrapSubRpc(data);
+      return unwrapSubRpc(data) as { package_id: string; created: boolean };
     },
-    onSuccess: (_d, args) => {
+    onSuccess: (_d, draft) => {
       invalidate();
-      queryClient.invalidateQueries({ queryKey: qk.adminOwnerSubscriptions.all });
-      toast.success(args.workspaceIds.length ? `Đã mở gói cho ${args.workspaceIds.length} tổ chức` : "Đã ẩn gói khỏi mọi tổ chức");
+      toast.success(draft.id ? `Đã lưu bộ “${draft.name.trim()}”` : `Đã tạo bộ “${draft.name.trim()}”`);
     },
     onError: (err) => toast.error(subErrorMessage(err)),
   });
 }
 
-export interface UpsertPlanInput {
-  planId: string | null;
-  name: string;
-  fitLine: string;
-  highlightLine: string;
-  tier: PlanTier;
-  monthlyPriceVnd: number;
-  overageMode: OverageMode;
-  isFeatured: boolean;
-  isActive: boolean;
-  sortOrder: number;
-  /** Theo thứ tự hiển thị (8 dòng đầu lên thẻ gói). */
-  benefits: BenefitLineInput[];
-}
-
-export function useUpsertOwnerSubPlan() {
-  const invalidate = useInvalidatePlans();
+/** Lưu một gói của bộ ĐÃ CÓ (trang Sửa gói) — có hiệu lực ngay, không chờ lưu bộ. */
+export function useSavePlan() {
+  const invalidate = useInvalidateCatalog();
   return useMutation({
-    mutationFn: async (input: UpsertPlanInput) => {
-      const { data, error } = await supabase.rpc("admin_owner_sub_plan_upsert", {
-        p_plan_id: input.planId as string,
-        p_name: input.name,
-        p_fit_line: input.fitLine,
-        p_highlight_line: input.highlightLine,
-        p_tier: input.tier,
-        p_monthly_price_vnd: input.monthlyPriceVnd,
-        p_overage_mode: input.overageMode,
-        p_is_featured: input.isFeatured,
-        p_is_active: input.isActive,
-        p_sort_order: input.sortOrder,
-        p_benefits: input.benefits as unknown as Json,
+    mutationFn: async ({ packageId, plan }: { packageId: string; plan: PlanDraft }) => {
+      const { data, error } = await supabase.rpc("admin_owner_sub_plan_save", {
+        p_package_id: packageId,
+        p_plan_id: plan.id as string,
+        p_plan: planPayload(plan) as unknown as Json,
       });
       if (error) throw error;
-      return unwrapSubRpc(data);
+      return unwrapSubRpc(data) as { plan_id: string; created: boolean };
     },
-    onSuccess: (_d, input) => {
+    onSuccess: (_d, { plan }) => {
       invalidate();
-      toast.success(input.planId ? "Đã lưu gói" : "Đã thêm gói — bấm \"Chọn tổ chức\" để mở gói cho chủ tài sản");
+      toast.success(`Đã lưu gói “${plan.name.trim()}”`);
     },
     onError: (err) => toast.error(subErrorMessage(err)),
   });
 }
 
-export function useSetOwnerSubTermOptions() {
-  const invalidate = useInvalidatePlans();
+export function useSaveTerm() {
+  const invalidate = useInvalidateCatalog();
   return useMutation({
-    mutationFn: async (options: OwnerSubTermOption[]) => {
-      const { data, error } = await supabase.rpc("admin_owner_sub_term_options_set", {
-        p_options: options as unknown as Json,
+    mutationFn: async (t: { id: string | null; months: number; discountPct: number; note: string }) => {
+      const { data, error } = await supabase.rpc("admin_owner_sub_term_save", {
+        p_term_id: t.id as string,
+        p_months: t.months,
+        p_discount_pct: t.discountPct,
+        p_note: t.note,
       });
+      if (error) throw error;
+      return unwrapSubRpc(data);
+    },
+    onSuccess: (_d, t) => {
+      invalidate();
+      toast.success(t.id ? "Đã lưu kỳ mua" : "Đã thêm kỳ mua");
+    },
+    onError: (err) => toast.error(subErrorMessage(err)),
+  });
+}
+
+export function useDeleteTerm() {
+  const invalidate = useInvalidateCatalog();
+  return useMutation({
+    mutationFn: async (termId: string) => {
+      const { data, error } = await supabase.rpc("admin_owner_sub_term_delete", { p_term_id: termId });
       if (error) throw error;
       return unwrapSubRpc(data);
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Đã lưu thời hạn & chiết khấu");
+      toast.success("Đã xoá kỳ mua");
     },
     onError: (err) => toast.error(subErrorMessage(err)),
   });

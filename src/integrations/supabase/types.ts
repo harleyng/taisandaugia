@@ -9050,6 +9050,149 @@ export type Database = {
         }
         Relationships: []
       }
+      owner_sub_package_terms: {
+        Row: {
+          package_id: string
+          term_id: string
+        }
+        Insert: {
+          package_id: string
+          term_id: string
+        }
+        Update: {
+          package_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_sub_package_terms_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "owner_sub_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_sub_package_terms_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "owner_sub_term_library"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_sub_package_workspaces: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          package_id: string
+          workspace_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          package_id: string
+          workspace_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          package_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_sub_package_workspaces_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "owner_sub_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_sub_package_workspaces_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_sub_packages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          featured_plan_id: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          featured_plan_id?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          featured_plan_id?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_sub_packages_featured_fkey"
+            columns: ["featured_plan_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_sub_term_library: {
+        Row: {
+          created_at: string
+          discount_pct: number
+          id: string
+          months: number
+          note: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          discount_pct?: number
+          id?: string
+          months: number
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          discount_pct?: number
+          id?: string
+          months?: number
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       owner_subscription_entitlements: {
         Row: {
           cycle: string | null
@@ -9210,10 +9353,10 @@ export type Database = {
           highlight_line: string | null
           id: string
           is_active: boolean
-          is_featured: boolean
           monthly_price_vnd: number
           name: string
           overage_mode: string
+          package_id: string
           sort_order: number
           tier: string
           updated_at: string
@@ -9226,10 +9369,10 @@ export type Database = {
           highlight_line?: string | null
           id?: string
           is_active?: boolean
-          is_featured?: boolean
           monthly_price_vnd: number
           name: string
           overage_mode?: string
+          package_id: string
           sort_order?: number
           tier?: string
           updated_at?: string
@@ -9242,16 +9385,24 @@ export type Database = {
           highlight_line?: string | null
           id?: string
           is_active?: boolean
-          is_featured?: boolean
           monthly_price_vnd?: number
           name?: string
           overage_mode?: string
+          package_id?: string
           sort_order?: number
           tier?: string
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "owner_subscription_plans_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "owner_sub_packages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       owner_subscription_term_options: {
         Row: {
@@ -11992,37 +12143,40 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_owner_sub_plan_set_workspaces: {
-        Args: { p_plan_id: string; p_workspace_ids: string[] }
+      admin_owner_sub_package_save: {
+        Args: {
+          p_description: string
+          p_is_active: boolean
+          p_name: string
+          p_package_id: string
+          p_plans: Json
+          p_term_ids: string[]
+          p_workspace_ids: string[]
+        }
         Returns: Json
       }
-      admin_owner_sub_plan_upsert: {
-        Args: {
-          p_benefits: Json
-          p_fit_line: string
-          p_highlight_line: string
-          p_is_active: boolean
-          p_is_featured: boolean
-          p_monthly_price_vnd: number
-          p_name: string
-          p_overage_mode: string
-          p_plan_id: string
-          p_sort_order: number
-          p_tier: string
-        }
+      admin_owner_sub_plan_save: {
+        Args: { p_package_id: string; p_plan: Json; p_plan_id: string }
         Returns: Json
       }
       admin_owner_sub_set_status: {
         Args: { p_reason: string; p_status: string; p_sub_id: string }
         Returns: Json
       }
-      admin_owner_sub_term_options_set: {
-        Args: { p_options: Json }
+      admin_owner_sub_term_delete: { Args: { p_term_id: string }; Returns: Json }
+      admin_owner_sub_term_save: {
+        Args: {
+          p_discount_pct: number
+          p_months: number
+          p_note: string
+          p_term_id: string
+        }
         Returns: Json
       }
       admin_owner_subscription_list: {
         Args: never
         Returns: {
+          assigned_package_id: string
           code: string
           ends_on: string
           match_scope: string
@@ -12030,7 +12184,7 @@ export type Database = {
           overage_mode: string
           owner_email: string
           owner_name: string
-          allowed_plan_ids: string[]
+          package_id: string
           parent_name: string
           plan_id: string
           plan_name: string
@@ -13654,6 +13808,7 @@ export type Database = {
         Args: { p_days: number; p_report_id: string }
         Returns: Json
       }
+      owner_sub_catalog: { Args: { p_workspace_id: string }; Returns: Json }
       owner_sub_effective_status: {
         Args: { p_ends_on: string; p_starts_on: string; p_status: string }
         Returns: string
@@ -13671,6 +13826,10 @@ export type Database = {
       owner_sub_plan_quote: {
         Args: { p_months: number; p_plan_id: string; p_workspace_id: string }
         Returns: Json
+      }
+      owner_sub_workspace_package: {
+        Args: { p_workspace_id: string }
+        Returns: string
       }
       owner_sub_term_end: {
         Args: { p_months: number; p_start: string }

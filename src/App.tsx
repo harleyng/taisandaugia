@@ -76,6 +76,8 @@ const AdminOrdersPage = lazy(() => import("./pages/admin/orders/AdminOrdersPage"
 const AdminOwnerSubscriptionsPage = lazy(() => import("./pages/admin/owner-subscriptions/AdminOwnerSubscriptionsPage"));
 const AdminOwnerSubscriptionDetail = lazy(() => import("./pages/admin/owner-subscriptions/AdminOwnerSubscriptionDetail"));
 const AdminOwnerSubPlansPage = lazy(() => import("./pages/admin/owner-subscriptions/AdminOwnerSubPlansPage"));
+const AdminSubPackagePage = lazy(() => import("./pages/admin/owner-subscriptions/AdminSubPackagePage"));
+const AdminSubTermsPage = lazy(() => import("./pages/admin/owner-subscriptions/AdminSubTermsPage"));
 const AdminPartnersPage = lazy(() => import("./pages/admin/partners/AdminPartnersPage"));
 const AdminAuctionToolsPage = lazy(() => import("./pages/admin/auction-tools/AdminAuctionToolsPage"));
 const AdminLegalDocsPage = lazy(() => import("./pages/admin/legal/AdminLegalDocsPage"));
@@ -775,6 +777,8 @@ const App = () => (
                   {/* Gói thuê bao — 2 menu con: Danh mục gói + Áp dụng gói (gói của từng Trạm) */}
                   <Route path="goi-thue-bao" element={<Navigate to="/admin/goi-thue-bao/ap-dung" replace />} />
                   <Route path="goi-thue-bao/danh-muc" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubPlansPage /></AdminPermissionRoute>} />
+                  <Route path="goi-thue-bao/danh-muc/:packageId" element={<AdminPermissionRoute module="goi-thue-bao"><AdminSubPackagePage /></AdminPermissionRoute>} />
+                  <Route path="goi-thue-bao/ky-mua" element={<AdminPermissionRoute module="goi-thue-bao"><AdminSubTermsPage /></AdminPermissionRoute>} />
                   <Route path="goi-thue-bao/ap-dung" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionsPage /></AdminPermissionRoute>} />
                   <Route path="goi-thue-bao/ap-dung/:workspaceId" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionDetail /></AdminPermissionRoute>} />
                   <Route path="goi-thue-bao/:workspaceId" element={<RedirectOwnerSubscriptionId />} />

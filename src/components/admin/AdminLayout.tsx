@@ -36,6 +36,7 @@ import {
   type LucideIcon,
   BadgeCheck,
   LayoutGrid,
+  Percent,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -92,8 +93,9 @@ const NAV: NavSection[] = [
         module: "goi-thue-bao",
         groupOnly: true,
         children: [
+          { to: "/admin/goi-thue-bao/ap-dung", label: "Trạm đăng ký", icon: Building2, module: "goi-thue-bao" },
           { to: "/admin/goi-thue-bao/danh-muc", label: "Danh mục gói", icon: LayoutGrid, module: "goi-thue-bao" },
-          { to: "/admin/goi-thue-bao/ap-dung", label: "Áp dụng gói", icon: Building2, module: "goi-thue-bao" },
+          { to: "/admin/goi-thue-bao/ky-mua", label: "Kỳ mua & chiết khấu", icon: Percent, module: "goi-thue-bao" },
         ],
       },
       { to: "/admin/doi-tac", label: "Đối tác", icon: Building2, module: "nha-cung-cap" },

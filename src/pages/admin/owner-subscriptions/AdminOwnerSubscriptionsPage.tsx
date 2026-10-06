@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAdminOwnerSubscriptionList } from "@/hooks/useAdminOwnerSubscriptions";
+import { useAdminOwnerSubscriptionList, useAdminSubCatalog } from "@/hooks/useAdminOwnerSubscriptions";
+import { SubAdminHeader } from "@/components/admin/owner-subscriptions/SubAdminHeader";
 import { SubscriptionStatusBadge } from "@/components/owner-subscription/SubscriptionStatusBadge";
 import { formatSubDate } from "@/lib/ownerSubscription/status";
 import { formatMoneyFull } from "@/utils/money";
@@ -33,10 +33,12 @@ const matches = (row: AdminOwnerSubRow, f: Filter) => {
   return row.status === f;
 };
 
-/** /admin/goi-thue-bao/ap-dung — mọi Trạm tổ chức chủ tài sản và gói thuê bao của từng Trạm. */
+/** /admin/goi-thue-bao/ap-dung (Trạm đăng ký) — mọi Trạm tổ chức chủ tài sản, bộ gói và gói thuê bao của từng Trạm. */
 export default function AdminOwnerSubscriptionsPage() {
   const navigate = useNavigate();
   const { data: rows, isLoading } = useAdminOwnerSubscriptionList();
+  const { data: catalog } = useAdminSubCatalog();
+  const packageName = (id: string | null) => catalog?.packages.find((k) => k.id === id)?.name ?? "—";
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -57,16 +59,13 @@ export default function AdminOwnerSubscriptionsPage() {
   }, [rows, search, filter]);
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Áp dụng gói</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Gói theo kỳ cho tổ chức chủ tài sản thay cho credit. Sàn tạo gói trong danh mục rồi chọn tổ chức được dùng; Trạm tự mua gói đã mở cho mình, hoặc sàn kích hoạt tay. Chủ tài sản cá nhân vẫn dùng credit.
-          </p>
-        </div>
-      </div>
-
+    <div>
+      <SubAdminHeader
+        section="subs"
+        title="Trạm đăng ký"
+        description="Gói theo kỳ cho tổ chức chủ tài sản thay cho credit. Mỗi Trạm thấy các gói của bộ gói được gán (chưa gán thì bộ mặc định); Trạm tự mua hoặc sàn kích hoạt tay. Chủ tài sản cá nhân vẫn dùng credit."
+      />
+      <div className="p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           {FILTERS.map((f) => (
@@ -96,7 +95,7 @@ export default function AdminOwnerSubscriptionsPage() {
               <th className="px-4 py-3 font-medium">Trạng thái</th>
               <th className="px-4 py-3 font-medium">Hiệu lực</th>
               <th className="px-4 py-3 text-right font-medium">Giá / kỳ</th>
-              <th className="px-4 py-3 text-right font-medium">Gói được dùng</th>
+              <th className="px-4 py-3 font-medium">Bộ gói</th>
               <th className="w-8 px-2 py-3" />
             </tr>
           </thead>
@@ -145,14 +144,16 @@ export default function AdminOwnerSubscriptionsPage() {
                 <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                   {r.subscription_id ? formatMoneyFull(r.price_vnd) : "—"}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {r.allowed_plan_ids?.length ? r.allowed_plan_ids.length : <span className="text-muted-foreground">0</span>}
+                <td className="px-4 py-3">
+                  <div className="whitespace-nowrap">{packageName(r.package_id)}</div>
+                  {!r.assigned_package_id && <div className="text-xs text-muted-foreground">Mặc định</div>}
                 </td>
                 <td className="px-2 py-3 text-muted-foreground"><ChevronRight className="h-4 w-4" /></td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );

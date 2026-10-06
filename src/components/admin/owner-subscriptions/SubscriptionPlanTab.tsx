@@ -4,20 +4,22 @@ import { Button } from "@/components/ui/button";
 import type { AdminSubDetail } from "@/hooks/useAdminOwnerSubscriptions";
 import { benefitValueText } from "@/lib/ownerSubscription/benefits";
 import { OVERAGE_LABELS, formatSubDate } from "@/lib/ownerSubscription/status";
-import type { OwnerSubPlan } from "@/lib/ownerSubscription/types";
+import type { AdminSubPackage, OwnerSubPlan } from "@/lib/ownerSubscription/types";
 import { formatMoneyFull } from "@/utils/money";
 
 interface Props {
   detail: AdminSubDetail;
-  /** Mọi gói danh mục đã mở cho Trạm (kể cả gói đã ngừng bán). */
+  /** Bộ gói Trạm đang thấy (bộ được gán, chưa gán thì bộ mặc định). */
+  pkg: AdminSubPackage | null;
+  /** Mọi gói của bộ (kể cả gói đã ngừng bán). */
   allowedPlans: OwnerSubPlan[];
 }
 
 /**
  * Gói của Trạm — CHỈ ĐỌC. Cấu hình gói nằm ở danh mục; ở đây xem hạn mức đã chép vào
- * Trạm (giữ nguyên tới lần gia hạn sau) và các gói admin đã mở cho Trạm.
+ * Trạm (giữ nguyên tới lần gia hạn sau) và các gói trong bộ gói của Trạm.
  */
-export function SubscriptionPlanTab({ detail, allowedPlans }: Props) {
+export function SubscriptionPlanTab({ detail, pkg, allowedPlans }: Props) {
   const navigate = useNavigate();
   const { sub, status } = detail;
   const lines = status?.lines ?? [];
@@ -62,7 +64,7 @@ export function SubscriptionPlanTab({ detail, allowedPlans }: Props) {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Trạm chưa có gói. Trưởng đơn vị tự mua trong các gói đã mở bên dưới, hoặc bấm "Kích hoạt tay".
+            Trạm chưa có gói. Trưởng đơn vị tự mua trong các gói của bộ bên dưới, hoặc bấm "Kích hoạt tay".
           </p>
         )}
         {status?.pending && (
@@ -76,9 +78,19 @@ export function SubscriptionPlanTab({ detail, allowedPlans }: Props) {
 
       <section className="rounded-2xl border bg-card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-foreground">Gói được dùng</h3>
-          <Button size="sm" variant="outline" onClick={() => navigate("/admin/goi-thue-bao/danh-muc")}>
-            <LayoutGrid className="mr-1.5 h-4 w-4" /> Danh mục gói
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Bộ gói: {pkg?.name ?? "—"}</h3>
+            <p className="text-xs text-muted-foreground">
+              {pkg?.is_default ? "Bộ mặc định — Trạm chưa được gán bộ riêng." : "Bộ được gán riêng cho Trạm."}
+              {pkg && !pkg.is_active && " Bộ đang ngừng bán — Trạm không mua / gia hạn được."}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(pkg ? `/admin/goi-thue-bao/danh-muc/${pkg.id}` : "/admin/goi-thue-bao/danh-muc")}
+          >
+            <LayoutGrid className="mr-1.5 h-4 w-4" /> {pkg ? "Mở bộ gói" : "Danh mục gói"}
           </Button>
         </div>
         {allowedPlans.length ? (
@@ -95,7 +107,7 @@ export function SubscriptionPlanTab({ detail, allowedPlans }: Props) {
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Chưa có gói nào mở cho Trạm này — Trưởng đơn vị không thấy gói nào. Vào Danh mục gói, bấm "Chọn tổ chức" ở gói cần mở.
+            Bộ gói chưa có gói nào — Trưởng đơn vị không thấy gói nào. Thêm gói ở trang bộ gói, hoặc gán Trạm vào bộ khác.
           </p>
         )}
       </section>

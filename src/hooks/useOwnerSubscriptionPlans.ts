@@ -17,50 +17,32 @@ export interface OwnerSubCatalog {
 }
 
 /** Dòng quyền lợi của gói kèm định nghĩa trong danh mục cố định owner_sub_benefits. */
-const BENEFITS_SELECT =
+export const BENEFITS_SELECT =
   "benefits:owner_subscription_plan_entitlements(benefit_key, quota, cycle, sort_order, benefit:owner_sub_benefits(*))";
 
-type CatalogScope = { admin: true } | { workspaceId: string };
+type PlanRow = Record<string, unknown> & { monthly_price_vnd: number | string; benefits: PlanBenefitLine[] | null };
 
-/**
- * Đọc danh mục gói + các kỳ.
- *   • `{ admin: true }` — mọi gói (kể cả đã ngừng bán) kèm danh sách Trạm được dùng.
- *   • `{ workspaceId }` — chỉ gói đang bán mà admin đã MỞ cho Trạm đó (gói không có
- *     Trạm nào là gói ẩn). RLS còn cho đọc gói hiện tại của Trạm, nhưng join `!inner`
- *     loại nó khỏi danh mục nếu Trạm đã bị gỡ khỏi gói.
- */
-export async function fetchOwnerSubCatalog(scope: CatalogScope): Promise<OwnerSubCatalog> {
-  const admin = "admin" in scope;
-  const select = admin
-    ? `*, ${BENEFITS_SELECT}, workspaces:owner_subscription_plan_workspaces(workspace_id)`
-    : `*, ${BENEFITS_SELECT}, access:owner_subscription_plan_workspaces!inner(workspace_id)`;
-  let plansQuery = supabase.from("owner_subscription_plans").select(select).order("sort_order").order("created_at");
-  if (!admin) plansQuery = plansQuery.eq("is_active", true).eq("access.workspace_id", scope.workspaceId);
-  let termsQuery = supabase.from("owner_subscription_term_options").select("*").order("months");
-  if (!admin) termsQuery = termsQuery.eq("is_active", true);
-
-  const [plansRes, termsRes] = await Promise.all([plansQuery, termsQuery]);
-  if (plansRes.error) throw plansRes.error;
-  if (termsRes.error) throw termsRes.error;
-
-  type PlanRow = Record<string, unknown> & {
-    monthly_price_vnd: number;
-    benefits: PlanBenefitLine[] | null;
-    workspaces?: { workspace_id: string }[];
-    access?: unknown;
-  };
-  const plans = ((plansRes.data ?? []) as unknown as PlanRow[]).map(({ access: _access, workspaces, ...p }) => ({
+/** Chuẩn hoá một dòng gói (giá NUMERIC về number, quyền lợi theo thứ tự hiển thị). */
+export const normalizePlan = (p: PlanRow, featured: boolean): OwnerSubPlan =>
+  ({
     ...p,
     monthly_price_vnd: Number(p.monthly_price_vnd),
+    is_featured: featured,
     benefits: [...(p.benefits ?? [])].sort((a, b) => a.sort_order - b.sort_order),
-    ...(admin ? { workspace_ids: (workspaces ?? []).map((w) => w.workspace_id) } : {}),
-  })) as unknown as OwnerSubPlan[];
-  const terms = (termsRes.data ?? []).map((t) => ({
-    months: t.months,
-    discount_pct: Number(t.discount_pct),
-    is_active: t.is_active,
-  }));
-  return { plans, terms };
+  }) as unknown as OwnerSubPlan;
+
+/**
+ * Danh mục Trạm thấy: gói đang bán của BỘ GÓI của Trạm (bộ được gán, chưa gán thì bộ mặc
+ * định) + các kỳ của bộ. Bộ ngừng bán ⇒ rỗng. Server lọc (owner_sub_catalog).
+ */
+export async function fetchOwnerSubCatalog(workspaceId: string): Promise<OwnerSubCatalog> {
+  const { data, error } = await supabase.rpc("owner_sub_catalog", { p_workspace_id: workspaceId });
+  if (error) throw error;
+  const res = (data ?? {}) as unknown as { plans?: (PlanRow & { is_featured: boolean })[]; terms?: OwnerSubTermOption[] };
+  return {
+    plans: (res.plans ?? []).map((p) => normalizePlan(p, !!p.is_featured)),
+    terms: (res.terms ?? []).map((t) => ({ months: t.months, discount_pct: Number(t.discount_pct), is_active: true })),
+  };
 }
 
 /** Danh mục quyền lợi cố định (form gói admin chọn từ đây) — không có màn sửa. */
@@ -76,12 +58,12 @@ export function useOwnerSubBenefitCatalog() {
   });
 }
 
-/** Danh mục gói đang bán mà admin đã mở cho Trạm (cổng chủ tài sản). */
+/** Danh mục gói đang bán của bộ gói của Trạm (cổng chủ tài sản). */
 export function useOwnerSubPlans(workspaceId: string | null | undefined) {
   return useQuery({
     queryKey: qk.ownerSubscription.plansFor(workspaceId),
     enabled: !!workspaceId,
-    queryFn: () => fetchOwnerSubCatalog({ workspaceId: workspaceId! }),
+    queryFn: () => fetchOwnerSubCatalog(workspaceId!),
     staleTime: 5 * 60 * 1000,
   });
 }

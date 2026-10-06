@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHasAdminPermission } from "@/hooks/useAdminPermissions";
 import {
-  useAdminOwnerSubPlans,
+  useAdminSubCatalog,
   useAdminOwnerSubscriptionDetail,
   useAdminOwnerSubscriptionList,
 } from "@/hooks/useAdminOwnerSubscriptions";
@@ -19,7 +19,7 @@ import {
   type ActivateCurrentSub,
 } from "@/components/admin/owner-subscriptions/ActivateSubscriptionDialog";
 import { CancelSubscriptionDialog } from "@/components/admin/owner-subscriptions/CancelSubscriptionDialog";
-import { sortPlans } from "@/lib/ownerSubscription/catalog";
+import { packageTerms } from "@/lib/ownerSubscription/packages";
 import { formatSubDate } from "@/lib/ownerSubscription/status";
 import type { SubStatus } from "@/lib/ownerSubscription/types";
 import { formatMoneyFull } from "@/utils/money";
@@ -35,7 +35,7 @@ export default function AdminOwnerSubscriptionDetail() {
 
   const { data: list } = useAdminOwnerSubscriptionList();
   const { data: detail, isLoading } = useAdminOwnerSubscriptionDetail(workspaceId);
-  const { data: catalog } = useAdminOwnerSubPlans();
+  const { data: catalog } = useAdminSubCatalog();
   const canUpdate = useHasAdminPermission("goi-thue-bao", "update");
 
   const [activateOpen, setActivateOpen] = useState(false);
@@ -45,11 +45,19 @@ export default function AdminOwnerSubscriptionDetail() {
   const sub = detail?.sub ?? null;
   const effective = (detail?.status?.status ?? (sub ? sub.status : null)) as SubStatus | null;
 
-  const allowedPlans = useMemo(
-    () => sortPlans((catalog?.plans ?? []).filter((p) => p.workspace_ids?.includes(workspaceId))),
-    [catalog?.plans, workspaceId],
+  // Gói Trạm được mua = gói của bộ gói của Trạm (bộ được gán, chưa gán thì bộ mặc định).
+  const pkg = catalog?.packages.find((k) => k.id === row?.package_id) ?? null;
+  const allowedPlans = pkg?.plans ?? [];
+  const activatablePlans = useMemo(() => (pkg?.is_active ? pkg.plans.filter((p) => p.is_active) : []), [pkg]);
+  const pkgTerms = useMemo(
+    () =>
+      packageTerms(pkg?.term_ids ?? [], catalog?.terms ?? []).map((t) => ({
+        months: t.months,
+        discount_pct: t.discount_pct,
+        is_active: true,
+      })),
+    [pkg, catalog?.terms],
   );
-  const activatablePlans = useMemo(() => allowedPlans.filter((p) => p.is_active), [allowedPlans]);
   const current = useMemo<ActivateCurrentSub | null>(
     () =>
       sub
@@ -71,7 +79,7 @@ export default function AdminOwnerSubscriptionDetail() {
     <div className="space-y-5 p-6">
       <div>
         <Button variant="ghost" size="sm" className="-ml-2 mb-2" onClick={() => navigate("/admin/goi-thue-bao/ap-dung")}>
-          <ArrowLeft className="mr-1.5 h-4 w-4" /> Áp dụng gói
+          <ArrowLeft className="mr-1.5 h-4 w-4" /> Trạm đăng ký
         </Button>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -118,7 +126,7 @@ export default function AdminOwnerSubscriptionDetail() {
             <TabsTrigger value="lich-su" className="gap-1.5" disabled={!sub}><History className="h-4 w-4" /> Lịch sử</TabsTrigger>
           </TabsList>
           <TabsContent value="goi" className="mt-4">
-            <SubscriptionPlanTab detail={detail} allowedPlans={allowedPlans} />
+            <SubscriptionPlanTab detail={detail} pkg={pkg} allowedPlans={allowedPlans} />
           </TabsContent>
           <TabsContent value="su-dung" className="mt-4">
             <SubscriptionUsageTab detail={detail} />
@@ -134,7 +142,7 @@ export default function AdminOwnerSubscriptionDetail() {
         onOpenChange={setActivateOpen}
         workspaceId={workspaceId}
         plans={activatablePlans}
-        terms={catalog?.terms ?? []}
+        terms={pkgTerms}
         current={current}
       />
       {sub && <CancelSubscriptionDialog open={cancelOpen} onOpenChange={setCancelOpen} subId={sub.id} />}

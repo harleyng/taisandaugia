@@ -13,7 +13,7 @@ const REASON_MESSAGES: Record<string, string> = {
   missing_txn: "Thiếu mã giao dịch thanh toán.",
   invalid_overage: "Chọn cách xử lý khi hết hạn mức.",
   invalid_terms: "Giá phải ≥ 0 và thời hạn từ 1 đến 36 tháng.",
-  invalid_name: "Tên gói phải từ 2 đến 120 ký tự.",
+  invalid_name: "Tên gói phải từ 2 đến 60 ký tự.",
   no_benefits: "Gói chưa có quyền lợi nào — thêm ít nhất một quyền lợi.",
   unknown_benefit: "Quyền lợi không có trong danh mục — tải lại trang rồi chọn lại.",
   duplicate_benefit: "Mỗi quyền lợi chỉ thêm một lần vào gói.",
@@ -29,6 +29,17 @@ const REASON_MESSAGES: Record<string, string> = {
   invalid_term: "Thời hạn không hợp lệ — chọn một kỳ trong danh sách.",
   invalid_tier: "Chọn kiểu hiển thị của gói.",
   invalid_text: "Mô tả ngắn tối đa 120 ký tự.",
+  invalid_package_name: "Tên bộ gói phải từ 2 đến 60 ký tự.",
+  no_plans: "Bộ gói cần ít nhất một gói.",
+  no_terms: "Chọn ít nhất một kỳ mua cho bộ gói.",
+  duplicate_term_months: "Một bộ gói không có hai kỳ cùng số tháng — bỏ bớt một kỳ.",
+  plans_changed: "Danh sách gói của bộ vừa thay đổi — tải lại trang rồi lưu lại.",
+  invalid_featured: "Gói “Phổ biến” phải là một gói đang bán.",
+  default_package_active: "Bộ mặc định không ngừng bán được.",
+  default_package_workspaces: "Bộ mặc định không gán tổ chức — tổ chức chưa gán bộ nào tự thấy bộ này.",
+  duplicate_term: "Kỳ này (số tháng + chiết khấu) đã có trong thư viện.",
+  term_months_conflict: "Có bộ gói đang dùng cả kỳ này lẫn một kỳ khác cùng số tháng mới — bỏ bớt khỏi bộ trước.",
+  term_in_use: "Kỳ đang dùng trong bộ gói — bỏ khỏi bộ trước khi xoá.",
 };
 
 export class OwnerSubRpcError extends Error {

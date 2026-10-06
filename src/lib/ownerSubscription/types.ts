@@ -133,8 +133,33 @@ export interface OwnerSubPlan {
   sort_order: number;
   /** Dòng quyền lợi theo thứ tự hiển thị (8 dòng đầu lên thẻ gói). */
   benefits: PlanBenefitLine[];
-  /** Chỉ có ở màn admin: các Trạm được dùng gói (gói không có Trạm nào = ẩn với chủ tài sản). */
-  workspace_ids?: string[];
+}
+
+// ─── Bộ gói + thư viện kỳ mua (migration 20261004230000_owner_sub_packages.sql) ──
+
+/** Một kỳ trong thư viện dùng chung; mỗi bộ gói chọn kỳ riêng (không trùng số tháng). */
+export interface SubTerm {
+  id: string;
+  months: number;
+  discount_pct: number;
+  note: string | null;
+}
+
+/** Bộ gói ở màn admin: gói của bộ + kỳ đã chọn + Trạm được gán. */
+export interface AdminSubPackage {
+  id: string;
+  name: string;
+  description: string | null;
+  /** Bộ mặc định: Trạm chưa gán bộ nào thấy bộ này; không ngừng bán được. */
+  is_default: boolean;
+  is_active: boolean;
+  featured_plan_id: string | null;
+  updated_at: string;
+  /** Theo thứ tự hiển thị; `is_featured` suy từ featured_plan_id. */
+  plans: OwnerSubPlan[];
+  term_ids: string[];
+  /** Trạm gán vào bộ (bộ mặc định luôn rỗng). */
+  workspace_ids: string[];
 }
 
 export interface OwnerSubTermOption {
@@ -226,8 +251,10 @@ export interface AdminOwnerSubRow {
   overage_mode: OverageMode | null;
   /** Gói danh mục hiện tại của Trạm (null = chưa có / gói riêng cũ). */
   plan_id: string | null;
-  /** Các gói danh mục admin đã mở cho Trạm này. */
-  allowed_plan_ids: string[];
+  /** Bộ gói được gán riêng (null = thuộc bộ mặc định). */
+  assigned_package_id: string | null;
+  /** Bộ gói Trạm đang thấy (đã tính bộ mặc định). */
+  package_id: string | null;
 }
 
 export type ActivationMethod = "bank_transfer" | "contract" | "complimentary" | "other";

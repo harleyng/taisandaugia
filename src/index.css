@@ -248,21 +248,6 @@ All colors MUST be HSL.
   }
 }
 
-/* Leaflet map container fixes */
-@layer components {
-  .leaflet-container {
-    @apply relative z-0;
-  }
-
-  .leaflet-pane {
-    @apply relative z-0;
-  }
-
-  .leaflet-tile-pane {
-    @apply relative z-0;
-  }
-}
-
 /* Cổng chủ tài sản — nền xám (<main className="owner-canvas">), thẻ trắng KHÔNG viền
    mà đổ bóng. Áp theo ngữ cảnh thay vì sửa từng component vì nhiều khối (số hoá, ký gửi,
    hợp đồng mua bán, tư vấn…) dùng chung với cổng khác, nơi thẻ vẫn giữ viền.

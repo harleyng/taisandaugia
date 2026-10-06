@@ -125,7 +125,7 @@ export default defineConfig(() => ({
           if (id.includes("@tanstack")) return "data-vendor";
           if (id.includes("@supabase")) return "data-vendor";
 
-          // recharts/leaflet/pdfmake/xlsx đã tự tách theo lazy import — để
+          // recharts/maplibre/pdfmake/xlsx đã tự tách theo lazy import — để
           // Rollup tự quyết, đừng gom vào vendor chung kẻo kéo lại vào entry.
         },
       },

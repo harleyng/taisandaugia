@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Glasses, MapPinned, Search } from "lucide-react";
+import { MapPinned, Search } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ export default function CraftVillagesPage() {
   const openId = params.get("ho-so");
   const open = useMemo(() => villages.find((v) => v.posting_id === openId) ?? null, [villages, openId]);
   const filtered = useMemo(() => villages.filter((v) => matchesVillage(v, query)), [villages, query]);
-  const withVr = useMemo(() => villages.filter((v) => v.vr_url).length, [villages]);
 
   const select = (v: PublicCraftVillage) => {
     const next = new URLSearchParams(params);
@@ -47,18 +46,10 @@ export default function CraftVillagesPage() {
             </p>
             <h1 className="text-3xl font-bold text-foreground md:text-4xl">Khám phá làng nghề Việt Nam</h1>
             <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
-              Hồ sơ số hoá do chính các làng nghề công khai. Bấm vào ảnh sản phẩm trên bản đồ để tham quan
-              làng bằng VR tour 360°.
+              Hồ sơ số hoá do chính các làng nghề công khai.
+              <br />
+              Bấm vào ảnh sản phẩm trên bản đồ để tham quan làng bằng VR tour 360°.
             </p>
-            {!isLoading && villages.length > 0 && (
-              <p className="mt-4 text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">{villages.length}</span> làng nghề ·{" "}
-                <span className="inline-flex items-center gap-1">
-                  <Glasses className="h-4 w-4 text-primary" />
-                  <span className="font-semibold text-foreground">{withVr}</span> có VR tour
-                </span>
-              </p>
-            )}
           </div>
         </section>
 

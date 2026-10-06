@@ -6,7 +6,7 @@ import { usePublicCraftVillages } from "@/hooks/useCraftVillages";
 import { villageLabel } from "@/lib/craftVillages";
 
 /**
- * Trang chủ: dải ảnh sản phẩm tròn của các làng nghề ⇒ /lang-nghe. KHÔNG import leaflet
+ * Trang chủ: dải ảnh sản phẩm tròn của các làng nghề ⇒ /lang-nghe. KHÔNG import bản đồ (maplibre)
  * (Index nạp eager) — bản đồ chỉ tải khi vào trang /lang-nghe.
  */
 export function CraftVillagesTeaser() {

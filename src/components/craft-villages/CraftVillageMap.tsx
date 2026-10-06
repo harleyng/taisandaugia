@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
-import L from "leaflet";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Marker, type MapRef } from "@vis.gl/react-maplibre";
+import Supercluster from "supercluster";
+import { VietnamMap } from "@/components/map/VietnamMap";
 import { villageLabel, type PublicCraftVillage } from "@/lib/craftVillages";
 import { cn } from "@/lib/utils";
-import { createVietnamMap, escapeHtml } from "./vietnamMap";
 
 interface CraftVillageMapProps {
   villages: PublicCraftVillage[];
@@ -11,134 +12,173 @@ interface CraftVillageMapProps {
   className?: string;
 }
 
-function pinHtml(v: PublicCraftVillage, selected: boolean): string {
-  const img = v.image_urls[0];
-  const ring = selected ? "ring-4 ring-accent" : "ring-2 ring-primary/40";
-  const inner = img
-    ? `<img src="${escapeHtml(img)}" alt="" class="h-full w-full object-cover" loading="lazy" />`
-    : `<span class="grid h-full w-full place-items-center bg-primary text-base font-bold text-primary-foreground">${escapeHtml(
-        (v.product || villageLabel(v)).charAt(0).toUpperCase(),
-      )}</span>`;
-  return `<span aria-label="${escapeHtml(villageLabel(v))}" class="block h-12 w-12 overflow-hidden rounded-full border-[3px] border-white bg-muted shadow-lg transition-transform duration-150 hover:scale-110 ${ring}">${inner}</span>`;
+type PointProps = { villageId: string };
+type Index = Supercluster<PointProps>;
+type View = { bbox: [number, number, number, number]; zoom: number };
+
+/** Bán kính gom (px) ≈ cỡ một thẻ ảnh — hai ghim đè nhau thì gộp thành một cụm. */
+const CLUSTER_RADIUS = 72;
+const MAX_CLUSTER_ZOOM = 16;
+
+function buildIndex(villages: PublicCraftVillage[]): Index {
+  const index = new Supercluster<PointProps>({ radius: CLUSTER_RADIUS, maxZoom: MAX_CLUSTER_ZOOM });
+  index.load(
+    villages.map((v) => ({
+      type: "Feature" as const,
+      properties: { villageId: v.posting_id },
+      geometry: { type: "Point" as const, coordinates: [Number(v.longitude), Number(v.latitude)] },
+    })),
+  );
+  return index;
 }
 
-const PIN = 48;
-const pinIcon = (v: PublicCraftVillage, selected: boolean) =>
-  L.divIcon({ className: "", html: pinHtml(v, selected), iconSize: [PIN, PIN], iconAnchor: [PIN / 2, PIN / 2] });
+/** Mức zoom thấp nhất (≥ `from`) mà làng đứng riêng, không còn nằm trong cụm. */
+function unclusteredZoom(index: Index, v: PublicCraftVillage, from: number): number {
+  const lng = Number(v.longitude);
+  const lat = Number(v.latitude);
+  for (let z = Math.floor(from); z <= MAX_CLUSTER_ZOOM; z++) {
+    const near = index.getClusters([lng - 1e-4, lat - 1e-4, lng + 1e-4, lat + 1e-4], z);
+    if (near.some((f) => !("cluster" in f.properties) && f.properties.villageId === v.posting_id)) return z;
+  }
+  return MAX_CLUSTER_ZOOM + 1;
+}
 
-interface PinEntry {
-  marker: L.Marker;
-  village: PublicCraftVillage;
-  /** Toạ độ thật — vị trí vẽ có thể lệch khi nhiều làng chồng nhau ở mức zoom hiện tại. */
-  home: L.LatLng;
+function readView(map: Pick<MapRef, "getBounds" | "getZoom">): View {
+  const b = map.getBounds();
+  return { bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], zoom: map.getZoom() };
+}
+
+interface PhotoPinProps {
+  image: string | undefined;
+  fallback: string;
+  count: number;
+  label: string;
+  sub: string;
+  selected: boolean;
+  onClick: () => void;
+}
+
+/** Ghim kiểu Ảnh trên iOS: thẻ ảnh bo góc + mũi nhọn chỉ vị trí; cụm thì ghi số làng ở góc ảnh. */
+function PhotoPin({ image, fallback, count, label, sub, selected, onClick }: PhotoPinProps) {
+  return (
+    <button type="button" aria-label={label} onClick={onClick} className="group relative block pb-2">
+      <span
+        aria-hidden
+        className="absolute bottom-0.5 left-1/2 h-3.5 w-3.5 -translate-x-1/2 rotate-45 rounded-[2px] bg-white shadow-md"
+      />
+      <span
+        className={cn(
+          "relative block h-16 w-16 overflow-hidden rounded-xl border-[3px] border-white bg-muted shadow-lg transition-transform duration-150 group-hover:scale-105",
+          selected && "ring-4 ring-accent",
+        )}
+      >
+        {image ? (
+          <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <span className="grid h-full w-full place-items-center bg-primary text-base font-bold text-primary-foreground">
+            {fallback}
+          </span>
+        )}
+        {count > 1 && (
+          <>
+            <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent" />
+            <span className="absolute bottom-0.5 left-1.5 text-sm font-bold leading-tight text-white">{count}</span>
+          </>
+        )}
+      </span>
+      <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-left text-xs text-popover-foreground shadow-md group-hover:block group-focus-visible:block">
+        <strong className="block">{label}</strong>
+        {sub}
+      </span>
+    </button>
+  );
 }
 
 /**
- * Các làng gần nhau (Hà Nội, Hội An…) chồng lên nhau ở mức zoom cả nước ⇒ chỉ bấm được ảnh
- * trên cùng. Gom ghim cách nhau < 1 ảnh thành nhóm và xếp vòng quanh tâm nhóm; zoom gần thì
- * nhóm tách ra và ghim về đúng toạ độ.
+ * Bản đồ Việt Nam; mỗi hồ sơ làng nghề là một thẻ ảnh sản phẩm. Thu nhỏ thì các làng gần nhau
+ * gộp thành một thẻ có số đếm (bấm để phóng tới), phóng to thì tách về đúng từng làng.
  */
-function spreadOverlapping(map: L.Map, entries: PinEntry[]) {
-  const pts = entries.map((e) => ({ e, p: map.latLngToLayerPoint(e.home) }));
-  const groups: (typeof pts)[] = [];
-  for (const it of pts) {
-    const g = groups.find((grp) => grp.some((o) => o.p.distanceTo(it.p) < PIN * 0.85));
-    if (g) g.push(it);
-    else groups.push([it]);
-  }
-  for (const g of groups) {
-    if (g.length === 1) {
-      g[0].e.marker.setLatLng(g[0].e.home);
-      continue;
-    }
-    const cx = g.reduce((s, it) => s + it.p.x, 0) / g.length;
-    const cy = g.reduce((s, it) => s + it.p.y, 0) / g.length;
-    const r = Math.max(PIN * 0.7, ((PIN + 6) * g.length) / (2 * Math.PI));
-    g.forEach((it, i) => {
-      const a = -Math.PI / 2 + (2 * Math.PI * i) / g.length;
-      it.e.marker.setLatLng(map.layerPointToLatLng(L.point(cx + r * Math.cos(a), cy + r * Math.sin(a))));
-    });
-  }
-}
-
-/** Bản đồ Việt Nam; mỗi hồ sơ làng nghề là một ảnh sản phẩm tròn — bấm để mở VR tour. */
 export function CraftVillageMap({ villages, selectedId, onSelect, className }: CraftVillageMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef(new Map<string, PinEntry>());
-  const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
-  const fittedRef = useRef(false);
+  const mapRef = useRef<MapRef>(null);
+  // null = bản đồ chưa sẵn sàng; cập nhật mỗi lần kéo/zoom xong để gom cụm theo khung nhìn.
+  const [view, setView] = useState<View | null>(null);
+  const ready = view !== null;
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const map = createVietnamMap(containerRef.current);
-    mapRef.current = map;
-    const markers = markersRef.current;
-    map.on("zoomend", () => spreadOverlapping(map, [...markers.values()]));
-    return () => {
-      map.remove();
-      mapRef.current = null;
-      markers.clear();
-      fittedRef.current = false;
-    };
-  }, []);
+  const byId = useMemo(() => new Map(villages.map((v) => [v.posting_id, v])), [villages]);
+  const index = useMemo(() => buildIndex(villages), [villages]);
+  const features = useMemo(() => (view ? index.getClusters(view.bbox, view.zoom) : []), [index, view]);
 
-  // Đồng bộ ghim theo danh sách (lọc tìm kiếm cũng đi qua đây).
+  // Đưa làng đang chọn vào giữa khung, phóng đủ gần để nó tách khỏi cụm.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    const markers = markersRef.current;
-    const keep = new Set(villages.map((v) => v.posting_id));
-    for (const [id, { marker }] of markers) {
-      if (!keep.has(id)) {
-        marker.remove();
-        markers.delete(id);
-      }
-    }
-    for (const v of villages) {
-      if (markers.has(v.posting_id)) continue;
-      const home = L.latLng(Number(v.latitude), Number(v.longitude));
-      const marker = L.marker(home, {
-        icon: pinIcon(v, false),
-        title: villageLabel(v),
-        riseOnHover: true,
-      })
-        .bindTooltip(
-          `<strong>${escapeHtml(villageLabel(v))}</strong><br/>${escapeHtml(
-            [v.product, v.province].filter(Boolean).join(" · "),
-          )}`,
-          { direction: "top", offset: [0, -26] },
-        )
-        .on("click", () => onSelectRef.current(v))
-        .addTo(map);
-      markers.set(v.posting_id, { marker, village: v, home });
-    }
-    if (!fittedRef.current && villages.length > 0) {
-      fittedRef.current = true;
-      map.fitBounds(
-        L.latLngBounds(villages.map((v) => [Number(v.latitude), Number(v.longitude)] as [number, number])),
-        { padding: [48, 48], maxZoom: 7, animate: false },
-      );
-    }
-    spreadOverlapping(map, [...markers.values()]);
-  }, [villages]);
-
-  // Làm nổi ghim đang chọn + đưa vào giữa khung.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    for (const [id, { marker, village }] of markersRef.current) {
-      const selected = id === selectedId;
-      marker.setIcon(pinIcon(village, selected));
-      marker.setZIndexOffset(selected ? 1000 : 0);
-      if (selected) map.panTo(marker.getLatLng());
-    }
-  }, [selectedId, villages]);
+    const v = selectedId ? byId.get(selectedId) : undefined;
+    if (!v || !ready || !map) return;
+    const zoom = Math.max(map.getZoom(), unclusteredZoom(index, v, map.getZoom()));
+    map.easeTo({ center: [Number(v.longitude), Number(v.latitude)], zoom });
+  }, [selectedId, byId, index, ready]);
 
   return (
     <div className={cn("relative isolate overflow-hidden rounded-2xl border border-border bg-muted", className)}>
-      <div ref={containerRef} className="relative z-0 h-full w-full" />
+      <VietnamMap
+        ref={mapRef}
+        onLoad={(e) => setView(readView(e.target))}
+        onMoveEnd={() => mapRef.current && setView(readView(mapRef.current))}
+      >
+        {features.map((f) => {
+          const [lng, lat] = f.geometry.coordinates;
+          if ("cluster" in f.properties && f.properties.cluster) {
+            const clusterId = f.properties.cluster_id;
+            const members = index
+              .getLeaves(clusterId, Infinity)
+              .map((leaf) => byId.get(leaf.properties.villageId))
+              .filter((v): v is PublicCraftVillage => !!v);
+            const cover = members.find((v) => v.image_urls[0]) ?? members[0];
+            const provinces = [...new Set(members.map((v) => v.province).filter(Boolean))];
+            return (
+              <Marker key={`c${clusterId}`} longitude={lng} latitude={lat} anchor="bottom" className="hover:!z-20">
+                <PhotoPin
+                  image={cover?.image_urls[0]}
+                  fallback={String(members.length)}
+                  count={members.length}
+                  label={`${members.length} làng nghề`}
+                  sub={provinces.length > 3 ? `${provinces.slice(0, 3).join(", ")}…` : provinces.join(", ")}
+                  selected={members.some((v) => v.posting_id === selectedId)}
+                  onClick={() =>
+                    mapRef.current?.easeTo({
+                      center: [lng, lat],
+                      zoom: Math.min(index.getClusterExpansionZoom(clusterId), MAX_CLUSTER_ZOOM + 1),
+                    })
+                  }
+                />
+              </Marker>
+            );
+          }
+          const v = byId.get((f.properties as PointProps).villageId);
+          if (!v) return null;
+          const label = villageLabel(v);
+          const selected = v.posting_id === selectedId;
+          return (
+            <Marker
+              key={v.posting_id}
+              longitude={lng}
+              latitude={lat}
+              anchor="bottom"
+              className="hover:!z-20"
+              style={{ zIndex: selected ? 10 : 1 }}
+            >
+              <PhotoPin
+                image={v.image_urls[0]}
+                fallback={(v.product || label).charAt(0).toUpperCase()}
+                count={1}
+                label={label}
+                sub={[v.product, v.province].filter(Boolean).join(" · ")}
+                selected={selected}
+                onClick={() => onSelect(v)}
+              />
+            </Marker>
+          );
+        })}
+      </VietnamMap>
     </div>
   );
 }

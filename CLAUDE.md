@@ -40,7 +40,7 @@ npx supabase gen types typescript --project-id vewtnkewyawmkpeymdot > src/integr
 - **UI:** shadcn-ui (Radix primitives) + Tailwind CSS
 - **State:** TanStack React Query (server state), React Hook Form + Zod (forms)
 - **Database:** Supabase (PostgreSQL with typed client, project ID `vewtnkewyawmkpeymdot`)
-- **Maps:** Leaflet + Mapbox GL
+- **Maps:** MapLibre (`@vis.gl/react-maplibre`) + OpenFreeMap tiles — always render through `src/components/map/VietnamMap.tsx` (hides foreign base-map labels on Hoàng Sa/Trường Sa, adds "(Việt Nam)" sovereignty labels, prefers `name:vi`)
 - **Charts:** Recharts
 - **PWA:** vite-plugin-pwa (scope `/broker/`, start URL `/broker/dashboard`)
 - **Toasts:** sonner + shadcn toast

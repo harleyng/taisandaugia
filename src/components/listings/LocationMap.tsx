@@ -1,17 +1,6 @@
-import React, { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-// Fix default marker icon issue in Leaflet
-// Leaflet dựng URL icon theo đường dẫn tương đối, sai khi bundle. Xoá field
-// nội bộ này để buộc dùng iconUrl khai báo bên dưới. `_getIconUrl` không có
-// trong kiểu công khai của Leaflet nên phải đi vòng qua Record.
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
+import React from "react";
+import { Marker } from "@vis.gl/react-maplibre";
+import { VietnamMap } from "@/components/map/VietnamMap";
 
 interface LocationMapProps {
   latitude: number;
@@ -19,59 +8,6 @@ interface LocationMapProps {
 }
 
 export const LocationMap = React.memo(({ latitude, longitude }: LocationMapProps) => {
-  const mapRef = useRef<L.Map | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!latitude || !longitude || !containerRef.current) return;
-
-    // Clean up existing map
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
-    }
-
-    // Small delay to ensure DOM is ready
-    const timeoutId = setTimeout(() => {
-      if (!containerRef.current) return;
-
-      try {
-        const map = L.map(containerRef.current, {
-          center: [latitude, longitude],
-          zoom: 15,
-          scrollWheelZoom: false,
-        });
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 19,
-        }).addTo(map);
-
-        L.marker([latitude, longitude]).addTo(map);
-
-        mapRef.current = map;
-
-        // Force map to invalidate size after a short delay
-        setTimeout(() => {
-          if (mapRef.current) {
-            mapRef.current.invalidateSize();
-          }
-        }, 100);
-      } catch (error) {
-        console.error("Error creating map:", error);
-      }
-    }, 50);
-
-    // Cleanup on unmount
-    return () => {
-      clearTimeout(timeoutId);
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, [latitude, longitude]);
-
   if (!latitude || !longitude) {
     return (
       <div className="w-full h-[300px] rounded-lg border bg-muted flex items-center justify-center">
@@ -82,7 +18,18 @@ export const LocationMap = React.memo(({ latitude, longitude }: LocationMapProps
 
   return (
     <div className="relative w-full h-[300px] rounded-lg border overflow-hidden isolate">
-      <div ref={containerRef} className="w-full h-full relative z-0" />
+      {/* key: đổi địa chỉ thì dựng lại khung nhìn quanh toạ độ mới */}
+      <VietnamMap key={`${latitude},${longitude}`} initialViewState={{ latitude, longitude, zoom: 15 }}>
+        <Marker latitude={latitude} longitude={longitude} anchor="bottom">
+          <svg width="28" height="38" viewBox="0 0 28 38" aria-hidden className="drop-shadow-md">
+            <path
+              d="M14 0C6.3 0 0 6.2 0 13.9 0 24.3 14 38 14 38s14-13.7 14-24.1C28 6.2 21.7 0 14 0z"
+              className="fill-primary"
+            />
+            <circle cx="14" cy="14" r="5" className="fill-white" />
+          </svg>
+        </Marker>
+      </VietnamMap>
     </div>
   );
 });

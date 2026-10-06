@@ -22,7 +22,7 @@ import { caString } from "@/types/listing";
 import type { LucideIcon } from "lucide-react";
 
 // ─── Tách khỏi entry chunk ────────────────────────────────────────────────────
-// LocationMap kéo theo leaflet (~107 refs). Bản đồ nằm dưới màn hình đầu và chỉ
+// LocationMap kéo theo maplibre-gl (nặng). Bản đồ nằm dưới màn hình đầu và chỉ
 // render khi tin đăng có toạ độ, nên không cần nằm trong bundle mà mọi khách
 // vãng lai phải tải.
 const LocationMap = lazy(() =>

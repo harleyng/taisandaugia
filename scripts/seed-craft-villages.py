@@ -1,11 +1,14 @@
-"""Dữ liệu demo cho bản đồ làng nghề /lang-nghe — 12 làng nghề đi đúng luồng thật.
+"""Dữ liệu demo cho bản đồ làng nghề /lang-nghe — 100 làng nghề đi đúng luồng thật.
+
+12 làng gốc (danh sách dưới đây) có VR tour; 88 làng bổ sung ở scripts/craft_villages_more.py
+KHÔNG có VR và phần lớn ảnh là minh hoạ dòng sản phẩm (ghi rõ trong mô tả hồ sơ).
 
 Mỗi làng:
   • 1 tài khoản demo.langnghe.<slug>@example.com (mật khẩu ghi vào scripts/craft-village-accounts.local)
   • KYC tổ chức org_type = 'craft_village' → admin duyệt → trigger tạo không gian (Trạm Điều Hành)
   • 1 hồ sơ số hoá (asset_postings) nhóm Thủ công mỹ nghệ, đã duyệt, ảnh sản phẩm thật từ
     Wikimedia Commons (giấy phép tự do, ghi công trong mô tả) tải lên bucket asset-media
-  • 1 đơn VR tour Silver Sea đi hết chuỗi RPC thật: yêu cầu → báo giá → thanh toán (mô phỏng)
+  • (chỉ 12 làng gốc) 1 đơn VR tour Silver Sea đi hết chuỗi RPC thật: yêu cầu → báo giá → thanh toán (mô phỏng)
     → hẹn chụp → giao link → gắn vào hồ sơ. Việc giao link ghi 1 dòng hoa hồng vào `orders`.
   • Bật "Công khai lên bản đồ làng nghề" qua owner_set_craft_map_publication
 
@@ -17,7 +20,7 @@ thì admin giao lại link mới (tour cũ tự chuyển superseded).
 Mọi dòng seed có id tiền tố c4af…. Ghi đi qua trigger/RPC thật bằng cách đổi
 `request.jwt.claims` sang từng người trong MỘT giao dịch.
 
-    python3 scripts/seed-craft-villages.py              # seed (dừng nếu đã seed)
+    python3 scripts/seed-craft-villages.py              # seed các làng CHƯA có (chạy lại an toàn)
     python3 scripts/seed-craft-villages.py --dry-run    # chạy hết SQL rồi ROLLBACK (không tải ảnh)
     python3 scripts/seed-craft-villages.py --teardown   # gỡ sạch: dữ liệu, ảnh, tài khoản
 
@@ -35,6 +38,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+
+from craft_villages_more import MORE_VILLAGES
 
 REPO = Path(__file__).resolve().parent.parent
 REF = "vewtnkewyawmkpeymdot"
@@ -208,13 +213,21 @@ VILLAGES = [
                  "Song tien giang, tan chau an giang - panoramio.jpg",
                  "Tan Chau, An Giang - panoramio - trungydang.jpg"]),
 ]
+for v in VILLAGES:
+    v["vr"] = True
+    v["illus"] = []
+for v in MORE_VILLAGES:
+    v["vr"] = False
+    v["photos"] = v.pop("at") + v["illus"]
+VILLAGES += MORE_VILLAGES
+assert len({v["slug"] for v in VILLAGES}) == len(VILLAGES), "slug làng nghề bị trùng"
 for i, v in enumerate(VILLAGES, start=1):
     v["n"] = i
     v["user"] = sid("00a0", i)
     v["kyc"] = sid("00b0", i)
     v["posting"] = sid("0005", i)
     v["email"] = f"demo.langnghe.{v['slug']}@example.com"
-    v["pano_src"] = None if v["slug"] in VR_OVERRIDE else (
+    v["pano_src"] = None if not v["vr"] or v["slug"] in VR_OVERRIDE else (
         PANO_MEKONG if v["slug"] == "tan-chau" else PANOS[(i - 1) % len(PANOS)])
 
 
@@ -285,6 +298,12 @@ def as_user(uid):
 AS_SYSTEM = "select set_config('request.jwt.claims', '', true);"
 
 
+def pending_villages():
+    """Làng chưa có hồ sơ KYC seed — chỉ những làng này được tải ảnh + chạy SQL."""
+    have = set(psql("select id from asset_owner_org_kyc where id::text like 'c4af00b0-%';", rows=True))
+    return [v for v in VILLAGES if v["kyc"] not in have]
+
+
 # ─── Bước 1: tài khoản ────────────────────────────────────────────────────────
 def ensure_accounts():
     have = dict(line.split("|") for line in psql(
@@ -332,8 +351,8 @@ def commons_meta(files):
     return out
 
 
-def load_meta():
-    for v in VILLAGES:
+def load_meta(villages):
+    for v in villages:
         meta = commons_meta(v["photos"])
         v["meta"] = [meta[f] for f in v["photos"]]
 
@@ -352,13 +371,14 @@ def fetch(url):
 
 
 def upload(path, data):
-    api("POST", f"/storage/v1/object/asset-media/{path}", raw=data, ctype="image/jpeg", extra={"x-upsert": "true"})
+    ctype = "image/png" if data[:8] == b"\x89PNG\r\n\x1a\n" else "image/jpeg"  # vài tệp Commons là PNG
+    api("POST", f"/storage/v1/object/asset-media/{path}", raw=data, ctype=ctype, extra={"x-upsert": "true"})
 
 
-def upload_photos():
+def upload_photos(villages):
     """Ảnh sản phẩm + ảnh 360° chép về asset-media: không hotlink Wikimedia (hay trả 429)."""
     n = 0
-    for v in VILLAGES:
+    for v in villages:
         for k, m in enumerate(v["meta"], start=1):
             upload(photo_path(v, k), fetch(m["url"]))
             n += 1
@@ -370,35 +390,39 @@ def upload_photos():
 
 def remove_photos():
     paths = [photo_path(v, k) for v in VILLAGES for k in range(1, len(v["photos"]) + 1)]
-    paths += [pano_path(v) for v in VILLAGES]
+    paths += [pano_path(v) for v in VILLAGES if v["vr"]]
     api("DELETE", "/storage/v1/object/asset-media", {"prefixes": paths})
     print(f"  ảnh: đã xoá {len(paths)}")
 
 
 # ─── Bước 3: SQL ──────────────────────────────────────────────────────────────
 def credits(v):
-    lines = [f"• {f.rsplit('.', 1)[0]} — {m['artist']}, {m['license']}" for f, m in zip(v["photos"], v["meta"])]
-    return "Nguồn ảnh (Wikimedia Commons):\n" + "\n".join(lines)
+    lines = [f"• {f.rsplit('.', 1)[0]} — {m['artist']}, {m['license']}" + (" · minh hoạ" if f in v["illus"] else "")
+             for f, m in zip(v["photos"], v["meta"])]
+    head = "Nguồn ảnh (Wikimedia Commons):"
+    if v["illus"]:
+        head += "\nẢnh ghi “minh hoạ” là sản phẩm cùng dòng nghề, không chụp tại làng."
+    return head + "\n" + "\n".join(lines)
 
 
 def delivered_vr(v):
     return VR_OVERRIDE.get(v["slug"]) or vr_url(public_url("asset-media", pano_path(v)), v["name"])
 
 
-def seed_sql(commit):
+def seed_sql(villages, commit):
     s = ["\\set ON_ERROR_STOP 1", "begin;", """
 create function pg_temp.ok(j jsonb) returns jsonb language plpgsql as $$
 begin
   if coalesce((j->>'ok')::boolean, false) is not true then raise exception 'RPC trả lỗi: %', j; end if;
   return j;
 end $$;""", f"""
-select case when exists (select 1 from asset_owner_org_kyc where id = {lit(VILLAGES[0]['kyc'])})
-  then pg_temp.ok('{{"ok":false,"reason":"da_seed_roi_chay_teardown_truoc"}}') end;"""]
+select case when exists (select 1 from asset_owner_org_kyc where id in ({', '.join(lit(v['kyc']) for v in villages)}))
+  then pg_temp.ok('{{"ok":false,"reason":"lang_vua_duoc_seed_o_phien_khac"}}') end;"""]
 
-    ids = ", ".join(lit(v["user"]) for v in VILLAGES)
+    ids = ", ".join(lit(v["user"]) for v in villages)
     s += [AS_SYSTEM, f"update profiles set activated = true, activated_at = now() where id in ({ids});"]
 
-    for v in VILLAGES:
+    for v in villages:
         n, u = v["n"], v["user"]
         imgs = [public_url("asset-media", photo_path(v, k)) for k in range(1, len(v["photos"]) + 1)]
         decl = {"name": v["rep"], "accepted_at": "2026-09-20T09:00:00+07:00", "version": "2026-09-06"}
@@ -419,21 +443,22 @@ values ({lit(v['posting'])}, {lit(u)}, :'ws', 'thu-cong-my-nghe', {lit(v['child'
   {lit(v['desc'] + chr(10) + chr(10) + credits(v))}, {lit(v['province'])}, {lit(v['district'])}, {lit(v['ward'])},
   {lit(v['name'])}, 'self', 'truc_tiep', 'flexible', false, false, false, true,
   {lit({'material': v['product'], 'origin': v['name']})}, array[{', '.join(lit(x) for x in imgs)}]::text[],
-  'active', now() - interval '9 days', 'approved', now() - interval '8 days', {lit(ADMIN)}, {lit(decl)});""",
-              # VR tour: đi hết chuỗi RPC thật của chủ + admin
-              as_user(u),
-              f"select (pg_temp.ok(owner_request_vr_tour({lit(v['posting'])}, {lit(VR_PACKAGE)}, {lit(SILVER_SEA)}, "
-              f"{lit(v['name'] + ', ' + v['province'])}, 'Sáng thứ Bảy', 'Chụp toàn cảnh làng và xưởng sản xuất.')))"
-              f"->>'order_id' as vr \\gset",
-              as_user(ADMIN),
-              f"select pg_temp.ok(admin_quote_vr_tour(:'vr', {VR_PRICE}, 'Gói cơ bản — khu xưởng dưới 300 m² (demo).', 7));",
-              as_user(u),
-              f"select pg_temp.ok(pay_vr_tour_order(:'vr', {lit(f'DEMO-LANGNGHE-{n:02d}')}, {VR_PRICE}));",
-              as_user(ADMIN),
-              "select pg_temp.ok(admin_schedule_vr_tour(:'vr', now() - interval '5 days', 'Đã chụp tại làng (demo).'));",
-              f"select pg_temp.ok(admin_deliver_vr_tour(:'vr', {lit(delivered_vr(v))}));",
-              "select pg_temp.ok(admin_attach_vr_tour(:'vr'));",
-              as_user(u),
+  'active', now() - interval '9 days', 'approved', now() - interval '8 days', {lit(ADMIN)}, {lit(decl)});"""]
+        if v["vr"]:
+            # VR tour: đi hết chuỗi RPC thật của chủ + admin
+            s += [as_user(u),
+                  f"select (pg_temp.ok(owner_request_vr_tour({lit(v['posting'])}, {lit(VR_PACKAGE)}, {lit(SILVER_SEA)}, "
+                  f"{lit(v['name'] + ', ' + v['province'])}, 'Sáng thứ Bảy', 'Chụp toàn cảnh làng và xưởng sản xuất.')))"
+                  f"->>'order_id' as vr \\gset",
+                  as_user(ADMIN),
+                  f"select pg_temp.ok(admin_quote_vr_tour(:'vr', {VR_PRICE}, 'Gói cơ bản — khu xưởng dưới 300 m² (demo).', 7));",
+                  as_user(u),
+                  f"select pg_temp.ok(pay_vr_tour_order(:'vr', {lit(f'DEMO-LANGNGHE-{n:02d}')}, {VR_PRICE}));",
+                  as_user(ADMIN),
+                  "select pg_temp.ok(admin_schedule_vr_tour(:'vr', now() - interval '5 days', 'Đã chụp tại làng (demo).'));",
+                  f"select pg_temp.ok(admin_deliver_vr_tour(:'vr', {lit(delivered_vr(v))}));",
+                  "select pg_temp.ok(admin_attach_vr_tour(:'vr'));"]
+        s += [as_user(u),
               f"select pg_temp.ok(owner_set_craft_map_publication({lit(v['posting'])}, true, {v['lat']}, {v['lng']}, "
               f"{lit(v['product'])}));"]
 
@@ -474,11 +499,16 @@ def main():
         return
     if arg not in ("", "--dry-run"):
         sys.exit(__doc__)
-    load_meta()
+    todo = pending_villages()
+    if not todo:
+        print(f"Đủ {len(VILLAGES)} làng — không còn gì để seed.")
+        return
+    print(f"  cần seed: {len(todo)}/{len(VILLAGES)} làng")
+    load_meta(todo)
     ensure_accounts()
     if arg != "--dry-run":
-        upload_photos()
-    print(psql(seed_sql(commit=arg != "--dry-run")))
+        upload_photos(todo)
+    print(psql(seed_sql(todo, commit=arg != "--dry-run")))
     print("Xong." if arg != "--dry-run" else "Dry-run: đã ROLLBACK.")
 
 

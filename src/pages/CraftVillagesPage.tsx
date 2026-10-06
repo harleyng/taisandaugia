@@ -39,7 +39,7 @@ export default function CraftVillagesPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
       <main className="flex-1">
-        <section className="border-b border-border bg-gradient-to-b from-primary/5 to-background">
+        <section className="bg-gradient-to-b from-primary/5 to-background">
           <div className="container px-4 py-10 text-center">
             <p className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
               <MapPinned className="h-4 w-4" /> Bản đồ làng nghề

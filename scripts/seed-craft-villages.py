@@ -23,6 +23,10 @@ Mọi dòng seed có id tiền tố c4af…. Ghi đi qua trigger/RPC thật bằ
     python3 scripts/seed-craft-villages.py              # seed các làng CHƯA có (chạy lại an toàn)
     python3 scripts/seed-craft-villages.py --dry-run    # chạy hết SQL rồi ROLLBACK (không tải ảnh)
     python3 scripts/seed-craft-villages.py --teardown   # gỡ sạch: dữ liệu, ảnh, tài khoản
+    python3 scripts/seed-craft-villages.py --refresh-photos [slug…]
+        # làng ĐÃ seed: tải lại ảnh + ghi image_urls/mô tả theo danh sách trong script
+        # (không slug = mọi làng có số ảnh lệch với script). Ghi dưới quyền admin
+        # duyệt nên hồ sơ giữ trạng thái đã duyệt.
 
 Đọc SUPABASE_SERVICE_ROLE_KEY + SUPABASE_DB_URI từ .env.local.
 """
@@ -114,7 +118,8 @@ def vr_url(pano, village):
 
 
 # Ảnh sản phẩm = tên tệp Wikimedia Commons; tác giả + giấy phép đọc từ Commons lúc chạy.
-# Ảnh đầu = ảnh tròn trên bản đồ. Người đại diện là tên HƯ CẤU (không dùng tên nghệ nhân thật).
+# `local` = ảnh sàn tự có (tệp trong repo, kèm chú thích) — xếp TRƯỚC ảnh Commons.
+# Ảnh đầu = ảnh bìa (thẻ ảnh trên bản đồ). Trang công khai chỉ lấy 6 ảnh đầu. Người đại diện là tên HƯ CẤU (không dùng tên nghệ nhân thật).
 VILLAGES = [
     dict(slug="bat-trang", name="Làng gốm Bát Tràng", province="Hà Nội", district="Gia Lâm", ward="Bát Tràng",
          lat=20.976, lng=105.912, child="gom-su", product="Gốm sứ", rep="Nguyễn Văn Hưng",
@@ -140,7 +145,12 @@ VILLAGES = [
               "Nón Chuông nổi tiếng thanh, nhẹ và bền.",
          photos=["Conical hat, Viet, Thanh Oai, Hanoi, 1999, palm leaves with bamboo frame - Vietnamese Women's Museum - Hanoi, Vietnam - DSC03996.JPG",
                  "Vietnamese conical hat nonla.jpg",
-                 "Hat-making display - Vietnam Museum of Ethnology - Hanoi, Vietnam - DSC02609.JPG"]),
+                 "Hat-making display - Vietnam Museum of Ethnology - Hanoi, Vietnam - DSC02609.JPG",
+                 "Conical hat.jpg",
+                 "Nón lá đồ chơi.jpg"],
+         illus=["Conical hat.jpg", "Nón lá đồ chơi.jpg"],
+         local=[("scripts/assets/craft-villages/lang-chuong-trien-lam.jpg",
+                 "Gian trưng bày nón Chuông tại triển lãm làng nghề Thanh Oai")]),
     dict(slug="quang-phu-cau", name="Làng hương Quảng Phú Cầu", province="Hà Nội", district="Ứng Hòa",
          ward="Quảng Phú Cầu", lat=20.7765, lng=105.7925, child="may-tre", product="Hương (nhang) thủ công",
          rep="Lê Văn Tuấn", title="Hương vòng, hương nén làng Quảng Phú Cầu",
@@ -215,13 +225,14 @@ VILLAGES = [
 ]
 for v in VILLAGES:
     v["vr"] = True
-    v["illus"] = []
+    v.setdefault("illus", [])
 for v in MORE_VILLAGES:
     v["vr"] = False
     v["photos"] = v.pop("at") + v["illus"]
 VILLAGES += MORE_VILLAGES
 assert len({v["slug"] for v in VILLAGES}) == len(VILLAGES), "slug làng nghề bị trùng"
 for i, v in enumerate(VILLAGES, start=1):
+    v.setdefault("local", [])
     v["n"] = i
     v["user"] = sid("00a0", i)
     v["kyc"] = sid("00b0", i)
@@ -229,6 +240,10 @@ for i, v in enumerate(VILLAGES, start=1):
     v["email"] = f"demo.langnghe.{v['slug']}@example.com"
     v["pano_src"] = None if not v["vr"] or v["slug"] in VR_OVERRIDE else (
         PANO_MEKONG if v["slug"] == "tan-chau" else PANOS[(i - 1) % len(PANOS)])
+
+
+def photo_count(v):
+    return len(v["local"]) + len(v["photos"])
 
 
 def photo_path(v, k):
@@ -379,7 +394,10 @@ def upload_photos(villages):
     """Ảnh sản phẩm + ảnh 360° chép về asset-media: không hotlink Wikimedia (hay trả 429)."""
     n = 0
     for v in villages:
-        for k, m in enumerate(v["meta"], start=1):
+        for k, (path, _) in enumerate(v["local"], start=1):
+            upload(photo_path(v, k), (REPO / path).read_bytes())
+            n += 1
+        for k, m in enumerate(v["meta"], start=len(v["local"]) + 1):
             upload(photo_path(v, k), fetch(m["url"]))
             n += 1
         if v["pano_src"]:
@@ -389,7 +407,7 @@ def upload_photos(villages):
 
 
 def remove_photos():
-    paths = [photo_path(v, k) for v in VILLAGES for k in range(1, len(v["photos"]) + 1)]
+    paths = [photo_path(v, k) for v in VILLAGES for k in range(1, photo_count(v) + 1)]
     paths += [pano_path(v) for v in VILLAGES if v["vr"]]
     api("DELETE", "/storage/v1/object/asset-media", {"prefixes": paths})
     print(f"  ảnh: đã xoá {len(paths)}")
@@ -402,7 +420,8 @@ def credits(v):
     head = "Nguồn ảnh (Wikimedia Commons):"
     if v["illus"]:
         head += "\nẢnh ghi “minh hoạ” là sản phẩm cùng dòng nghề, không chụp tại làng."
-    return head + "\n" + "\n".join(lines)
+    own = [f"• {caption} — ảnh do sàn cung cấp" for _, caption in v["local"]]
+    return "\n".join(own + [head] + lines)
 
 
 def delivered_vr(v):
@@ -424,7 +443,7 @@ select case when exists (select 1 from asset_owner_org_kyc where id in ({', '.jo
 
     for v in villages:
         n, u = v["n"], v["user"]
-        imgs = [public_url("asset-media", photo_path(v, k)) for k in range(1, len(v["photos"]) + 1)]
+        imgs = [public_url("asset-media", photo_path(v, k)) for k in range(1, photo_count(v) + 1)]
         decl = {"name": v["rep"], "accepted_at": "2026-09-20T09:00:00+07:00", "version": "2026-09-06"}
         s += [f"\n-- ── {n}. {v['name']} ──", AS_SYSTEM, f"""
 insert into asset_owner_org_kyc (id, created_by, status, kyc_scope, org_type, org_name, official_email, email_domain,
@@ -468,6 +487,33 @@ values ({lit(v['posting'])}, {lit(u)}, :'ws', 'thu-cong-my-nghe', {lit(v['child'
     return "\n".join(s)
 
 
+def refresh_targets(slugs):
+    """Làng đã seed cần làm mới ảnh: theo slug chỉ định, hoặc mọi làng có số ảnh lệch."""
+    seeded = {v["posting"]: v for v in VILLAGES}
+    live = dict(line.split("|") for line in psql(
+        "select id || '|' || coalesce(array_length(image_urls, 1), 0) from asset_postings "
+        f"where id in ({', '.join(lit(x) for x in seeded)});", rows=True))
+    if slugs:
+        unknown = set(slugs) - {v["slug"] for v in VILLAGES}
+        if unknown:
+            sys.exit(f"Không có làng: {', '.join(sorted(unknown))}")
+        return [v for v in VILLAGES if v["slug"] in slugs and v["posting"] in live]
+    return [v for v in VILLAGES if v["posting"] in live and int(live[v["posting"]]) != photo_count(v)]
+
+
+def refresh_sql(villages):
+    # Đường dẫn ảnh giữ nguyên nên CDN Storage vẫn trả bản cũ ⇒ gắn ?v= để buộc tải lại.
+    ver = int(time.time())
+    s = ["\\set ON_ERROR_STOP 1", "begin;", as_user(ADMIN)]
+    for v in villages:
+        imgs = [f"{public_url('asset-media', photo_path(v, k))}?v={ver}" for k in range(1, photo_count(v) + 1)]
+        s.append(f"update asset_postings set image_urls = array[{', '.join(lit(x) for x in imgs)}]::text[], "
+                 f"description = {lit(v['desc'] + chr(10) + chr(10) + credits(v))} where id = {lit(v['posting'])};")
+    s += [AS_SYSTEM, "select count(*) filter (where review_status = 'approved') as van_duyet, count(*) as tong "
+          f"from asset_postings where id in ({', '.join(lit(v['posting']) for v in villages)});", "commit;"]
+    return "\n".join(s)
+
+
 def teardown_sql():
     posts = ", ".join(lit(v["posting"]) for v in VILLAGES)
     kycs = ", ".join(lit(v["kyc"]) for v in VILLAGES)
@@ -496,6 +542,16 @@ def main():
                     raise
         ACCOUNTS_FILE.unlink(missing_ok=True)  # mật khẩu cũ vô hiệu khi tài khoản bị xoá
         print("  tài khoản: đã xoá")
+        return
+    if arg == "--refresh-photos":
+        todo = refresh_targets(sys.argv[2:])
+        if not todo:
+            print("Không có làng nào cần làm mới ảnh.")
+            return
+        print(f"  làm mới ảnh: {', '.join(v['slug'] for v in todo)}")
+        load_meta(todo)
+        upload_photos(todo)
+        print(psql(refresh_sql(todo)))
         return
     if arg not in ("", "--dry-run"):
         sys.exit(__doc__)

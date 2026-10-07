@@ -1,6 +1,6 @@
 // Ai được vào phòng đấu giá, và nếu không thì vì sao.
 //
-// Tách khỏi JSX để unit test được: chuỗi này có 9 nhánh xếp theo thứ tự, mà một
+// Tách khỏi JSX để unit test được: chuỗi này có 10 nhánh xếp theo thứ tự, mà một
 // nhánh xếp sai chỗ là hiện sai câu (ví dụ phiên đã HUỶ mà báo "không đấu giá
 // trực tuyến"). Trang chỉ còn việc switch trên kết quả.
 //
@@ -13,7 +13,7 @@
 // "tổ chức chưa ghi nhận tiền đặt trước của bạn" — sai sự thật, và đuổi đúng lúc
 // họ cần đọc kết quả. Nhánh `view_only` giữ họ ở lại, chỉ khoá ô trả giá.
 
-import type { BidderBlockReason } from "@/hooks/useMyBidderStatus";
+import type { BidderBlockReason } from "@/lib/bidding/bidderReason";
 import type { SessionPublishStatus } from "@/lib/auctionSessions/phase";
 
 export type RoomGate =
@@ -89,6 +89,12 @@ export function roomGateOf(input: RoomGateInput): RoomGate {
   }
 
   if (bidderLoading) return { kind: "loading" };
+
+  // Vắng mặt (chốt danh sách điểm danh, 20261008100300) xét TRƯỚC nhánh tịch thu:
+  // người vắng cũng có deposit 'forfeited' nhưng chưa từng có số báo danh, nên
+  // nhánh dưới sẽ báo "chưa được cấp số báo danh" — sai lý do. Miễn trừ
+  // (pending_refund) cũng vẫn là vắng: phòng chỉ nhận người đã điểm danh.
+  if (reason === "absent") return { kind: "blocked", reason: "absent" };
 
   // Xét TRƯỚC `eligible`: người đã rút giá có deposit_status='forfeited' nên
   // useMyBidderStatus trả 'no_deposit' — câu đó SAI sự thật với họ (tổ chức đã

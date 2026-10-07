@@ -9,7 +9,18 @@
 
 // "operate" / "finalize" chỉ dùng cho module điều hành đấu giá trực tuyến — ma
 // trận vẽ action theo từng module nên các module khác không bị thêm cột.
-export type OrgAction = "view" | "create" | "update" | "delete" | "export" | "operate" | "finalize";
+// "review" / "checkin" chỉ dùng cho ho-so-tham-gia (20261008100200): duyệt hồ sơ
+// người mua và điểm danh tại cửa — tách khỏi "update" để giao cho nhân viên cửa.
+export type OrgAction =
+  | "view"
+  | "create"
+  | "update"
+  | "delete"
+  | "export"
+  | "operate"
+  | "finalize"
+  | "review"
+  | "checkin";
 
 export type OrgCategory =
   | "tong-quan"
@@ -30,7 +41,17 @@ export interface OrgModuleDef {
 // module -> danh sách action đang bật (dùng cho ma trận + quyền hiệu lực)
 export type OrgPermissionMatrix = Record<string, OrgAction[]>;
 
-export const ORG_ACTIONS: OrgAction[] = ["view", "create", "update", "delete", "export", "operate", "finalize"];
+export const ORG_ACTIONS: OrgAction[] = [
+  "view",
+  "create",
+  "update",
+  "delete",
+  "export",
+  "operate",
+  "finalize",
+  "review",
+  "checkin",
+];
 
 export const ORG_ACTION_LABELS: Record<OrgAction, string> = {
   view: "Xem",
@@ -40,6 +61,8 @@ export const ORG_ACTION_LABELS: Record<OrgAction, string> = {
   export: "Xuất",
   operate: "Điều hành",
   finalize: "Chốt kết quả",
+  review: "Duyệt",
+  checkin: "Điểm danh",
 };
 
 export const ORG_CATEGORY_LABELS: Record<OrgCategory, string> = {
@@ -102,7 +125,12 @@ export const ORG_MODULE_DEFINITIONS: OrgModuleDef[] = [
   // Hồ sơ tham gia người mua đã thanh toán (auction_bidding_contracts) — CHỨA CCCD,
   // nên tách khỏi phien-dau-gia. "update" = xác nhận tiền đặt trước + cấp số báo
   // danh. Không có create/delete: hồ sơ do người mua tạo và không bao giờ bị xoá.
-  { module: "ho-so-tham-gia", label: "Hồ sơ tham gia đấu giá", category: "kinh-doanh", actions: ["view", "update"] },
+  {
+    module: "ho-so-tham-gia",
+    label: "Hồ sơ tham gia đấu giá",
+    category: "kinh-doanh",
+    actions: ["view", "update", "review", "checkin"],
+  },
   // Điều hành phiên đấu giá trực tuyến (auction_lot_states / auction_bids).
   // "operate" = mở / tạm dừng / tiếp tục / rút tài sản khỏi phiên đang diễn ra.
   // "finalize" = chốt kết quả phiên, phát hành biên bản, xác nhận người trúng thanh

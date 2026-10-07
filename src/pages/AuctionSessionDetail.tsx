@@ -13,7 +13,10 @@ import { SessionTimeline } from "@/components/auction-sessions/SessionTimeline";
 import { SessionQaLinkCard } from "@/components/case-qa/SessionQaLinkCard";
 import { SessionBiddingEntryCard } from "@/components/auction-sessions/SessionBiddingEntryCard";
 import { SessionContractCard } from "@/components/auction-sessions/SessionContractCard";
+import { CheckinReminderBanner } from "@/components/bidder-checkin/CheckinReminderBanner";
+import { SelfCheckInCard } from "@/components/bidder-checkin/SelfCheckInCard";
 import { usePublicAuctionSession } from "@/hooks/usePublicAuctionSessions";
+import { useMySessionContract } from "@/hooks/useBiddingContracts";
 import { useSessionLot3dModels } from "@/hooks/useAsset3dScans";
 import { useSessionLotVrTours } from "@/hooks/useVrTourOrders";
 import { useSessionLotAuthentications } from "@/hooks/useAuthenticationOrders";
@@ -29,6 +32,7 @@ export default function AuctionSessionDetail() {
   // VR tour đã gắn lô sau khi admin duyệt (BR-VR-02) — nhãn "VR" + tab VR.
   const { data: lotVrTours } = useSessionLotVrTours(session ? id : null);
   const { data: lotAuthentications } = useSessionLotAuthentications(session ? id : null);
+  const { data: myContract } = useMySessionContract(session ? id : undefined);
 
   const lots = session?.auction_session_items ?? [];
   const priced = lots.filter((l) => l.starting_price != null);
@@ -86,6 +90,12 @@ export default function AuctionSessionDetail() {
               </InfoBox>
             )}
 
+            {myContract && (
+              <div className="mb-6">
+                <CheckinReminderBanner contract={myContract} session={session} />
+              </div>
+            )}
+
             <div className="grid gap-8 lg:grid-cols-3">
               <div className="space-y-6 lg:col-span-2">
                 <Card className="rounded-2xl p-6">
@@ -132,6 +142,7 @@ export default function AuctionSessionDetail() {
               <aside className="order-first space-y-4 lg:sticky lg:top-4 lg:order-none lg:self-start">
                 <SessionTimeline session={session} />
                 <SessionContractCard session={session} />
+                <SelfCheckInCard session={session} />
                 <SessionBiddingEntryCard session={session} />
                 {session.status === "published" && <SessionQaLinkCard sessionId={session.id} />}
                 {org && (

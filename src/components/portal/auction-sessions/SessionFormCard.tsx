@@ -12,34 +12,20 @@ import { vietnamProvinces } from "@/constants/vietnam-locations";
 import { AUCTION_FORMAT_LABELS } from "@/types/asset-posting";
 import { useSaveAuctionSession } from "@/hooks/useAuctionSessions";
 import { useDossierSaleReady } from "@/hooks/useOrgBiddingContracts";
-import { toLocalInput } from "@/lib/auctionSessions/datetime";
 import {
   defaultSessionForm,
   formToSessionInput,
+  LEGACY_FORMAT_MESSAGE,
+  SESSION_FORMATS,
   sessionFormSchema,
   sessionToForm,
   type SessionFormValues,
 } from "@/lib/auctionSessions/sessionForm";
 import type { AuctionSession } from "@/types/auction-session";
+import { SessionScheduleFields } from "./SessionScheduleFields";
 
 const PROVINCES = vietnamProvinces.map((p) => p.name);
 const NO_PROVINCE = "__none__";
-const TWO_HOURS = 2 * 60 * 60 * 1000;
-
-type DateField =
-  | "registration_start_at"
-  | "registration_end_at"
-  | "viewing_start_at"
-  | "viewing_end_at"
-  | "starts_at"
-  | "ends_at";
-
-const DATE_GROUPS: { label: string; from: DateField; to: DateField; required?: boolean }[] = [
-  { label: "Bán & nhận hồ sơ", from: "registration_start_at", to: "registration_end_at" },
-  { label: "Xem tài sản", from: "viewing_start_at", to: "viewing_end_at" },
-  { label: "Thời gian đấu giá", from: "starts_at", to: "ends_at", required: true },
-];
-
 interface Props {
   session: AuctionSession | null;
   readOnly: boolean;
@@ -71,19 +57,6 @@ export function SessionFormCard({ session, readOnly, onCreated, onSaved, onCance
       { id: session?.id, input: formToSessionInput(values) },
       { onSuccess: ({ id, created }) => (created ? onCreated?.(id) : onSaved?.()) },
     );
-  };
-
-  // Dời giờ bắt đầu qua giờ kết thúc thì tự đẩy giờ kết thúc theo (+2 giờ).
-  const onStartsChange = (value: string) => {
-    form.setValue("starts_at", value, { shouldDirty: true, shouldValidate: true });
-    const starts = Date.parse(value);
-    const ends = Date.parse(form.getValues("ends_at"));
-    if (!Number.isNaN(starts) && (Number.isNaN(ends) || ends <= starts)) {
-      form.setValue("ends_at", toLocalInput(new Date(starts + TWO_HOURS).toISOString()), {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-    }
   };
 
   return (
@@ -140,13 +113,22 @@ export function SessionFormCard({ session, readOnly, onCreated, onSaved, onCance
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(AUCTION_FORMAT_LABELS).map(([value, label]) => (
+                        {SESSION_FORMATS.map((value) => (
                           <SelectItem key={value} value={value}>
-                            {label}
+                            {AUCTION_FORMAT_LABELS[value]}
                           </SelectItem>
                         ))}
+                        {/* Phiên cũ: vẫn hiện nhãn, không chọn lại được. */}
+                        {field.value === "ca_hai" && (
+                          <SelectItem value="ca_hai" disabled>
+                            {AUCTION_FORMAT_LABELS.ca_hai}
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
+                    {field.value === "ca_hai" && !readOnly && !form.formState.errors.auction_format && (
+                      <FormDescription>{LEGACY_FORMAT_MESSAGE}.</FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -242,38 +224,7 @@ export function SessionFormCard({ session, readOnly, onCreated, onSaved, onCance
               />
             </div>
 
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Lịch phiên</h3>
-              {DATE_GROUPS.map((group) => (
-                <div key={group.label} className="grid gap-3 md:grid-cols-[10rem_1fr_1fr] md:items-start">
-                  <p className="text-sm font-medium text-foreground md:pt-8">
-                    {group.label}
-                    {group.required && <span className="text-destructive"> *</span>}
-                  </p>
-                  {([group.from, group.to] as const).map((name, i) => (
-                    <FormField
-                      key={name}
-                      control={form.control}
-                      name={name}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs text-muted-foreground">{i === 0 ? "Bắt đầu" : "Kết thúc"}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="datetime-local"
-                              {...field}
-                              value={field.value ?? ""}
-                              onChange={name === "starts_at" ? (e) => onStartsChange(e.target.value) : field.onChange}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
+            <SessionScheduleFields form={form} checkinLocked={!!session?.roster_closed_at} />
           </fieldset>
 
           {!readOnly && (

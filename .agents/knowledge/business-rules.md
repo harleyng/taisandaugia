@@ -840,19 +840,26 @@ Người mua mua hồ sơ của một **PHIÊN** đã công bố trên `/session
 - **Giữ chỗ 15 phút** (`pending_payment` + `hold_expires_at`). Trần `max_registrants` = đã trả + giữ chỗ còn hạn; không hạ được trần dưới số đã trả (trigger `auction_sessions_cap_guard`).
 - **Giá là bản chụp** (`fee_amount`) lúc giữ chỗ; đổi giá phiên không đổi hồ sơ đã có.
 - **Thanh toán idempotent ở server** qua `payment_claims`; F5 trả `already_paid`. Mỗi lần trả = một đơn `commission`; hợp đồng hết hiệu lực giữa lúc giữ chỗ và trả ⇒ đơn `fixed 0` kèm ghi chú "cần đối soát" (không chặn người đã trả).
-- **Riêng tư**: bảng không có policy ghi; người mua đọc dòng của mình, tổ chức (`ho-so-tham-gia` view) chỉ đọc dòng `paid`, admin chỉ đọc. Mọi thay đổi qua RPC tự kiểm quyền.
+- **Riêng tư**: bảng không có policy ghi; người mua đọc dòng của mình, tổ chức (`ho-so-tham-gia` view **hoặc** checkin) chỉ đọc dòng `paid`/`refunded`, admin chỉ đọc. Mọi thay đổi qua RPC tự kiểm quyền. Ảnh giấy tờ ở bucket private `buyer-kyc/{user_id}/…`; tổ chức chỉ đọc ảnh của hồ sơ `paid`.
 - **Tiền đặt trước**: `pending → received → refunded | forfeited` (forfeited bắt buộc ghi chú); lùi một bước được để sửa nhầm, lùi về `pending` **xoá số báo danh**. Phiên đã huỷ chỉ cho `received → refunded`. Sau chốt phiên trực tuyến thêm `applied` / `pending_refund` (xem mục dưới); hồ sơ đã trả giá hoặc phiên đã chốt thì `org_set_contract_deposit` bị trigger chặn.
-- **Số báo danh** duy nhất trong phiên, chỉ cấp khi `deposit_status='received'` và phiên chưa huỷ; tự cấp = max + 1.
-- **VNeID**: `user_verified_identities` (1 dòng/người, huỷ liên kết = xoá). Server gắn `identity_source='vneid'` khi họ tên + CCCD khớp và lấy ngày sinh/giới tính từ bản xác thực.
+- **Số báo danh CHỈ cấp lúc điểm danh** (từ 2026-10-08): số ngẫu nhiên chưa dùng trong `1..greatest(99, 3 × hồ sơ đủ điều kiện)`, dưới advisory lock của phiên; điểm danh lại không đổi số. `org_assign_bidder_no` chỉ còn để ĐỔI số của hồ sơ đã điểm danh (không còn nút "Cấp SBD").
+- **Danh tính đã lưu**: `user_verified_identities` (1 dòng/người), `source` = `vneid` | `id_photo` (ảnh 2 mặt CCCD, đọc QR → OCR mô phỏng → gõ tay; ô đã sửa ghi `edited_fields`). Hồ sơ là BẢN CHỤP: chép đường dẫn ảnh vào hồ sơ, không trỏ ngược. Server gắn `identity_source='vneid'` khi họ tên + CCCD khớp bản VNeID. Người mua là cá nhân / tổ chức (MST + ĐKKD + người đại diện) và có thể cử người được uỷ quyền (giấy uỷ quyền + KYC cả hai).
 - **MÔ PHỎNG — chưa dùng cho tiền thật**: `pay_bidding_contract` và `save_vneid_identity` tin client. Trước khi có tiền thật phải thay bằng IPN VNPay / OAuth VNeID ở Edge Function (service_role) rồi thu hồi 2 hàm này.
 - Chưa có: sổ khoản sàn phải trả tổ chức (`gross − amount`), hoàn tiền hồ sơ khi phiên huỷ.
+
+### Duyệt hồ sơ + điểm danh (mig `20261008100000`–`100300`, kế hoạch `docs/bidder-ekyc-checkin-plan.md`)
+- **`review_status` TÁCH khỏi `status`:** `pending → needs_info → pending (nộp lại) → approved | rejected`. Bắt buộc với MỌI hồ sơ. Từ chối cần lý do ⇒ `status='refunded'` (hoàn phí hồ sơ, mô phỏng `MOCK-RF-…`), đơn `orders` ⇒ `cancelled`, cọc `received` ⇒ `pending_refund`; người bị từ chối được mua lại (`uq_abc_session_user` bỏ qua `cancelled`/`refunded`). Lịch sử ở `auction_contract_review_events` (chỉ ghi thêm). Đã điểm danh hoặc phiên đã chốt danh sách ⇒ trigger khoá đổi kết quả duyệt. Quyền mới: `ho-so-tham-gia:review`, `ho-so-tham-gia:checkin`.
+- **Đủ điều kiện điểm danh** = `paid` + `approved` + cọc `received` + phiên `published`, trong cửa sổ `[starts_at − checkin_lead_minutes, starts_at + checkin_grace_minutes]` (mặc định 60 / 0; CHECK 15–1440 / 0–60).
+- **Kênh suy từ hình thức:** `truc_tiep` ⇒ nhân viên quét QR phiếu tại cửa (`org_check_in`); `truc_tuyen` ⇒ người mua tự điểm danh + OTP 6 số (5 phút, tối đa 5 lần; mô phỏng trả `demo_code`). **`ca_hai` không điểm danh được** ⇒ đã bỏ khỏi form phiên (schema vẫn nhận để mở phiên cũ nhưng không cho lưu; DB CHECK giữ vì dữ liệu cũ). `ca_hai` ở phía chủ tài sản (wizard, báo giá, tư vấn) vẫn giữ — nghĩa là "hình thức nào cũng được".
+- **Trả giá đòi `checked_in_at`** (`place_bid`); phòng đấu giá chặn `not_checked_in` / `absent`.
+- **Chốt danh sách:** cron `close_due_rosters` (mỗi phút) chốt phiên `published` khi qua `starts_at + grace`; hồ sơ đủ điều kiện mà chưa điểm danh ⇒ VẮNG + cọc `forfeited` (trigger ghi sổ). Đấu giá viên (`dieu-hanh-dau-gia:operate`) chốt sớm được từ `starts_at`. Miễn trừ vắng (`ho-so-tham-gia:update`) ⇒ `pending_refund`. Có mặt < 2 ⇒ cảnh báo, không tự huỷ.
 
 ## Đấu giá trực tuyến (trả giá lên) — phiên `truc_tuyen` / `ca_hai`
 
 Engine ở SQL, migration `20260913000001` (kế hoạch + các bước UI còn lại: `docs/online-auction-plan.md`). v1 là thí điểm, chưa phải trang đấu giá trực tuyến được phê duyệt.
 
 **Luật bất biến:**
-- **Chỉ trả giá lên** (`bidding_method='ascending'`). Đủ điều kiện trả giá = hồ sơ `paid` + có số báo danh + `deposit_status='received'`.
+- **Chỉ trả giá lên** (`bidding_method='ascending'`). Đủ điều kiện trả giá = hồ sơ `paid` + có số báo danh + **đã điểm danh** (`checked_in_at`) + `deposit_status='received'`.
 - **Giá hợp lệ**: lượt đầu ≥ giá khởi điểm; sau đó ≥ giá hiện tại + 1 bước; phải nằm trên lưới `giá khởi điểm + k × bước giá`; nhảy tối đa `max_bid_steps` bước (mặc định 10). Người đang dẫn đầu không tự trả giá đè (`already_leading`).
 - **Thời gian = server.** Lô đóng khi `ends_at` qua; lượt hợp lệ khi còn < `extension_seconds` (mặc định 300) ⇒ `ends_at = now + extension_seconds`. Tạm dừng: không nhận giá, tiếp tục cộng lại thời gian dừng. Mốc kết thúc ban đầu = giờ kết thúc phiên.
 - **Rút lại giá đang dẫn đầu chỉ ảnh hưởng LÔ đó** (người dùng chọn 2026-09-12): lô quay về lượt hợp lệ trước; tiền đặt trước (tính theo PHIÊN) bị tịch thu ngay ⇒ không trả giá thêm ở đâu nữa, nhưng vẫn giữ dẫn đầu lô khác và vẫn trúng.

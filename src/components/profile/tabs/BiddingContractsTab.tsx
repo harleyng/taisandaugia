@@ -3,8 +3,11 @@ import { FileSignature, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DepositStatusBadge } from "@/components/bidding-contracts/DepositStatusBadge";
+import { ContractAttendanceSection } from "@/components/bidding-contracts/ContractAttendanceSection";
+import { ContractReviewNotice } from "@/components/bidding-contracts/ContractReviewNotice";
+import { ReviewStatusBadge } from "@/components/bidding-contracts/ReviewStatusBadge";
 import { WonLotsNotice } from "@/components/bidding-contracts/WonLotsNotice";
+import { CheckinReminderBanner } from "@/components/bidder-checkin/CheckinReminderBanner";
 import { VneidVerifiedBadge } from "@/components/vneid/VneidButton";
 import {
   useCancelBiddingContract,
@@ -14,8 +17,8 @@ import {
 } from "@/hooks/useBiddingContracts";
 import { formatVnd } from "@/lib/advertising/slug";
 import { formatDateTime } from "@/lib/auctionSessions/datetime";
-import { identityDefaults, identityToRpcArgs } from "@/lib/biddingContracts/identityForm";
-import { contractCheckoutPath, formatBidderNo } from "@/lib/biddingContracts/paths";
+import { contractToRegistrationPayload } from "@/lib/biddingContracts/registrationPayload";
+import { contractCheckoutPath } from "@/lib/biddingContracts/paths";
 import { CONTRACT_STATUS_LABELS, type ContractWithSession } from "@/types/bidding-contract";
 
 const ONLINE_FORMATS = new Set(["truc_tuyen", "ca_hai"]);
@@ -39,7 +42,7 @@ export const BiddingContractsTab = () => {
   }
 
   const continuePayment = (c: ContractWithSession) =>
-    start.mutate(identityToRpcArgs(c.session_id, { ...identityDefaults({ last: c }), consent: true }), {
+    start.mutate({ sessionId: c.session_id, payload: contractToRegistrationPayload(c) }, {
       onSuccess: (r) => navigate(contractCheckoutPath(r.contract_id, c.session_id)),
     });
 
@@ -48,9 +51,16 @@ export const BiddingContractsTab = () => {
       <Card className="p-6">
         <h2 className="text-lg font-bold text-foreground">Hồ sơ đấu giá</h2>
         <p className="text-sm text-muted-foreground">
-          Hồ sơ tham gia các phiên đấu giá bạn đã mua. Số báo danh được cấp sau khi tổ chức xác nhận tiền đặt trước.
+          Hồ sơ tham gia các phiên đấu giá bạn đã mua. Số báo danh được cấp khi bạn điểm danh trước giờ đấu giá.
         </p>
       </Card>
+
+      {contracts.map(
+        (c) =>
+          c.auction_sessions && (
+            <CheckinReminderBanner key={c.id} contract={c} session={c.auction_sessions} showSession />
+          ),
+      )}
 
       {isLoading ? (
         <Card className="flex items-center justify-center p-10">
@@ -74,6 +84,7 @@ export const BiddingContractsTab = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-sm font-semibold text-foreground">{c.code}</span>
                     <Badge variant={c.status === "paid" ? "default" : "outline"}>{CONTRACT_STATUS_LABELS[c.status]}</Badge>
+                    {c.status === "paid" && <ReviewStatusBadge status={c.review_status} />}
                     {s?.status === "cancelled" && <Badge variant="destructive">Phiên đã huỷ</Badge>}
                     {c.identity_source === "vneid" && <VneidVerifiedBadge />}
                   </div>
@@ -94,20 +105,8 @@ export const BiddingContractsTab = () => {
               {c.status === "paid" ? (
                 <>
                   <WonLotsNotice lots={wonByContract.get(c.id) ?? []} />
-                  <div className="grid gap-2 rounded-xl bg-muted p-3 text-sm sm:grid-cols-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Số báo danh</p>
-                      <p className="font-semibold text-foreground">{formatBidderNo(c.bidder_no) ?? "Chưa cấp"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Tiền đặt trước</p>
-                      <DepositStatusBadge status={c.deposit_status} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Thanh toán lúc</p>
-                      <p className="text-foreground">{formatDateTime(c.paid_at)}</p>
-                    </div>
-                  </div>
+                  <ContractReviewNotice contract={c} sessionPublished={s?.status === "published"} />
+                  <ContractAttendanceSection contract={c} />
                   {s && ONLINE_FORMATS.has(s.auction_format) && (
                     <Button
                       size="sm"
@@ -118,6 +117,8 @@ export const BiddingContractsTab = () => {
                     </Button>
                   )}
                 </>
+              ) : c.status === "refunded" ? (
+                <ContractReviewNotice contract={c} sessionPublished={s?.status === "published"} showRebuy />
               ) : (
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={() => continuePayment(c)} disabled={busy}>

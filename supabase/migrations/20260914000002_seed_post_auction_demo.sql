@@ -30,6 +30,7 @@
 --   ALTER TABLE public.auction_lot_events           DISABLE TRIGGER auction_lot_events_append_only;
 --   ALTER TABLE public.auction_deposit_events       DISABLE TRIGGER auction_deposit_events_append_only;
 --   ALTER TABLE public.auction_session_minutes      DISABLE TRIGGER auction_session_minutes_append_only;
+--   ALTER TABLE public.auction_contract_review_events DISABLE TRIGGER auction_contract_review_events_append_only;
 --
 --   DELETE FROM public.auction_sale_contract_events e USING public.auction_sale_contracts c
 --     WHERE e.contract_id = c.id AND c.session_id = 'f10d000e-0000-4000-8000-000000000001';
@@ -43,9 +44,12 @@
 --   DELETE FROM public.auction_bids              WHERE session_id = 'f10d000e-0000-4000-8000-000000000001';
 --   DELETE FROM public.auction_lot_events        WHERE session_id = 'f10d000e-0000-4000-8000-000000000001';
 --   DELETE FROM public.auction_deposit_events    WHERE session_id = 'f10d000e-0000-4000-8000-000000000001';
+--   DELETE FROM public.auction_contract_review_events e USING public.auction_bidding_contracts c
+--     WHERE e.contract_id = c.id AND c.session_id = 'f10d000e-0000-4000-8000-000000000001';
 --   DELETE FROM public.auction_bidding_contracts WHERE session_id = 'f10d000e-0000-4000-8000-000000000001';
 --   DELETE FROM public.auction_sessions          WHERE id         = 'f10d000e-0000-4000-8000-000000000001';
 --
+--   ALTER TABLE public.auction_contract_review_events ENABLE TRIGGER auction_contract_review_events_append_only;
 --   ALTER TABLE public.auction_session_minutes      ENABLE TRIGGER auction_session_minutes_append_only;
 --   ALTER TABLE public.auction_deposit_events       ENABLE TRIGGER auction_deposit_events_append_only;
 --   ALTER TABLE public.auction_lot_events           ENABLE TRIGGER auction_lot_events_append_only;
@@ -56,6 +60,9 @@
 --
 -- Tệp trong storage `auction-sale-contracts/c9d00002-…/` phải xoá qua Storage API.
 -- Dựng lại = gỡ như trên rồi `psql -f` lại file này.
+-- Từ 20261008100200/100300 (duyệt hồ sơ + điểm danh): chạy lại file này phải kèm
+-- scripts/demo-bidding-backfill.sql TRONG CÙNG GIAO DỊCH (psql -1 -f <file này> -f <backfill>),
+-- nếu không hồ sơ ở "chờ duyệt", chưa điểm danh ⇒ cron chốt danh sách đánh vắng + tịch thu cọc.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 DO $seed$

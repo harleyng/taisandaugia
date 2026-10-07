@@ -25,7 +25,7 @@ export function usePublicAuctionSessions(includeEnded: boolean) {
       let query = supabase
         .from("auction_sessions")
         .select(
-          "id, code, title, description, auction_format, venue, province, registration_start_at, registration_end_at, viewing_start_at, viewing_end_at, starts_at, ends_at, max_registrants, dossier_fee, status, bidding_method, extension_seconds, max_bid_steps, finalized_at, published_at, cancelled_reason, auction_org_id, auction_organizations(id, name, logo_url), auction_session_items(id, starting_price, image_url, category_slug)",
+          "id, code, title, description, auction_format, venue, province, registration_start_at, registration_end_at, viewing_start_at, viewing_end_at, starts_at, ends_at, max_registrants, dossier_fee, status, bidding_method, extension_seconds, max_bid_steps, finalized_at, checkin_lead_minutes, checkin_grace_minutes, roster_closed_at, published_at, cancelled_reason, auction_org_id, auction_organizations(id, name, logo_url), auction_session_items(id, starting_price, image_url, category_slug)",
         )
         .eq("status", "published");
       if (!includeEnded) query = query.gte("ends_at", new Date().toISOString());
@@ -44,7 +44,7 @@ export function usePublicAuctionSession(id?: string) {
       const { data, error } = await supabase
         .from("auction_sessions")
         .select(
-          "id, code, title, description, auction_format, venue, province, registration_start_at, registration_end_at, viewing_start_at, viewing_end_at, starts_at, ends_at, max_registrants, dossier_fee, status, bidding_method, extension_seconds, max_bid_steps, finalized_at, published_at, cancelled_reason, auction_org_id, auction_organizations(id, name, logo_url), auction_session_items(*)",
+          "id, code, title, description, auction_format, venue, province, registration_start_at, registration_end_at, viewing_start_at, viewing_end_at, starts_at, ends_at, max_registrants, dossier_fee, status, bidding_method, extension_seconds, max_bid_steps, finalized_at, checkin_lead_minutes, checkin_grace_minutes, roster_closed_at, published_at, cancelled_reason, auction_org_id, auction_organizations(id, name, logo_url), auction_session_items(*)",
         )
         .eq("id", id!)
         .in("status", ["published", "cancelled"])
@@ -70,7 +70,7 @@ export function usePublicOrgSessions(auctionOrgId?: string) {
       const { data, error } = await supabase
         .from("auction_sessions")
         .select(
-          "id, code, title, description, auction_format, venue, province, registration_start_at, registration_end_at, viewing_start_at, viewing_end_at, starts_at, ends_at, max_registrants, dossier_fee, status, bidding_method, extension_seconds, max_bid_steps, finalized_at, published_at, cancelled_reason, auction_org_id, auction_organizations(id, name, logo_url), auction_session_items(id, starting_price, image_url, category_slug)",
+          "id, code, title, description, auction_format, venue, province, registration_start_at, registration_end_at, viewing_start_at, viewing_end_at, starts_at, ends_at, max_registrants, dossier_fee, status, bidding_method, extension_seconds, max_bid_steps, finalized_at, checkin_lead_minutes, checkin_grace_minutes, roster_closed_at, published_at, cancelled_reason, auction_org_id, auction_organizations(id, name, logo_url), auction_session_items(id, starting_price, image_url, category_slug)",
         )
         .eq("auction_org_id", auctionOrgId!)
         .eq("status", "published")

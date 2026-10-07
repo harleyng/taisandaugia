@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { defaultSessionForm, formToSessionInput, sessionFormSchema, sessionToForm } from "./sessionForm";
+import {
+  defaultSessionForm,
+  formToSessionInput,
+  SESSION_FORMATS,
+  sessionFormSchema,
+  sessionToForm,
+} from "./sessionForm";
 import type { AuctionSession } from "@/types/auction-session";
 
 const valid = () => ({ ...defaultSessionForm(new Date("2026-09-11T03:00:00Z")), title: "Phiên tháng 10" });
@@ -26,6 +32,19 @@ describe("sessionFormSchema", () => {
     expect(sessionFormSchema.safeParse({ ...valid(), max_registrants: "0" }).success).toBe(false);
     expect(sessionFormSchema.safeParse({ ...valid(), max_registrants: "12.5" }).success).toBe(false);
     expect(sessionFormSchema.safeParse({ ...valid(), max_registrants: "120" }).success).toBe(true);
+  });
+
+  it("ca_hai (phiên cũ) mở được nhưng không lưu được; trực tiếp / trực tuyến thì qua", () => {
+    for (const f of SESSION_FORMATS) {
+      expect(sessionFormSchema.safeParse({ ...valid(), auction_format: f }).success).toBe(true);
+    }
+    expect(SESSION_FORMATS).not.toContain("ca_hai");
+    const r = sessionFormSchema.safeParse({ ...valid(), auction_format: "ca_hai" });
+    expect(r.success).toBe(false);
+    expect(r.success ? [] : r.error.issues.map((i) => i.path.join("."))).toEqual(["auction_format"]);
+    expect(sessionToForm({ ...(valid() as unknown as AuctionSession), auction_format: "ca_hai" }).auction_format).toBe(
+      "ca_hai",
+    );
   });
 });
 
@@ -60,6 +79,8 @@ describe("formToSessionInput", () => {
       viewing_end_at: null,
       starts_at: "2026-10-10T02:00:00.000Z",
       ends_at: "2026-10-10T04:00:00.000Z",
+      checkin_lead_minutes: 90,
+      checkin_grace_minutes: 10,
     } as AuctionSession;
     const input = formToSessionInput(sessionToForm(session));
     expect(input.starts_at).toBe(session.starts_at);
@@ -67,5 +88,20 @@ describe("formToSessionInput", () => {
     expect(input.max_registrants).toBe(30);
     expect(input.dossier_fee).toBe(200_000);
     expect(input.description).toBeNull();
+    expect(input.checkin_lead_minutes).toBe(90);
+    expect(input.checkin_grace_minutes).toBe(10);
+  });
+
+  it("phút điểm danh: mặc định 60 / 0, ngoài khoảng CHECK ⇒ lỗi", () => {
+    expect(formToSessionInput(valid())).toMatchObject({ checkin_lead_minutes: 60, checkin_grace_minutes: 0 });
+    const paths = (v: object) => {
+      const r = sessionFormSchema.safeParse({ ...valid(), ...v });
+      return r.success ? [] : r.error.issues.map((i) => i.path.join("."));
+    };
+    expect(paths({ checkin_lead_minutes: "10" })).toContain("checkin_lead_minutes");
+    expect(paths({ checkin_lead_minutes: "1441" })).toContain("checkin_lead_minutes");
+    expect(paths({ checkin_grace_minutes: "61" })).toContain("checkin_grace_minutes");
+    expect(paths({ checkin_grace_minutes: "" })).toContain("checkin_grace_minutes");
+    expect(paths({ checkin_lead_minutes: "15", checkin_grace_minutes: "60" })).toEqual([]);
   });
 });

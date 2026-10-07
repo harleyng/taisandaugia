@@ -4,7 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { BiddingControlRoom } from "@/components/portal/bidding-control/BiddingControlRoom";
+import { RosterSummaryCard } from "@/components/portal/checkin/RosterSummaryCard";
 import { useHasOrgPermissionIn } from "@/hooks/useOrgPermissions";
+import { useCheckinSummary } from "@/hooks/useSessionCheckin";
+import { sessionCheckinPath } from "@/lib/biddingContracts/paths";
 import { controlGateOf } from "@/lib/bidding/controlAccess";
 import type { AuctionSessionWithItems } from "@/types/auction-session";
 
@@ -34,6 +37,8 @@ export function SessionControlTab({ session }: { session: AuctionSessionWithItem
   const canRefund = useHasOrgPermissionIn(orgId, "ho-so-tham-gia", "update");
 
   const gate = controlGateOf({ loading: false, session });
+  // Số có mặt trước khi mở lô — chỉ tải khi phòng điều hành thật sự dựng.
+  const { data: checkinSummary } = useCheckinSummary(gate.kind === "ready" ? session.id : null);
 
   const notice = (title: string, body: string) => (
     <Card className="rounded-2xl p-10 text-center">
@@ -92,6 +97,16 @@ export function SessionControlTab({ session }: { session: AuctionSessionWithItem
               Phòng đấu giá trên sàn
             </Button>
           </div>
+
+          {!session.finalized_at && (
+            <RosterSummaryCard
+              session={session}
+              summary={checkinSummary}
+              canClose={canOperate}
+              compact
+              onOpenRoster={() => navigate(sessionCheckinPath(session.id))}
+            />
+          )}
 
           <BiddingControlRoom
             session={session}

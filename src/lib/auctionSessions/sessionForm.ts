@@ -5,10 +5,31 @@
 
 import { z } from "zod";
 import type { AuctionSession, SessionInput } from "@/types/auction-session";
+import { DEFAULT_CHECKIN_GRACE_MINUTES, DEFAULT_CHECKIN_LEAD_MINUTES } from "@/lib/biddingContracts/checkinWindow";
 import { fromLocalInput, toLocalInput } from "./datetime";
 
 const ms = (v: string | undefined) => (v ? new Date(v).getTime() : Number.NaN);
 const bothSet = (a: number, b: number) => !Number.isNaN(a) && !Number.isNaN(b);
+
+/** Khớp CHECK auction_sessions_checkin_lead_check / _grace_check (20261008100300). */
+export const CHECKIN_LEAD_RANGE = { min: 15, max: 1440 } as const;
+export const CHECKIN_GRACE_RANGE = { min: 0, max: 60 } as const;
+
+/**
+ * Hình thức chọn được cho phiên. "Cả hai hình thức" (ca_hai) đã bỏ: điểm danh suy kênh từ
+ * hình thức (checkinChannelOf) nên ca_hai không điểm danh được. Schema vẫn NHẬN ca_hai để
+ * phiên cũ mở form lên được, nhưng không cho lưu (DB CHECK giữ nguyên vì dữ liệu cũ).
+ */
+export const SESSION_FORMATS = ["truc_tiep", "truc_tuyen"] as const;
+export const LEGACY_FORMAT_MESSAGE = "“Cả hai hình thức” không còn hỗ trợ — chọn Trực tiếp hoặc Trực tuyến";
+
+const minutesIn = (range: { min: number; max: number }) =>
+  z
+    .string()
+    .refine(
+      (v) => /^\d+$/.test(v) && Number(v) >= range.min && Number(v) <= range.max,
+      `Nhập số phút từ ${range.min} đến ${range.max}`,
+    );
 
 export const sessionFormSchema = z
   .object({
@@ -32,6 +53,9 @@ export const sessionFormSchema = z
     viewing_end_at: z.string().optional(),
     starts_at: z.string().min(1, "Chọn thời gian bắt đầu đấu giá"),
     ends_at: z.string().min(1, "Chọn thời gian kết thúc"),
+    // Cửa sổ điểm danh = [starts_at − lead, starts_at + grace].
+    checkin_lead_minutes: minutesIn(CHECKIN_LEAD_RANGE),
+    checkin_grace_minutes: minutesIn(CHECKIN_GRACE_RANGE),
   })
   .superRefine((v, ctx) => {
     const starts = ms(v.starts_at);
@@ -41,6 +65,9 @@ export const sessionFormSchema = z
     const viewStart = ms(v.viewing_start_at);
     const viewEnd = ms(v.viewing_end_at);
 
+    if (v.auction_format === "ca_hai") {
+      ctx.addIssue({ code: "custom", path: ["auction_format"], message: LEGACY_FORMAT_MESSAGE });
+    }
     if (bothSet(starts, ends) && ends <= starts) {
       ctx.addIssue({ code: "custom", path: ["ends_at"], message: "Kết thúc phải sau thời điểm bắt đầu" });
     }
@@ -84,6 +111,8 @@ export function defaultSessionForm(now: Date = new Date()): SessionFormValues {
     viewing_end_at: "",
     starts_at: toLocalInput(starts.toISOString()),
     ends_at: toLocalInput(ends.toISOString()),
+    checkin_lead_minutes: String(DEFAULT_CHECKIN_LEAD_MINUTES),
+    checkin_grace_minutes: String(DEFAULT_CHECKIN_GRACE_MINUTES),
   };
 }
 
@@ -102,6 +131,8 @@ export function sessionToForm(s: AuctionSession): SessionFormValues {
     viewing_end_at: toLocalInput(s.viewing_end_at),
     starts_at: toLocalInput(s.starts_at),
     ends_at: toLocalInput(s.ends_at),
+    checkin_lead_minutes: String(s.checkin_lead_minutes ?? DEFAULT_CHECKIN_LEAD_MINUTES),
+    checkin_grace_minutes: String(s.checkin_grace_minutes ?? DEFAULT_CHECKIN_GRACE_MINUTES),
   };
 }
 
@@ -126,5 +157,7 @@ export function formToSessionInput(v: SessionFormValues): SessionInput {
     viewing_end_at: fromLocalInput(v.viewing_end_at),
     starts_at: fromLocalInput(v.starts_at) as string,
     ends_at: fromLocalInput(v.ends_at) as string,
+    checkin_lead_minutes: Number(v.checkin_lead_minutes),
+    checkin_grace_minutes: Number(v.checkin_grace_minutes),
   };
 }

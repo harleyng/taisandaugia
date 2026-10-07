@@ -1,13 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { qk } from "@/lib/queryKeys";
 import { attributeBiddingContract } from "@/lib/analytics/mktAttribution";
 import { contractErrorMessage } from "@/lib/biddingContracts/errors";
-import type { StartContractArgs } from "@/lib/biddingContracts/identityForm";
 import type { LotPaymentStatus } from "@/types/auction-bidding";
-import type { BiddingContract, ContractSummary, ContractWithSession } from "@/types/bidding-contract";
+import type {
+  BiddingContract,
+  ContractReviewEvent,
+  ContractSummary,
+  ContractWithSession,
+  RegistrationPayload,
+  ReviewStatus,
+} from "@/types/bidding-contract";
 
 /**
  * Hồ sơ tham gia đấu giá — phía NGƯỜI MUA.
@@ -18,7 +25,7 @@ import type { BiddingContract, ContractSummary, ContractWithSession } from "@/ty
  */
 
 export const CONTRACT_WITH_SESSION_SELECT =
-  "*, auction_sessions(id, code, title, starts_at, ends_at, status, auction_format, finalized_at)";
+  "*, auction_sessions(id, code, title, starts_at, ends_at, status, auction_format, finalized_at, venue, checkin_lead_minutes, checkin_grace_minutes, roster_closed_at)";
 
 export interface StartContractResult {
   contract_id: string;
@@ -55,7 +62,11 @@ export function useSessionContractSummary(sessionId?: string) {
   });
 }
 
-/** Hồ sơ CHƯA huỷ của người đang xem cho một phiên. */
+/**
+ * Hồ sơ ĐANG HIỆU LỰC của người đang xem cho một phiên. Bỏ cả 'refunded' (bị tổ
+ * chức từ chối): người đó được mua lại, và uq_abc_session_user cho phép một hồ sơ
+ * refunded + một hồ sơ mới cùng tồn tại — giữ refunded lại thì maybeSingle vỡ.
+ */
 export function useMySessionContract(sessionId?: string) {
   const { userId } = useAuth();
   return useQuery({
@@ -67,7 +78,7 @@ export function useMySessionContract(sessionId?: string) {
         .select("*")
         .eq("session_id", sessionId!)
         .eq("user_id", userId!)
-        .neq("status", "cancelled")
+        .not("status", "in", "(cancelled,refunded)")
         .maybeSingle();
       if (error) throw error;
       return (data as BiddingContract | null) ?? null;
@@ -151,12 +162,23 @@ export function useBiddingContract(id?: string | null) {
   });
 }
 
-/** Giữ chỗ 15 phút + lưu danh tính. Gọi lại khi "Tiếp tục thanh toán" để gia hạn. */
+export interface StartContractInput {
+  sessionId: string;
+  payload: RegistrationPayload;
+}
+
+/**
+ * Giữ chỗ 15 phút + lưu bản chụp người đăng ký. Gọi lại khi "Tiếp tục thanh
+ * toán" để gia hạn (dựng payload bằng contractToRegistrationPayload).
+ */
 export function useStartBiddingContract() {
   const invalidate = useInvalidateContracts();
   return useMutation({
-    mutationFn: async (args: StartContractArgs): Promise<StartContractResult> => {
-      const { data, error } = await supabase.rpc("start_bidding_contract", args);
+    mutationFn: async ({ sessionId, payload }: StartContractInput): Promise<StartContractResult> => {
+      const { data, error } = await supabase.rpc("start_bidding_contract", {
+        _session_id: sessionId,
+        _payload: payload as unknown as Json,
+      });
       if (error) throw error;
       return data as unknown as StartContractResult;
     },
@@ -200,5 +222,53 @@ export function useCancelBiddingContract() {
       toast.success("Đã huỷ hồ sơ chờ thanh toán.");
     },
     onError: (err) => toast.error(contractErrorMessage(err)),
+  });
+}
+
+export interface ResubmitContractResult {
+  contract_id: string;
+  review_status: Extract<ReviewStatus, "pending">;
+}
+
+/** Nộp lại hồ sơ khi tổ chức yêu cầu bổ sung (review_status 'needs_info' ⇒ 'pending'). */
+export function useResubmitContract() {
+  const invalidate = useInvalidateContracts();
+  return useMutation({
+    mutationFn: async ({
+      contractId,
+      payload,
+    }: {
+      contractId: string;
+      payload: RegistrationPayload;
+    }): Promise<ResubmitContractResult> => {
+      const { data, error } = await supabase.rpc("resubmit_bidding_contract", {
+        _contract_id: contractId,
+        _payload: payload as unknown as Json,
+      });
+      if (error) throw error;
+      return data as unknown as ResubmitContractResult;
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Đã nộp lại hồ sơ — chờ tổ chức đấu giá duyệt.");
+    },
+    onError: (err) => toast.error(contractErrorMessage(err)),
+  });
+}
+
+/** Nhật ký duyệt của một hồ sơ (người mua + tổ chức đọc được qua RLS). */
+export function useContractReviewEvents(contractId?: string | null) {
+  return useQuery({
+    queryKey: qk.biddingContracts.reviewEvents(contractId),
+    enabled: !!contractId,
+    queryFn: async (): Promise<ContractReviewEvent[]> => {
+      const { data, error } = await supabase
+        .from("auction_contract_review_events")
+        .select("*")
+        .eq("contract_id", contractId!)
+        .order("at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as ContractReviewEvent[];
+    },
   });
 }

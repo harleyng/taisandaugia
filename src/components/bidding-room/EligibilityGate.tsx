@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import { MY_CONTRACTS_PATH } from "@/lib/biddingContracts/paths";
-import { BIDDER_BLOCK_MESSAGES, type BidderBlockReason } from "@/hooks/useMyBidderStatus";
+import { BIDDER_BLOCK_MESSAGES, type BidderBlockReason } from "@/lib/bidding/bidderReason";
 
 /**
  * Cổng vào phòng đấu giá — CHẶN CẢ TRANG (người dùng chọn 2026-09-12).
@@ -30,15 +30,20 @@ export function EligibilityGate({ sessionId, reason }: Props) {
 
   const hint: Record<BidderBlockReason, string> = {
     login_required: "Đăng nhập bằng tài khoản đã mua hồ sơ tham gia phiên này.",
-    no_contract: "Mua hồ sơ tham gia tại trang phiên, sau đó nộp tiền đặt trước để được cấp số báo danh.",
+    no_contract:
+      "Mua hồ sơ tham gia tại trang phiên, nộp tiền đặt trước, rồi điểm danh trước giờ đấu giá để nhận số báo danh.",
     unpaid: "Hoàn tất thanh toán hồ sơ tại trang phiên để tiếp tục.",
+    review_pending: "Tổ chức đấu giá sẽ đối chiếu giấy tờ của bạn. Khi hồ sơ được duyệt và tiền đặt trước được ghi nhận, bạn điểm danh để vào phòng.",
+    review_needs_info: "Xem yêu cầu của tổ chức trong hồ sơ của tôi và nộp lại hồ sơ đã bổ sung.",
     no_deposit:
-      "Tiền đặt trước nộp trực tiếp cho tổ chức đấu giá. Sau khi tổ chức ghi nhận, bạn sẽ được cấp số báo danh và vào được phòng đấu giá.",
+      "Tiền đặt trước nộp trực tiếp cho tổ chức đấu giá. Sau khi tổ chức ghi nhận, bạn điểm danh trước giờ đấu giá để nhận số báo danh và vào phòng.",
     // Hai mã dưới thường KHÔNG tới đây: roomGateOf đưa người đã chốt sổ vào
     // nhánh chỉ-xem. Chúng chỉ rơi xuống đây khi hồ sơ chưa có số báo danh.
     settled: "Phiên đã kết thúc và chốt kết quả. Xem kết quả tại trang phiên.",
     refunded: "Tiền đặt trước của bạn đã được hoàn trả. Xem lại hồ sơ để đối chiếu.",
-    no_bidder_no: "Số báo danh do tổ chức đấu giá cấp sau khi ghi nhận tiền đặt trước.",
+    absent: "Liên hệ tổ chức đấu giá nếu bạn có lý do chính đáng để được xem xét hoàn trả tiền đặt trước.",
+    not_checked_in: "Số báo danh được cấp ngay khi bạn điểm danh bằng mã xác nhận gửi qua tin nhắn.",
+    no_bidder_no: "Số báo danh được cấp tự động khi bạn điểm danh.",
   };
 
   const actions = () => {

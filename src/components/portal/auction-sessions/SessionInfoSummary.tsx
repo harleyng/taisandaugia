@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { formatVnd } from "@/lib/advertising/slug";
 import { formatDateTimeRange } from "@/lib/auctionSessions/datetime";
+import { checkinWindowOf } from "@/lib/biddingContracts/checkinWindow";
 import { AUCTION_FORMAT_LABELS } from "@/types/asset-posting";
 import type { AuctionSession } from "@/types/auction-session";
 
@@ -36,6 +37,11 @@ export function SessionInfoSummary({ session }: { session: AuctionSession }) {
     { label: "Xem tài sản", value: formatDateTimeRange(session.viewing_start_at, session.viewing_end_at) },
     { label: "Thời gian đấu giá", value: formatDateTimeRange(session.starts_at, session.ends_at) },
   ];
+  const checkin = checkinWindowOf(session);
+  schedule.push({
+    label: "Điểm danh",
+    value: `${formatDateTimeRange(checkin.opensAt.toISOString(), checkin.closesAt.toISOString())} (mở trước ${session.checkin_lead_minutes} phút${session.checkin_grace_minutes > 0 ? `, nhận thêm ${session.checkin_grace_minutes} phút sau giờ bắt đầu` : ""})`,
+  });
 
   return (
     <Card className="space-y-5 rounded-2xl p-5">

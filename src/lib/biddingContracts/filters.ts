@@ -1,15 +1,21 @@
 // Lọc / tính toán thuần cho màn quản lý hồ sơ tham gia ở /portal.
 
-import type { DepositStatus } from "@/types/bidding-contract";
+import type { DepositStatus, ReviewStatus } from "@/types/bidding-contract";
 
 export interface OrgContractFilters {
   sessionId: string;
   deposit: DepositStatus | "all";
+  review: ReviewStatus | "all";
   q: string;
 }
 
 export const ALL_SESSIONS = "all";
-export const EMPTY_CONTRACT_FILTERS: OrgContractFilters = { sessionId: ALL_SESSIONS, deposit: "all", q: "" };
+export const EMPTY_CONTRACT_FILTERS: OrgContractFilters = {
+  sessionId: ALL_SESSIONS,
+  deposit: "all",
+  review: "all",
+  q: "",
+};
 
 /** Bỏ dấu + chữ thường để "nguyen van" tìm được "Nguyễn Văn". */
 export const foldText = (s: string) =>
@@ -18,6 +24,7 @@ export const foldText = (s: string) =>
 interface FilterableRow {
   session_id: string;
   deposit_status: DepositStatus;
+  review_status: ReviewStatus;
   code: string;
   full_name: string;
   phone: string;
@@ -30,15 +37,11 @@ export function filterOrgContracts<T extends FilterableRow>(rows: T[], f: OrgCon
   return rows.filter((r) => {
     if (f.sessionId !== ALL_SESSIONS && r.session_id !== f.sessionId) return false;
     if (f.deposit !== "all" && r.deposit_status !== f.deposit) return false;
+    if (f.review !== "all" && r.review_status !== f.review) return false;
     if (!q) return true;
     const haystack = foldText([r.code, r.full_name, r.phone, r.id_number, r.bidder_no ?? ""].join(" "));
     return haystack.includes(q);
   });
-}
-
-/** Số báo danh gợi ý tiếp theo trong MỘT phiên (server tự cấp cũng theo max+1). */
-export function nextBidderNo(rows: { bidder_no: number | null }[]): number {
-  return rows.reduce((max, r) => Math.max(max, r.bidder_no ?? 0), 0) + 1;
 }
 
 /** Tổng tiền đặt trước các lô — gợi ý khi xác nhận đã nhận. null nếu phiên không khai. */

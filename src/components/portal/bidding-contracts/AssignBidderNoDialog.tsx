@@ -9,49 +9,51 @@ import type { ContractWithSession } from "@/types/bidding-contract";
 
 interface Props {
   contract: ContractWithSession | null;
-  /** Số tiếp theo trong phiên (max + 1) — server tự cấp cũng theo cùng quy tắc. */
-  suggested: number;
   onOpenChange: (open: boolean) => void;
 }
 
-export function AssignBidderNoDialog({ contract, suggested, onOpenChange }: Props) {
+/**
+ * ĐỔI số báo danh của người đã điểm danh (org_assign_bidder_no đòi checked_in_at).
+ * Số đầu tiên chỉ sinh ra lúc điểm danh — không còn "cấp số" từ màn này.
+ */
+export function AssignBidderNoDialog({ contract, onOpenChange }: Props) {
   const assign = useAssignBidderNo();
   const [value, setValue] = useState("");
 
   useEffect(() => {
-    if (contract) setValue(String(contract.bidder_no ?? suggested));
-  }, [contract, suggested]);
+    if (contract) setValue(contract.bidder_no != null ? String(contract.bidder_no) : "");
+  }, [contract]);
 
-  const submit = (bidderNo?: number) => {
+  const submit = () => {
     if (!contract) return;
-    assign.mutate({ contractId: contract.id, bidderNo }, { onSuccess: () => onOpenChange(false) });
+    assign.mutate({ contractId: contract.id, bidderNo: Number(value) }, { onSuccess: () => onOpenChange(false) });
   };
 
   return (
     <Dialog open={!!contract} onOpenChange={(v) => !assign.isPending && onOpenChange(v)}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{contract?.bidder_no ? "Đổi số báo danh" : "Cấp số báo danh"}</DialogTitle>
+          <DialogTitle>Đổi số báo danh</DialogTitle>
           <DialogDescription>
             {contract?.code} · {contract?.full_name}. Số báo danh không trùng trong cùng phiên.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-1.5 py-1">
-          <Label>Số báo danh</Label>
+          <Label>
+            Số báo danh mới <span className="text-destructive">*</span>
+          </Label>
           <NumberInput value={value} onChange={setValue} allowDecimal={false} />
-          {!contract?.bidder_no && <p className="text-xs text-muted-foreground">Gợi ý số tiếp theo: {suggested}</p>}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          {!contract?.bidder_no && (
-            <Button variant="outline" onClick={() => submit(undefined)} disabled={assign.isPending}>
-              Tự cấp số tiếp theo
-            </Button>
-          )}
-          <Button onClick={() => submit(Number(value))} disabled={assign.isPending || !(Number(value) > 0)} className="gap-1.5">
+        <DialogFooter>
+          <Button
+            onClick={submit}
+            disabled={assign.isPending || !(Number(value) > 0) || Number(value) === contract?.bidder_no}
+            className="gap-1.5"
+          >
             {assign.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Cấp số này
+            Đổi số
           </Button>
         </DialogFooter>
       </DialogContent>

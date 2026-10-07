@@ -41,6 +41,8 @@ export type SessionInput = Pick<
   | "viewing_end_at"
   | "starts_at"
   | "ends_at"
+  | "checkin_lead_minutes"
+  | "checkin_grace_minutes"
 > & { auction_format: AuctionFormat };
 
 type ItemSnapshot = Pick<

@@ -1,8 +1,8 @@
 import { type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { useOrgPermissions, useHasOrgPermission } from "@/hooks/useOrgPermissions";
-import type { OrgAction } from "@/lib/orgPermissions";
+import { useOrgPermissions } from "@/hooks/useOrgPermissions";
+import { orgMatrixHas, type OrgAction } from "@/lib/orgPermissions";
 
 /**
  * Cổng quyền cho từng trang trong portal tổ chức (/portal).
@@ -15,14 +15,17 @@ import type { OrgAction } from "@/lib/orgPermissions";
 export function PortalPermissionRoute({
   module,
   action = "view",
+  anyOf,
   children,
 }: {
   module: string;
   action?: OrgAction;
+  /** Qua được khi có MỘT trong các quyền này (thay cho `action`). */
+  anyOf?: OrgAction[];
   children: ReactNode;
 }) {
-  const { ready } = useOrgPermissions();
-  const allowed = useHasOrgPermission(module, action);
+  const { ready, isOwner, matrix } = useOrgPermissions();
+  const allowed = isOwner || (anyOf ?? [action]).some((a) => orgMatrixHas(matrix, module, a));
 
   if (!ready) {
     return (

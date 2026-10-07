@@ -12,13 +12,21 @@
 -- auction_bidding_contracts_deposit_ledger_ins tự ghi khi INSERT đã 'received'.
 --
 -- Idempotent: có hồ sơ rồi thì thôi (uq_abc_session_user chỉ chặn hồ sơ chưa huỷ).
+-- Từ 20261008100200/100300 (duyệt hồ sơ + điểm danh): chạy lại file này phải kèm
+-- scripts/demo-bidding-backfill.sql TRONG CÙNG GIAO DỊCH (psql -1 -f <file này> -f <backfill>),
+-- nếu không hồ sơ ở "chờ duyệt", chưa điểm danh ⇒ cron chốt danh sách đánh vắng + tịch thu cọc.
 --
--- GỠ (chạy tay, tắt trigger vì sổ tiền đặt trước là chỉ-ghi-thêm):
+-- GỠ (chạy tay, tắt trigger vì sổ tiền đặt trước là chỉ-ghi-thêm). Chỉ dùng được khi tài khoản
+-- CHƯA trả giá — đã có giá / thắng lô (FK RESTRICT từ auction_bids, auction_lot_states) thì gỡ
+-- cả phiên theo hướng dẫn trong 20260913000002:
 --   BEGIN;
 --   ALTER TABLE public.auction_deposit_events DISABLE TRIGGER auction_deposit_events_append_only;
+--   ALTER TABLE public.auction_contract_review_events DISABLE TRIGGER auction_contract_review_events_append_only;
 --   DELETE FROM public.auction_deposit_events    WHERE contract_id = 'f10d0009-0000-4000-8000-000000000023';
+--   DELETE FROM public.auction_contract_review_events WHERE contract_id = 'f10d0009-0000-4000-8000-000000000023';
 --   DELETE FROM public.auction_bidding_contracts WHERE id = 'f10d0009-0000-4000-8000-000000000023';
 --   ALTER TABLE public.auction_deposit_events ENABLE TRIGGER auction_deposit_events_append_only;
+--   ALTER TABLE public.auction_contract_review_events ENABLE TRIGGER auction_contract_review_events_append_only;
 --   COMMIT;
 
 DO $seed$

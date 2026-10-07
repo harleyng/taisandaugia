@@ -12,6 +12,12 @@
 --
 -- Mọi dòng mới có id tiền tố f10d. Gỡ bộ demo (chạy tay):
 --   DELETE FROM public.chat_conversations        WHERE id::text LIKE 'f10d000a-%';
+--   ALTER TABLE public.auction_contract_review_events DISABLE TRIGGER auction_contract_review_events_append_only;
+--   ALTER TABLE public.auction_deposit_events DISABLE TRIGGER auction_deposit_events_append_only;
+--   DELETE FROM public.auction_contract_review_events WHERE contract_id::text LIKE 'f10d0008-%';
+--   DELETE FROM public.auction_deposit_events    WHERE contract_id::text LIKE 'f10d0008-%';
+--   ALTER TABLE public.auction_deposit_events ENABLE TRIGGER auction_deposit_events_append_only;
+--   ALTER TABLE public.auction_contract_review_events ENABLE TRIGGER auction_contract_review_events_append_only;
 --   DELETE FROM public.auction_bidding_contracts WHERE id::text LIKE 'f10d0008-%';
 --   DELETE FROM public.auction_sessions          WHERE id = 'f10d0006-0000-4000-8000-000000000001';
 --   DELETE FROM public.user_verified_identities  WHERE user_id = '957b8823-9a29-424d-a0fb-6f859590e236' AND id_number = '079088001234';
@@ -22,6 +28,9 @@
 --   DELETE FROM public.asset_service_requests    WHERE id::text LIKE 'f10d0002-%';
 --   DELETE FROM public.asset_postings            WHERE id::text LIKE 'f10d0001-%';
 --   rồi: python3 scripts/seed-flow-demo-assets.py --teardown
+-- Từ 20261008100200/100300 (duyệt hồ sơ + điểm danh): chạy lại file này phải kèm
+-- scripts/demo-bidding-backfill.sql TRONG CÙNG GIAO DỊCH (psql -1 -f <file này> -f <backfill>),
+-- nếu không hồ sơ ở "chờ duyệt", chưa điểm danh ⇒ cron chốt danh sách đánh vắng + tịch thu cọc.
 --
 -- Bẫy đã né (xem .agents/knowledge/common-pitfalls.md):
 --   • asset_postings chỉ INSERT (review guard nuốt UPDATE của caller không có quyền approve).

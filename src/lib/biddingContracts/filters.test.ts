@@ -5,14 +5,13 @@ import {
   expectedDeposit,
   filterOrgContracts,
   maskIdNumber,
-  nextBidderNo,
 } from "./filters";
 import { contractErrorMessage } from "./errors";
 
 const rows = [
-  { session_id: "s1", deposit_status: "pending", code: "HSDG000001", full_name: "Nguyễn Văn An", phone: "0912345678", id_number: "079085123456", bidder_no: null as number | null },
-  { session_id: "s1", deposit_status: "received", code: "HSDG000002", full_name: "Đỗ Thị Hà", phone: "0987654321", id_number: "001190654321", bidder_no: 3 },
-  { session_id: "s2", deposit_status: "received", code: "HSDG000003", full_name: "Lê Minh", phone: "0901112223", id_number: "B1234567", bidder_no: 1 },
+  { session_id: "s1", deposit_status: "pending", review_status: "pending", code: "HSDG000001", full_name: "Nguyễn Văn An", phone: "0912345678", id_number: "079085123456", bidder_no: null as number | null },
+  { session_id: "s1", deposit_status: "received", review_status: "approved", code: "HSDG000002", full_name: "Đỗ Thị Hà", phone: "0987654321", id_number: "001190654321", bidder_no: 3 },
+  { session_id: "s2", deposit_status: "received", review_status: "approved", code: "HSDG000003", full_name: "Lê Minh", phone: "0901112223", id_number: "B1234567", bidder_no: 1 },
 ] as const;
 
 describe("filterOrgContracts", () => {
@@ -21,8 +20,13 @@ describe("filterOrgContracts", () => {
   });
 
   it("lọc theo phiên + tiền đặt trước", () => {
-    const r = filterOrgContracts([...rows], { sessionId: "s1", deposit: "received", q: "" });
+    const r = filterOrgContracts([...rows], { sessionId: "s1", deposit: "received", review: "all", q: "" });
     expect(r.map((x) => x.code)).toEqual(["HSDG000002"]);
+  });
+
+  it("lọc theo trạng thái duyệt", () => {
+    const r = filterOrgContracts([...rows], { ...EMPTY_CONTRACT_FILTERS, review: "pending" });
+    expect(r.map((x) => x.code)).toEqual(["HSDG000001"]);
   });
 
   it("tìm không dấu theo tên, SĐT, mã, CCCD", () => {
@@ -33,11 +37,6 @@ describe("filterOrgContracts", () => {
 });
 
 describe("helpers", () => {
-  it("nextBidderNo = max + 1", () => {
-    expect(nextBidderNo([...rows])).toBe(4);
-    expect(nextBidderNo([])).toBe(1);
-  });
-
   it("expectedDeposit cộng lô có khai, null nếu không lô nào khai", () => {
     expect(expectedDeposit([{ deposit_amount: 10_000_000 }, { deposit_amount: null }, { deposit_amount: 5_000_000 }])).toBe(
       15_000_000,

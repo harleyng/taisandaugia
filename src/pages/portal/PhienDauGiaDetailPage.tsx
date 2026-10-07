@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, FileText, Gavel, Info, Loader2, Megaphone, Package, ShieldAlert, Users } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, FileText, Gavel, Info, Loader2, Megaphone, Package, ShieldAlert, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionDetailHero } from "@/components/portal/auction-sessions/SessionDetailHero";
 import { SessionFormCard } from "@/components/portal/auction-sessions/SessionFormCard";
+import { SessionCheckinTab } from "@/components/portal/auction-sessions/tabs/SessionCheckinTab";
 import { SessionContractsTab } from "@/components/portal/auction-sessions/tabs/SessionContractsTab";
 import { SessionControlTab } from "@/components/portal/auction-sessions/tabs/SessionControlTab";
 import { SessionDocumentsTab } from "@/components/portal/auction-sessions/tabs/SessionDocumentsTab";
@@ -15,9 +16,11 @@ import { SessionOutreachTab } from "@/components/portal/auction-sessions/tabs/Se
 import { useAuctionSession, useSessionOrg } from "@/hooks/useAuctionSessions";
 import { useHasOrgPermission, useHasOrgPermissionIn } from "@/hooks/useOrgPermissions";
 
-export type SessionTab = "thong-tin" | "tai-san" | "tai-lieu" | "ho-so" | "tiep-thi" | "dieu-hanh";
+export type SessionTab = "thong-tin" | "tai-san" | "tai-lieu" | "ho-so" | "diem-danh" | "tiep-thi" | "dieu-hanh";
 
 const ONLINE_FORMATS = new Set(["truc_tuyen", "ca_hai"]);
+/** ca_hai tạm bỏ — không điểm danh trên hệ thống (checkinChannelOf). */
+const CHECKIN_FORMATS = new Set(["truc_tiep", "truc_tuyen"]);
 
 /**
  * /portal/phien-dau-gia/moi và /portal/phien-dau-gia/:id — hero tóm tắt + 3 tab.
@@ -40,6 +43,7 @@ export default function PhienDauGiaDetailPage({ tab = "thong-tin" }: { tab?: Ses
   const canUpdateContracts = useHasOrgPermission("ho-so-tham-gia", "update");
   // Theo tổ chức của PHIÊN — xem chú thích ở useHasOrgPermissionIn.
   const canRunAuction = useHasOrgPermissionIn(session?.organization_id, "dieu-hanh-dau-gia", "view");
+  const canCheckIn = useHasOrgPermissionIn(session?.organization_id, "ho-so-tham-gia", "checkin");
   // Chế độ sửa nằm trên URL chứ không phải state: nút "Chỉnh sửa" bấm được từ
   // mọi tab, mà mỗi tab là một route — state sẽ mất khi điều hướng.
   const [searchParams] = useSearchParams();
@@ -116,6 +120,11 @@ export default function PhienDauGiaDetailPage({ tab = "thong-tin" }: { tab?: Ses
   const showContractsTab = (session.status !== "draft" && canViewContracts) || tab === "ho-so";
   // Điều hành: phiên trực tiếp không có phòng điều hành; quyền xét theo tổ chức
   // CỦA PHIÊN.
+  // Điểm danh: phiên đã công bố, hình thức trực tiếp / trực tuyến; nhân viên cửa
+  // có thể chỉ có quyền "checkin" mà không có "view".
+  const showCheckinTab =
+    (session.status !== "draft" && CHECKIN_FORMATS.has(session.auction_format) && (canViewContracts || canCheckIn)) ||
+    tab === "diem-danh";
   const showControlTab = (ONLINE_FORMATS.has(session.auction_format) && canRunAuction) || tab === "dieu-hanh";
 
   return shell(
@@ -153,6 +162,12 @@ export default function PhienDauGiaDetailPage({ tab = "thong-tin" }: { tab?: Ses
               Hồ sơ tham gia
             </TabsTrigger>
           )}
+          {showCheckinTab && (
+            <TabsTrigger value="diem-danh" className="gap-1.5">
+              <ClipboardCheck className="h-4 w-4" />
+              Điểm danh
+            </TabsTrigger>
+          )}
           <TabsTrigger value="tiep-thi" className="gap-1.5">
             <Megaphone className="h-4 w-4" />
             Tiếp thị phiên
@@ -185,6 +200,10 @@ export default function PhienDauGiaDetailPage({ tab = "thong-tin" }: { tab?: Ses
 
         <TabsContent value="ho-so" className="mt-4">
           <SessionContractsTab session={session} canView={canViewContracts} canUpdate={canUpdateContracts} />
+        </TabsContent>
+
+        <TabsContent value="diem-danh" className="mt-4">
+          <SessionCheckinTab session={session} />
         </TabsContent>
 
         <TabsContent value="tiep-thi" className="mt-4">

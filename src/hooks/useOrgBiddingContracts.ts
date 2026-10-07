@@ -3,16 +3,23 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { qk } from "@/lib/queryKeys";
 import { contractErrorMessage } from "@/lib/biddingContracts/errors";
+import { assertBiddingRpcOk, biddingErrorMessage } from "@/lib/bidding/errors";
 import { useSessionOrg } from "@/hooks/useAuctionSessions";
 import { CONTRACT_WITH_SESSION_SELECT } from "@/hooks/useBiddingContracts";
-import type { ContractWithSession, DepositActionStatus } from "@/types/bidding-contract";
+import type {
+  ContractStatus,
+  ContractWithSession,
+  DepositActionStatus,
+  ReviewDecision,
+} from "@/types/bidding-contract";
 
 /**
  * Hồ sơ tham gia — phía TỔ CHỨC (/portal).
  *
- * Tổ chức lấy theo MEMBERSHIP (useSessionOrg), không theo owner_id. RLS chỉ trả
- * hồ sơ ĐÃ thanh toán; lọc thêm status ở đây để chính chủ tổ chức (nếu từng mua
- * hồ sơ phiên tổ chức khác) không lẫn dòng của mình vào.
+ * Tổ chức lấy theo MEMBERSHIP (useSessionOrg), không theo owner_id. RLS trả hồ
+ * sơ đã thanh toán + đã bị từ chối (refunded — lịch sử duyệt); lọc thêm status ở
+ * đây để chính chủ tổ chức (nếu từng mua hồ sơ phiên tổ chức khác) không lẫn dòng
+ * đang chờ thanh toán của mình vào. Đếm "đã bán" / suất thì lọc status 'paid'.
  *
  * Một query cho cả tổ chức; thẻ trong chi tiết phiên lọc theo session_id ở
  * client — hai màn dùng chung cache nên cập nhật ở màn này hiện ngay ở màn kia.
@@ -27,7 +34,7 @@ export function useOrgBiddingContracts() {
         .from("auction_bidding_contracts")
         .select(CONTRACT_WITH_SESSION_SELECT)
         .eq("organization_id", organizationId!)
-        .eq("status", "paid")
+        .in("status", ["paid", "refunded"])
         .order("paid_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as ContractWithSession[];
@@ -123,8 +130,68 @@ export function useAssignBidderNo() {
     },
     onSuccess: (no) => {
       queryClient.invalidateQueries({ queryKey: qk.biddingContracts.all });
-      toast.success(`Đã cấp số báo danh ${no}.`);
+      toast.success(`Đã đổi số báo danh thành ${no}.`);
     },
     onError: (err) => toast.error(contractErrorMessage(err)),
+  });
+}
+
+const REVIEW_TOAST: Record<ReviewDecision, string> = {
+  approved: "Đã duyệt hồ sơ.",
+  needs_info: "Đã yêu cầu người mua bổ sung hồ sơ.",
+  rejected: "Đã từ chối hồ sơ — tiền hồ sơ được hoàn cho người mua.",
+};
+
+export interface ReviewContractResult {
+  contract_id: string;
+  review_status: ReviewDecision;
+  status: Extract<ContractStatus, "paid" | "refunded">;
+}
+
+/**
+ * Duyệt / yêu cầu bổ sung / từ chối (org_review_bidding_contract, quyền
+ * ho-so-tham-gia:review). Từ chối bắt buộc lý do và hoàn tiền hồ sơ (mô phỏng);
+ * tiền đặt trước đã nhận chuyển sang chờ hoàn trả. RPC RAISE câu tiếng Việt.
+ */
+export function useReviewContract() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { contractId: string; decision: ReviewDecision; note?: string }) => {
+      const { data, error } = await supabase.rpc("org_review_bidding_contract", {
+        _contract_id: v.contractId,
+        _decision: v.decision,
+        _note: v.note,
+      });
+      if (error) throw error;
+      return data as unknown as ReviewContractResult;
+    },
+    onSuccess: (r) => {
+      queryClient.invalidateQueries({ queryKey: qk.biddingContracts.all });
+      toast.success(REVIEW_TOAST[r.review_status]);
+    },
+    onError: (err) => toast.error(contractErrorMessage(err)),
+  });
+}
+
+/**
+ * Miễn trừ vắng mặt (giả định F1-b — chưa chốt): tiền đặt trước bị giữ do vắng
+ * chuyển sang chờ hoàn trả. RPC trả { ok:false, reason } ⇒ assertBiddingRpcOk.
+ */
+export function useExcuseAbsence() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { contractId: string; note: string }) => {
+      const { data, error } = await supabase.rpc("org_excuse_absence", {
+        _contract_id: v.contractId,
+        _note: v.note,
+      });
+      if (error) throw error;
+      assertBiddingRpcOk(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.biddingContracts.all });
+      toast.success("Đã miễn trừ vắng mặt — tiền đặt trước chờ hoàn trả.");
+    },
+    onError: (err) => toast.error(biddingErrorMessage(err)),
   });
 }

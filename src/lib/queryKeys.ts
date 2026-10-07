@@ -225,9 +225,18 @@ export const qk = {
      */
     wonLots: (userId?: string | null, contractIds: readonly string[] = []) =>
       ["bidding-contracts", "won", userId, [...contractIds].sort().join(",")] as const,
+    /** Nhật ký duyệt của một hồ sơ. */
+    reviewEvents: (contractId?: string | null) => ["bidding-contracts", "review-events", contractId] as const,
+    /** Điểm danh — nằm DƯỚI prefix để duyệt / tiền đặt trước / điểm danh cùng làm mới
+     *  số đếm và kết quả tra cứu tại cửa. `checkinSummary` công khai. */
+    checkinSummary: (sessionId?: string | null) => ["bidding-contracts", "checkin-summary", sessionId] as const,
+    checkinLookup: (sessionId?: string | null, query?: string | null) =>
+      ["bidding-contracts", "checkin-lookup", sessionId, query] as const,
   },
-  /** Danh tính đã xác thực qua VNeID — dữ liệu CÁ NHÂN, key theo userId. */
+  /** Danh tính đã lưu (VNeID hoặc ảnh giấy tờ) — dữ liệu CÁ NHÂN, key theo userId. */
   verifiedIdentity: (userId?: string | null) => ["verified-identity", userId] as const,
+  /** URL ký 10 phút cho ảnh trong bucket buyer-kyc. Đường dẫn bất biến ⇒ key theo path. */
+  kycImageUrl: (path?: string | null) => ["kyc-image-url", path] as const,
 
   /** Đấu giá trực tuyến. Một lượt trả giá đổi CÙNG LÚC trạng thái lô, sổ trả
    *  giá và nhật ký, nên cả ba nằm dưới `all(sessionId)` để mutation chỉ phải

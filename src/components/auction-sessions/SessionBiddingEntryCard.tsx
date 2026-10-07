@@ -32,7 +32,7 @@ export function SessionBiddingEntryCard({ session }: { session: PublicSessionDet
             {finalized
               ? "Phiên đã chốt kết quả. Người đã tham gia vẫn xem lại được diễn biến từng lô."
               : started
-                ? "Trả giá trực tiếp trên sàn. Cần hồ sơ đã thanh toán, tiền đặt trước đã nộp và số báo danh."
+                ? "Trả giá trực tiếp trên sàn. Cần hồ sơ đã được duyệt, tiền đặt trước đã nộp và đã điểm danh."
                 : `Phòng đấu giá mở lúc ${formatDateTime(session.starts_at)}.`}
           </p>
         </div>

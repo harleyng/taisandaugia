@@ -2726,10 +2726,21 @@ export type Database = {
       }
       auction_bidding_contracts: {
         Row: {
+          absence_excused_at: string | null
+          absence_excused_by: string | null
+          absence_note: string | null
+          absent_at: string | null
           address: string
           bidder_no: number | null
           bidder_no_assigned_at: string | null
+          buyer_kind: string
           cancelled_at: string | null
+          checked_in_at: string | null
+          checked_in_by: string | null
+          checkin_attendee: string | null
+          checkin_channel: string | null
+          checkin_note: string | null
+          checkin_token: string
           code: string
           created_at: string
           date_of_birth: string | null
@@ -2743,27 +2754,66 @@ export type Database = {
           fee_amount: number
           full_name: string
           gender: string | null
+          has_proxy: boolean
           hold_expires_at: string | null
           id: string
+          id_back_path: string | null
+          id_edited_fields: string[]
+          id_front_path: string | null
           id_number: string
-          mkt_link_id: string | null
+          id_read_method: string | null
           id_type: string
           identity_source: string
+          mkt_link_id: string | null
           order_id: string | null
+          org_address: string | null
+          org_name: string | null
+          org_reg_doc_path: string | null
+          org_tax_code: string | null
           organization_id: string
           paid_at: string | null
           payment_txn_ref: string | null
           phone: string
+          poa_doc_path: string | null
+          proxy_address: string | null
+          proxy_date_of_birth: string | null
+          proxy_full_name: string | null
+          proxy_gender: string | null
+          proxy_id_back_path: string | null
+          proxy_id_edited_fields: string[]
+          proxy_id_front_path: string | null
+          proxy_id_number: string | null
+          proxy_id_read_method: string | null
+          proxy_id_type: string | null
+          proxy_phone: string | null
+          refund_txn_ref: string | null
+          refunded_at: string | null
+          resubmitted_at: string | null
+          review_note: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           session_id: string
           status: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          absence_excused_at?: string | null
+          absence_excused_by?: string | null
+          absence_note?: string | null
+          absent_at?: string | null
           address: string
           bidder_no?: number | null
           bidder_no_assigned_at?: string | null
+          buyer_kind?: string
           cancelled_at?: string | null
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          checkin_attendee?: string | null
+          checkin_channel?: string | null
+          checkin_note?: string | null
+          checkin_token?: string
           code: string
           created_at?: string
           date_of_birth?: string | null
@@ -2777,27 +2827,66 @@ export type Database = {
           fee_amount: number
           full_name: string
           gender?: string | null
+          has_proxy?: boolean
           hold_expires_at?: string | null
           id?: string
+          id_back_path?: string | null
+          id_edited_fields?: string[]
+          id_front_path?: string | null
           id_number: string
-          mkt_link_id?: string | null
+          id_read_method?: string | null
           id_type: string
           identity_source?: string
+          mkt_link_id?: string | null
           order_id?: string | null
+          org_address?: string | null
+          org_name?: string | null
+          org_reg_doc_path?: string | null
+          org_tax_code?: string | null
           organization_id: string
           paid_at?: string | null
           payment_txn_ref?: string | null
           phone: string
+          poa_doc_path?: string | null
+          proxy_address?: string | null
+          proxy_date_of_birth?: string | null
+          proxy_full_name?: string | null
+          proxy_gender?: string | null
+          proxy_id_back_path?: string | null
+          proxy_id_edited_fields?: string[]
+          proxy_id_front_path?: string | null
+          proxy_id_number?: string | null
+          proxy_id_read_method?: string | null
+          proxy_id_type?: string | null
+          proxy_phone?: string | null
+          refund_txn_ref?: string | null
+          refunded_at?: string | null
+          resubmitted_at?: string | null
+          review_note?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           session_id: string
           status?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          absence_excused_at?: string | null
+          absence_excused_by?: string | null
+          absence_note?: string | null
+          absent_at?: string | null
           address?: string
           bidder_no?: number | null
           bidder_no_assigned_at?: string | null
+          buyer_kind?: string
           cancelled_at?: string | null
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          checkin_attendee?: string | null
+          checkin_channel?: string | null
+          checkin_note?: string | null
+          checkin_token?: string
           code?: string
           created_at?: string
           date_of_birth?: string | null
@@ -2811,23 +2900,58 @@ export type Database = {
           fee_amount?: number
           full_name?: string
           gender?: string | null
+          has_proxy?: boolean
           hold_expires_at?: string | null
           id?: string
+          id_back_path?: string | null
+          id_edited_fields?: string[]
+          id_front_path?: string | null
           id_number?: string
-          mkt_link_id?: string | null
+          id_read_method?: string | null
           id_type?: string
           identity_source?: string
+          mkt_link_id?: string | null
           order_id?: string | null
+          org_address?: string | null
+          org_name?: string | null
+          org_reg_doc_path?: string | null
+          org_tax_code?: string | null
           organization_id?: string
           paid_at?: string | null
           payment_txn_ref?: string | null
           phone?: string
+          poa_doc_path?: string | null
+          proxy_address?: string | null
+          proxy_date_of_birth?: string | null
+          proxy_full_name?: string | null
+          proxy_gender?: string | null
+          proxy_id_back_path?: string | null
+          proxy_id_edited_fields?: string[]
+          proxy_id_front_path?: string | null
+          proxy_id_number?: string | null
+          proxy_id_read_method?: string | null
+          proxy_id_type?: string | null
+          proxy_phone?: string | null
+          refund_txn_ref?: string | null
+          refunded_at?: string | null
+          resubmitted_at?: string | null
+          review_note?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           session_id?: string
           status?: string
           updated_at?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "auction_bidding_contracts_mkt_link_id_fkey"
+            columns: ["mkt_link_id"]
+            isOneToOne: false
+            referencedRelation: "posting_share_links"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "auction_bidding_contracts_order_id_fkey"
             columns: ["order_id"]
@@ -2908,6 +3032,73 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_checkin_otps: {
+        Row: {
+          attempts: number
+          code_hash: string
+          contract_id: string
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          contract_id: string
+          created_at?: string
+          expires_at: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          contract_id?: string
+          created_at?: string
+          expires_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_checkin_otps_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: true
+            referencedRelation: "auction_bidding_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auction_contract_review_events: {
+        Row: {
+          actor_id: string | null
+          at: string
+          contract_id: string
+          id: string
+          kind: string
+          note: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          at?: string
+          contract_id: string
+          id?: string
+          kind: string
+          note?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          at?: string
+          contract_id?: string
+          id?: string
+          kind?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_contract_review_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_bidding_contracts"
             referencedColumns: ["id"]
           },
         ]
@@ -3793,6 +3984,8 @@ export type Database = {
           auction_org_id: string | null
           bidding_method: string
           cancelled_reason: string | null
+          checkin_grace_minutes: number
+          checkin_lead_minutes: number
           code: string | null
           created_at: string
           created_by: string | null
@@ -3810,6 +4003,7 @@ export type Database = {
           published_at: string | null
           registration_end_at: string | null
           registration_start_at: string | null
+          roster_closed_at: string | null
           starts_at: string
           status: string
           title: string
@@ -3823,6 +4017,8 @@ export type Database = {
           auction_org_id?: string | null
           bidding_method?: string
           cancelled_reason?: string | null
+          checkin_grace_minutes?: number
+          checkin_lead_minutes?: number
           code?: string | null
           created_at?: string
           created_by?: string | null
@@ -3840,6 +4036,7 @@ export type Database = {
           published_at?: string | null
           registration_end_at?: string | null
           registration_start_at?: string | null
+          roster_closed_at?: string | null
           starts_at: string
           status?: string
           title: string
@@ -3853,6 +4050,8 @@ export type Database = {
           auction_org_id?: string | null
           bidding_method?: string
           cancelled_reason?: string | null
+          checkin_grace_minutes?: number
+          checkin_lead_minutes?: number
           code?: string | null
           created_at?: string
           created_by?: string | null
@@ -3870,6 +4069,7 @@ export type Database = {
           published_at?: string | null
           registration_end_at?: string | null
           registration_start_at?: string | null
+          roster_closed_at?: string | null
           starts_at?: string
           status?: string
           title?: string
@@ -11594,10 +11794,15 @@ export type Database = {
           address: string
           created_at: string
           date_of_birth: string
+          edited_fields: string[]
           full_name: string
           gender: string | null
+          id_back_path: string | null
+          id_front_path: string | null
           id_issued_on: string | null
           id_number: string
+          id_type: string
+          read_method: string | null
           source: string
           updated_at: string
           user_id: string
@@ -11607,10 +11812,15 @@ export type Database = {
           address: string
           created_at?: string
           date_of_birth: string
+          edited_fields?: string[]
           full_name: string
           gender?: string | null
+          id_back_path?: string | null
+          id_front_path?: string | null
           id_issued_on?: string | null
           id_number: string
+          id_type?: string
+          read_method?: string | null
           source?: string
           updated_at?: string
           user_id: string
@@ -11620,10 +11830,15 @@ export type Database = {
           address?: string
           created_at?: string
           date_of_birth?: string
+          edited_fields?: string[]
           full_name?: string
           gender?: string | null
+          id_back_path?: string | null
+          id_front_path?: string | null
           id_issued_on?: string | null
           id_number?: string
+          id_type?: string
+          read_method?: string | null
           source?: string
           updated_at?: string
           user_id?: string
@@ -11698,6 +11913,10 @@ export type Database = {
         Returns: undefined
       }
       _asset_3d_refund: { Args: { _scan_id: string }; Returns: undefined }
+      _assign_random_bidder_no: {
+        Args: { _contract_id: string }
+        Returns: number
+      }
       _auction_consult_service_id: { Args: never; Returns: string }
       _auction_consult_write_proposal: {
         Args: {
@@ -11732,6 +11951,10 @@ export type Database = {
       }
       _bidding_ctx_clear: { Args: never; Returns: undefined }
       _bidding_rpc_active: { Args: never; Returns: boolean }
+      _buyer_kyc_path_ok: {
+        Args: { _path: string; _uid: string }
+        Returns: boolean
+      }
       _charge_owner_feature_credits: {
         Args: {
           p_cost: number
@@ -11743,7 +11966,26 @@ export type Database = {
         }
         Returns: string
       }
+      _checkin_block_reason: {
+        Args: { _at: string; _channel: string; _contract_id: string }
+        Returns: string
+      }
+      _checkin_window_json: { Args: { _session_id: string }; Returns: Json }
       _close_lot: { Args: { _at: string; _lot_id: string }; Returns: boolean }
+      _jsonb_text_array: { Args: { _j: Json }; Returns: string[] }
+      _kyc_check_identity: {
+        Args: {
+          _address: string
+          _dob: string
+          _full_name: string
+          _gender: string
+          _id_number: string
+          _id_type: string
+          _who: string
+        }
+        Returns: undefined
+      }
+      _kyc_edited_fields: { Args: { _fields: string[] }; Returns: string[] }
       _legal_consult_replace_items: {
         Args: {
           _consultation: Database["public"]["Tables"]["asset_legal_consultations"]["Row"]
@@ -12288,6 +12530,35 @@ export type Database = {
         Returns: Json
       }
       admin_start_valuation: { Args: { _order_id: string }; Returns: Json }
+      auction_contract_review_event_visible: {
+        Args: { _contract_id: string }
+        Returns: boolean
+      }
+      auction_session_checkin_summary: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
+      buyer_kyc_path_referenced: { Args: { _name: string }; Returns: boolean }
+      can_read_buyer_kyc_object: { Args: { _name: string }; Returns: boolean }
+      close_due_rosters: { Args: never; Returns: number }
+      close_session_roster: { Args: { _session_id: string }; Returns: Json }
+      org_check_in: {
+        Args: { _attendee?: string; _contract_id: string; _note?: string }
+        Returns: Json
+      }
+      org_checkin_lookup: {
+        Args: { _query: string; _session_id: string }
+        Returns: Json
+      }
+      org_close_roster_now: { Args: { _session_id: string }; Returns: Json }
+      org_excuse_absence: {
+        Args: { _contract_id: string; _note: string }
+        Returns: Json
+      }
+      org_review_bidding_contract: {
+        Args: { _contract_id: string; _decision: string; _note?: string }
+        Returns: Json
+      }
       owner_cancel_valuation: { Args: { _order_id: string }; Returns: Json }
       owner_request_valuation: {
         Args: {
@@ -12300,6 +12571,31 @@ export type Database = {
       }
       pay_valuation_order: {
         Args: { _expected_amount: number; _order_id: string; _txn_ref: string }
+        Returns: Json
+      }
+      request_checkin_otp: { Args: { _contract_id: string }; Returns: Json }
+      resubmit_bidding_contract: {
+        Args: { _contract_id: string; _payload: Json }
+        Returns: Json
+      }
+      save_id_photo_identity: {
+        Args: {
+          _address: string
+          _date_of_birth: string
+          _edited_fields?: string[]
+          _full_name: string
+          _gender?: string
+          _id_back_path?: string
+          _id_front_path: string
+          _id_issued_on?: string
+          _id_number: string
+          _id_type: string
+          _read_method?: string
+        }
+        Returns: undefined
+      }
+      self_check_in: {
+        Args: { _attendee?: string; _code: string; _contract_id: string }
         Returns: Json
       }
       valuation_cert_readable: { Args: { _name: string }; Returns: boolean }
@@ -14371,17 +14667,7 @@ export type Database = {
       service_kind_label: { Args: { _kind: string }; Returns: string }
       start_asset_3d_scan: { Args: { _posting_id: string }; Returns: Json }
       start_bidding_contract: {
-        Args: {
-          _address: string
-          _date_of_birth?: string
-          _email: string
-          _full_name: string
-          _gender?: string
-          _id_number: string
-          _id_type: string
-          _phone: string
-          _session_id: string
-        }
+        Args: { _payload: Json; _session_id: string }
         Returns: Json
       }
       suggest_org_aliases: { Args: { p_name: string }; Returns: Json }

@@ -15,6 +15,7 @@ import { roomGateOf } from "@/lib/bidding/roomAccess";
 import { BiddingMethodNotice } from "@/components/bidding-room/BiddingMethodNotice";
 import { BiddingRoom } from "@/components/bidding-room/BiddingRoom";
 import { EligibilityGate } from "@/components/bidding-room/EligibilityGate";
+import { SelfCheckInCard } from "@/components/bidder-checkin/SelfCheckInCard";
 
 /**
  * /sessions/:id/dau-gia — phòng đấu giá trực tuyến của một phiên.
@@ -110,14 +111,25 @@ export default function AuctionBiddingRoomPage() {
           </div>
         );
 
+      // Điểm danh mở TRƯỚC giờ bắt đầu, nên người đến sớm điểm danh luôn ở đây.
       case "not_started":
-        return notice(
-          "Phòng đấu giá chưa mở",
-          `Phiên bắt đầu lúc ${formatDateTime(gate.startsAt)}. Hãy quay lại đúng giờ để trả giá.`,
+        return (
+          <div className="mx-auto max-w-xl space-y-4">
+            {notice(
+              "Phòng đấu giá chưa mở",
+              `Phiên bắt đầu lúc ${formatDateTime(gate.startsAt)}. Hãy quay lại đúng giờ để trả giá.`,
+            )}
+            {session && <SelfCheckInCard session={session} inRoom />}
+          </div>
         );
 
       case "blocked":
-        return <EligibilityGate sessionId={id!} reason={gate.reason} />;
+        return (
+          <div className="mx-auto max-w-xl space-y-4">
+            <EligibilityGate sessionId={id!} reason={gate.reason} />
+            {gate.reason === "not_checked_in" && session && <SelfCheckInCard session={session} inRoom />}
+          </div>
+        );
 
       case "view_only":
       case "open":

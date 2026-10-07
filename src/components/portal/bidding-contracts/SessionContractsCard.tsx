@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { useOrgBiddingContracts } from "@/hooks/useOrgBiddingContracts";
-import { expectedDeposit, nextBidderNo } from "@/lib/biddingContracts/filters";
+import { expectedDeposit } from "@/lib/biddingContracts/filters";
 import type { AuctionSessionWithItems } from "@/types/auction-session";
 import type { ContractWithSession } from "@/types/bidding-contract";
 import { AssignBidderNoDialog } from "./AssignBidderNoDialog";
 import { BiddingContractsTable } from "./BiddingContractsTable";
 import { ContractDepositDialog } from "./ContractDepositDialog";
+import { ContractReviewSheet } from "./ContractReviewSheet";
 
 interface Props {
   session: AuctionSessionWithItems;
@@ -24,8 +25,12 @@ export function SessionContractsCard({ session, canUpdate }: Props) {
   const rows = useMemo(() => data.filter((r) => r.session_id === session.id), [data, session.id]);
   const [depositFor, setDepositFor] = useState<ContractWithSession | null>(null);
   const [bidderFor, setBidderFor] = useState<ContractWithSession | null>(null);
+  const [reviewId, setReviewId] = useState<string | null>(null);
 
-  const count = session.max_registrants != null ? `${rows.length}/${session.max_registrants}` : String(rows.length);
+  // Hồ sơ bị từ chối vẫn hiện (lịch sử duyệt) nhưng không chiếm suất.
+  const paidCount = rows.filter((r) => r.status === "paid").length;
+  const awaitingReview = rows.filter((r) => r.status === "paid" && r.review_status === "pending").length;
+  const count = session.max_registrants != null ? `${paidCount}/${session.max_registrants}` : String(paidCount);
 
   return (
     <Card className="space-y-4 rounded-2xl p-5">
@@ -33,7 +38,9 @@ export function SessionContractsCard({ session, canUpdate }: Props) {
         <div>
           <h2 className="font-semibold text-foreground">Hồ sơ tham gia ({count})</h2>
           <p className="text-xs text-muted-foreground">
-            Người mua đã thanh toán tiền hồ sơ qua sàn. Xác nhận tiền đặt trước rồi cấp số báo danh.
+            Người mua đã thanh toán tiền hồ sơ qua sàn. Duyệt hồ sơ và xác nhận tiền đặt trước — số báo danh cấp khi
+            điểm danh.
+            {awaitingReview > 0 && <span className="font-medium text-foreground"> {awaitingReview} hồ sơ chờ duyệt.</span>}
           </p>
         </div>
         <Button
@@ -62,6 +69,7 @@ export function SessionContractsCard({ session, canUpdate }: Props) {
         <BiddingContractsTable
           rows={rows}
           canUpdate={canUpdate}
+          onReview={(r) => setReviewId(r.id)}
           onDeposit={setDepositFor}
           onBidderNo={setBidderFor}
           emptyText={
@@ -72,6 +80,10 @@ export function SessionContractsCard({ session, canUpdate }: Props) {
         />
       )}
 
+      <ContractReviewSheet
+        contract={rows.find((r) => r.id === reviewId) ?? null}
+        onOpenChange={(open) => !open && setReviewId(null)}
+      />
       {canUpdate && (
         <>
           <ContractDepositDialog
@@ -79,11 +91,7 @@ export function SessionContractsCard({ session, canUpdate }: Props) {
             expected={expectedDeposit(session.auction_session_items)}
             onOpenChange={(open) => !open && setDepositFor(null)}
           />
-          <AssignBidderNoDialog
-            contract={bidderFor}
-            suggested={nextBidderNo(rows)}
-            onOpenChange={(open) => !open && setBidderFor(null)}
-          />
+          <AssignBidderNoDialog contract={bidderFor} onOpenChange={(open) => !open && setBidderFor(null)} />
         </>
       )}
     </Card>

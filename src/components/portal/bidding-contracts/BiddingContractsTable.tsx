@@ -1,28 +1,34 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardCheck, Eye, EyeOff, Hash, Wallet } from "lucide-react";
+import { ClipboardCheck, Eye, EyeOff, FileSearch, Hash, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DepositStatusBadge } from "@/components/bidding-contracts/DepositStatusBadge";
+import { ReviewStatusBadge } from "@/components/bidding-contracts/ReviewStatusBadge";
 import { VneidVerifiedBadge } from "@/components/vneid/VneidButton";
 import { formatVnd } from "@/lib/advertising/slug";
 import { formatDateTime } from "@/lib/auctionSessions/datetime";
 import { maskIdNumber } from "@/lib/biddingContracts/filters";
 import { formatBidderNo } from "@/lib/biddingContracts/paths";
-import { ID_TYPE_LABELS, type ContractWithSession } from "@/types/bidding-contract";
+import { BUYER_KIND_LABELS, ID_TYPE_LABELS, type ContractWithSession } from "@/types/bidding-contract";
 
 interface Props {
   rows: ContractWithSession[];
   showSession?: boolean;
   canUpdate: boolean;
+  onReview: (row: ContractWithSession) => void;
   onDeposit: (row: ContractWithSession) => void;
+  /** Chỉ để ĐỔI số đã cấp lúc điểm danh — số báo danh mới chỉ sinh ra khi điểm danh. */
   onBidderNo: (row: ContractWithSession) => void;
   emptyText?: string;
 }
 
-/** Bảng hồ sơ tham gia đã thanh toán — dùng ở chi tiết phiên và màn quản lý chung. */
-export function BiddingContractsTable({ rows, showSession, canUpdate, onDeposit, onBidderNo, emptyText }: Props) {
+/**
+ * Bảng hồ sơ tham gia (đã thanh toán + đã bị từ chối) — dùng ở chi tiết phiên và
+ * màn quản lý chung. Xem / duyệt hồ sơ mở ContractReviewSheet.
+ */
+export function BiddingContractsTable({ rows, showSession, canUpdate, onReview, onDeposit, onBidderNo, emptyText }: Props) {
   const navigate = useNavigate();
   // CCCD che mặc định; mở từng dòng khi cần đối chiếu.
   const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
@@ -55,14 +61,15 @@ export function BiddingContractsTable({ rows, showSession, canUpdate, onDeposit,
             {showSession && <TableHead>Phiên</TableHead>}
             <TableHead className="text-right">Tiền hồ sơ</TableHead>
             <TableHead className="text-center">Số báo danh</TableHead>
+            <TableHead>Duyệt hồ sơ</TableHead>
             <TableHead>Tiền đặt trước</TableHead>
-            {canUpdate && <TableHead className="w-24" />}
+            <TableHead className="w-28" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => {
             const sessionCancelled = row.auction_sessions?.status === "cancelled";
-            const canAssign = row.deposit_status === "received" && !sessionCancelled;
+            const rejected = row.status === "refunded";
             return (
               <TableRow key={row.id}>
                 <TableCell className="whitespace-nowrap">
@@ -75,6 +82,11 @@ export function BiddingContractsTable({ rows, showSession, canUpdate, onDeposit,
                   )}
                 </TableCell>
                 <TableCell className="min-w-[12rem]">
+                  {row.buyer_kind === "organization" && (
+                    <p className="text-xs text-muted-foreground">
+                      {BUYER_KIND_LABELS.organization}: <span className="font-medium text-foreground">{row.org_name}</span>
+                    </p>
+                  )}
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-medium text-foreground">{row.full_name}</span>
                     {row.identity_source === "vneid" && <VneidVerifiedBadge />}
@@ -115,43 +127,53 @@ export function BiddingContractsTable({ rows, showSession, canUpdate, onDeposit,
                   {formatBidderNo(row.bidder_no) ?? <span className="text-sm font-normal text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
+                  <ReviewStatusBadge status={row.review_status} />
+                  {row.review_status === "pending" && row.resubmitted_at && (
+                    <p className="mt-1 text-xs text-muted-foreground">Đã nộp lại</p>
+                  )}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
                   <DepositStatusBadge status={row.deposit_status} />
                   {row.deposit_amount_received != null && (
                     <p className="mt-1 text-xs text-muted-foreground">{formatVnd(row.deposit_amount_received)}</p>
                   )}
                 </TableCell>
-                {canUpdate && (
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onReview(row)}
+                      title="Xem & duyệt hồ sơ"
+                      aria-label="Xem & duyệt hồ sơ"
+                    >
+                      <FileSearch className="h-4 w-4" />
+                    </Button>
+                    {canUpdate && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => onDeposit(row)}
-                        title="Cập nhật tiền đặt trước"
+                        title={rejected ? "Hồ sơ đã bị từ chối — hoàn trả tiền đặt trước trong hồ sơ" : "Cập nhật tiền đặt trước"}
                         aria-label="Cập nhật tiền đặt trước"
-                        disabled={sessionCancelled && row.deposit_status !== "received"}
+                        disabled={rejected || (sessionCancelled && row.deposit_status !== "received")}
                       >
                         <Wallet className="h-4 w-4" />
                       </Button>
+                    )}
+                    {canUpdate && row.checked_in_at && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => onBidderNo(row)}
-                        disabled={!canAssign}
-                        title={
-                          canAssign
-                            ? "Cấp số báo danh"
-                            : sessionCancelled
-                              ? "Phiên đã huỷ"
-                              : "Cấp số báo danh sau khi xác nhận đã nhận tiền đặt trước"
-                        }
-                        aria-label="Cấp số báo danh"
+                        title="Đổi số báo danh"
+                        aria-label="Đổi số báo danh"
                       >
                         <Hash className="h-4 w-4" />
                       </Button>
-                    </div>
-                  </TableCell>
-                )}
+                    )}
+                  </div>
+                </TableCell>
               </TableRow>
             );
           })}

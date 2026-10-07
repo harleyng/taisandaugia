@@ -5,6 +5,17 @@
 
 ---
 
+## 2026-10-08 — Hồ sơ tham gia: eKYC → tổ chức duyệt → điểm danh cấp số báo danh
+
+**Context:** số báo danh cấp tay khi nhận cọc, tổ chức không duyệt giấy tờ, không ghi nhận ai có mặt ⇒ người vắng vẫn giữ quyền trả giá và cọc. Kế hoạch `docs/bidder-ekyc-checkin-plan.md` (W0 → S7, xong cùng ngày).
+**Decision:**
+- Danh tính lưu ở hồ sơ người dùng (VNeID hoặc ảnh CCCD + QR); hồ sơ tham gia là bản chụp; người mua tổ chức + uỷ quyền.
+- `review_status` tách khỏi `status`; từ chối ⇒ hoàn phí hồ sơ (`refunded`), đơn `cancelled`.
+- Số báo danh CHỈ cấp lúc điểm danh, ngẫu nhiên; kênh theo hình thức (trực tiếp = quét phiếu, trực tuyến = tự điểm danh + OTP); `place_bid` đòi `checked_in_at`.
+- Cron chốt danh sách lúc `starts_at + grace` ⇒ vắng = tịch thu cọc (miễn trừ được).
+- Bỏ "Cả hai hình thức" khỏi form phiên (không điểm danh được); phiên cũ vẫn hiển thị, DB CHECK giữ nguyên.
+**Consequences:** seed tự đặt duyệt/điểm danh; chạy lại seed cũ cần `scripts/demo-bidding-backfill.sql` cùng giao dịch. Hoàn tiền, OTP, VNeID vẫn mô phỏng (seam: Edge Function). Chưa chạy nghiệm thu bằng tài khoản thật. Sổ tay luồng đấu giá trực tuyến (4613d5db) đã lỗi thời. Luật: business-rules § "Duyệt hồ sơ + điểm danh"; pitfalls § bảng chỉ ghi thêm.
+
 ## 2026-10-04 — Danh mục gói theo BỘ GÓI (design "Danh Muc Goi - Admin v3")
 
 **Context:** chọn Trạm theo TỪNG gói (01/10) + kỳ mua dùng chung không đủ cho bảng giá theo đối tượng (ngân hàng HĐ khung −15%, làng nghề kỳ 1 tháng…). Design v3 gom gói thành bộ.

@@ -1,10 +1,11 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileSignature, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { InfoCardShell } from "@/components/shared/InfoCardShell";
+import { ContractReviewNotice } from "@/components/bidding-contracts/ContractReviewNotice";
 import { DepositStatusBadge } from "@/components/bidding-contracts/DepositStatusBadge";
+import { ReviewStatusBadge } from "@/components/bidding-contracts/ReviewStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthDialog } from "@/contexts/AuthDialogContext";
 import {
@@ -16,10 +17,9 @@ import {
 import { formatVnd } from "@/lib/advertising/slug";
 import { formatDateTime } from "@/lib/auctionSessions/datetime";
 import { contractCtaState } from "@/lib/biddingContracts/ctaState";
-import { identityDefaults, identityToRpcArgs } from "@/lib/biddingContracts/identityForm";
-import { contractCheckoutPath, formatBidderNo, MY_CONTRACTS_PATH } from "@/lib/biddingContracts/paths";
+import { contractToRegistrationPayload } from "@/lib/biddingContracts/registrationPayload";
+import { contractCheckoutPath, formatBidderNo, MY_CONTRACTS_PATH, sessionRegistrationPath } from "@/lib/biddingContracts/paths";
 import type { PublicSessionDetail } from "@/types/auction-session";
-import { BuyContractDialog } from "./BuyContractDialog";
 
 /** Cột phải trang /sessions/:id — mua hồ sơ tham gia hoặc xem hồ sơ đã mua. */
 export function SessionContractCard({ session }: { session: PublicSessionDetail }) {
@@ -30,7 +30,6 @@ export function SessionContractCard({ session }: { session: PublicSessionDetail 
   const { data: contract, isLoading: contractLoading } = useMySessionContract(session.id);
   const start = useStartBiddingContract();
   const cancel = useCancelBiddingContract();
-  const [buyOpen, setBuyOpen] = useState(false);
 
   const cta = contractCtaState({ session, contract: contract ?? null, summary: summary ?? null, userId });
   const fee = session.dossier_fee ?? 0;
@@ -39,10 +38,10 @@ export function SessionContractCard({ session }: { session: PublicSessionDetail 
   if (cta.kind === "cancelled_session") return null;
   if (cta.kind === "not_for_sale" && fee <= 0) return null;
 
-  // Gia hạn giữ chỗ bằng chính danh tính đã khai, rồi sang trang thanh toán.
+  // Gia hạn giữ chỗ bằng chính bản chụp đã nộp (kể cả ảnh giấy tờ), rồi sang trang thanh toán.
   const continuePayment = () => {
     if (!contract) return;
-    start.mutate(identityToRpcArgs(session.id, { ...identityDefaults({ last: contract }), consent: true }), {
+    start.mutate({ sessionId: session.id, payload: contractToRegistrationPayload(contract) }, {
       onSuccess: (r) => navigate(contractCheckoutPath(r.contract_id, session.id)),
     });
   };
@@ -68,7 +67,11 @@ export function SessionContractCard({ session }: { session: PublicSessionDetail 
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Số báo danh</span>
-                <span className="font-semibold text-foreground">{formatBidderNo(contract?.bidder_no) ?? "Chưa cấp"}</span>
+                <span className="font-semibold text-foreground">{formatBidderNo(contract?.bidder_no) ?? "Cấp khi điểm danh"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Duyệt hồ sơ</span>
+                {contract && <ReviewStatusBadge status={contract.review_status} />}
               </div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Tiền đặt trước</span>
@@ -81,8 +84,9 @@ export function SessionContractCard({ session }: { session: PublicSessionDetail 
               </InfoBox>
             ) : (
               contract?.deposit_status === "pending" &&
-              muted("Nộp tiền đặt trước theo hướng dẫn của tổ chức đấu giá. Sau khi tổ chức xác nhận, bạn được cấp số báo danh.")
+              muted("Nộp tiền đặt trước theo hướng dẫn của tổ chức đấu giá. Sau khi tổ chức xác nhận, bạn điểm danh trước giờ đấu giá để nhận số báo danh.")
             )}
+            {contract && <ContractReviewNotice contract={contract} sessionPublished={session.status === "published"} />}
             <Button variant="outline" className="w-full" onClick={() => navigate(MY_CONTRACTS_PATH)}>
               Xem hồ sơ của tôi
             </Button>
@@ -112,7 +116,11 @@ export function SessionContractCard({ session }: { session: PublicSessionDetail 
           <div className="space-y-2">
             <Button
               className="h-11 w-full text-base font-semibold"
-              onClick={() => (userId ? setBuyOpen(true) : openAuthDialog(() => setBuyOpen(true)))}
+              onClick={() => {
+                const register = () => navigate(sessionRegistrationPath(session.id));
+                if (userId) register();
+                else openAuthDialog(register);
+              }}
             >
               {userId ? "Mua hồ sơ tham gia" : "Đăng nhập để mua hồ sơ"}
             </Button>
@@ -155,12 +163,6 @@ export function SessionContractCard({ session }: { session: PublicSessionDetail 
         </div>
       )}
       {body()}
-
-      <BuyContractDialog
-        session={session}
-        open={buyOpen && (cta.kind === "available" || cta.kind === "login_required")}
-        onOpenChange={setBuyOpen}
-      />
     </InfoCardShell>
   );
 }

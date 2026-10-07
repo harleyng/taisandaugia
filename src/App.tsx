@@ -128,6 +128,7 @@ const YeuCauKyGuiPage = lazy(() => import("./pages/portal/YeuCauKyGuiPage"));
 const PhienDauGiaPage = lazy(() => import("./pages/portal/PhienDauGiaPage"));
 const PhienDauGiaDetailPage = lazy(() => import("./pages/portal/PhienDauGiaDetailPage"));
 const PhienDauGiaQaPreviewPage = lazy(() => import("./pages/portal/PhienDauGiaQaPreviewPage"));
+const BidderCardPrintPage = lazy(() => import("./pages/portal/BidderCardPrintPage"));
 const HoiDapPage = lazy(() => import("./pages/portal/HoiDapPage"));
 const KhachHangPage = lazy(() => import("./pages/portal/KhachHangPage"));
 const KhachHangDetailPage = lazy(() => import("./pages/portal/KhachHangDetailPage"));
@@ -212,6 +213,7 @@ const AuctionSessions = lazy(() => import("./pages/AuctionSessions"));
 const AuctionSessionDetail = lazy(() => import("./pages/AuctionSessionDetail"));
 const AuctionSessionQaPage = lazy(() => import("./pages/AuctionSessionQaPage"));
 const AuctionBiddingRoomPage = lazy(() => import("./pages/AuctionBiddingRoomPage"));
+const BidderRegistrationPage = lazy(() => import("./pages/BidderRegistrationPage"));
 
 function RedirectApplicationId() {
   const { id } = useParams<{ id: string }>()
@@ -320,6 +322,10 @@ const App = () => (
               <Route path="/sessions/:id" element={<AuctionSessionDetail />} />
               <Route path="/sessions/:id/hoi-dap" element={<AuctionSessionQaPage />} />
               <Route path="/sessions/:id/dau-gia" element={<AuctionBiddingRoomPage />} />
+              {/* Đăng ký tham gia (mua hồ sơ) 4 bước — cần đăng nhập */}
+              <Route path="/sessions/:id/dang-ky" element={<ProtectedRoute />}>
+                <Route index element={<BidderRegistrationPage />} />
+              </Route>
 
               {/* Credits */}
               <Route path="/buy-credits" element={<BuyCredits />} />
@@ -426,6 +432,10 @@ const App = () => (
 
               {/* Protected: Company Portal — sidebar layout */}
               <Route path="/portal" element={<ProtectedRoute />}>
+                {/* Thẻ số báo danh A6 — trang in, ngoài PortalLayout (không có OrgProvider
+                    nên không bọc PortalPermissionRoute): RLS abc_select_org là cổng —
+                    thiếu quyền view/checkin thì query trả rỗng. */}
+                <Route path="phien-dau-gia/:id/diem-danh/:contractId/the" element={<BidderCardPrintPage />} />
                 <Route element={<PortalLayout />}>
                   <Route index element={<Navigate to="/portal/dashboard" replace />} />
                   <Route path="dashboard" element={<DashboardPage />} />
@@ -535,6 +545,15 @@ const App = () => (
                     element={
                       <PortalPermissionRoute module="ho-so-tham-gia">
                         <PhienDauGiaDetailPage tab="ho-so" />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  {/* Điểm danh: nhân viên cửa có thể chỉ có quyền "checkin". */}
+                  <Route
+                    path="phien-dau-gia/:id/diem-danh"
+                    element={
+                      <PortalPermissionRoute module="ho-so-tham-gia" anyOf={["view", "checkin"]}>
+                        <PhienDauGiaDetailPage tab="diem-danh" />
                       </PortalPermissionRoute>
                     }
                   />

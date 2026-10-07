@@ -26,7 +26,7 @@ export const BIDDING_REASON_MESSAGES: Record<string, string> = {
   lot_paused: "Lô đang tạm dừng. Vui lòng chờ đấu giá viên tiếp tục.",
   lot_closed: "Lô đã đóng, không nhận thêm lượt trả giá.",
   not_eligible:
-    "Bạn chưa đủ điều kiện trả giá: cần hồ sơ đã thanh toán, đã nộp tiền đặt trước và có số báo danh.",
+    "Bạn chưa đủ điều kiện trả giá: cần hồ sơ đã được duyệt, đã nộp tiền đặt trước và đã điểm danh.",
   already_leading: "Bạn đang là người trả giá cao nhất — không cần trả thêm.",
   invalid_nonce: "Phiên gửi không hợp lệ. Vui lòng tải lại trang rồi thử lại.",
   bid_too_low: "Giá trả phải cao hơn giá hiện tại ít nhất một bước giá.",
@@ -46,6 +46,31 @@ export const BIDDING_REASON_MESSAGES: Record<string, string> = {
   invalid_path: "Đường dẫn tệp biên bản không hợp lệ, hoặc biên bản đã tồn tại.",
   invalid_hash: "Mã kiểm tra nội dung biên bản không hợp lệ.",
   file_missing: "Chưa tải được tệp biên bản lên. Vui lòng thử lại.",
+
+  // Điểm danh (20261008100300) — _checkin_block_reason + RPC điểm danh / OTP
+  not_paid: "Hồ sơ tham gia chưa được thanh toán.",
+  review_pending: "Hồ sơ tham gia đang chờ tổ chức đấu giá duyệt.",
+  review_needs_info: "Tổ chức đấu giá yêu cầu bổ sung hồ sơ — nộp lại trước khi điểm danh.",
+  review_rejected: "Hồ sơ tham gia đã bị tổ chức đấu giá từ chối.",
+  deposit_not_received: "Tổ chức đấu giá chưa ghi nhận tiền đặt trước.",
+  session_not_published: "Phiên không còn công bố.",
+  format_unsupported: "Phiên theo hình thức này chưa hỗ trợ điểm danh trên hệ thống.",
+  wrong_channel: "Phiên trực tiếp điểm danh tại địa điểm tổ chức; phiên trực tuyến người tham gia tự điểm danh.",
+  already_checked_in: "Người tham gia đã điểm danh.",
+  absent: "Người tham gia đã bị ghi vắng mặt.",
+  roster_closed: "Phiên đã chốt danh sách điểm danh.",
+  window_not_open: "Chưa đến giờ mở điểm danh.",
+  window_closed: "Đã hết thời gian điểm danh.",
+  wrong_session: "Phiếu dự phiên này thuộc phiên đấu giá khác.",
+  query_too_short: "Nhập ít nhất 2 ký tự để tìm.",
+  invalid_attendee: "Chọn người có mặt: người đăng ký hoặc người được uỷ quyền.",
+  no_proxy: "Hồ sơ này không đăng ký người được uỷ quyền.",
+  too_early: "Chỉ chốt danh sách sau giờ bắt đầu phiên.",
+  otp_too_soon: "Vừa gửi mã — vui lòng chờ 30 giây rồi gửi lại.",
+  otp_missing: "Chưa có mã xác nhận — bấm “Gửi mã” trước.",
+  otp_expired: "Mã xác nhận đã hết hạn — gửi mã mới.",
+  otp_invalid: "Mã xác nhận không đúng.",
+  otp_locked: "Nhập sai quá 5 lần — gửi mã mới để thử lại.",
 };
 
 const FALLBACK_MESSAGE = "Thao tác không thành công. Vui lòng thử lại.";
@@ -68,6 +93,14 @@ export function biddingReasonMessage(
   }
   if (reason === "bid_too_many_steps" && max != null) {
     return `Giá trả tối đa cho một lượt là ${formatVnd(max)}.`;
+  }
+  const opensAt = typeof details?.opens_at === "string" ? new Date(details.opens_at) : null;
+  if (reason === "window_not_open" && opensAt && !Number.isNaN(opensAt.getTime())) {
+    return `Chưa đến giờ điểm danh — mở lúc ${opensAt.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}.`;
+  }
+  const left = num(details?.attempts_left);
+  if (reason === "otp_invalid" && left != null) {
+    return `Mã xác nhận không đúng — còn ${left} lần thử.`;
   }
   return (reason && BIDDING_REASON_MESSAGES[reason]) || FALLBACK_MESSAGE;
 }

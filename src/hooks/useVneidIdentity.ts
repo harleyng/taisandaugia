@@ -1,30 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useKycProfile } from "@/hooks/useKycProfile";
 import { qk } from "@/lib/queryKeys";
 import { contractErrorMessage } from "@/lib/biddingContracts/errors";
 import { mockVneidIdentity } from "@/lib/vneid/mockVneid";
 import type { VerifiedIdentity } from "@/types/bidding-contract";
 
-/** Danh tính đã xác thực qua VNeID của người đang đăng nhập (null = chưa liên kết). */
-export function useVerifiedIdentity() {
-  const { userId } = useAuth();
-  return useQuery({
-    queryKey: qk.verifiedIdentity(userId),
-    enabled: !!userId,
-    queryFn: async (): Promise<VerifiedIdentity | null> => {
-      const { data, error } = await supabase
-        .from("user_verified_identities")
-        .select("*")
-        .eq("user_id", userId!)
-        .maybeSingle();
-      if (error) throw error;
-      return (data as VerifiedIdentity | null) ?? null;
-    },
-  });
-}
+/**
+ * Danh tính đã lưu của người đang đăng nhập (null = chưa có). Giữ tên cũ cho các
+ * màn VNeID; nguồn duy nhất là useKycProfile (VNeID hoặc ảnh giấy tờ).
+ */
+export const useVerifiedIdentity = useKycProfile;
 
 /** Đủ lâu để thấy "đang chờ ứng dụng", chưa đủ để sốt ruột. */
 const MOCK_APPROVAL_MS = 1600;

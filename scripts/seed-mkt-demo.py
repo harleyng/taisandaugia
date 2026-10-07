@@ -314,20 +314,30 @@ update auction_sessions set status = 'published' where id = {lit(SESSION)};""", 
           "alter table auction_sessions enable trigger auction_sessions_guard;"]
     s.append("\\endif")
 
-    # Hồ sơ đã thanh toán — tạo nếu thiếu, luôn dời ngày thanh toán theo hôm nay.
+    # Hồ sơ đã thanh toán + ĐÃ DUYỆT — tạo nếu thiếu, luôn dời ngày thanh toán theo hôm nay.
+    # Lịch sử duyệt là bảng chỉ-ghi-thêm và insert thẳng 'paid' không qua trigger 'submitted'
+    # ⇒ dựng lại 2 sự kiện theo ngày mới (tắt trigger chỉ-ghi-thêm trong lúc dựng).
+    s.append("alter table auction_contract_review_events disable trigger auction_contract_review_events_append_only;")
     for k, (b, d, _ch) in enumerate(DOSSIERS, start=1):
         cid = sid("0b0b", k)
         _id, email, name = BUYERS[b - 1]
         s.append(f"""
 insert into auction_bidding_contracts (id, code, session_id, organization_id, user_id, full_name, id_type, id_number,
   date_of_birth, gender, phone, email, address, identity_source, fee_amount, status, paid_at, payment_txn_ref,
-  created_at, updated_at)
+  review_status, reviewed_at, created_at, updated_at)
 values ({lit(cid)}, 'HSDG' || lpad(nextval('public.auction_bidding_contract_code_seq')::text, 6, '0'), {lit(SESSION)},
   {lit(BAOTIN_ORG)}, {lit(_id)}, {lit(name)}, 'cccd', {lit(f'07909{k:07d}')}, date '1986-01-01' + {k * 431},
   {lit('male' if k % 2 else 'female')}, {lit(f'09000000{k:02d}')}, {lit(email)},
   {lit(f'{20 + k * 7} Đường số {k + 2}, Phường Tân Phong, Quận 7, TP. Hồ Chí Minh')}, 'manual', 500000, 'paid',
-  timestamptz {lit(at(d, 10 + k))}, {lit(f'DEMO-M6-HS-{k:04d}')}, timestamptz {lit(at(d, 9 + k))}, timestamptz {lit(at(d, 10 + k))})
-on conflict (id) do update set paid_at = excluded.paid_at, created_at = excluded.created_at, updated_at = excluded.updated_at;""")
+  timestamptz {lit(at(d, 10 + k))}, {lit(f'DEMO-M6-HS-{k:04d}')}, 'approved', timestamptz {lit(at(d + 1, 9))},
+  timestamptz {lit(at(d, 9 + k))}, timestamptz {lit(at(d, 10 + k))})
+on conflict (id) do update set paid_at = excluded.paid_at, reviewed_at = excluded.reviewed_at,
+  created_at = excluded.created_at, updated_at = excluded.updated_at;
+delete from auction_contract_review_events where contract_id = {lit(cid)};
+insert into auction_contract_review_events (contract_id, kind, note, actor_id, at) values
+  ({lit(cid)}, 'submitted', null, {lit(_id)}, timestamptz {lit(at(d, 10 + k))}),
+  ({lit(cid)}, 'approved', 'Dữ liệu mẫu — hồ sơ hợp lệ.', null, timestamptz {lit(at(d + 1, 9))});""")
+    s.append("alter table auction_contract_review_events enable trigger auction_contract_review_events_append_only;")
     return s
 
 
@@ -843,6 +853,11 @@ def teardown_sql(with_session):
     if with_session:
         s += ["alter table auction_session_items disable trigger auction_session_items_guard_delete;",
               "alter table auction_session_items disable trigger auction_session_items_bidding_lock;",
+              # Lịch sử duyệt: FK RESTRICT + chỉ-ghi-thêm ⇒ xoá trước hồ sơ, tắt trigger.
+              "alter table auction_contract_review_events disable trigger auction_contract_review_events_append_only;",
+              f"delete from auction_contract_review_events where contract_id in "
+              f"(select id from auction_bidding_contracts where session_id = {lit(SESSION)});",
+              "alter table auction_contract_review_events enable trigger auction_contract_review_events_append_only;",
               f"delete from auction_bidding_contracts where session_id = {lit(SESSION)};",
               f"delete from auction_session_items where session_id = {lit(SESSION)};",
               f"delete from auction_sessions where id = {lit(SESSION)};",

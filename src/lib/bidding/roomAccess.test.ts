@@ -139,3 +139,37 @@ describe("roomGateOf — sau khi chốt kết quả (Bước 6)", () => {
     });
   });
 });
+
+describe("roomGateOf — điểm danh (20261008100300)", () => {
+  it("chưa điểm danh ⇒ chặn cả trang với lý do riêng", () => {
+    expect(roomGateOf(input({ eligible: false, reason: "not_checked_in", bidderNo: null }))).toEqual({
+      kind: "blocked",
+      reason: "not_checked_in",
+    });
+  });
+
+  it("vắng mặt (tiền đặt trước bị giữ, chưa có số) ⇒ báo vắng, không báo 'chưa được cấp số'", () => {
+    const gate = roomGateOf(input({ forfeited: true, eligible: false, reason: "absent", bidderNo: null }));
+    expect(gate).toEqual({ kind: "blocked", reason: "absent" });
+  });
+
+  it("vắng có lý do (chờ hoàn tiền) vẫn bị chặn, không thành 'settled'", () => {
+    expect(roomGateOf(input({ eligible: false, reason: "absent", bidderNo: null }))).toEqual({
+      kind: "blocked",
+      reason: "absent",
+    });
+  });
+
+  it("vắng mặt vẫn thua các cổng về phiên", () => {
+    const absent: Partial<RoomGateInput> = { forfeited: true, eligible: false, reason: "absent", bidderNo: null };
+    expect(roomGateOf(input({ ...absent, session: session({ status: "cancelled" }) }))).toEqual({ kind: "cancelled" });
+    expect(roomGateOf(input({ ...absent, bidderLoading: true }))).toEqual({ kind: "loading" });
+  });
+
+  it("đã điểm danh rồi rút giá ⇒ vẫn là nhánh tịch thu chỉ-xem", () => {
+    expect(roomGateOf(input({ forfeited: true, eligible: false, reason: "no_deposit", bidderNo: 7 }))).toEqual({
+      kind: "view_only",
+      reason: "forfeited",
+    });
+  });
+});

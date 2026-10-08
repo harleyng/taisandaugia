@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signContractFile } from "@/hooks/useConsignmentContract";
 import { CONTRACT_BUCKET } from "@/lib/consignment/contractFiles";
@@ -10,13 +10,21 @@ interface ContractFileButtonProps {
   /** Mặc định bucket hợp đồng; giấy tờ sở hữu dùng 'asset-docs'. */
   bucket?: string;
   size?: "sm" | "default";
+  /** Biểu tượng khi đã ký xong URL (mặc định Download). */
+  icon?: LucideIcon;
 }
 
 /**
  * Nút mở tệp trong bucket PRIVATE. Ký URL trước khi render (không ký trong
  * onClick): window.open sau một await bị trình duyệt chặn như popup.
  */
-export function ContractFileButton({ path, label, bucket = CONTRACT_BUCKET, size = "sm" }: ContractFileButtonProps) {
+export function ContractFileButton({
+  path,
+  label,
+  bucket = CONTRACT_BUCKET,
+  size = "sm",
+  icon: Icon = Download,
+}: ContractFileButtonProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -43,7 +51,7 @@ export function ContractFileButton({ path, label, bucket = CONTRACT_BUCKET, size
       disabled={!url}
       onClick={() => url && window.open(url, "_blank", "noopener")}
     >
-      {url ? <Download className="h-4 w-4" /> : !failed && <Loader2 className="h-4 w-4 animate-spin" />}
+      {url ? <Icon className="h-4 w-4" /> : !failed && <Loader2 className="h-4 w-4 animate-spin" />}
       {failed ? "Không mở được tệp" : label}
     </Button>
   );

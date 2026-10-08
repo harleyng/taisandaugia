@@ -77,6 +77,8 @@ export interface OrgServiceRequest {
   quote_valid_until: string | null;
   /** Mã hồ sơ HS-xxxx. */
   posting_code: string;
+  /** Lần đổi cuối của yêu cầu — mốc của "từ chối" / "không được chọn" (không có cột riêng). */
+  updated_at: string;
 }
 
 /**

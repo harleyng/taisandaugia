@@ -13436,6 +13436,7 @@ export type Database = {
           starting_price: number
           status: string
           title: string
+          updated_at: string
         }[]
       }
       org_session_auction_consult_suggestions: {

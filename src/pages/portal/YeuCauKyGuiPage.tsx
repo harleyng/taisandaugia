@@ -1,166 +1,98 @@
 import { useMemo, useState } from 'react'
-import { Inbox, Loader2, MapPin, ShieldAlert } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { useNavigate } from 'react-router-dom'
+import { Loader2, ShieldAlert } from 'lucide-react'
+import { SelectItem } from '@/components/ui/select'
 import { ASSET_CATEGORIES } from '@/constants/category.constants'
-import { formatVnd } from '@/lib/advertising/slug'
+import { stripViDiacritics } from '@/lib/normalizeVi'
+import { useOrgServiceRequests } from '@/hooks/useOrgServiceRequests'
+import { OwnerTabBar } from '@/components/asset-owner-portal/ui/OwnerTabs'
+import { OwnerSearchInput } from '@/components/asset-owner-portal/ui/OwnerSearchInput'
+import { OwnerFilterSelect } from '@/components/asset-owner-portal/ui/OwnerFilterSelect'
+import { ConsignmentCanvas } from '@/components/portal/consignment/ConsignmentCanvas'
+import { RequestsTable } from '@/components/portal/consignment/list/RequestsTable'
 import {
-  useOrgServiceRequestCounts, useOrgServiceRequests, useRespondServiceRequest,
-} from '@/hooks/useOrgServiceRequests'
-import { QuoteDialog } from '@/components/portal/consignment/quote/QuoteDialog'
-import { DeclineDialog } from '@/components/portal/consignment/DeclineDialog'
-import { RequestDetailSheet } from '@/components/portal/consignment/RequestDetailSheet'
-import {
-  ORG_REQUEST_STATUS_LABELS, REQUEST_STATUS_BADGE_CLASS,
-  type OrgServiceRequest, type ServiceQuoteInput, type ServiceRequestStatus,
-} from '@/types/consignment'
-import { CONTRACT_STATUS_BADGE_CLASS, CONTRACT_STATUS_LABELS_ORG } from '@/types/consignment-contract'
+  REQUEST_TABS, compareRequests, matchesQuery, type RequestTab,
+} from '@/components/portal/consignment/list/requestRows'
+import type { OrgServiceRequest } from '@/types/consignment'
 
-const PARENT_NAME: Record<string, string> = Object.fromEntries(ASSET_CATEGORIES.map((p) => [p.slug, p.name]))
+const STORAGE_KEY = 'ycg-list-v2'
 
-type TabKey = 'open' | 'quoted' | 'declined' | 'won'
-
-const TABS: { key: TabKey; label: string; match: ServiceRequestStatus[] }[] = [
-  { key: 'open', label: 'Cần trả lời', match: ['sent', 'seen'] },
-  { key: 'quoted', label: 'Đã báo giá', match: ['quoted'] },
-  { key: 'won', label: 'Đã trúng · hợp đồng', match: ['selected', 'accepted'] },
-  { key: 'declined', label: 'Đã đóng', match: ['declined', 'not_selected', 'contract_cancelled'] },
-]
-
-function RequestCard({ r, onOpen }: { r: OrgServiceRequest; onOpen: () => void }) {
-  const location = [r.district, r.province].filter(Boolean).join(', ')
-  const reopened = !!r.reopened_at && (r.status === 'sent' || r.status === 'seen' || r.status === 'quoted')
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="w-full rounded-2xl border border-border bg-card p-4 text-left transition hover:border-primary/40"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <p className="truncate font-semibold text-foreground">{r.title}</p>
-          <p className="text-xs text-muted-foreground">
-            {PARENT_NAME[r.parent_slug] ?? r.parent_slug}
-            {location && (
-              <>
-                {' · '}
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {location}
-                </span>
-              </>
-            )}
-            {r.origin === 'platform' && ' · Sàn giới thiệu'}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${REQUEST_STATUS_BADGE_CLASS[r.status]}`}>
-            {ORG_REQUEST_STATUS_LABELS[r.status]}
-          </span>
-          {r.contract_status && r.status !== 'contract_cancelled' && (
-            <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${CONTRACT_STATUS_BADGE_CLASS[r.contract_status]}`}>
-              {CONTRACT_STATUS_LABELS_ORG[r.contract_status]}
-            </span>
-          )}
-          {reopened && (
-            <span className="rounded-full bg-accent/20 px-2.5 py-1 text-[11px] font-medium text-foreground">Mở lại</span>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span>
-          Giá khởi điểm:{' '}
-          <b className="font-semibold text-foreground">
-            {r.pricing_mode === 'appraisal'
-              ? 'Nhờ định giá'
-              : r.starting_price != null
-                ? formatVnd(r.starting_price)
-                : '—'}
-          </b>
-        </span>
-        {r.commission_pct != null && <span>Thù lao chấp nhận: {r.commission_pct}%</span>}
-        {r.quote_commission_pct != null && (
-          <span>
-            Bạn chào: <b className="font-semibold text-foreground">{r.quote_commission_pct}%</b>
-          </span>
-        )}
-      </div>
-    </button>
-  )
+interface ListState {
+  tab: RequestTab
+  cat: string
+  q: string
 }
 
-/** Hộp thư yêu cầu ký gửi tài sản gửi tới tổ chức đấu giá. */
+const DEFAULT_STATE: ListState = { tab: 'tat-ca', cat: 'all', q: '' }
+
+/** Tab/lọc/từ khoá nhớ theo trình duyệt — chỉ là tiện ích, đọc hỏng thì về mặc định. */
+function loadState(): ListState {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<ListState>
+    const tab = REQUEST_TABS.some((t) => t.key === saved.tab) ? saved.tab! : DEFAULT_STATE.tab
+    return { tab, cat: saved.cat || 'all', q: typeof saved.q === 'string' ? saved.q : '' }
+  } catch {
+    return DEFAULT_STATE
+  }
+}
+
+/** Hộp thư yêu cầu ký gửi tài sản gửi tới tổ chức đấu giá (design "Yeu Cau Ky Gui - Cong To Chuc v2"). */
 export default function YeuCauKyGuiPage() {
-  const { requests, isLoading, hasOrg, organizationId, auctionOrgId } = useOrgServiceRequests()
-  const respond = useRespondServiceRequest()
-  const { contractsActionCount } = useOrgServiceRequestCounts()
+  const navigate = useNavigate()
+  const { requests, isLoading, hasOrg } = useOrgServiceRequests()
 
-  const [tab, setTab] = useState<TabKey>('open')
-  const [openId, setOpenId] = useState<string | null>(null)
-  const [quoting, setQuoting] = useState(false)
-  const [declining, setDeclining] = useState(false)
+  const [state, setState] = useState<ListState>(loadState)
 
-  const selected = useMemo(() => requests.find((r) => r.id === openId) ?? null, [requests, openId])
+  const update = (patch: Partial<ListState>) =>
+    setState((prev) => {
+      const next = { ...prev, ...patch }
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      } catch {
+        // Bộ nhớ trình duyệt bị chặn — vẫn lọc được trong phiên này.
+      }
+      return next
+    })
 
-  const counts = useMemo(() => {
-    const map = {} as Record<TabKey, number>
-    for (const t of TABS) map[t.key] = requests.filter((r) => t.match.includes(r.status)).length
-    return map
-  }, [requests])
+  const tabItems = useMemo(
+    () =>
+      REQUEST_TABS.map((t) => ({
+        value: t.key,
+        label: t.label,
+        count: requests.filter(t.match).length,
+        attention: t.key === 'can-xu-ly',
+      })),
+    [requests],
+  )
 
-  const visible = useMemo(() => {
-    const match = TABS.find((t) => t.key === tab)?.match ?? []
-    return requests.filter((r) => match.includes(r.status))
-  }, [requests, tab])
+  const folded = stripViDiacritics(state.q)
+  const rows = useMemo(() => {
+    const match = (REQUEST_TABS.find((t) => t.key === state.tab) ?? REQUEST_TABS[0]).match
+    return requests
+      .filter(match)
+      .filter((r) => state.cat === 'all' || r.parent_slug === state.cat)
+      .filter((r) => matchesQuery(r, folded))
+      .sort(compareRequests)
+  }, [requests, state.tab, state.cat, folded])
 
-  const openRequest = (r: OrgServiceRequest) => {
-    setOpenId(r.id)
-    // Đánh dấu đã xem ngay khi mở — chủ tài sản thấy tổ chức đã tiếp cận hồ sơ.
-    if (r.status === 'sent') respond.mutate({ requestId: r.id, action: 'seen' })
-  }
-
-  const submitQuote = (quote: ServiceQuoteInput) => {
-    if (!selected) return
-    respond.mutate(
-      { requestId: selected.id, action: 'quote', quote },
-      {
-        onSuccess: () => {
-          setQuoting(false)
-          setOpenId(null)
-        },
-      },
-    )
-  }
-
-  const submitDecline = (reason: string) => {
-    if (!selected) return
-    respond.mutate(
-      { requestId: selected.id, action: 'decline', declineReason: reason },
-      {
-        onSuccess: () => {
-          setDeclining(false)
-          setOpenId(null)
-        },
-      },
-    )
-  }
+  // Trang chi tiết tự đánh dấu 'đã xem' khi mở.
+  const openRequest = (r: OrgServiceRequest) => navigate(`/portal/yeu-cau-ky-gui/${r.id}`)
 
   if (isLoading) {
     return (
-      <div className="px-6 py-6">
-        <Card className="flex items-center justify-center gap-2 rounded-2xl p-10 text-sm text-muted-foreground">
+      <ConsignmentCanvas>
+        <div className="flex items-center justify-center gap-2 rounded-2xl bg-card p-10 text-sm text-muted-foreground shadow-card">
           <Loader2 className="h-4 w-4 animate-spin" />
           Đang tải yêu cầu ký gửi…
-        </Card>
-      </div>
+        </div>
+      </ConsignmentCanvas>
     )
   }
 
   if (!hasOrg) {
     return (
-      <div className="px-6 py-6">
-        <Card className="space-y-3 rounded-2xl p-10 text-center">
+      <ConsignmentCanvas>
+        <div className="space-y-3 rounded-2xl bg-card p-10 text-center shadow-card">
           <ShieldAlert className="mx-auto h-9 w-9 text-muted-foreground" />
           <div>
             <p className="font-semibold text-foreground">Chưa liên kết tổ chức đấu giá</p>
@@ -168,83 +100,65 @@ export default function YeuCauKyGuiPage() {
               Tài khoản của bạn chưa gắn với tổ chức nào trong danh bạ, nên chưa nhận được yêu cầu ký gửi.
             </p>
           </div>
-        </Card>
-      </div>
+        </div>
+      </ConsignmentCanvas>
     )
   }
 
   return (
-    <div className="space-y-5 px-6 py-6">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Yêu cầu ký gửi</h1>
-        <p className="text-sm text-muted-foreground">
-          Tài sản chủ sở hữu muốn đưa ra đấu giá. Duyệt và gửi báo giá; khi được chọn, soạn và ký hợp đồng dịch vụ
-          ngay tại đây.
+    <ConsignmentCanvas>
+      <header>
+        <h1 className="text-2xl font-semibold tracking-[-0.01em] text-foreground">Yêu cầu ký gửi</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Nhận tài sản từ chủ sở hữu, gửi báo giá và ký hợp đồng ký gửi.
         </p>
-      </div>
+      </header>
 
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <Button
-            key={t.key}
-            variant={tab === t.key ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTab(t.key)}
-            className="gap-1.5"
-          >
-            {t.label}
-            <span className={tab === t.key ? 'opacity-80' : 'text-muted-foreground'}>{counts[t.key]}</span>
-            {t.key === 'won' && contractsActionCount > 0 && (
-              <span
-                className="rounded-full bg-accent px-1.5 py-0.5 text-[11px] font-semibold text-accent-foreground"
-                aria-label={`${contractsActionCount} hợp đồng cần bạn xử lý`}
-              >
-                {contractsActionCount} cần xử lý
-              </span>
-            )}
-          </Button>
-        ))}
-      </div>
-
-      {visible.length === 0 ? (
-        <Card className="space-y-2 rounded-2xl p-12 text-center">
-          <Inbox className="mx-auto h-9 w-9 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            {tab === 'open' ? 'Chưa có yêu cầu nào chờ bạn trả lời.' : 'Chưa có yêu cầu nào trong mục này.'}
-          </p>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {visible.map((r) => (
-            <RequestCard key={r.id} r={r} onOpen={() => openRequest(r)} />
-          ))}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
+          <OwnerTabBar
+            aria-label="Lọc yêu cầu ký gửi"
+            value={state.tab}
+            onValueChange={(tab) => update({ tab })}
+            items={tabItems}
+          />
+          <div className="flex flex-wrap gap-2">
+            <OwnerFilterSelect
+              label="Loại tài sản"
+              value={state.cat}
+              onValueChange={(cat) => update({ cat })}
+              className="sm:w-[13rem]"
+            >
+              <SelectItem value="all">Tất cả</SelectItem>
+              {ASSET_CATEGORIES.map((c) => (
+                <SelectItem key={c.slug} value={c.slug}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </OwnerFilterSelect>
+            <OwnerSearchInput
+              aria-label="Tìm yêu cầu"
+              placeholder="Tìm theo tên, mã hồ sơ, khu vực"
+              value={state.q}
+              onValueChange={(q) => update({ q })}
+              className="sm:w-auto sm:max-w-[22rem] sm:flex-[1_1_16rem]"
+            />
+          </div>
         </div>
-      )}
 
-      <RequestDetailSheet
-        request={selected}
-        auctionOrgId={auctionOrgId}
-        onOpenChange={(open) => !open && setOpenId(null)}
-        onQuote={() => setQuoting(true)}
-        onDecline={() => setDeclining(true)}
-      />
-
-      <QuoteDialog
-        request={selected}
-        organizationId={organizationId}
-        open={quoting}
-        onOpenChange={setQuoting}
-        onSubmit={submitQuote}
-        isPending={respond.isPending}
-      />
-
-      <DeclineDialog
-        title={selected?.title}
-        open={declining}
-        onOpenChange={setDeclining}
-        onConfirm={submitDecline}
-        isPending={respond.isPending}
-      />
-    </div>
+        <section className="overflow-hidden rounded-2xl bg-card shadow-card">
+          {rows.length > 0 ? (
+            <RequestsTable rows={rows} onOpen={openRequest} />
+          ) : (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              <b className="mb-1 block text-[15px] font-semibold text-foreground">
+                {state.tab === 'can-xu-ly' && !folded ? 'Không có yêu cầu nào chờ bạn' : 'Không có yêu cầu nào khớp'}
+              </b>
+              {folded && <span>Thử từ khoá khác.</span>}
+            </div>
+          )}
+        </section>
+      </div>
+    </ConsignmentCanvas>
   )
 }

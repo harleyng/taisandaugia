@@ -15,7 +15,7 @@ interface QuoteDetailsProps {
 /**
  * Phương án tổ chức đấu giá + bảng chi phí của MỘT báo giá.
  *
- * Dùng chung cho cả hai phía — hộp thư của tổ chức (RequestDetailSheet) và màn
+ * Dùng chung cho cả hai phía — hộp thư của tổ chức (trang chi tiết yêu cầu ký gửi) và màn
  * so sánh của chủ tài sản (QuoteCompareCard) — để hai bên đọc đúng cùng một thứ
  * tự, cùng cách tính tổng. Báo giá cũ chưa có phương án thì không hiện gì.
  */

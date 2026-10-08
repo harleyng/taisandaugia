@@ -125,6 +125,7 @@ const CoSoVatChatPage = lazy(() => import("./pages/portal/nang-luc/CoSoVatChatPa
 const LichSuDauGiaPage = lazy(() => import("./pages/portal/nang-luc/LichSuDauGiaPage"));
 const TaiChinhPage = lazy(() => import("./pages/portal/nang-luc/TaiChinhPage"));
 const YeuCauKyGuiPage = lazy(() => import("./pages/portal/YeuCauKyGuiPage"));
+const YeuCauKyGuiDetailPage = lazy(() => import("./pages/portal/YeuCauKyGuiDetailPage"));
 const PhienDauGiaPage = lazy(() => import("./pages/portal/PhienDauGiaPage"));
 const PhienDauGiaDetailPage = lazy(() => import("./pages/portal/PhienDauGiaDetailPage"));
 const PhienDauGiaQaPreviewPage = lazy(() => import("./pages/portal/PhienDauGiaQaPreviewPage"));
@@ -492,6 +493,14 @@ const App = () => (
                     element={
                       <PortalPermissionRoute module="yeu-cau-ky-gui">
                         <YeuCauKyGuiPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="yeu-cau-ky-gui/:id"
+                    element={
+                      <PortalPermissionRoute module="yeu-cau-ky-gui">
+                        <YeuCauKyGuiDetailPage />
                       </PortalPermissionRoute>
                     }
                   />

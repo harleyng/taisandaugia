@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SERVICE_KIND_MODULES } from "@/lib/serviceRequests/kinds";
+import { AdminGuideButton } from "./AdminGuideButton";
 
 interface NavItem {
   to: string;
@@ -329,6 +330,7 @@ export default function AdminLayout() {
           <Outlet />
         </ErrorBoundary>
       </main>
+      <AdminGuideButton />
     </div>
   );
 }

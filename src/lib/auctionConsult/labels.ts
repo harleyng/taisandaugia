@@ -18,8 +18,8 @@ export const BIDDING_METHOD_LABELS: Record<ConsultBiddingMethod, string> = {
   sealed: "Bỏ phiếu kín",
 };
 
-/** Phương thức engine đấu giá trực tuyến chạy được hôm nay — còn lại chỉ để tham khảo. */
-export const ENGINE_SUPPORTED_METHODS: ConsultBiddingMethod[] = ["ascending"];
+/** Phương thức engine đấu giá trực tuyến chạy được — cả ba từ 20261018190000. */
+export const ENGINE_SUPPORTED_METHODS: ConsultBiddingMethod[] = ["ascending", "descending", "sealed"];
 
 export const PROPOSAL_NOTE_LABELS: Record<ProposalNoteKey, string> = {
   auction_format: "Hình thức",
@@ -27,7 +27,7 @@ export const PROPOSAL_NOTE_LABELS: Record<ProposalNoteKey, string> = {
   starting_price: "Giá khởi điểm",
   reserve_price: "Giá bảo lưu",
   bid_step: "Bước giá",
-  lot_duration: "Thời lượng lô",
+  lot_duration: "Thời lượng tài sản",
   deposit: "Tiền đặt trước",
 };
 

@@ -37,7 +37,7 @@ describe("filterOrgContracts", () => {
 });
 
 describe("helpers", () => {
-  it("expectedDeposit cộng lô có khai, null nếu không lô nào khai", () => {
+  it("expectedDeposit cộng tài sản có khai, null nếu không tài sản nào khai", () => {
     expect(expectedDeposit([{ deposit_amount: 10_000_000 }, { deposit_amount: null }, { deposit_amount: 5_000_000 }])).toBe(
       15_000_000,
     );
@@ -119,7 +119,7 @@ describe("bidderRosterRows", () => {
     expect(rows[0].depositStatus).toBe("forfeited");
   });
 
-  it("đếm số lô đang dẫn đầu, bỏ qua lô đã đóng", () => {
+  it("đếm số tài sản đang dẫn đầu, bỏ qua tài sản đã đóng", () => {
     const rows = bidderRosterRows(
       [contract({ bidder_no: 1 }), contract({ id: "c2", bidder_no: 2 })],
       [

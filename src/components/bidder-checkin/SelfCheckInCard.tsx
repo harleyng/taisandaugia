@@ -26,7 +26,7 @@ import { CheckInOtpDialog } from "./CheckInOtpDialog";
 
 type SessionLike = Pick<
   PublicSessionDetail,
-  "id" | "status" | "auction_format" | "starts_at" | "checkin_lead_minutes" | "checkin_grace_minutes" | "roster_closed_at"
+  "id" | "code" | "status" | "auction_format" | "starts_at" | "checkin_lead_minutes" | "checkin_grace_minutes" | "roster_closed_at"
 >;
 
 interface Props {
@@ -135,7 +135,7 @@ export function SelfCheckInCard({ session, inRoom }: Props) {
         open={otpOpen}
         onOpenChange={setOtpOpen}
         contract={contract}
-        sessionId={session.id}
+        session={session}
         inRoom={inRoom}
       />
     </>

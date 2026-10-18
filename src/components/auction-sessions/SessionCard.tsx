@@ -1,89 +1,99 @@
 import { memo } from "react";
 import { Link } from "react-router-dom";
-import { Building2, CalendarClock, Gavel, Layers, MapPin, Users } from "lucide-react";
-import { AUCTION_FORMAT_LABELS } from "@/types/asset-posting";
-import { formatDateTime } from "@/lib/auctionSessions/datetime";
-import { formatVnd } from "@/lib/advertising/slug";
+import { CalendarDays, Gavel, Globe, MapPin, Tag } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { formatMoneyShort } from "@/utils/money";
+import { cardDateLabel, seatsLeftLabel, sessionListBadge, type ListBadgeTone } from "@/lib/auctionSessions/listBadge";
 import type { PublicSessionSummary } from "@/types/auction-session";
-import { SessionStateBadge } from "./SessionStateBadge";
 
 interface Props {
   session: PublicSessionSummary;
-  /** Ẩn tên tổ chức — dùng trong tab phiên của chính trang tổ chức. */
-  hideOrg?: boolean;
+  /** Hồ sơ đã bán + đang giữ chỗ — có thì nhãn đang nhận hồ sơ kèm "còn N suất". */
+  seatsTaken?: number;
 }
 
-/** Card một PHIÊN (khác AuctionCard là card một TÀI SẢN). */
-export const SessionCard = memo(function SessionCard({ session, hideOrg }: Props) {
+const LIST_BADGE_TONE: Record<ListBadgeTone, string> = {
+  open: "bg-[hsl(var(--tier-std-hover))] text-primary",
+  soon: "bg-[hsl(var(--tier-info-bg))] text-[hsl(var(--tier-info))]",
+  upcoming: "bg-[hsl(var(--tier-warn-bg))] text-[hsl(var(--tier-warn-fg))]",
+  live: "bg-destructive text-destructive-foreground",
+  done: "bg-background text-success",
+  cancelled: "bg-destructive text-destructive-foreground",
+};
+
+/** Thẻ một PHIÊN (khác AuctionCard là thẻ một TÀI SẢN) — design 979d4c55 "San - Phien Dau Gia". */
+export const SessionCard = memo(function SessionCard({ session, seatsTaken }: Props) {
   const lots = session.auction_session_items ?? [];
   const cover = lots.find((l) => l.image_url)?.image_url ?? null;
   const priced = lots.filter((l) => l.starting_price != null);
   const totalStart = priced.reduce((sum, l) => sum + (l.starting_price ?? 0), 0);
+  const badge = sessionListBadge(session);
+  const seats = badge.tone === "open" ? seatsLeftLabel(session.max_registrants, seatsTaken) : null;
+  const ended = badge.tone === "done";
+  const online = session.auction_format === "truc_tuyen";
 
   return (
     <Link
       to={`/sessions/${session.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-md transition-shadow hover:shadow-lg"
+      className={cn(
+        "group flex flex-col overflow-hidden rounded-2xl bg-card text-foreground shadow-card transition-shadow hover:shadow-lg",
+        session.status === "cancelled" && "opacity-[.85]",
+      )}
     >
-      <div className="relative aspect-[16/9] bg-muted">
+      <div className="relative aspect-[16/9] overflow-hidden bg-muted">
         {cover ? (
-          <img src={cover} alt={session.title} loading="lazy" className="h-full w-full object-cover" />
+          <img
+            src={cover}
+            alt={session.title}
+            loading="lazy"
+            className={cn("h-full w-full object-cover", session.status === "cancelled" && "grayscale")}
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <Gavel className="h-10 w-10" />
           </div>
         )}
-        <div className="absolute left-3 top-3">
-          <SessionStateBadge session={session} />
-        </div>
-        <span className="absolute right-3 top-3 rounded-full bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground">
-          {lots.length} tài sản
+        <span
+          className={cn(
+            "absolute left-3 top-3 inline-flex h-6 items-center whitespace-nowrap rounded-full px-2.5 text-xs font-semibold shadow-sm",
+            LIST_BADGE_TONE[badge.tone],
+          )}
+        >
+          {badge.label}
+          {seats && ` · ${seats}`}
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <p className="font-mono text-xs text-muted-foreground">{session.code}</p>
-        <h3 className="line-clamp-2 font-semibold text-foreground group-hover:text-primary">{session.title}</h3>
-
-        <div className="space-y-1.5 text-sm text-muted-foreground">
-          <p className="flex items-center gap-1.5">
-            <CalendarClock className="h-4 w-4 shrink-0" />
-            {formatDateTime(session.starts_at)}
-          </p>
-          <p className="flex flex-wrap items-center gap-1.5">
-            <Layers className="h-4 w-4 shrink-0" />
-            {AUCTION_FORMAT_LABELS[session.auction_format] ?? session.auction_format}
-            {session.province && (
-              <>
-                <span aria-hidden>·</span>
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                {session.province}
-              </>
+      <div className="flex flex-1 flex-col gap-1 px-4 pb-4 pt-3.5">
+        <h3 className="line-clamp-2 min-h-[42px] text-[15px] font-semibold leading-snug">{session.title}</h3>
+        <ul className="mt-2.5 grid grid-cols-[repeat(auto-fit,minmax(110px,max-content))] gap-x-4 gap-y-2 text-[13px] text-muted-foreground">
+          <li className="flex min-w-0 items-center gap-1.5">
+            <CalendarDays className="h-[15px] w-[15px] shrink-0 opacity-80" strokeWidth={1.8} />
+            <span className="whitespace-nowrap">
+              {ended ? "Đã đấu" : session.status === "cancelled" ? "Dự kiến" : "Đấu giá"}{" "}
+              <b className="font-semibold text-foreground">{cardDateLabel(session.starts_at)}</b>
+            </span>
+          </li>
+          <li className="flex min-w-0 items-center gap-1.5">
+            {online ? (
+              <Globe className="h-[15px] w-[15px] shrink-0 opacity-80" strokeWidth={1.8} />
+            ) : (
+              <MapPin className="h-[15px] w-[15px] shrink-0 opacity-80" strokeWidth={1.8} />
             )}
-          </p>
-          {session.max_registrants != null && (
-            <p className="flex items-center gap-1.5">
-              <Users className="h-4 w-4 shrink-0" />
-              Tối đa {session.max_registrants} người đăng ký
-            </p>
-          )}
-          {!hideOrg && session.auction_organizations && (
-            <p className="flex items-center gap-1.5">
-              <Building2 className="h-4 w-4 shrink-0" />
-              <span className="truncate">{session.auction_organizations.name}</span>
-            </p>
-          )}
-        </div>
-
-        {priced.length > 0 && (
-          <div className="mt-auto border-t border-border pt-3">
-            <p className="text-xs text-muted-foreground">
-              Tổng giá khởi điểm
-              {priced.length < lots.length && ` (${priced.length}/${lots.length} tài sản)`}
-            </p>
-            <p className="text-lg font-bold text-primary">{formatVnd(totalStart)}</p>
-          </div>
-        )}
+            <span className="whitespace-nowrap">{online ? "Trực tuyến" : (session.province ?? "Trực tiếp")}</span>
+          </li>
+          <li className="flex min-w-0 items-center gap-1.5">
+            <Tag className="h-[15px] w-[15px] shrink-0 opacity-80" strokeWidth={1.8} />
+            <span className="whitespace-nowrap">
+              {priced.length > 0 && (
+                <>
+                  <b className="text-[15px] font-semibold text-foreground">{formatMoneyShort(totalStart)}</b> ·{" "}
+                </>
+              )}
+              {lots.length} tài sản
+            </span>
+          </li>
+        </ul>
       </div>
     </Link>
   );

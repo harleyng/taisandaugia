@@ -4,7 +4,7 @@ import { DetailNote } from "@/components/portal/auction-sessions/DetailCard";
 import { DotPill } from "@/components/portal/auction-sessions/list/SessionStatePill";
 import { DESIGN_BTN } from "@/components/portal/auction-sessions/SessionDetailHero";
 import {
-  DEPOSIT_PILL,
+  depositPillOf,
   REVIEW_PILL,
   displayNameOf,
   formatFullDateTime,
@@ -29,7 +29,7 @@ const DECISION_BTN: Record<ReviewDecision, { label: string; icon: typeof Check; 
 /** Thẻ đầu trang chi tiết hồ sơ (design `.hd`): mã + 2 trạng thái, tên, meta, nút duyệt. */
 export function ContractHero({ contract: c, lotCount, canReview, onDecide }: Props) {
   const rv = REVIEW_PILL[c.review_status];
-  const dp = DEPOSIT_PILL[c.deposit_status];
+  const dp = depositPillOf(c);
   const { decisions, statusLine } = headerActionsOf(c);
   const shown = canReview ? decisions : [];
   const org = c.buyer_kind === "organization";
@@ -56,7 +56,7 @@ export function ContractHero({ contract: c, lotCount, canReview, onDecide }: Pro
           </span>
           <span className="inline-flex items-center gap-1.5">
             <Hash className="h-[15px] w-[15px] shrink-0" />
-            {lotCount} lô đăng ký
+            {lotCount} tài sản đăng ký
           </span>
         </div>
       </div>

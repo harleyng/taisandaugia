@@ -1,76 +1,76 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, Building2, ChevronRight, Gavel } from "lucide-react";
+import { ChevronRight, Gavel } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InfoBox } from "@/components/shared/InfoBox";
 import { SessionResultsCard } from "@/components/auction-sessions/SessionResultsCard";
-import { SessionLotList } from "@/components/auction-sessions/SessionLotList";
-import { SessionStateBadge } from "@/components/auction-sessions/SessionStateBadge";
-import { SessionTimeline } from "@/components/auction-sessions/SessionTimeline";
-import { SessionQaLinkCard } from "@/components/case-qa/SessionQaLinkCard";
-import { SessionBiddingEntryCard } from "@/components/auction-sessions/SessionBiddingEntryCard";
-import { SessionContractCard } from "@/components/auction-sessions/SessionContractCard";
-import { CheckinReminderBanner } from "@/components/bidder-checkin/CheckinReminderBanner";
-import { SelfCheckInCard } from "@/components/bidder-checkin/SelfCheckInCard";
+import { SessionActionCard } from "@/components/auction-sessions/detail/SessionActionCard";
+import { SessionDocumentsCard } from "@/components/auction-sessions/detail/SessionDocumentsCard";
+import { SessionHero } from "@/components/auction-sessions/detail/SessionHero";
+import { SessionLotsCard } from "@/components/auction-sessions/detail/SessionLotsCard";
+import { SessionOrgCard } from "@/components/auction-sessions/detail/SessionOrgCard";
+import { SessionQaCard } from "@/components/auction-sessions/detail/SessionQaCard";
+import { SessionRulesCard } from "@/components/auction-sessions/detail/SessionRulesCard";
+import { SessionScheduleCard } from "@/components/auction-sessions/detail/SessionScheduleCard";
+import { Note } from "@/components/auction-sessions/detail/ui";
 import { usePublicAuctionSession } from "@/hooks/usePublicAuctionSessions";
-import { useMySessionContract } from "@/hooks/useBiddingContracts";
+import { usePublicSessionDocuments } from "@/hooks/usePublicSessionPage";
 import { useSessionLot3dModels } from "@/hooks/useAsset3dScans";
 import { useSessionLotVrTours } from "@/hooks/useVrTourOrders";
 import { useSessionLotAuthentications } from "@/hooks/useAuthenticationOrders";
-import { formatVnd } from "@/lib/advertising/slug";
 
-/** /sessions/:id — chi tiết một phiên đấu giá đã công bố (hoặc đã huỷ). */
+/**
+ * /sessions/:id — chi tiết một phiên đã công bố (hoặc đã huỷ), theo design
+ * 979d4c55 "San - Phien Dau Gia - De xuat": cột trái thông tin phiên, cột phải
+ * dính (sticky) gồm thẻ hành động 5 bước của người mua + tổ chức + hỏi đáp.
+ * Dưới 1024px cột phải tách ra: thẻ hành động lên đầu, tổ chức + hỏi đáp xuống cuối.
+ */
 export default function AuctionSessionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: session, isLoading, error } = usePublicAuctionSession(id);
+  const ready = session ? id : null;
   // Chỉ model đã được admin duyệt cùng hồ sơ (RPC tự lọc) — nhãn "3D" + nút xem trên lô.
-  const { data: lot3dModels } = useSessionLot3dModels(session ? id : null);
-  // VR tour đã gắn lô sau khi admin duyệt (BR-VR-02) — nhãn "VR" + tab VR.
-  const { data: lotVrTours } = useSessionLotVrTours(session ? id : null);
-  const { data: lotAuthentications } = useSessionLotAuthentications(session ? id : null);
-  const { data: myContract } = useMySessionContract(session ? id : undefined);
+  const { data: lot3dModels } = useSessionLot3dModels(ready);
+  // VR tour đã gắn lô sau khi admin duyệt (BR-VR-02).
+  const { data: lotVrTours } = useSessionLotVrTours(ready);
+  const { data: lotAuthentications } = useSessionLotAuthentications(ready);
+  const { data: documents = [] } = usePublicSessionDocuments(ready);
 
-  const lots = session?.auction_session_items ?? [];
-  const priced = lots.filter((l) => l.starting_price != null);
-  const totalStart = priced.reduce((sum, l) => sum + (l.starting_price ?? 0), 0);
-  const org = session?.auction_organizations ?? null;
+  const cancelled = session?.status === "cancelled";
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-muted">
       <Header />
 
-      <main className="container flex-1 px-4 py-6">
-        <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-          <Link to="/" className="transition-colors hover:text-foreground">
+      <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 pb-20 pt-6">
+        <nav className="mb-5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted-foreground">
+          <Link to="/" className="hover:text-foreground">
             Trang chủ
           </Link>
           <ChevronRight className="h-3.5 w-3.5" />
-          <Link to="/sessions" className="transition-colors hover:text-foreground">
+          <Link to="/sessions" className="hover:text-foreground">
             Phiên đấu giá
           </Link>
           {session && (
             <>
               <ChevronRight className="h-3.5 w-3.5" />
-              <span className="max-w-[280px] truncate font-medium text-foreground">{session.title}</span>
+              <span className="max-w-[320px] truncate font-medium text-foreground">{session.title}</span>
             </>
           )}
         </nav>
 
         {isLoading ? (
-          <div className="grid gap-8 lg:grid-cols-3">
-            <div className="space-y-4 lg:col-span-2">
-              <Skeleton className="h-48 rounded-2xl" />
-              <Skeleton className="h-36 rounded-2xl" />
-              <Skeleton className="h-36 rounded-2xl" />
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div className="space-y-6">
+              <Skeleton className="h-[520px] rounded-2xl bg-card" />
+              <Skeleton className="h-36 rounded-2xl bg-card" />
             </div>
-            <Skeleton className="h-80 rounded-2xl" />
+            <Skeleton className="h-80 rounded-2xl bg-card" />
           </div>
         ) : error || !session ? (
-          <div className="py-16 text-center">
+          <div className="rounded-2xl bg-card py-16 text-center">
             <Gavel className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <h2 className="mb-2 text-xl font-bold text-foreground">Không tìm thấy phiên đấu giá</h2>
             <p className="text-sm text-muted-foreground">Phiên có thể chưa được công bố hoặc đã bị gỡ.</p>
@@ -80,90 +80,45 @@ export default function AuctionSessionDetail() {
           </div>
         ) : (
           <>
-            {session.status === "cancelled" && (
-              <InfoBox variant="amber" className="mb-6 flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="font-semibold">Phiên đã bị huỷ</p>
-                  {session.cancelled_reason && <p className="text-sm">Lý do: {session.cancelled_reason}</p>}
-                </div>
-              </InfoBox>
-            )}
-
-            {myContract && (
+            {cancelled && (
               <div className="mb-6">
-                <CheckinReminderBanner contract={myContract} session={session} />
+                <Note tone="amber">
+                  <b>Phiên đã bị huỷ</b>
+                  {session.cancelled_reason && (
+                    <>
+                      <br />
+                      Lý do: {session.cancelled_reason}
+                    </>
+                  )}
+                </Note>
               </div>
             )}
 
-            <div className="grid gap-8 lg:grid-cols-3">
-              <div className="space-y-6 lg:col-span-2">
-                <Card className="rounded-2xl p-6">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <SessionStateBadge session={session} />
-                    <span className="font-mono text-xs text-muted-foreground">{session.code}</span>
-                  </div>
-                  <h1 className="mt-3 text-2xl font-bold text-foreground">{session.title}</h1>
-                  {session.description && (
-                    <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">{session.description}</p>
-                  )}
-                  <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <div className="rounded-xl bg-muted p-3">
-                      <p className="text-xs text-muted-foreground">Số tài sản</p>
-                      <p className="text-lg font-bold text-foreground">{lots.length}</p>
-                    </div>
-                    <div className="rounded-xl bg-muted p-3">
-                      <p className="text-xs text-muted-foreground">
-                        Tổng giá khởi điểm
-                        {priced.length > 0 && priced.length < lots.length && ` (${priced.length}/${lots.length})`}
-                      </p>
-                      <p className="text-lg font-bold text-primary">{priced.length ? formatVnd(totalStart) : "—"}</p>
-                    </div>
-                    <div className="rounded-xl bg-muted p-3">
-                      <p className="text-xs text-muted-foreground">Người đăng ký tối đa</p>
-                      <p className="text-lg font-bold text-foreground">{session.max_registrants ?? "—"}</p>
-                    </div>
-                  </div>
-                </Card>
-
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+              <div className="flex flex-col gap-6">
+                <SessionHero session={session} />
+                <SessionScheduleCard session={session} />
                 <SessionResultsCard session={session} />
-
-                <section>
-                  <h2 className="mb-3 text-lg font-bold text-foreground">Danh sách tài sản ({lots.length})</h2>
-                  <SessionLotList
-                    lots={lots}
-                    models={lot3dModels}
-                    vrTours={lotVrTours}
-                    authentications={lotAuthentications}
-                  />
-                </section>
+                <SessionLotsCard
+                  lots={session.auction_session_items ?? []}
+                  models={lot3dModels}
+                  vrTours={lotVrTours}
+                  authentications={lotAuthentications}
+                />
+                <SessionRulesCard session={session} />
+                <SessionDocumentsCard documents={documents} />
               </div>
 
-              <aside className="order-first space-y-4 lg:sticky lg:top-4 lg:order-none lg:self-start">
-                <SessionTimeline session={session} />
-                <SessionContractCard session={session} />
-                <SelfCheckInCard session={session} />
-                <SessionBiddingEntryCard session={session} />
-                {session.status === "published" && <SessionQaLinkCard sessionId={session.id} />}
-                {org && (
-                  <Card className="flex items-center gap-3 rounded-2xl p-4">
-                    {org.logo_url ? (
-                      <img src={org.logo_url} alt={org.name} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
-                    ) : (
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                        <Building2 className="h-5 w-5 text-primary" />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground">Tổ chức đấu giá</p>
-                      <p className="truncate font-semibold text-foreground">{org.name}</p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/auction-org/${org.id}`)}>
-                      Xem tổ chức
-                    </Button>
-                  </Card>
-                )}
-              </aside>
+              {/* lg+: một cột dính. Dưới lg: `contents` để thẻ hành động lên đầu, phần còn lại xuống cuối. */}
+              <div className="contents lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100vh-32px)] lg:flex-col lg:gap-4 lg:overflow-auto lg:rounded-2xl lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
+                <div className="order-first lg:order-none">
+                  <SessionActionCard session={session} />
+                </div>
+                <div className="order-last flex flex-col gap-4 lg:order-none">
+                  {session.auction_organizations && <SessionOrgCard org={session.auction_organizations} />}
+                  {!cancelled && <SessionQaCard session={session} />}
+                </div>
+              </div>
             </div>
           </>
         )}

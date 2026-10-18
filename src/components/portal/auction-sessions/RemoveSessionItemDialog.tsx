@@ -29,9 +29,9 @@ export function RemoveSessionItemDialog({ item, onOpenChange }: Props) {
     <AlertDialog open={!!item} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Gỡ lô {item?.lot_no} khỏi phiên?</AlertDialogTitle>
+          <AlertDialogTitle>Gỡ tài sản {item?.lot_no} khỏi phiên?</AlertDialogTitle>
           <AlertDialogDescription>
-            «{item?.title}» sẽ bị gỡ khỏi phiên, các lô phía sau được đánh lại số. Tài sản nguồn không bị ảnh hưởng.
+            «{item?.title}» sẽ bị gỡ khỏi phiên, các tài sản phía sau được đánh lại số. Tài sản nguồn không bị ảnh hưởng.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

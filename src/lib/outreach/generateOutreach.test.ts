@@ -40,18 +40,18 @@ describe("generateOutreach", () => {
     }
   });
 
-  it("tiền tách nhóm bằng dấu phẩy, lô liệt kê theo số lô", () => {
+  it("tiền tách nhóm bằng dấu phẩy, tài sản liệt kê theo số tài sản", () => {
     expect(draft.channels.listing).toContain("12,500,000,000₫");
-    expect(draft.channels.listing.indexOf("Lô 1:")).toBeLessThan(draft.channels.listing.indexOf("Lô 2:"));
+    expect(draft.channels.listing.indexOf("Tài sản 1:")).toBeLessThan(draft.channels.listing.indexOf("Tài sản 2:"));
   });
 
   it("ô 'draft' của thông báo chỉ viết từ dữ kiện có sẵn", () => {
-    expect(draft.draftSlots.asset_description).toContain("Lô 1: Nhà phố Quận 5 (nhà phố). Nhà 1 trệt 3 lầu");
-    expect(draft.draftSlots.asset_condition).toContain("Lô 1: Đang bỏ trống.");
-    expect(draft.draftSlots.asset_condition).toContain("Lô 2: tài sản được giới thiệu theo hiện trạng thực tế");
+    expect(draft.draftSlots.asset_description).toContain("Tài sản 1: Nhà phố Quận 5 (nhà phố). Nhà 1 trệt 3 lầu");
+    expect(draft.draftSlots.asset_condition).toContain("Tài sản 1: Đang bỏ trống.");
+    expect(draft.draftSlots.asset_condition).toContain("Tài sản 2: tài sản được giới thiệu theo hiện trạng thực tế");
   });
 
-  it("câu chào đúng các phân khúc được yêu cầu; phân khúc trỏ lô đã gỡ bị bỏ", () => {
+  it("câu chào đúng các phân khúc được yêu cầu; phân khúc trỏ tài sản đã gỡ bị bỏ", () => {
     const d = generateOutreach(buildInput({ segments: [`lot:${LOT1}`, `lot:${LOT3}`, "multi"] }));
     expect(Object.keys(d.pitches).sort()).toEqual([`lot:${LOT1}`, "multi"].sort());
     expect(d.pitches[`lot:${LOT1}`]).toContain("Nhà phố Quận 5");

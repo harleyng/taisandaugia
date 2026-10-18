@@ -33,7 +33,7 @@ export function buildBulletin(cf: CaseFile, session: { title: string; auction_se
     lots
       .map((l) => ({ l, v: caseLot(cf, l.id)[k].trim() }))
       .filter((x) => x.v)
-      .map((x) => (lots.length > 1 ? `Lô ${x.l.lot_no}: ${x.v}` : x.v))
+      .map((x) => (lots.length > 1 ? `Tài sản ${x.l.lot_no}: ${x.v}` : x.v))
       .join("\n");
   return {
     head: cf.headline.trim() || session.title,

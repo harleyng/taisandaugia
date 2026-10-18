@@ -66,7 +66,7 @@ export const lotPlace = (l: Pick<OutreachLot, "district" | "province">) =>
 /** Một dòng / lô cho các mục giá: "Lô 1: 12,500,000,000₫". Lô thiếu số ⇒ ghi rõ. */
 function perLot(lots: OutreachLot[], pickValue: (l: OutreachLot) => number | null, missing: string): string {
   return sortedLots(lots)
-    .map((l) => `Lô ${l.lot_no}: ${pickValue(l) != null ? vnd(pickValue(l)) : missing}`)
+    .map((l) => `Tài sản ${l.lot_no}: ${pickValue(l) != null ? vnd(pickValue(l)) : missing}`)
     .join("\n");
 }
 
@@ -80,7 +80,7 @@ export function buildNoticeFacts(input: OutreachInput): Record<FactSlotKey, stri
       .map((l) => {
         const kind = l.category_slug ? ` (${categoryLabel(l.category_slug)})` : "";
         const place = lotPlace(l);
-        return `Lô ${l.lot_no}: ${l.title}${kind}${place ? ` — ${place}` : ""}`;
+        return `Tài sản ${l.lot_no}: ${l.title}${kind}${place ? ` — ${place}` : ""}`;
       })
       .join("\n"),
     starting_prices: perLot(lots, (l) => l.starting_price, "chưa công bố"),

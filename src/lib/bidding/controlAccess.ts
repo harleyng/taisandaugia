@@ -40,9 +40,9 @@ export interface ControlGateInput {
 const ONLINE_FORMATS = new Set(["truc_tuyen", "ca_hai"]);
 
 /**
- * KHÔNG có nhánh `method_unsupported` như roomAccess: CHECK ở DB mới chỉ cho
- * bidding_method = 'ascending', và trang này không có lối vào ẩn danh — thêm
- * nhánh đó là viết code chết.
+ * KHÔNG có nhánh `method_unsupported` như roomAccess: CHECK ở DB chỉ nhận ba
+ * phương thức mà màn điều hành đều xử lý được, và trang này không có lối vào
+ * ẩn danh — thêm nhánh đó là viết code chết.
  */
 export function controlGateOf({ loading, session }: ControlGateInput): ControlGate {
   if (loading) return { kind: "loading" };
@@ -102,17 +102,20 @@ export interface LotActions {
   pause: LotAction;
   resume: LotAction;
   withdraw: LotAction;
+  /** Bỏ phiếu kín: mở vòng phụ cho người bằng giá (org_open_tie_round). */
+  openTieRound: LotAction;
 }
 
 const NO_PERMISSION = "Bạn không có quyền điều hành phiên đấu giá.";
 
 const PHASE_BLOCK: Partial<Record<LotPhase, string>> = {
-  pending: "Lô chưa được mở.",
-  open: "Lô đang trả giá.",
-  extended: "Lô đang trả giá.",
-  paused: "Lô đang tạm dừng.",
-  closed: "Lô đã đóng.",
-  withdrawn: "Lô đã bị rút khỏi phiên.",
+  pending: "Tài sản chưa được mở.",
+  open: "Tài sản đang trả giá.",
+  extended: "Tài sản đang trả giá.",
+  paused: "Tài sản đang tạm dừng.",
+  tied: "Tài sản đang chờ vòng phụ.",
+  closed: "Tài sản đã đóng.",
+  withdrawn: "Tài sản đã bị rút khỏi phiên.",
 };
 
 const act = (enabled: boolean, reason: string): LotAction =>
@@ -129,6 +132,9 @@ const act = (enabled: boolean, reason: string): LotAction =>
  *   2. Rút lô được phép từ pending VÀ paused, không chỉ khi đang mở.
  *   3. Tạm dừng KHÔNG cần cửa sổ phiên còn sống (org_pause_lot không kiểm
  *      session status), nhưng Mở và Tiếp tục thì có.
+ *   4. Lô bằng giá (bỏ phiếu kín) mở vòng phụ / rút được CẢ SAU giờ kết thúc
+ *      phiên (org_open_tie_round chỉ đòi phiên 'published') — nếu không lô kẹt
+ *      và phiên không chốt được. Chỉ phiên đã chốt mới chặn.
  */
 export function lotActionsFor(
   state: LotState | null,
@@ -139,7 +145,7 @@ export function lotActionsFor(
 
   if (!canOperate) {
     const blocked = act(false, NO_PERMISSION);
-    return { open: blocked, pause: blocked, resume: blocked, withdraw: blocked };
+    return { open: blocked, pause: blocked, resume: blocked, withdraw: blocked, openTieRound: blocked };
   }
 
   const phase = lotPhaseOf(state, now);
@@ -148,6 +154,8 @@ export function lotActionsFor(
 
   const live = phase === "open" || phase === "extended";
   const terminal = phase === "closed" || phase === "withdrawn";
+  const tied = phase === "tied";
+  const finalizedWhy = window.reason === "finalized" ? `${OPERATE_BLOCK_LABELS.finalized}.` : null;
 
   return {
     open: act(phase === "pending" && !windowWhy, windowWhy ?? phaseWhy),
@@ -155,7 +163,10 @@ export function lotActionsFor(
     // vừa quá giờ kết thúc.
     pause: act(live, phaseWhy),
     resume: act(phase === "paused" && !windowWhy, windowWhy ?? phaseWhy),
-    withdraw: act(!terminal && !windowWhy, windowWhy ?? phaseWhy),
+    withdraw: tied
+      ? act(!finalizedWhy, finalizedWhy ?? phaseWhy)
+      : act(!terminal && !windowWhy, windowWhy ?? phaseWhy),
+    openTieRound: act(tied && !finalizedWhy, finalizedWhy ?? phaseWhy),
   };
 }
 
@@ -178,6 +189,23 @@ export function isValidDurationMinutes(minutes: number): boolean {
   const s = minutesToSeconds(minutes);
   return s >= MIN_DURATION_SECONDS && s <= MAX_DURATION_SECONDS;
 }
+
+/** Lựa chọn của DurationPicker (mốc phút / tuỳ chọn / đến hết phiên). */
+export const UNTIL_END = "until_end";
+export const CUSTOM = "custom";
+
+/** Giây đã chọn; `null` = đến hết phiên HOẶC ô tuỳ chọn chưa hợp lệ (xem `durationChoiceValid`). */
+export function durationSecondsOf(choice: string, custom: string): number | null {
+  if (choice === UNTIL_END) return null;
+  if (choice === CUSTOM) {
+    const m = Number(custom);
+    return custom !== "" && isValidDurationMinutes(m) ? minutesToSeconds(m) : null;
+  }
+  return minutesToSeconds(Number(choice));
+}
+
+export const durationChoiceValid = (choice: string, custom: string) =>
+  choice !== CUSTOM || (custom !== "" && isValidDurationMinutes(Number(custom)));
 
 /**
  * Bản TS của `LEAST(session.ends_at, now + thời lượng)` trong org_open_lot —

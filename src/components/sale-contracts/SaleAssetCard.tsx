@@ -28,7 +28,7 @@ export function SaleAssetCard({
         <div>
           <p className="font-medium">{val(a.title)}</p>
           <p className="text-sm text-muted-foreground">
-            {[a.session_code ? `Phiên ${a.session_code}` : null, a.lot_no ? `Lô ${a.lot_no}` : null,
+            {[a.session_code ? `Phiên ${a.session_code}` : null, a.lot_no ? `Tài sản ${a.lot_no}` : null,
               [a.district, a.province].filter(Boolean).join(", ") || null]
               .filter(Boolean)
               .join(" · ") || DASH}

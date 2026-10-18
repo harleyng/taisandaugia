@@ -38,6 +38,9 @@ export interface MinutesSession {
   auctionFormat: AuctionFormat;
   extensionSeconds: number;
   maxBidSteps: number;
+  /** auction_sessions.bidding_method — thiếu = trả giá lên (biên bản cũ). */
+  biddingMethod?: string;
+  priceDropSeconds?: number;
   finalizedAt: string | null;
 }
 

@@ -30,7 +30,7 @@ export const TVDG_REASON_MESSAGES: Record<string, string> = {
   starting_price_invalid: "Giá khởi điểm phải là số nguyên dương.",
   reserve_invalid: "Giá bảo lưu không hợp lệ — trả giá lên thì phải ≥ giá khởi điểm, đặt giá xuống thì ≤ giá khởi điểm.",
   bid_step_invalid: "Bước giá phải là số nguyên dương và không lớn hơn giá khởi điểm.",
-  duration_invalid: "Thời lượng lô phải từ 1 đến 1.440 phút (24 giờ).",
+  duration_invalid: "Thời lượng tài sản phải từ 1 đến 1.440 phút (24 giờ).",
   deposit_mode_invalid: "Cách tính tiền đặt trước không hợp lệ.",
   deposit_value_invalid: "Tiền đặt trước không hợp lệ — % phải trong (0, 100], số tiền phải là số nguyên dương.",
   deposit_above_price: "Tiền đặt trước không được lớn hơn giá khởi điểm.",
@@ -41,7 +41,7 @@ export const TVDG_REASON_MESSAGES: Record<string, string> = {
   starting_price_required: "Nhập giá khởi điểm đề xuất.",
   bid_step_required: "Nhập bước giá đề xuất.",
   deposit_required: "Nhập tiền đặt trước đề xuất.",
-  duration_required: "Hình thức có trực tuyến cần thời lượng lô.",
+  duration_required: "Hình thức có trực tuyến cần thời lượng tài sản.",
   rationale_required: "Nhập lý giải phương án (ít nhất 5 ký tự).",
 };
 

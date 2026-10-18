@@ -14,6 +14,7 @@
 // họ cần đọc kết quả. Nhánh `view_only` giữ họ ở lại, chỉ khoá ô trả giá.
 
 import type { BidderBlockReason } from "@/lib/bidding/bidderReason";
+import { isBiddingMethod } from "@/lib/bidding/methods";
 import type { SessionPublishStatus } from "@/lib/auctionSessions/phase";
 
 export type RoomGate =
@@ -22,7 +23,7 @@ export type RoomGate =
   | { kind: "cancelled" }
   /** Phiên đấu giá trực tiếp tại hội trường — không có phòng trực tuyến. */
   | { kind: "not_online" }
-  /** bidding_method ngoài 'ascending' (hiện CHECK ở DB chưa cho, để sẵn cho sau). */
+  /** bidding_method client không biết (DB chỉ nhận ascending / descending / sealed). */
   | { kind: "method_unsupported" }
   | { kind: "not_started"; startsAt: string }
   | { kind: "blocked"; reason: BidderBlockReason }
@@ -39,9 +40,9 @@ export type NoBidReason = "forfeited" | "settled" | "refunded";
 
 export const NO_BID_MESSAGES: Record<NoBidReason, string> = {
   forfeited:
-    "Bạn đã rút lại giá đã trả nên tiền đặt trước bị tịch thu — không thể trả giá tiếp ở phiên này. Bạn vẫn theo dõi được diễn biến các lô.",
+    "Bạn đã rút lại giá đã trả nên tiền đặt trước bị tịch thu — không thể trả giá tiếp ở phiên này. Bạn vẫn theo dõi được diễn biến các tài sản.",
   settled:
-    "Phiên đã chốt kết quả nên không còn nhận trả giá. Bạn vẫn xem được diễn biến và kết quả các lô.",
+    "Phiên đã chốt kết quả nên không còn nhận trả giá. Bạn vẫn xem được diễn biến và kết quả các tài sản.",
   refunded:
     "Tổ chức đấu giá đã hoàn trả tiền đặt trước của bạn nên bạn không còn trả giá ở phiên này.",
 };
@@ -79,7 +80,7 @@ export function roomGateOf(input: RoomGateInput): RoomGate {
   if (!session || session.status === "draft") return { kind: "not_found" };
   if (session.status === "cancelled") return { kind: "cancelled" };
   if (!ONLINE_FORMATS.has(session.auction_format)) return { kind: "not_online" };
-  if (session.bidding_method !== "ascending") return { kind: "method_unsupported" };
+  if (!isBiddingMethod(session.bidding_method)) return { kind: "method_unsupported" };
 
   // place_bid trả session_not_live trước starts_at, nên vào phòng lúc này chỉ
   // thấy một màn hình chết. Báo giờ mở thay vì bày phòng rỗng.

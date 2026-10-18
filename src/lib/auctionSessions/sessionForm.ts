@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { AuctionSession, SessionInput } from "@/types/auction-session";
 import { DEFAULT_CHECKIN_GRACE_MINUTES, DEFAULT_CHECKIN_LEAD_MINUTES } from "@/lib/biddingContracts/checkinWindow";
 import { fromLocalInput, toLocalInput } from "./datetime";
+import { BIDDING_METHODS, biddingMethodOf } from "@/lib/bidding/methods";
 
 const ms = (v: string | undefined) => (v ? new Date(v).getTime() : Number.NaN);
 const bothSet = (a: number, b: number) => !Number.isNaN(a) && !Number.isNaN(b);
@@ -26,8 +27,11 @@ export const LEGACY_FORMAT_MESSAGE = "“Cả hai hình thức” không còn h�
 /** Khớp CHECK quy tắc trả giá (20260913000001). Mặc định cho phiên MỚI theo design (cột DB mặc định 300 / 10). */
 export const EXTENSION_RANGE = { min: 0, max: 3600 } as const;
 export const BID_STEPS_RANGE = { min: 1, max: 100 } as const;
+/** Khớp CHECK auction_sessions_price_drop_seconds_check (20261018190000). */
+export const PRICE_DROP_RANGE = { min: 10, max: 3600 } as const;
 const DEFAULT_EXTENSION_SECONDS = 60;
 const DEFAULT_MAX_BID_STEPS = 5;
+const DEFAULT_PRICE_DROP_SECONDS = 60;
 const ONLINE_FORMATS = new Set(["truc_tuyen", "ca_hai"]);
 
 const intIn = (v: string, range: { min: number; max: number }) =>
@@ -67,8 +71,11 @@ export const sessionFormSchema = z
     checkin_lead_minutes: minutesIn(CHECKIN_LEAD_RANGE),
     checkin_grace_minutes: minutesIn(CHECKIN_GRACE_RANGE),
     // Quy tắc trả giá trực tuyến — chỉ kiểm khi hình thức có trả giá qua sàn.
+    bidding_method: z.enum(BIDDING_METHODS as [string, ...string[]]),
     extension_seconds: z.string(),
     max_bid_steps: z.string(),
+    // Đặt giá xuống: giây giữa hai lần hạ một bước giá.
+    price_drop_seconds: z.string(),
   })
   .superRefine((v, ctx) => {
     const starts = ms(v.starts_at);
@@ -95,12 +102,18 @@ export const sessionFormSchema = z
     } else if (bothSet(viewEnd, starts) && viewEnd > starts) {
       ctx.addIssue({ code: "custom", path: ["viewing_end_at"], message: "Xem tài sản phải kết thúc trước giờ đấu giá" });
     }
-    if (ONLINE_FORMATS.has(v.auction_format)) {
+    // Mỗi phương thức chỉ kiểm trường của nó — trường ẩn đi không được chặn lưu.
+    if (ONLINE_FORMATS.has(v.auction_format) && v.bidding_method === "ascending") {
       if (!intIn(v.extension_seconds, EXTENSION_RANGE)) {
         ctx.addIssue({ code: "custom", path: ["extension_seconds"], message: "Nhập số giây từ 0 đến 3600" });
       }
       if (!intIn(v.max_bid_steps, BID_STEPS_RANGE)) {
         ctx.addIssue({ code: "custom", path: ["max_bid_steps"], message: "Nhập số bước từ 1 đến 100" });
+      }
+    }
+    if (ONLINE_FORMATS.has(v.auction_format) && v.bidding_method === "descending") {
+      if (!intIn(v.price_drop_seconds, PRICE_DROP_RANGE)) {
+        ctx.addIssue({ code: "custom", path: ["price_drop_seconds"], message: "Nhập số giây từ 10 đến 3600" });
       }
     }
   });
@@ -152,8 +165,10 @@ export function defaultSessionForm(now: Date = new Date()): SessionFormValues {
     ends_at: toLocalInput(ends.toISOString()),
     checkin_lead_minutes: String(DEFAULT_CHECKIN_LEAD_MINUTES),
     checkin_grace_minutes: String(DEFAULT_CHECKIN_GRACE_MINUTES),
+    bidding_method: "ascending",
     extension_seconds: String(DEFAULT_EXTENSION_SECONDS),
     max_bid_steps: String(DEFAULT_MAX_BID_STEPS),
+    price_drop_seconds: String(DEFAULT_PRICE_DROP_SECONDS),
   };
 }
 
@@ -174,8 +189,10 @@ export function sessionToForm(s: AuctionSession): SessionFormValues {
     ends_at: toLocalInput(s.ends_at),
     checkin_lead_minutes: String(s.checkin_lead_minutes ?? DEFAULT_CHECKIN_LEAD_MINUTES),
     checkin_grace_minutes: String(s.checkin_grace_minutes ?? DEFAULT_CHECKIN_GRACE_MINUTES),
+    bidding_method: biddingMethodOf(s.bidding_method),
     extension_seconds: String(s.extension_seconds ?? DEFAULT_EXTENSION_SECONDS),
     max_bid_steps: String(s.max_bid_steps ?? DEFAULT_MAX_BID_STEPS),
+    price_drop_seconds: String(s.price_drop_seconds ?? DEFAULT_PRICE_DROP_SECONDS),
   };
 }
 
@@ -205,11 +222,17 @@ export function formToSessionInput(v: SessionFormValues): SessionInput {
   };
 }
 
-/** Ba cột quy tắc trả giá. Hình thức trả giá hiện chỉ có "Trả giá lên". */
+/**
+ * Cột quy tắc trả giá. Trường của phương thức KHÁC bị ẩn và không được kiểm — giá
+ * trị hỏng thì lưu mặc định để không vướng CHECK ở DB.
+ */
 export function formToBiddingRules(v: SessionFormValues) {
+  const pick = (raw: string, range: { min: number; max: number }, fallback: number) =>
+    intIn(raw, range) ? Number(raw) : fallback;
   return {
-    bidding_method: "ascending",
-    extension_seconds: Number(v.extension_seconds),
-    max_bid_steps: Number(v.max_bid_steps),
+    bidding_method: biddingMethodOf(v.bidding_method),
+    extension_seconds: pick(v.extension_seconds, EXTENSION_RANGE, DEFAULT_EXTENSION_SECONDS),
+    max_bid_steps: pick(v.max_bid_steps, BID_STEPS_RANGE, DEFAULT_MAX_BID_STEPS),
+    price_drop_seconds: pick(v.price_drop_seconds, PRICE_DROP_RANGE, DEFAULT_PRICE_DROP_SECONDS),
   };
 }

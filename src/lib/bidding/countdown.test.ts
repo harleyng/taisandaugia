@@ -7,7 +7,7 @@ const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 
 describe("formatCountdown", () => {
-  it("trả null khi lô chưa có mốc đóng", () => {
+  it("trả null khi tài sản chưa có mốc đóng", () => {
     expect(formatCountdown(null)).toBeNull();
     expect(formatCountdown(Number.NaN)).toBeNull();
   });

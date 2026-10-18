@@ -104,7 +104,7 @@ export function AuctionConsultProposalView({ proposal: p }: { proposal: Proposal
         />
         {p.auction_format !== "truc_tiep" && (
           <Param
-            label="Thời lượng mỗi lô"
+            label="Thời lượng mỗi tài sản"
             value={p.lot_duration_minutes ? `${p.lot_duration_minutes} phút` : "—"}
             note={notes.lot_duration}
           />

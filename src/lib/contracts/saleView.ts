@@ -163,7 +163,7 @@ export function saleSummary(d: Detail): SummaryView {
     { label: "Còn lại", value: formatMoneyShort(Math.max(0, Number(d.balance))) },
   ];
   if (asset.session_code) {
-    rows.push({ label: "Phiên", value: [asset.session_code, asset.lot_no ? `Lô ${asset.lot_no}` : null].filter(Boolean).join(" · ") });
+    rows.push({ label: "Phiên", value: [asset.session_code, asset.lot_no ? `Tài sản ${asset.lot_no}` : null].filter(Boolean).join(" · ") });
   }
   if (org.name) rows.push({ label: "Tổ chức", value: org.name.replace(/^Công ty /, "") });
   if (c.contract_no) rows.push({ label: "Số hợp đồng", value: c.contract_no });

@@ -31,15 +31,21 @@ const contract = (id: string, o: Partial<{ status: string; deposit_status: strin
 });
 
 describe("finalizeBlockersOf", () => {
-  it("không có lô ⇒ không chặn", () => {
+  it("không có tài sản ⇒ không chặn", () => {
     expect(finalizeBlockersOf([], map(), NOW)).toEqual([]);
   });
 
-  it("lô chưa mở (không có dòng trạng thái) chặn, kèm việc cần làm", () => {
+  it("lô bỏ phiếu kín bằng giá chặn chốt phiên — mở vòng phụ hoặc rút", () => {
+    const [b] = finalizeBlockersOf([lot(1)], map(state("lot1", { status: "tied", ends_at: PAST })), NOW);
+    expect(b.phase).toBe("tied");
+    expect(b.advice).toMatch(/vòng phụ/);
+  });
+
+  it("tài sản chưa mở (không có dòng trạng thái) chặn, kèm việc cần làm", () => {
     const [b] = finalizeBlockersOf([lot(2)], map(), NOW);
     expect(b.phase).toBe("pending");
     expect(b.lotNo).toBe(2);
-    expect(b.advice).toMatch(/Mở lô rồi chờ đóng/);
+    expect(b.advice).toMatch(/Mở tài sản rồi chờ đóng/);
   });
 
   it("dòng 'open' đã quá ends_at KHÔNG chặn — server tự đóng lười trước khi đếm", () => {
@@ -47,23 +53,23 @@ describe("finalizeBlockersOf", () => {
     expect(finalizeBlockersOf([lot(1)], map(s), NOW)).toEqual([]);
   });
 
-  it("lô đang trả giá thật sự thì chặn", () => {
+  it("tài sản đang trả giá thật sự thì chặn", () => {
     const s = state("lot1", { status: "open", ends_at: FUTURE });
     const [b] = finalizeBlockersOf([lot(1)], map(s), NOW);
     expect(b.phase).toBe("open");
-    expect(b.advice).toMatch(/Chờ lô đóng/);
+    expect(b.advice).toMatch(/Chờ tài sản đóng/);
   });
 
-  it("lô đã gia hạn vẫn chặn, đúng giai đoạn extended", () => {
+  it("tài sản đã gia hạn vẫn chặn, đúng giai đoạn extended", () => {
     const s = state("lot1", { status: "open", ends_at: FUTURE, extension_count: 2 });
     expect(finalizeBlockersOf([lot(1)], map(s), NOW)[0].phase).toBe("extended");
   });
 
-  it("lô tạm dừng chặn với lời khuyên riêng", () => {
+  it("tài sản tạm dừng chặn với lời khuyên riêng", () => {
     const s = state("lot1", { status: "paused", ends_at: FUTURE });
     const [b] = finalizeBlockersOf([lot(1)], map(s), NOW);
     expect(b.phase).toBe("paused");
-    expect(b.advice).toMatch(/Tiếp tục lô/);
+    expect(b.advice).toMatch(/Tiếp tục tài sản/);
   });
 
   it("closed + withdrawn không chặn", () => {
@@ -72,21 +78,21 @@ describe("finalizeBlockersOf", () => {
     expect(finalizeBlockersOf([lot(1), lot(2)], map(a, b), NOW)).toEqual([]);
   });
 
-  it("xếp theo số lô, không theo thứ tự đầu vào", () => {
+  it("xếp theo số tài sản, không theo thứ tự đầu vào", () => {
     const got = finalizeBlockersOf([lot(3), lot(1), lot(2)], map(), NOW);
     expect(got.map((b) => b.lotNo)).toEqual([1, 2, 3]);
   });
 });
 
 describe("finalizePreviewOf", () => {
-  it("lô đã rút không nằm trong sold lẫn unsold", () => {
+  it("tài sản đã rút không nằm trong sold lẫn unsold", () => {
     const a = state("lot1", { status: "closed", result: "sold", winner_contract_id: "c1" });
     const b = state("lot2", { status: "withdrawn" });
     const p = finalizePreviewOf([lot(1), lot(2)], map(a, b), [], NOW);
     expect(p).toMatchObject({ sold: 1, unsold: 0, withdrawn: 1 });
   });
 
-  it("một hồ sơ trúng HAI lô vẫn chỉ đếm applied một lần", () => {
+  it("một hồ sơ trúng HAI tài sản vẫn chỉ đếm applied một lần", () => {
     const a = state("lot1", { status: "closed", result: "sold", winner_contract_id: "c1" });
     const b = state("lot2", { status: "closed", result: "sold", winner_contract_id: "c1" });
     const p = finalizePreviewOf([lot(1), lot(2)], map(a, b), [contract("c1")], NOW);
@@ -115,13 +121,13 @@ describe("finalizePreviewOf", () => {
     expect(p).toMatchObject({ unsold: 1, applied: 0, pendingRefund: 0 });
   });
 
-  it("lô 'open' quá giờ đã mang result nên được đếm như server sẽ thấy", () => {
+  it("tài sản 'open' quá giờ đã mang result nên được đếm như server sẽ thấy", () => {
     const a = state("lot1", { status: "open", ends_at: PAST, result: "sold", winner_contract_id: "c1" });
     const p = finalizePreviewOf([lot(1)], map(a), [contract("c1")], NOW);
     expect(p).toMatchObject({ sold: 1, applied: 1 });
   });
 
-  it("phiên chưa mở lô nào: tất cả bằng 0", () => {
+  it("phiên chưa mở tài sản nào: tất cả bằng 0", () => {
     expect(finalizePreviewOf([lot(1), lot(2)], map(), [contract("c1")], NOW)).toEqual({
       sold: 0,
       unsold: 0,

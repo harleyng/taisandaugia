@@ -97,10 +97,27 @@ export default {
             height: "0",
           },
         },
+        // Phòng đấu giá (design "Phong Dau Gia - Redesign").
+        "room-blink": { "50%": { opacity: "0.35" } },
+        "room-onair": {
+          "0%": { boxShadow: "0 0 0 0 hsl(var(--destructive) / 0.55)", opacity: "1" },
+          "50%": { opacity: "0.4" },
+          "70%": { boxShadow: "0 0 0 6px hsl(var(--destructive) / 0)" },
+          "100%": { boxShadow: "0 0 0 0 hsl(var(--destructive) / 0)", opacity: "1" },
+        },
+        "room-flash": {
+          "0%": { color: "hsl(var(--tier-gold))", transform: "scale(1.03)" },
+          "100%": { transform: "none" },
+        },
+        "room-bid-in": { from: { backgroundColor: "hsl(var(--tier-warn-bg))" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "room-blink": "room-blink 1.4s infinite",
+        "room-onair": "room-onair 1.4s infinite",
+        "room-flash": "room-flash 0.9s ease-out",
+        "room-bid-in": "room-bid-in 0.6s ease-out",
       },
     },
   },

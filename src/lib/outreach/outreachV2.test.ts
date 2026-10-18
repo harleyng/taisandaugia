@@ -29,8 +29,8 @@ describe("bulletin", () => {
     const cf = parseCaseFile({ lots: { a: { description: "Xe 2020" }, b: { description: "Nhà 3 tầng", condition: "Trống" } } });
     const b = buildBulletin(cf, { title: "Phiên A", auction_session_items: lots });
     expect(b.head).toBe("Phiên A");
-    expect(b.description).toBe("Lô 1: Nhà 3 tầng\nLô 2: Xe 2020");
-    expect(b.condition).toBe("Lô 1: Trống");
+    expect(b.description).toBe("Tài sản 1: Nhà 3 tầng\nTài sản 2: Xe 2020");
+    expect(b.condition).toBe("Tài sản 1: Trống");
   });
 });
 
@@ -41,11 +41,11 @@ describe("aiWriter", () => {
     expect(optionsSummary(DEFAULT_OPTIONS)).toBe("Thân thiện · Vừa · Mọi khách · Giá khởi điểm · Hạn nộp hồ sơ");
   });
 
-  it("bài chung nhắc đủ mọi lô, mốc và liên kết; chỉ dùng dữ liệu có sẵn", () => {
+  it("bài chung nhắc đủ mọi tài sản, mốc và liên kết; chỉ dùng dữ liệu có sẵn", () => {
     const t = writeSharedPost(ctx, DEFAULT_OPTIONS);
-    expect(t).toContain("Lô 1: Máy CNC — giá khởi điểm 1,200,000,000₫");
-    expect(t).toContain("Lô 2: Xe nâng");
-    expect(t).not.toContain("Lô 2: Xe nâng —");
+    expect(t).toContain("Tài sản 1: Máy CNC — giá khởi điểm 1,200,000,000₫");
+    expect(t).toContain("Tài sản 2: Xe nâng");
+    expect(t).not.toContain("Tài sản 2: Xe nâng —");
     expect(t).toContain("Hạn nhận hồ sơ: 05/10/2026");
     expect(t).toContain("https://x.vn/sessions/1");
     expect(t).toContain("🔔");

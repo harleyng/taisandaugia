@@ -83,7 +83,7 @@ export function useOpenLot(sessionId?: string | null) {
     },
     onSuccess: (res) => {
       invalidate();
-      toast.success(`Đã mở lô để trả giá. Lô đóng lúc ${formatDateTime(res.ends_at)}.`);
+      toast.success(`Đã mở tài sản để trả giá. Tài sản đóng lúc ${formatDateTime(res.ends_at)}.`);
     },
     onError: showError,
   });
@@ -99,7 +99,7 @@ export function usePauseLot(sessionId?: string | null) {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Đã tạm dừng lô.");
+      toast.success("Đã tạm dừng tài sản.");
     },
     onError: showError,
   });
@@ -116,7 +116,7 @@ export function useResumeLot(sessionId?: string | null) {
     onSuccess: () => {
       invalidate();
       // Thời gian tạm dừng được cộng trả lại vào ends_at.
-      toast.success("Đã tiếp tục lô. Thời gian tạm dừng được bù lại.");
+      toast.success("Đã tiếp tục tài sản. Thời gian tạm dừng được bù lại.");
     },
     onError: showError,
   });
@@ -132,7 +132,7 @@ export function useWithdrawLot(sessionId?: string | null) {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Đã rút lô khỏi phiên.");
+      toast.success("Đã rút tài sản khỏi phiên.");
     },
     onError: showError,
   });
@@ -153,7 +153,7 @@ export function useFinalizeSession(sessionId?: string | null) {
       // Chốt phiên chuyển tiền đặt trước sang applied / pending_refund.
       queryClient.invalidateQueries({ queryKey: qk.biddingContracts.all });
       queryClient.invalidateQueries({ queryKey: qk.auctionSessions.byId(sessionId) });
-      toast.success(`Đã chốt kết quả phiên: ${res.sold} lô đấu giá thành, ${res.unsold} lô không thành.`);
+      toast.success(`Đã chốt kết quả phiên: ${res.sold} tài sản đấu giá thành, ${res.unsold} tài sản không thành.`);
     },
     onError: showError,
   });

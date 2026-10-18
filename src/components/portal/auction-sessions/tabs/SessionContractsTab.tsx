@@ -75,7 +75,7 @@ export function SessionContractsTab({ session, canView }: Props) {
         <DetailNote icon={<AlertTriangle />}>Phiên đã huỷ — chỉ ghi nhận hoàn trả tiền đặt trước cho người đã nộp.</DetailNote>
       )}
 
-      {/* Thẻ tự ẩn khi phiên không có lô nào đấu giá thành. */}
+      {/* Thẻ tự ẩn khi phiên không có tài sản nào đấu giá thành. */}
       {session.finalized_at && <SessionSaleContractsCard session={session} contracts={rows} />}
 
       <SessionContractsList

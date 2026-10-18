@@ -15,12 +15,15 @@ import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
 import { useUpdateSessionItem } from "@/hooks/useAuctionSessions";
 import { useLotAuctionConsultSuggestion } from "@/hooks/useAuctionConsultSuggestions";
+import { floorPriceError } from "@/lib/bidding/descending";
 import type { AuctionSessionItem } from "@/types/auction-session";
 import { AuctionConsultSuggestionPanel } from "./AuctionConsultSuggestionPanel";
 
 interface Props {
   item: AuctionSessionItem | null;
   sessionFormat?: string | null;
+  /** Đặt giá xuống ⇒ hiện ô giá sàn. */
+  biddingMethod?: string | null;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -36,13 +39,15 @@ const MONEY_FIELDS = [
 type MoneyKey = (typeof MONEY_FIELDS)[number]["key"];
 
 /** Sửa snapshot của một lô: tên, giá, tiền đặt trước, bước giá, giới hạn người đăng ký. */
-export function EditSessionItemDialog({ item, sessionFormat, onOpenChange }: Props) {
+export function EditSessionItemDialog({ item, sessionFormat, biddingMethod, onOpenChange }: Props) {
+  const descending = biddingMethod === "descending";
   const update = useUpdateSessionItem();
   // Gợi ý tư vấn đấu giá (chỉ lô ký gửi có đề xuất đã được chủ tài sản chấp nhận).
   const suggestion = useLotAuctionConsultSuggestion(item?.session_id, item?.asset_posting_id, !!item);
   const [title, setTitle] = useState("");
   const [money, setMoney] = useState<Record<MoneyKey, string>>({ starting_price: "", deposit_amount: "", bid_step: "" });
   const [maxRegistrants, setMaxRegistrants] = useState("");
+  const [floor, setFloor] = useState("");
 
   useEffect(() => {
     if (!item) return;
@@ -53,12 +58,19 @@ export function EditSessionItemDialog({ item, sessionFormat, onOpenChange }: Pro
       bid_step: digits(item.bid_step),
     });
     setMaxRegistrants(digits(item.max_registrants));
+    setFloor(digits(item.floor_price));
   }, [item]);
+
+  const floorError = descending
+    ? floorPriceError(toNumber(money.starting_price), toNumber(money.bid_step), toNumber(floor))
+    : null;
 
   const submit = () => {
     if (!item) return;
     if (!title.trim()) return toast.error("Tên tài sản không được để trống.");
     if (maxRegistrants && Number(maxRegistrants) <= 0) return toast.error("Số người đăng ký tối đa phải lớn hơn 0.");
+    // Thiếu giá sàn vẫn lưu được (mở lô mới chặn) — chỉ chặn giá sàn SAI.
+    if (descending && floor && floorError) return toast.error(floorError);
     update.mutate(
       {
         id: item.id,
@@ -69,6 +81,7 @@ export function EditSessionItemDialog({ item, sessionFormat, onOpenChange }: Pro
           deposit_amount: toNumber(money.deposit_amount),
           bid_step: toNumber(money.bid_step),
           max_registrants: toNumber(maxRegistrants),
+          ...(descending ? { floor_price: toNumber(floor) } : {}),
         },
       },
       { onSuccess: () => onOpenChange(false) },
@@ -79,7 +92,7 @@ export function EditSessionItemDialog({ item, sessionFormat, onOpenChange }: Pro
     <Dialog open={!!item} onOpenChange={onOpenChange}>
       <DialogContent className={suggestion ? "max-h-[90vh] max-w-2xl overflow-y-auto" : "max-w-lg"}>
         <DialogHeader>
-          <DialogTitle>Sửa lô {item?.lot_no}</DialogTitle>
+          <DialogTitle>Sửa tài sản {item?.lot_no}</DialogTitle>
           <DialogDescription>Chỉ đổi thông tin hiển thị trong phiên — tài sản nguồn không bị ảnh hưởng.</DialogDescription>
         </DialogHeader>
 
@@ -113,6 +126,17 @@ export function EditSessionItemDialog({ item, sessionFormat, onOpenChange }: Pro
                 />
               </div>
             ))}
+            {descending && (
+              <div className="space-y-1.5">
+                <Label>
+                  Giá sàn (₫) <span className="text-destructive">*</span>
+                </Label>
+                <NumberInput value={floor} onChange={setFloor} allowDecimal={false} />
+                <p className={floorError ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                  {floorError ?? "Giá thấp nhất khi đặt giá xuống — giá tự giảm tới đây thì dừng."}
+                </p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Người đăng ký tối đa</Label>
               <NumberInput

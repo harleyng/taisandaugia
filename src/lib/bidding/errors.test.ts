@@ -21,7 +21,7 @@ describe("assertBiddingRpcOk", () => {
       expect(err).toBeInstanceOf(BiddingRpcError);
       expect((err as BiddingRpcError).reason).toBe("lot_paused");
       expect((err as BiddingRpcError).message).toBe(
-        "Lô đang tạm dừng. Vui lòng chờ đấu giá viên tiếp tục.",
+        "Tài sản đang tạm dừng. Vui lòng chờ đấu giá viên tiếp tục.",
       );
     }
   });
@@ -49,26 +49,26 @@ describe("biddingReasonMessage", () => {
   });
 
   it("phủ các mã của luồng điều hành", () => {
-    expect(biddingReasonMessage("lots_not_closed")).toMatch(/đóng hết các lô/i);
+    expect(biddingReasonMessage("lots_not_closed")).toMatch(/đóng hết các tài sản/i);
     expect(biddingReasonMessage("already_finalized")).toMatch(/đã được chốt/i);
     expect(biddingReasonMessage("not_authorized")).toMatch(/không có quyền/i);
   });
 
-  it("another_lot_live nêu đích danh lô đang chiếm sân khấu", () => {
+  it("another_lot_live nêu đích danh tài sản đang chiếm sân khấu", () => {
     expect(biddingReasonMessage("another_lot_live", { lot_no: 2, status: "open" })).toBe(
-      "Lô 2 đang mở — chờ lô đóng hoặc rút lô đó trước khi mở lô khác.",
+      "Tài sản 2 đang mở — chờ tài sản đóng hoặc rút tài sản đó trước khi mở tài sản khác.",
     );
     expect(biddingReasonMessage("another_lot_live", { lot_no: 1, status: "paused" })).toBe(
-      "Lô 1 đang tạm dừng — tiếp tục cho lô chạy hết giờ hoặc rút lô đó trước khi mở lô khác.",
+      "Tài sản 1 đang tạm dừng — tiếp tục cho tài sản chạy hết giờ hoặc rút tài sản đó trước khi mở tài sản khác.",
     );
-    expect(biddingReasonMessage("another_lot_live")).toMatch(/chỉ mở một lô/);
+    expect(biddingReasonMessage("another_lot_live")).toMatch(/chỉ mở một tài sản/);
   });
 });
 
 describe("biddingErrorMessage", () => {
   it("giữ nguyên thông điệp đã dịch của BiddingRpcError", () => {
     expect(biddingErrorMessage(new BiddingRpcError("lot_closed"))).toBe(
-      "Lô đã đóng, không nhận thêm lượt trả giá.",
+      "Tài sản đã đóng, không nhận thêm lượt trả giá.",
     );
   });
 
@@ -90,5 +90,18 @@ describe("biddingErrorMessage", () => {
 
   it("không có gì để nói ⇒ câu mặc định", () => {
     expect(biddingErrorMessage({})).toBe("Thao tác không thành công. Vui lòng thử lại.");
+  });
+});
+
+describe("phương thức đặt giá xuống / bỏ phiếu kín", () => {
+  it("price_changed kèm giá máy chủ", () => {
+    expect(biddingReasonMessage("price_changed", { current_price: 980_000_000 })).toMatch(/980,000,000/);
+    expect(biddingReasonMessage("price_changed")).toMatch(/xác nhận lại/);
+  });
+
+  it("các mã mới có câu riêng, không rơi vào câu chung", () => {
+    for (const r of ["method_mismatch", "round_closed", "not_in_tie_round", "already_submitted", "floor_missing", "floor_invalid", "duration_required"]) {
+      expect(biddingReasonMessage(r)).not.toMatch(/Thao tác không thành công/);
+    }
   });
 });

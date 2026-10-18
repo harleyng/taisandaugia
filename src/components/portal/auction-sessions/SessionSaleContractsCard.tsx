@@ -55,7 +55,7 @@ export function SessionSaleContractsCard({
         <h2 className="text-base font-semibold tracking-[-0.005em] text-foreground">Hợp đồng mua bán với người trúng</h2>
         {todo ? (
           <span className="rounded-full bg-[hsl(var(--tier-warn-bg))] px-[9px] py-0.5 text-xs font-semibold text-[hsl(var(--tier-warn-strong))]">
-            {todo} lô chưa lập
+            {todo} tài sản chưa lập
           </span>
         ) : (
           <span className="text-[13px] text-muted-foreground">Đủ hợp đồng</span>
@@ -69,7 +69,7 @@ export function SessionSaleContractsCard({
           return (
             <DetailRow
               key={lot.id}
-              title={<span className="block truncate">{`Lô ${lot.lot_no} · ${lot.title}`}</span>}
+              title={<span className="block truncate">{`Tài sản ${lot.lot_no} · ${lot.title}`}</span>}
               sub={
                 <span className="tabular-nums">
                   {[

@@ -8,6 +8,7 @@ import { InfoBox } from "@/components/shared/InfoBox";
 import { useExcuseAbsence } from "@/hooks/useOrgBiddingContracts";
 import { formatDateTime } from "@/lib/auctionSessions/datetime";
 import { DEPOSIT_STATUS_LABELS, type ContractWithSession } from "@/types/bidding-contract";
+import { KycImageThumb } from "./KycImageThumb";
 
 /** org_excuse_absence đòi lý do ≥ 3 ký tự sau khi trim (reason_required). */
 const MIN_REASON = 3;
@@ -55,6 +56,18 @@ export function ExcuseAbsenceDialog({ contract, onOpenChange }: Props) {
           Tiền đặt trước chuyển từ “{DEPOSIT_STATUS_LABELS.forfeited}” sang “{DEPOSIT_STATUS_LABELS.pending_refund}”.
           Người tham gia vẫn là vắng mặt: không có số báo danh và không vào phòng đấu giá. Không hoàn tác được.
         </InfoBox>
+
+        {contract?.absence_appeal_note && (
+          <div className="space-y-2 rounded-xl bg-muted p-3 text-sm">
+            <p className="text-xs text-muted-foreground">
+              Người tham gia gửi lý do lúc {formatDateTime(contract.absence_appeal_at)}
+            </p>
+            <p className="whitespace-pre-line text-foreground">{contract.absence_appeal_note}</p>
+            {contract.absence_appeal_path && (
+              <KycImageThumb path={contract.absence_appeal_path} label="Giấy tờ chứng minh lý do vắng" />
+            )}
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="excuse-note">

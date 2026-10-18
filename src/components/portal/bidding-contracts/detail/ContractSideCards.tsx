@@ -1,12 +1,13 @@
 import { Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DotPill } from "@/components/portal/auction-sessions/list/SessionStatePill";
+import { KycImageThumb } from "@/components/ekyc/KycImageThumb";
 import { useContractReviewEvents } from "@/hooks/useBiddingContracts";
 import { useMarkDepositRefunded } from "@/hooks/useOrgBidding";
 import { useContractDepositEvents, useSetContractDeposit } from "@/hooks/useOrgBiddingContracts";
 import { formatVnd } from "@/lib/advertising/slug";
 import {
-  DEPOSIT_PILL,
+  depositPillOf,
   contractHistory,
   depositMethodLabel,
   formatDayMonthYear,
@@ -33,7 +34,7 @@ interface DepositProps {
 export function DepositCard({ contract: c, required, deadline, canUpdate, onEdit }: DepositProps) {
   const setDeposit = useSetContractDeposit();
   const markRefunded = useMarkDepositRefunded(c.session_id);
-  const pill = DEPOSIT_PILL[c.deposit_status];
+  const pill = depositPillOf(c);
   const cancelled = c.auction_sessions?.status === "cancelled";
   const targets = depositActionsFor(c.deposit_status, {
     sessionCancelled: cancelled,
@@ -65,6 +66,18 @@ export function DepositCard({ contract: c, required, deadline, canUpdate, onEdit
             </Button>
           )}
         </div>
+        {c.deposit_reported_at && (
+          <div className="mt-3 flex items-center gap-3 rounded-[10px] bg-muted p-3 text-[12.5px]">
+            {c.deposit_proof_path && (
+              <KycImageThumb path={c.deposit_proof_path} alt="Chứng từ nộp tiền" className="h-12 w-16 shrink-0" />
+            )}
+            <span className="text-muted-foreground">
+              Người mua báo đã nộp lúc{" "}
+              <b className="font-semibold text-foreground">{formatFullDateTime(c.deposit_reported_at)}</b>
+              {c.deposit_proof_path ? " · kèm chứng từ" : " · không kèm chứng từ"}. Đối soát sao kê rồi ghi nhận.
+            </span>
+          </div>
+        )}
       </HsCard>
     );
   }

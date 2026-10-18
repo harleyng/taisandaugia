@@ -19,30 +19,41 @@ export const BIDDING_REASON_MESSAGES: Record<string, string> = {
   not_found: "Không tìm thấy dữ liệu, hoặc bạn không có quyền thao tác.",
 
   // place_bid
-  lot_not_found: "Không tìm thấy lô tài sản này.",
-  lot_not_configured: "Lô chưa có giá khởi điểm hoặc bước giá — chưa trả giá được.",
+  lot_not_found: "Không tìm thấy tài sản này.",
+  lot_not_configured: "Tài sản chưa có giá khởi điểm hoặc bước giá — chưa trả giá được.",
   session_not_live: "Phiên chưa bắt đầu hoặc không nhận trả giá trực tuyến.",
-  lot_not_open: "Lô chưa được mở để trả giá.",
-  lot_paused: "Lô đang tạm dừng. Vui lòng chờ đấu giá viên tiếp tục.",
-  lot_closed: "Lô đã đóng, không nhận thêm lượt trả giá.",
+  lot_not_open: "Tài sản chưa được mở để trả giá.",
+  lot_paused: "Tài sản đang tạm dừng. Vui lòng chờ đấu giá viên tiếp tục.",
+  lot_closed: "Tài sản đã đóng, không nhận thêm lượt trả giá.",
   not_eligible:
     "Bạn chưa đủ điều kiện trả giá: cần hồ sơ đã được duyệt, đã nộp tiền đặt trước và đã điểm danh.",
+  lot_not_registered: "Bạn không đăng ký tài sản này khi mua hồ sơ — chỉ trả giá được các tài sản đã đăng ký.",
   already_leading: "Bạn đang là người trả giá cao nhất — không cần trả thêm.",
   invalid_nonce: "Phiên gửi không hợp lệ. Vui lòng tải lại trang rồi thử lại.",
   bid_too_low: "Giá trả phải cao hơn giá hiện tại ít nhất một bước giá.",
   bid_step_mismatch: "Giá trả phải đúng bội số của bước giá tính từ giá khởi điểm.",
   bid_too_many_steps: "Giá trả vượt quá số bước giá tối đa cho một lượt.",
 
+  // Phương thức (20261018190000)
+  method_mismatch: "Phiên dùng phương thức trả giá khác — tải lại trang để vào đúng màn hình.",
+  price_changed: "Giá vừa giảm — xác nhận lại ở mức giá mới.",
+  round_closed: "Vòng bỏ phiếu đã kết thúc — chờ đấu giá viên công bố kết quả.",
+  not_in_tie_round: "Vòng phụ chỉ dành cho những người cùng trả giá cao nhất ở vòng trước.",
+  already_submitted: "Bạn đã nộp phiếu ở vòng này — phiếu kín không sửa được.",
+  floor_missing: "Tài sản chưa có giá sàn — đặt giá sàn trước khi mở theo phương thức đặt giá xuống.",
+  floor_invalid: "Giá sàn phải không cao hơn giá khởi điểm và nằm trên lưới bước giá.",
+  duration_required: "Bỏ phiếu kín cần đặt thời gian nhận phiếu khi mở tài sản.",
+
   // withdraw_bid
   not_leading: "Chỉ rút được lượt trả giá đang cao nhất của chính bạn.",
 
   // org_*
   reason_required: "Vui lòng nhập lý do (ít nhất 3 ký tự).",
-  invalid_duration: "Thời lượng mở lô phải từ 1 phút đến 24 giờ.",
-  another_lot_live: "Đang có lô khác mở hoặc tạm dừng — mỗi phiên chỉ mở một lô tại một thời điểm.",
+  invalid_duration: "Thời lượng mở tài sản phải từ 1 phút đến 24 giờ.",
+  another_lot_live: "Đang có tài sản khác mở hoặc tạm dừng — mỗi phiên chỉ mở một tài sản tại một thời điểm.",
   invalid_status: "Trạng thái vừa thay đổi. Tải lại trang để xem tình trạng mới nhất.",
   already_finalized: "Phiên đã được chốt kết quả trước đó.",
-  lots_not_closed: "Còn lô chưa đóng — đóng hết các lô trước khi chốt kết quả phiên.",
+  lots_not_closed: "Còn tài sản chưa đóng — đóng hết các tài sản trước khi chốt kết quả phiên.",
   not_finalized: "Phiên chưa chốt kết quả.",
   invalid_path: "Đường dẫn tệp biên bản không hợp lệ, hoặc biên bản đã tồn tại.",
   invalid_hash: "Mã kiểm tra nội dung biên bản không hợp lệ.",
@@ -92,6 +103,10 @@ export function biddingReasonMessage(
   if (reason === "bid_too_low" && min != null) {
     return `Giá trả tối thiểu cho lượt này là ${formatVnd(min)}.`;
   }
+  const current = num(details?.current_price);
+  if (reason === "price_changed" && current != null) {
+    return `Giá vừa giảm còn ${formatVnd(current)} — xác nhận lại để chấp nhận mức giá này.`;
+  }
   if (reason === "bid_too_many_steps" && max != null) {
     return `Giá trả tối đa cho một lượt là ${formatVnd(max)}.`;
   }
@@ -104,8 +119,8 @@ export function biddingReasonMessage(
   if (reason === "another_lot_live" && liveLotNo != null) {
     // Không có thao tác "đóng lô" tay — lô đóng theo giờ, nên chỉ gợi ý chờ hoặc rút.
     return details?.status === "paused"
-      ? `Lô ${liveLotNo} đang tạm dừng — tiếp tục cho lô chạy hết giờ hoặc rút lô đó trước khi mở lô khác.`
-      : `Lô ${liveLotNo} đang mở — chờ lô đóng hoặc rút lô đó trước khi mở lô khác.`;
+      ? `Tài sản ${liveLotNo} đang tạm dừng — tiếp tục cho tài sản chạy hết giờ hoặc rút tài sản đó trước khi mở tài sản khác.`
+      : `Tài sản ${liveLotNo} đang mở — chờ tài sản đóng hoặc rút tài sản đó trước khi mở tài sản khác.`;
   }
   const left = num(details?.attempts_left);
   if (reason === "otp_invalid" && left != null) {
@@ -151,7 +166,7 @@ export function biddingErrorMessage(err: unknown): string {
   }
   if (e.code === "23505") return "Dữ liệu bị trùng — vui lòng tải lại trang.";
   if (/violates check constraint/i.test(msg)) {
-    return "Thông tin chưa hợp lệ — kiểm tra lại số tiền và trạng thái lô.";
+    return "Thông tin chưa hợp lệ — kiểm tra lại số tiền và trạng thái tài sản.";
   }
   if (/failed to fetch|networkerror/i.test(msg)) return "Mất kết nối. Vui lòng thử lại.";
   return msg || FALLBACK_MESSAGE;

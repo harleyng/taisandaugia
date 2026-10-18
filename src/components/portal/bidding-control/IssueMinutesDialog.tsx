@@ -113,6 +113,8 @@ export function IssueMinutesDialog({ open, onOpenChange, session, lots, stateByL
           auctionFormat: session.auction_format,
           extensionSeconds: session.extension_seconds,
           maxBidSteps: session.max_bid_steps,
+          biddingMethod: session.bidding_method,
+          priceDropSeconds: session.price_drop_seconds,
           finalizedAt: session.finalized_at,
         },
         org: {

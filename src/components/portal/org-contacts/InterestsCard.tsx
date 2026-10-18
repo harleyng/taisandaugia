@@ -30,7 +30,7 @@ export function InterestsCard({ contact, canEdit }: Props) {
         <div>
           <h2 className="font-semibold text-foreground">Nhu cầu tài sản</h2>
           <p className="text-sm text-muted-foreground">
-            Khách được chọn gửi tin cho một lô khi khớp <strong>bất kỳ</strong> nhu cầu nào dưới đây.
+            Khách được chọn gửi tin cho một tài sản khi khớp <strong>bất kỳ</strong> nhu cầu nào dưới đây.
           </p>
         </div>
         {canEdit && (

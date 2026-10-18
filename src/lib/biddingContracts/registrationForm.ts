@@ -63,6 +63,8 @@ const baseSchema = z.object({
   /** self = chính người đăng ký / người đại diện theo pháp luật dự phiên. */
   attendee: z.enum(["self", "proxy"]),
   proxy: proxyBlock,
+  /** auction_session_items.id người mua chọn trả giá — tiền đặt trước tính theo các lô này. */
+  lot_ids: z.array(z.string()),
   consent: z.boolean(),
 });
 
@@ -114,10 +116,12 @@ export function checkIdentity(ctx: Ctx, at: string[], v: IdentityBlockValues, wh
 interface SchemaOptions {
   /** Danh tính VNeID của người dùng — khớp thì người đăng ký không phải tải ảnh. */
   vneid?: VneidRef | null;
+  /** Số lô của phiên — > 0 ⇒ phải chọn ít nhất một lô. */
+  lotCount?: number;
   now?: Date;
 }
 
-export function makeRegistrationSchema({ vneid = null, now = new Date() }: SchemaOptions = {}) {
+export function makeRegistrationSchema({ vneid = null, lotCount = 0, now = new Date() }: SchemaOptions = {}) {
   return baseSchema.superRefine((v, ctx) => {
     const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message });
     const org = v.buyer_kind === "organization";
@@ -148,6 +152,7 @@ export function makeRegistrationSchema({ vneid = null, now = new Date() }: Schem
       if (!x.poa_doc_path) issue(["proxy", "poa_doc_path"], "Vui lòng tải giấy uỷ quyền");
     }
 
+    if (lotCount > 0 && v.lot_ids.length === 0) issue(["lot_ids"], "Vui lòng chọn ít nhất một tài sản để đăng ký");
     if (!v.consent) issue(["consent"], "Vui lòng đồng ý chia sẻ thông tin với tổ chức đấu giá");
   });
 }
@@ -212,13 +217,15 @@ interface DefaultsInput {
   saved?: SavedIdentity | null;
   /** Hồ sơ gần nhất của chính người mua — điền lại SĐT / email liên hệ đã dùng. */
   last?: { phone: string; email: string } | null;
+  /** Lô của phiên — mặc định chọn hết. */
+  lotIds?: string[];
 }
 
 /**
  * Ưu tiên: danh tính đã lưu > profile / tài khoản; liên hệ: hồ sơ gần nhất >
  * tài khoản. Mặc định cá nhân tự dự phiên.
  */
-export function registrationDefaults({ profileName, authEmail, authPhone, saved, last }: DefaultsInput = {}): RegistrationFormValues {
+export function registrationDefaults({ profileName, authEmail, authPhone, saved, last, lotIds = [] }: DefaultsInput = {}): RegistrationFormValues {
   return {
     buyer_kind: "individual",
     phone: last?.phone || toLocalPhone(authPhone),
@@ -227,6 +234,7 @@ export function registrationDefaults({ profileName, authEmail, authPhone, saved,
     organization: { name: "", tax_code: "", address: "", reg_doc_path: null },
     attendee: "self",
     proxy: emptyProxy(),
+    lot_ids: [...lotIds],
     consent: false,
   };
 }
@@ -284,5 +292,7 @@ export function toStartPayload(v: RegistrationFormValues): RegistrationPayload {
             poa_doc_path: v.proxy.poa_doc_path ?? "",
           }
         : null,
+    // Không gửi khoá ⇒ server giữ lựa chọn đã lưu (phiên không có lô / payload dựng lại).
+    ...(v.lot_ids.length > 0 ? { lot_ids: [...v.lot_ids] } : {}),
   };
 }

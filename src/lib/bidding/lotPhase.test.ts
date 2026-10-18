@@ -19,6 +19,12 @@ const lotState = (patch: Partial<LotState> = {}): LotState => ({
   leading_bidder_no: null,
   bid_count: 0,
   extension_count: 0,
+  price_anchor_at: null,
+  price_anchor_amount: null,
+  round_no: 1,
+  round_bid_count: 0,
+  tie_amount: null,
+  tied_bidder_nos: null,
   result: null,
   winner_contract_id: null,
   winning_amount: null,
@@ -85,5 +91,13 @@ describe("lotAcceptsBids", () => {
     expect(lotAcceptsBids(lotState({ extension_count: 1 }), now)).toBe(true);
     expect(lotAcceptsBids(lotState({ status: "paused" }), now)).toBe(false);
     expect(lotAcceptsBids(null, now)).toBe(false);
+  });
+});
+
+describe("bỏ phiếu kín — bằng giá", () => {
+  it("'tied' là giai đoạn riêng, không coi là đã đóng và không nhận phiếu", () => {
+    const st = lotState({ status: "tied", tie_amount: 1, tied_bidder_nos: [1, 2] });
+    expect(lotPhaseOf(st, at("2026-10-10T12:00:00Z"))).toBe("tied");
+    expect(lotAcceptsBids(st, at("2026-10-10T10:00:00Z"))).toBe(false);
   });
 });

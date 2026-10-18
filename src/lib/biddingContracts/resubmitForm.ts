@@ -43,6 +43,8 @@ export function contractToFormValues(c: ContractParties): RegistrationFormValues
     proxy: p.proxy
       ? { ...block(p.proxy), phone: p.proxy.phone, poa_doc_path: p.proxy.poa_doc_path }
       : { ...emptyIdentity(), phone: "", poa_doc_path: null },
+    // Nộp lại không đổi lô đã chọn: mảng rỗng ⇒ payload không có lot_ids ⇒ server giữ nguyên.
+    lot_ids: [],
     consent: true,
   };
 }

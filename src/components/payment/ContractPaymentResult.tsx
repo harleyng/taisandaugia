@@ -40,6 +40,12 @@ export function ContractPaymentResult() {
 
   const sessionPath = returnPath || (data?.session_id ? `/sessions/${data.session_id}` : "/sessions");
 
+  // Mua từ trang đăng ký ⇒ quay thẳng về đó: trang tự hiện màn "Đã mua hồ sơ tham gia".
+  const backToWizard = !!returnPath && returnPath.includes("/dang-ky?ho-so=");
+  useEffect(() => {
+    if (data && backToWizard) navigate(returnPath!, { replace: true });
+  }, [data, backToWizard, returnPath, navigate]);
+
   const content = () => {
     if (status !== "success") {
       return (

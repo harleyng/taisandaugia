@@ -5,6 +5,12 @@
 
 ---
 
+## 2026-10-18 — Đặt giá xuống + bỏ phiếu kín cho phiên đấu giá trực tuyến
+
+**Context:** hai phương thức còn "Sắp ra mắt" (CHECK chỉ nhận `ascending`). Người dùng chốt: đặt giá xuống = đồng hồ tự hạ + giá sàn, người đầu tiên chấp nhận trúng; bỏ phiếu kín = một phiếu/vòng không sửa, tổ chức bắt buộc đặt thời gian, bằng giá ⇒ mở vòng phụ cho những người bằng giá, giá ≥ bước lưới.
+**Decision:** mig `20261018190000` — cột `price_drop_seconds`, `floor_price`, mốc giá + vòng trên `auction_lot_states`, trạng thái `tied`, bảng `auction_sealed_bids` (ngoài realtime, RLS theo vòng công bố), RPC `accept_descending_price` / `submit_sealed_bid` / `org_open_tie_round`; `_close_lot` rẽ nhánh sealed. Hàm dùng chung vá bằng replace() trên bản LIVE. Mặc định do Claude chọn: vòng phụ không ai nộp ⇒ người nộp sớm nhất nhóm bằng giá trúng; vòng phụ mở được sau giờ kết thúc phiên; giá sàn công khai. Client: `lib/bidding/{methods,descending,sealed,actionGate}.ts`, panel `DescendingAcceptPanel` / `SealedBidPanel`, `TieRoundCard` + `OpenTieRoundDialog`.
+**Consequences:** sealed thấy kết quả qua `auction_bids` sau khi đóng (biên bản / hợp đồng / quyết toán không đổi). Thêm `kind` vào `auction_lot_events` phải sửa CHECK — thiếu là cron `close_due_lots` chết cho mọi phiên. types.ts sửa tay.
+
 ## 2026-10-18 — Tiếp thị phiên theo file MVP (AI viết bài chung)
 
 **Context:** người dùng chỉ định file design MỚI "Phien Dau Gia - Cong Cong Ty MVP" — `pdg-mvp3.js` ghi đè tab Tiếp thị thành một thẻ "Viết cho" (bài chung + kênh) + tuỳ chọn viết + "Viết bằng AI".

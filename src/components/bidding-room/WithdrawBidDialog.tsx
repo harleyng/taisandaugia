@@ -9,7 +9,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { formatVnd } from "@/lib/advertising/slug";
+import { formatMoneyFull } from "@/utils/money";
 import type { LotBid } from "@/types/auction-bidding";
 
 /**
@@ -18,42 +18,43 @@ import type { LotBid } from "@/types/auction-bidding";
  * Hậu quả phải nói ĐÚNG như SQL làm (withdraw_bid, 20260913000001):
  *  - Chỉ LÔ NÀY quay về lượt hợp lệ trước đó.
  *  - Tiền đặt trước tính theo PHIÊN nên bị tịch thu ngay, không hoàn lại.
- *  - Mất tiền đặt trước ⇒ không trả giá tiếp ở BẤT KỲ lô nào của phiên, và
- *    không vào lại được phòng đấu giá.
+ *  - Mất tiền đặt trước ⇒ không trả giá tiếp ở BẤT KỲ lô nào của phiên (vẫn
+ *    vào phòng ở chế độ chỉ xem — roomGateOf trả view_only 'forfeited').
  *  - Các lô khác đang dẫn đầu thì VẪN giữ và vẫn có thể trúng.
  */
 
 interface Props {
   bid: LotBid | null;
-  lotTitle: string;
+  lotNo: number;
   depositAmount: number | null;
   pending: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (bidId: string) => void;
 }
 
-export function WithdrawBidDialog({ bid, lotTitle, depositAmount, pending, onOpenChange, onConfirm }: Props) {
+export function WithdrawBidDialog({ bid, lotNo, depositAmount, pending, onOpenChange, onConfirm }: Props) {
   return (
     <AlertDialog open={!!bid} onOpenChange={(open) => !open && !pending && onOpenChange(false)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Rút lại giá {formatVnd(bid?.amount)}?</AlertDialogTitle>
+      <AlertDialogContent className="max-w-[440px] gap-0 rounded-[14px] p-[22px]">
+        <AlertDialogHeader className="space-y-0 text-left">
+          <AlertDialogTitle className="mb-1.5 text-[17px]">Rút lại giá {formatMoneyFull(bid?.amount)}?</AlertDialogTitle>
           <AlertDialogDescription asChild>
-            <div className="space-y-2 text-sm">
-              <p>«{lotTitle}» sẽ quay về lượt trả giá hợp lệ trước đó.</p>
-              <p className="font-semibold text-destructive">
-                Tiền đặt trước của cả phiên{depositAmount ? ` (${formatVnd(depositAmount)})` : ""} bị tịch thu ngay và
-                không được hoàn lại.
-              </p>
+            <div className="text-[13.5px] text-muted-foreground">
               <p>
-                Sau khi rút, bạn <strong>không trả giá tiếp được ở bất kỳ lô nào</strong> của phiên này và không vào lại
-                phòng đấu giá. Những lô khác bạn đang dẫn đầu vẫn được giữ và vẫn có thể trúng đấu giá.
+                Đây là lượt đang dẫn đầu của bạn ở tài sản {lotNo}. Giá sẽ quay về lượt hợp lệ liền trước. Những tài sản
+                khác bạn đang dẫn đầu vẫn được giữ.
               </p>
+              <div className="mt-3 rounded-lg bg-destructive/10 px-3 py-2.5 text-[13px] text-destructive">
+                Bạn sẽ <b>mất toàn bộ tiền đặt trước{depositAmount ? ` ${formatMoneyFull(depositAmount)}` : ""}</b> và
+                không được trả giá tiếp trong phiên này.
+              </div>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Giữ lượt trả giá</AlertDialogCancel>
+        <AlertDialogFooter className="mt-[18px] gap-2">
+          <AlertDialogCancel disabled={pending} className="mt-0">
+            Giữ nguyên
+          </AlertDialogCancel>
           <Button
             variant="destructive"
             className="gap-1.5"

@@ -7,9 +7,9 @@ const t = noticeTemplate();
 const full: NoticeValues = {
   facts: {
     org_name: "Công ty Đấu giá Hợp danh Bảo Tín",
-    lots_list: "Lô 1: Nhà phố Quận 5",
-    starting_prices: "Lô 1: 12,500,000,000₫",
-    deposits: "Lô 1: 1,250,000,000₫",
+    lots_list: "Tài sản 1: Nhà phố Quận 5",
+    starting_prices: "Tài sản 1: 12,500,000,000₫",
+    deposits: "Tài sản 1: 1,250,000,000₫",
     viewing_time: "Từ 08:00 ngày 15/09/2026",
     registration_time: "Từ 08:00 ngày 12/09/2026",
     auction_time: "09:00 ngày 28/09/2026",
@@ -25,7 +25,7 @@ const full: NoticeValues = {
     registration_conditions: "Tổ chức, cá nhân đủ điều kiện theo quy định",
     auction_method: "Phương thức trả giá lên",
   },
-  drafts: { asset_description: "Lô 1: Nhà phố Quận 5 (nhà phố)." },
+  drafts: { asset_description: "Tài sản 1: Nhà phố Quận 5 (nhà phố)." },
 };
 
 describe("renderNotice", () => {

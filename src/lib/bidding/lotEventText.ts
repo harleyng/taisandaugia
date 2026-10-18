@@ -46,6 +46,16 @@ const sbd = (v: unknown): string | null => {
   return n == null ? null : `số báo danh ${formatBidderNo(n)}`;
 };
 
+const sbdList = (v: unknown): string | null => {
+  const ns = Array.isArray(v) ? v.filter((x): x is number => typeof x === "number") : [];
+  return ns.length ? `số báo danh ${ns.map(formatBidderNo).join(", ")}` : null;
+};
+
+const roundText = (v: unknown): string | null => {
+  const n = num(v);
+  return n == null ? null : n > 1 ? `vòng phụ ${n - 1}` : "vòng 1";
+};
+
 function detailOf(kind: LotEventKind, p: Payload): string {
   switch (kind) {
     case "open": {
@@ -73,6 +83,37 @@ function detailOf(kind: LotEventKind, p: Payload): string {
     case "bid": {
       const amount = num(p.amount);
       return [amount != null ? formatVnd(amount) : null, sbd(p.bidder_no)].filter(Boolean).join(" · ");
+    }
+    case "accept": {
+      const amount = num(p.amount);
+      return [amount != null ? `Chấp nhận ${formatVnd(amount)}` : null, sbd(p.bidder_no)].filter(Boolean).join(" · ");
+    }
+    case "sealed_bid":
+      // Cố ý không có số tiền — phiếu kín chỉ công bố khi hết vòng.
+      return [sbd(p.bidder_no), roundText(p.round_no)].filter(Boolean).join(" · ");
+    case "tie": {
+      const amount = num(p.tie_amount);
+      return [
+        roundText(p.round_no),
+        amount != null ? `cùng ${formatVnd(amount)}` : null,
+        sbdList(p.bidder_nos),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    case "tie_round": {
+      const duration = num(p.duration_seconds);
+      const ends = str(p.ends_at);
+      const amount = num(p.tie_amount);
+      return [
+        roundText(p.round_no),
+        sbdList(p.bidder_nos),
+        amount != null ? `giá từ ${formatVnd(amount)}` : null,
+        duration != null ? `nhận phiếu ${humanSeconds(duration)}` : null,
+        ends ? `đóng lúc ${formatDateTime(ends)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
     }
     case "bid_rejected": {
       const amount = num(p.amount);
@@ -116,15 +157,15 @@ function detailOf(kind: LotEventKind, p: Payload): string {
     case "withdraw_lot": {
       const reason = str(p.reason);
       // close_due_lots ghi mã thay vì câu chữ khi phiên bị huỷ.
-      if (reason === "session_cancelled") return "Phiên bị huỷ nên lô được rút tự động";
+      if (reason === "session_cancelled") return "Phiên bị huỷ nên tài sản được rút tự động";
       const bids = num(p.bid_count);
       return [reason, bids ? `đã có ${bids} lượt trả giá` : null].filter(Boolean).join(" · ");
     }
     case "finalize": {
       const parts = [
-        num(p.sold) != null ? `${p.sold} lô đấu giá thành` : null,
-        num(p.unsold) != null ? `${p.unsold} lô không thành` : null,
-        num(p.withdrawn) ? `${p.withdrawn} lô đã rút` : null,
+        num(p.sold) != null ? `${p.sold} tài sản đấu giá thành` : null,
+        num(p.unsold) != null ? `${p.unsold} tài sản không thành` : null,
+        num(p.withdrawn) ? `${p.withdrawn} tài sản đã rút` : null,
         num(p.applied) != null ? `${p.applied} hồ sơ chuyển tiền đặt trước` : null,
         num(p.pending_refund) != null ? `${p.pending_refund} hồ sơ chờ hoàn trả` : null,
       ].filter(Boolean);
@@ -168,7 +209,7 @@ export function describeLotEvent(event: LotEvent, lotNoById: Map<string, number>
   return {
     label: LOT_EVENT_LABELS[event.kind] ?? event.kind,
     detail,
-    lotLabel: lotNo != null ? `Lô ${lotNo}` : null,
+    lotLabel: lotNo != null ? `Tài sản ${lotNo}` : null,
   };
 }
 

@@ -3,6 +3,7 @@ import { formatVnd } from "@/lib/advertising/slug";
 import { fmtDate, fmtTime } from "@/lib/auctionSessions/sessionDetail";
 import { AUCTION_FORMAT_LABELS } from "@/types/asset-posting";
 import type { AuctionSession } from "@/types/auction-session";
+import { methodRuleRows } from "@/lib/bidding/methods";
 import { DetailCard } from "./DetailCard";
 
 /**
@@ -16,8 +17,6 @@ interface Tile {
   /** wide = mô tả (chữ thường, cả hàng) · row = giá trị đậm nhưng chiếm cả hàng. */
   kind?: "code" | "wide" | "row";
 }
-
-const BIDDING_METHOD_LABELS: Record<string, string> = { ascending: "Trả giá lên" };
 
 function TileGrid({ tiles, cols = 3 }: { tiles: Tile[]; cols?: 3 | 4 }) {
   return (
@@ -68,9 +67,7 @@ export function SessionInfoSummary({ session }: { session: AuctionSession }) {
   ];
   if (online) {
     dossier.push(
-      { label: "Phương thức trả giá", value: BIDDING_METHOD_LABELS[session.bidding_method] ?? session.bidding_method },
-      { label: "Bước giá tối đa / lượt", value: `${session.max_bid_steps} bước` },
-      { label: "Gia hạn", value: session.extension_seconds > 0 ? `${session.extension_seconds} giây` : "Không gia hạn" },
+      ...methodRuleRows(session).map((r, i) => (i === 0 ? { ...r, label: "Phương thức trả giá" } : r)),
     );
   }
 

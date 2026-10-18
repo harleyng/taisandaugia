@@ -8,6 +8,7 @@ import { useSaleContractDetail } from "@/hooks/useSaleContracts";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import type { SaleAssetSnapshot } from "@/types/auction-sale-contract";
 import { cn } from "@/lib/utils";
+import { MY_CONTRACTS_PATH } from "@/lib/biddingContracts/paths";
 
 const CHILD_LABEL: Record<string, string> = Object.fromEntries(
   ASSET_CATEGORIES.flatMap((p) => p.children.map((ch) => [ch.slug, ch.name])),
@@ -27,7 +28,7 @@ const CHILD_LABEL: Record<string, string> = Object.fromEntries(
  */
 export default function SaleContractPage({
   embedded = false,
-  backPath = "/profile?tab=auction-contracts",
+  backPath = MY_CONTRACTS_PATH,
   backLabel = "Về hồ sơ đấu giá của tôi",
 }: {
   embedded?: boolean;

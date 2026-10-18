@@ -61,7 +61,7 @@ export type SessionItemDraft = ItemSnapshot &
   ({ source: "listing"; listing_id: string } | { source: "posting"; asset_posting_id: string });
 
 export type SessionItemPatch = Partial<
-  Pick<ItemRow, "title" | "starting_price" | "deposit_amount" | "bid_step" | "max_registrants">
+  Pick<ItemRow, "title" | "starting_price" | "deposit_amount" | "bid_step" | "floor_price" | "max_registrants">
 >;
 
 // ─── Bản công khai ─────────────────────────────────────────────────────────
@@ -74,6 +74,9 @@ export interface PublicSessionOrg {
   id: string;
   name: string;
   logo_url: string | null;
+  /** Chỉ query chi tiết lấy — để chỉ đường / gọi tổ chức khi không bán hồ sơ qua sàn. */
+  address?: string | null;
+  phone?: string | null;
 }
 
 export interface PublicSessionLotSummary {

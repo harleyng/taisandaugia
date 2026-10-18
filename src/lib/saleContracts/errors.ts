@@ -17,12 +17,12 @@ export const SALE_REASON_MESSAGES: Record<string, string> = {
 
   // Lập hợp đồng
   not_finalized: "Phiên chưa chốt kết quả — chưa lập được hợp đồng mua bán.",
-  lot_not_sold: "Lô này không có người trúng đấu giá.",
+  lot_not_sold: "Tài sản này không có người trúng đấu giá.",
   lot_defaulted:
-    "Lô này đã được ghi nhận là người trúng không thanh toán — không lập hợp đồng mua bán được nữa.",
-  already_exists: "Lô này đã có một hợp đồng mua bán đang mở.",
+    "Tài sản này đã được ghi nhận là người trúng không thanh toán — không lập hợp đồng mua bán được nữa.",
+  already_exists: "Tài sản này đã có một hợp đồng mua bán đang mở.",
   seller_unresolved:
-    "Chưa xác định được bên bán của lô này. Lô ký gửi cần hợp đồng dịch vụ còn hiệu lực; lô tin đăng cần có chủ tài sản trong danh bạ.",
+    "Chưa xác định được bên bán của tài sản này. Tài sản ký gửi cần hợp đồng dịch vụ còn hiệu lực; tài sản tin đăng cần có chủ tài sản trong danh bạ.",
   invalid_payee: "Bên nhận tiền không hợp lệ.",
 
   // Điều khoản
@@ -57,7 +57,7 @@ export const SALE_REASON_MESSAGES: Record<string, string> = {
 
   // Backstop của bước 6 (org_confirm_winner_payment)
   sale_contract_exists:
-    "Lô này đã có hợp đồng mua bán — trạng thái thanh toán do sổ tiền của hợp đồng quyết định.",
+    "Tài sản này đã có hợp đồng mua bán — trạng thái thanh toán do sổ tiền của hợp đồng quyết định.",
 };
 
 const FALLBACK_MESSAGE = "Thao tác không thành công. Vui lòng thử lại.";
@@ -123,5 +123,5 @@ export function saleErrorMessage(err: unknown): string {
 
 export const cancelConsequenceOf = (kind: SaleCancelKind): string =>
   kind === "buyer_refused"
-    ? "Tiền đặt trước của người trúng đấu giá bị MẤT và lô được ghi nhận là không thanh toán."
+    ? "Tiền đặt trước của người trúng đấu giá bị MẤT và tài sản được ghi nhận là không thanh toán."
     : "Tiền đặt trước của người trúng đấu giá chuyển sang chờ hoàn trả.";

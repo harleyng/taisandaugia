@@ -36,11 +36,11 @@ export function FinalizeSessionDialog({ open, sessionTitle, preview, pending, on
         </DialogHeader>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-muted p-3 text-sm">
-          <dt className="text-muted-foreground">Lô đấu giá thành</dt>
+          <dt className="text-muted-foreground">Tài sản đấu giá thành</dt>
           <dd className="text-right font-medium text-foreground">{preview.sold}</dd>
-          <dt className="text-muted-foreground">Lô không thành</dt>
+          <dt className="text-muted-foreground">Tài sản không thành</dt>
           <dd className="text-right font-medium text-foreground">{preview.unsold}</dd>
-          <dt className="text-muted-foreground">Lô đã rút</dt>
+          <dt className="text-muted-foreground">Tài sản đã rút</dt>
           <dd className="text-right font-medium text-foreground">{preview.withdrawn}</dd>
           <dt className="text-muted-foreground">Hồ sơ chuyển thành tiền mua</dt>
           <dd className="text-right font-medium text-foreground">{preview.applied}</dd>
@@ -49,7 +49,7 @@ export function FinalizeSessionDialog({ open, sessionTitle, preview, pending, on
         </dl>
 
         <InfoBox variant="amber" className="text-sm">
-          Không hoàn tác được. Sau khi chốt, không mở hay đóng lô được nữa; tiền đặt trước chuyển sang “Chuyển vào tiền
+          Không hoàn tác được. Sau khi chốt, không mở hay đóng tài sản được nữa; tiền đặt trước chuyển sang “Chuyển vào tiền
           mua tài sản” hoặc “Chờ hoàn trả”. Biên bản đấu giá chỉ phát hành được sau bước này.
         </InfoBox>
 

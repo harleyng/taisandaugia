@@ -49,11 +49,11 @@ describe("extractCaseDocument", () => {
     expect(result.warnings.some((w) => w.includes("xem tài sản"))).toBe(true);
   });
 
-  it("thiếu tiền đặt trước một lô ⇒ chỗ trống đúng lô đó", () => {
+  it("thiếu tiền đặt trước một tài sản ⇒ chỗ trống đúng tài sản đó", () => {
     const lots = [LOTS[0], { ...LOTS[1], deposit_amount: null }];
     const body = byHeading("deposit_terms", "Khoản tiền đặt trước", { lots }).body;
     expect(body).toContain(formatVnd(250000000));
-    expect(body).toContain("[[CẦN NHẬP: tiền đặt trước lô 2]]");
+    expect(body).toContain("[[CẦN NHẬP: tiền đặt trước tài sản 2]]");
   });
 
   it("điều khoản chỉ tài liệu gốc mới có thì luôn để trống", () => {

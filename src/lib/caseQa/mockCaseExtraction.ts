@@ -48,11 +48,11 @@ export const EXTRACTION_TEMPLATES: Record<UploadableDocType, DocTemplate> = {
         variants: [
           (ctx) =>
             ctx.lotLines(
-              (l) => `Lô ${l.lot_no} – ${l.title}: giá khởi điểm ${ctx.money(l.starting_price, `giá khởi điểm lô ${l.lot_no}`)}.`,
+              (l) => `Tài sản ${l.lot_no} – ${l.title}: giá khởi điểm ${ctx.money(l.starting_price, `giá khởi điểm tài sản ${l.lot_no}`)}.`,
             ),
           (ctx) =>
             ctx.lotLines(
-              (l) => `Lô ${l.lot_no}: ${l.title}, giá khởi điểm là ${ctx.money(l.starting_price, `giá khởi điểm lô ${l.lot_no}`)}.`,
+              (l) => `Tài sản ${l.lot_no}: ${l.title}, giá khởi điểm là ${ctx.money(l.starting_price, `giá khởi điểm tài sản ${l.lot_no}`)}.`,
             ),
         ],
       },
@@ -138,9 +138,9 @@ export const EXTRACTION_TEMPLATES: Record<UploadableDocType, DocTemplate> = {
         heading: "Bước giá",
         topics: ["bid_step"],
         variants: [
-          (ctx) => ctx.lotLines((l) => `Lô ${l.lot_no}: bước giá ${ctx.money(l.bid_step, `bước giá lô ${l.lot_no}`)}.`),
+          (ctx) => ctx.lotLines((l) => `Tài sản ${l.lot_no}: bước giá ${ctx.money(l.bid_step, `bước giá tài sản ${l.lot_no}`)}.`),
           (ctx) =>
-            ctx.lotLines((l) => `Lô ${l.lot_no}: bước giá là ${ctx.money(l.bid_step, `bước giá lô ${l.lot_no}`)}/lần trả giá.`),
+            ctx.lotLines((l) => `Tài sản ${l.lot_no}: bước giá là ${ctx.money(l.bid_step, `bước giá tài sản ${l.lot_no}`)}/lần trả giá.`),
         ],
       },
       {
@@ -175,10 +175,10 @@ export const EXTRACTION_TEMPLATES: Record<UploadableDocType, DocTemplate> = {
         topics: ["deposit"],
         variants: [
           (ctx) =>
-            ctx.lotLines((l) => `Lô ${l.lot_no}: tiền đặt trước ${ctx.money(l.deposit_amount, `tiền đặt trước lô ${l.lot_no}`)}.`),
+            ctx.lotLines((l) => `Tài sản ${l.lot_no}: tiền đặt trước ${ctx.money(l.deposit_amount, `tiền đặt trước tài sản ${l.lot_no}`)}.`),
           (ctx) =>
             ctx.lotLines(
-              (l) => `Lô ${l.lot_no} – ${l.title}: tiền đặt trước là ${ctx.money(l.deposit_amount, `tiền đặt trước lô ${l.lot_no}`)}.`,
+              (l) => `Tài sản ${l.lot_no} – ${l.title}: tiền đặt trước là ${ctx.money(l.deposit_amount, `tiền đặt trước tài sản ${l.lot_no}`)}.`,
             ),
         ],
       },
@@ -241,6 +241,18 @@ export const EXTRACTION_TEMPLATES: Record<UploadableDocType, DocTemplate> = {
         variants: [
           (ctx) => `Để đăng ký lịch xem tài sản, người đăng ký liên hệ: ${ctx.fill("đầu mối liên hệ, số điện thoại")}.`,
         ],
+      },
+    ],
+  },
+  // Tài liệu khác: không biết trước nội dung ⇒ một điều khoản trống, chuyên viên
+  // chép từ tệp gốc và gắn chủ đề trước khi xác nhận.
+  other: {
+    refPrefix: "Mục",
+    clauses: [
+      {
+        heading: "Nội dung chính",
+        topics: [],
+        variants: [(ctx) => ctx.fill("nội dung chính của tài liệu")],
       },
     ],
   },

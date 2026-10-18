@@ -2,9 +2,8 @@ import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InfoBox } from "@/components/shared/InfoBox";
 import { DURATION_PRESETS } from "@/lib/bidding/controlAccess";
-import { BIDDING_METHOD_LABELS, isEngineSupportedMethod } from "@/lib/auctionConsult/labels";
+import { BIDDING_METHOD_LABELS } from "@/lib/auctionConsult/labels";
 import { AUCTION_FORMAT_LABELS, type AuctionFormat } from "@/types/asset-posting";
 import type { ConsultBiddingMethod, ProposalDraft } from "@/types/auctionConsult";
 
@@ -51,21 +50,15 @@ export function ProposalFormatFields({ draft, onChange, disabled }: Props) {
             {(Object.keys(BIDDING_METHOD_LABELS) as ConsultBiddingMethod[]).map((m) => (
               <SelectItem key={m} value={m}>
                 {BIDDING_METHOD_LABELS[m]}
-                {!isEngineSupportedMethod(m) && " (tham khảo)"}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {draft.bidding_method && !isEngineSupportedMethod(draft.bidding_method) && (
-          <InfoBox variant="amber" className="text-xs">
-            Sàn hiện chỉ chạy "Trả giá lên" — phương thức này chỉ để tham khảo, tổ chức không áp dụng trực tiếp được.
-          </InfoBox>
-        )}
       </div>
 
       {online && (
         <div className="space-y-2">
-          <Label htmlFor="tvdg-duration">Thời lượng mỗi lô (phút)</Label>
+          <Label htmlFor="tvdg-duration">Thời lượng mỗi tài sản (phút)</Label>
           <div className="flex flex-wrap items-center gap-2">
             {DURATION_PRESETS.map((m) => (
               <button
@@ -88,7 +81,7 @@ export function ProposalFormatFields({ draft, onChange, disabled }: Props) {
               onChange={(e) => onChange({ lot_duration_minutes: e.target.value.replace(/[^\d]/g, "") })}
             />
           </div>
-          <p className="text-xs text-muted-foreground">Từ 1 đến 1.440 phút — gợi ý cho tổ chức khi mở lô.</p>
+          <p className="text-xs text-muted-foreground">Từ 1 đến 1.440 phút — gợi ý cho tổ chức khi mở tài sản.</p>
         </div>
       )}
     </div>

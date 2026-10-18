@@ -54,7 +54,7 @@ export function usePlaceBid(sessionId?: string | null) {
       if (res.duplicate) return;
       toast.success(
         res.extended
-          ? `Đã trả giá ${formatVnd(res.amount)}. Lô được gia hạn thêm thời gian.`
+          ? `Đã trả giá ${formatVnd(res.amount)}. Tài sản được gia hạn thêm thời gian.`
           : `Đã trả giá ${formatVnd(res.amount)}.`,
       );
     },

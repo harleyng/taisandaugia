@@ -14,6 +14,7 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { AdminPermissionRoute } from "@/components/admin/AdminPermissionRoute";
 import { SERVICE_KIND_MODULES } from "@/lib/serviceRequests/kinds";
 import { portalSaleContractPath, portalSaleContractsPath } from "@/lib/saleContracts/files";
+import { myContractsGroupPath } from "@/lib/biddingContracts/paths";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { PortalPermissionRoute } from "@/components/portal/PortalPermissionRoute";
 import { OwnerPortalLayout } from "@/components/owner-portal/OwnerPortalLayout";
@@ -171,8 +172,8 @@ const OwnerSubscriptionPage = lazy(() => import("./pages/chu-tai-san/OwnerSubscr
 const OwnerSubscriptionPlansPage = lazy(() => import("./pages/chu-tai-san/OwnerSubscriptionPlansPage"));
 const OwnerMembersPage = lazy(() => import("./pages/chu-tai-san/OwnerMembersPage"));
 const OwnerRolesPage = lazy(() => import("./pages/chu-tai-san/OwnerRolesPage"));
-const OwnerAuditLogPage = lazy(() => import("./pages/chu-tai-san/OwnerAuditLogPage"));
 const OwnerCraftVillagePage = lazy(() => import("./pages/chu-tai-san/OwnerCraftVillagePage"));
+const OwnerAuditLogPage = lazy(() => import("./pages/chu-tai-san/OwnerAuditLogPage"));
 const OwnerRoleDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerRoleDetailPage"));
 const OwnerLinksPage = lazy(() => import("./pages/chu-tai-san/OwnerLinksPage"));
 const OwnerOutcomesPage = lazy(() => import("./pages/chu-tai-san/OwnerOutcomesPage"));
@@ -222,6 +223,8 @@ const AuctionSessionDetail = lazy(() => import("./pages/AuctionSessionDetail"));
 const AuctionSessionQaPage = lazy(() => import("./pages/AuctionSessionQaPage"));
 const AuctionBiddingRoomPage = lazy(() => import("./pages/AuctionBiddingRoomPage"));
 const BidderRegistrationPage = lazy(() => import("./pages/BidderRegistrationPage"));
+const MyContractDetailPage = lazy(() => import("./pages/MyContractDetailPage"));
+const ContractDepositPage = lazy(() => import("./pages/ContractDepositPage"));
 
 function RedirectApplicationId() {
   const { id } = useParams<{ id: string }>()
@@ -257,6 +260,12 @@ function RedirectPortalSaleContractId() {
 function RedirectOwnerSubscriptionId() {
   const { workspaceId } = useParams<{ workspaceId: string }>()
   return <Navigate to={`/admin/goi-thue-bao/ap-dung/${workspaceId}`} replace />
+}
+
+// "Hồ sơ của tôi" thành tab "Hồ sơ đấu giá" trong /profile — giữ link cũ (cả ?tab=done|cancelled).
+function RedirectMyContracts() {
+  const [params] = useSearchParams()
+  return <Navigate to={myContractsGroupPath(params.get("tab"))} replace />
 }
 
 function RedirectNhanSuId() {
@@ -344,6 +353,12 @@ const App = () => (
               <Route path="/sessions/:id/dang-ky" element={<ProtectedRoute />}>
                 <Route index element={<BidderRegistrationPage />} />
               </Route>
+              {/* Hồ sơ của tôi (người mua) — danh sách ở /profile, ở đây chi tiết + nộp tiền đặt trước */}
+              <Route path="/ho-so-cua-toi" element={<ProtectedRoute />}>
+                <Route index element={<RedirectMyContracts />} />
+                <Route path=":code" element={<MyContractDetailPage />} />
+                <Route path=":code/dat-truoc" element={<ContractDepositPage />} />
+              </Route>
 
               {/* Credits */}
               <Route path="/buy-credits" element={<BuyCredits />} />
@@ -424,6 +439,7 @@ const App = () => (
                     <Route path=":id" element={<OwnerConsignmentDetailPage />} />
                   </Route>
                   <Route path="chi-nhanh-amc" element={<OwnerBranchesPage />} />
+                  <Route path="lang-nghe" element={<OwnerCraftVillagePage />} />
                   <Route path="thanh-vien" element={<OwnerMembersPage />} />
                   <Route path="vai-tro" element={<OwnerRolesPage />} />
                   <Route path="vai-tro/:id" element={<OwnerRoleDetailPage />} />
@@ -439,7 +455,6 @@ const App = () => (
                   <Route path="hop-dong/ky-gui/:id" element={<OwnerConsignmentContractPage />} />
                   <Route path="hop-dong/mua-ban/:id" element={<OwnerSaleContractDetailPage />} />
                   <Route path="hop-dong/dich-vu/:id" element={<OwnerServiceContractPage />} />
-                  <Route path="lang-nghe" element={<OwnerCraftVillagePage />} />
                   <Route path="hop-dong-mua-ban" element={<Navigate to="/chu-tai-san/hop-dong?loai=mua-ban" replace />} />
                   <Route path="hop-dong-mua-ban/:id" element={<RedirectOwnerSaleContractId />} />
                 </Route>

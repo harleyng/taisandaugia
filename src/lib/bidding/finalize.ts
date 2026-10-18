@@ -14,7 +14,7 @@
 import { lotPhaseOf } from "./lotPhase";
 import type { LotState } from "@/types/auction-bidding";
 
-export type FinalizeBlockPhase = "pending" | "open" | "extended" | "paused";
+export type FinalizeBlockPhase = "pending" | "open" | "extended" | "paused" | "tied";
 
 export interface FinalizeBlocker {
   lotId: string;
@@ -26,10 +26,11 @@ export interface FinalizeBlocker {
 }
 
 const ADVICE: Record<FinalizeBlockPhase, string> = {
-  pending: "Mở lô rồi chờ đóng, hoặc rút lô khỏi phiên.",
-  open: "Chờ lô đóng hoặc rút lô khỏi phiên.",
-  extended: "Chờ lô đóng hoặc rút lô khỏi phiên.",
-  paused: "Tiếp tục lô rồi chờ đóng, hoặc rút lô khỏi phiên.",
+  pending: "Mở tài sản rồi chờ đóng, hoặc rút tài sản khỏi phiên.",
+  open: "Chờ tài sản đóng hoặc rút tài sản khỏi phiên.",
+  extended: "Chờ tài sản đóng hoặc rút tài sản khỏi phiên.",
+  paused: "Tiếp tục tài sản rồi chờ đóng, hoặc rút tài sản khỏi phiên.",
+  tied: "Mở vòng phụ cho những người bằng giá, hoặc rút tài sản khỏi phiên.",
 };
 
 interface FinalizeLot {

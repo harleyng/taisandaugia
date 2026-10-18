@@ -18,12 +18,12 @@ const base = {
 };
 
 describe("composeDirectMessage", () => {
-  it("chỉ nhắc đúng các lô khách khớp", () => {
+  it("chỉ nhắc đúng các tài sản khách khớp", () => {
     const matched = threeLots.filter((l) => l.id === LOT1 || l.lot_no === 3);
     const msg = composeDirectMessage({ ...base, method: "zalo", lots: matched });
-    expect(msg).toContain("Lô 1: Nhà phố Quận 5");
-    expect(msg).toContain("Lô 3: Máy xúc Komatsu");
-    expect(msg).not.toContain("Lô 2");
+    expect(msg).toContain("Tài sản 1: Nhà phố Quận 5");
+    expect(msg).toContain("Tài sản 3: Máy xúc Komatsu");
+    expect(msg).not.toContain("Tài sản 2");
     expect(msg).toContain("Chào anh/chị Nguyễn Văn An");
   });
 

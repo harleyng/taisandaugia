@@ -1,10 +1,31 @@
 // Đường dẫn dùng chung của luồng hồ sơ tham gia.
 
+/** Nhóm tab trong danh sách hồ sơ của tôi — `?tab=` đã dành cho tab của trang hồ sơ cá nhân. */
+export const MY_CONTRACTS_GROUP_PARAM = "nhom";
+
+/**
+ * "Hồ sơ đấu giá" — tab trong trang hồ sơ cá nhân trên sàn. `/ho-so-cua-toi`
+ * (trang riêng cũ) chuyển hướng về đây; chi tiết hồ sơ vẫn ở `/ho-so-cua-toi/:code`.
+ */
 export const MY_CONTRACTS_PATH = "/profile?tab=auction-contracts";
 
-/** Trang thanh toán VNPay cho một hồ sơ; thanh toán xong quay về trang phiên. */
+/** Danh sách hồ sơ của tôi, mở sẵn một nhóm (active | done | cancelled). */
+export const myContractsGroupPath = (group: string | null | undefined) =>
+  group && group !== "active" ? `${MY_CONTRACTS_PATH}&${MY_CONTRACTS_GROUP_PARAM}=${group}` : MY_CONTRACTS_PATH;
+
+/** Chi tiết một hồ sơ của tôi — mã hồ sơ là UNIQUE. */
+export const myContractPath = (code: string) => `/ho-so-cua-toi/${encodeURIComponent(code)}`;
+
+/** Hướng dẫn nộp tiền đặt trước của một hồ sơ. */
+export const myContractDepositPath = (code: string) => `${myContractPath(code)}/dat-truoc`;
+
+/**
+ * Trang thanh toán VNPay cho một hồ sơ; thanh toán xong quay về trang đăng ký
+ * (`?ho-so=`) để hiện màn "Đã mua hồ sơ tham gia".
+ */
 export function contractCheckoutPath(contractId: string, sessionId: string): string {
-  const sp = new URLSearchParams({ contract: contractId, return: `/sessions/${sessionId}` });
+  const back = `${sessionRegistrationPath(sessionId)}?ho-so=${encodeURIComponent(contractId)}`;
+  const sp = new URLSearchParams({ contract: contractId, return: back });
   return `/payment/vnpay?${sp.toString()}`;
 }
 

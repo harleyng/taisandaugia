@@ -1,14 +1,19 @@
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Note } from "@/components/auction-sessions/detail/ui";
 import { IdentityCapture, type IdentityCaptureErrors } from "@/components/ekyc/IdentityCapture";
 import { KycDocumentSlot } from "@/components/bidding-contracts/KycDocumentSlot";
-import { applySavedIdentity, type RegistrationFormValues } from "@/lib/biddingContracts/registrationForm";
-import { cn } from "@/lib/utils";
+import { OptionTile } from "@/components/buyer-contracts/ui";
+import { formatDateTime } from "@/lib/auctionSessions/datetime";
+import { applySavedIdentity } from "@/lib/biddingContracts/registrationForm";
+import { checkinChannelOf, checkinWindowOf } from "@/lib/biddingContracts/checkinWindow";
+import type { PublicSessionDetail } from "@/types/auction-session";
 import type { VerifiedIdentity } from "@/types/bidding-contract";
 import { RegField } from "./RegField";
+import { StepCard } from "./StepCard";
 import type { StepProps } from "./types";
 
 interface Props extends StepProps {
+  session: PublicSessionDetail;
   saved: VerifiedIdentity | null;
   /** Người đăng ký đang dùng danh tính đã lưu ⇒ không thể đồng thời là người được uỷ quyền. */
   principalIsSaved: boolean;
@@ -19,57 +24,44 @@ interface Props extends StepProps {
  * người được uỷ quyền (B2) ⇒ KYC thêm người đó + giấy uỷ quyền.
  */
 export function ProxySection(props: Props) {
-  const { values, patch, errors, busy, submitting, onUploaded, busyHandlers, saved } = props;
+  const { values, patch, errors, busy, submitting, onUploaded, busyHandlers, saved, session } = props;
   const org = values.buyer_kind === "organization";
   const x = values.proxy;
   const set = (p: Partial<typeof x>) => patch({ proxy: { ...x, ...p } });
+  const proxy = values.attendee === "proxy";
+  const w = checkinWindowOf(session);
+  const online = checkinChannelOf(session.auction_format) === "online";
 
   // Nhân viên được tổ chức uỷ quyền thường là chính chủ tài khoản ⇒ dùng ảnh đã lưu.
   const canUseSavedForProxy = saved?.source === "id_photo" && !props.principalIsSaved;
 
-  const options: { value: RegistrationFormValues["attendee"]; title: string; hint: string }[] = [
-    {
-      value: "self",
-      title: org ? "Người đại diện theo pháp luật tự dự phiên" : "Tôi tự dự phiên",
-      hint: "Mang giấy tờ gốc đã kê khai khi điểm danh",
-    },
-    { value: "proxy", title: "Uỷ quyền cho người khác dự phiên", hint: "Cần giấy uỷ quyền và giấy tờ tuỳ thân của người được uỷ quyền" },
-  ];
-
   return (
-    <div className="space-y-5">
-      <RadioGroup
-        value={values.attendee}
-        onValueChange={(v) => patch({ attendee: v as RegistrationFormValues["attendee"] })}
-        className="grid gap-3 sm:grid-cols-2"
-        disabled={busy}
-      >
-        {options.map((o) => (
-          <label
-            key={o.value}
-            htmlFor={`reg-attendee-${o.value}`}
-            className={cn(
-              "flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors",
-              values.attendee === o.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-            )}
-          >
-            <RadioGroupItem id={`reg-attendee-${o.value}`} value={o.value} className="mt-1" />
-            <span>
-              <span className="block font-medium text-foreground">{o.title}</span>
-              <span className="block text-xs text-muted-foreground">{o.hint}</span>
-            </span>
-          </label>
-        ))}
-      </RadioGroup>
+    <StepCard title="Ai sẽ dự phiên?" sub="Người dự phiên điểm danh và trả giá trong phòng đấu giá.">
+      <div role="radiogroup" aria-label="Người dự phiên" className="grid gap-3 sm:grid-cols-2">
+        <OptionTile
+          selected={!proxy}
+          title={org ? "Người đại diện theo pháp luật" : "Tôi tự dự phiên"}
+          hint={online ? "Điểm danh bằng tài khoản này" : "Mang giấy tờ gốc đã kê khai khi điểm danh"}
+          disabled={busy}
+          onSelect={() => patch({ attendee: "self" })}
+        />
+        <OptionTile
+          selected={proxy}
+          title="Uỷ quyền người khác"
+          hint="Cần giấy uỷ quyền công chứng hoặc chứng thực"
+          disabled={busy}
+          onSelect={() => patch({ attendee: "proxy" })}
+        />
+      </div>
 
-      {values.attendee === "proxy" && (
-        <div className="space-y-5 rounded-xl border border-border p-4">
+      {proxy ? (
+        <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-foreground">Người được uỷ quyền</p>
             {canUseSavedForProxy && (
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 disabled={submitting}
                 onClick={() => set({ ...applySavedIdentity(saved!), phone: x.phone || values.phone })}
@@ -86,10 +78,10 @@ export function ProxySection(props: Props) {
             onUploaded={onUploaded}
             onBusyChange={busyHandlers.proxy}
           />
-          <RegField id="reg-proxy-phone" label="Số điện thoại người được uỷ quyền" inputMode="tel" placeholder="0912345678"
+          <RegField id="reg-proxy-phone" label="Số điện thoại" inputMode="tel" placeholder="0912345678"
             value={x.phone} error={errors.proxy.phone} disabled={busy} onChange={(v) => set({ phone: v })} />
           <KycDocumentSlot
-            label="Giấy uỷ quyền"
+            label="Giấy uỷ quyền (bản công chứng / chứng thực)"
             required
             path={x.poa_doc_path}
             error={errors.proxy.poa_doc_path}
@@ -98,8 +90,17 @@ export function ProxySection(props: Props) {
             onUploaded={onUploaded}
             onBusyChange={busyHandlers.poa}
           />
-        </div>
+          <Note tone="amber">
+            Người được uỷ quyền phải khác {org ? "người đại diện theo pháp luật" : "người đăng ký"} và tự điểm danh bằng giấy
+            tờ của mình.
+          </Note>
+        </>
+      ) : (
+        <Note>
+          Điểm danh {online ? "trực tuyến" : "tại địa điểm"} mở {formatDateTime(w.opensAt.toISOString())} →{" "}
+          {formatDateTime(w.closesAt.toISOString())}. Quá giờ đóng điểm danh sẽ bị ghi vắng và mất tiền đặt trước.
+        </Note>
       )}
-    </div>
+    </StepCard>
   );
 }

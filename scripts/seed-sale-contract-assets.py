@@ -124,9 +124,9 @@ def files():
     ]
 
 
-def upload(key, path, blob):
+def upload(key, path, blob, bucket=BUCKET):
     req = urllib.request.Request(
-        f"{SUPABASE_URL}/storage/v1/object/{BUCKET}/{path}",
+        f"{SUPABASE_URL}/storage/v1/object/{bucket}/{path}",
         data=blob, method="POST",
         headers={"Authorization": f"Bearer {key}", "apikey": key,
                  "Content-Type": "application/pdf", "x-upsert": "true"})

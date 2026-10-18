@@ -9,6 +9,7 @@ import { DepositCard, HistoryCard } from "@/components/portal/bidding-contracts/
 import { DecisionDialog, type NoteDecision } from "@/components/portal/bidding-contracts/detail/DecisionDialog";
 import { DepositDialog } from "@/components/portal/bidding-contracts/detail/DepositDialog";
 import { DocumentsCard } from "@/components/portal/bidding-contracts/detail/DocumentsCard";
+import { useContractLotIds } from "@/hooks/useBuyerContracts";
 import { useAuctionSession } from "@/hooks/useAuctionSessions";
 import { useSessionContractByCode } from "@/hooks/useOrgBiddingContracts";
 import { useHasOrgPermissionIn } from "@/hooks/useOrgPermissions";
@@ -77,6 +78,7 @@ export default function HoSoThamGiaDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: session, isLoading: sessionLoading } = useAuctionSession(id);
   const { data: contract, isLoading, error } = useSessionContractByCode(id, code);
+  const { data: lotIds } = useContractLotIds(contract?.id);
   const canReview = useHasOrgPermissionIn(contract?.organization_id, "ho-so-tham-gia", "review");
   const canUpdate = useHasOrgPermissionIn(contract?.organization_id, "ho-so-tham-gia", "update");
   const [noteDecision, setNoteDecision] = useState<NoteDecision | null>(null);
@@ -123,7 +125,10 @@ export default function HoSoThamGiaDetailPage() {
     );
   }
 
-  const items = session?.auction_session_items ?? [];
+  // Người mua chọn lô khi mua hồ sơ (20261018160000); không chọn = mọi lô.
+  const picked = new Set(lotIds ?? []);
+  const allItems = session?.auction_session_items ?? [];
+  const items = picked.size > 0 ? allItems.filter((i) => picked.has(i.id)) : allItems;
   const required = expectedDeposit(items);
   const deadline = session?.registration_end_at ?? null;
   const docs = contractDocuments(contract);

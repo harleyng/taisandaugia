@@ -106,7 +106,10 @@ export default function AuctionBiddingRoomPage() {
       case "method_unsupported":
         return (
           <div className="mx-auto max-w-xl space-y-4">
-            {notice("Hình thức trả giá chưa hỗ trợ", "Sàn hiện chỉ đấu giá trực tuyến theo hình thức trả giá lên.")}
+            {notice(
+              "Phương thức trả giá chưa hỗ trợ",
+              "Sàn đấu giá trực tuyến theo ba phương thức: trả giá lên, đặt giá xuống và bỏ phiếu kín.",
+            )}
             <BiddingMethodNotice />
           </div>
         );
@@ -131,19 +134,25 @@ export default function AuctionBiddingRoomPage() {
           </div>
         );
 
+      // Phòng thật có thanh đầu + bố cục riêng — render ở nhánh trên, không qua vỏ trang.
       case "view_only":
       case "open":
-        return session && bidder.contract && bidder.bidderNo != null && userId ? (
-          <BiddingRoom
-            session={session}
-            contract={bidder.contract}
-            bidderNo={bidder.bidderNo}
-            noBid={gate.kind === "view_only" ? gate.reason : null}
-            userId={userId}
-          />
-        ) : null;
+        return null;
     }
   };
+
+  if ((gate.kind === "open" || gate.kind === "view_only") && session && bidder.contract && bidder.bidderNo != null && userId) {
+    return (
+      <BiddingRoom
+        session={session}
+        sessionPath={sessionPath}
+        contract={bidder.contract}
+        bidderNo={bidder.bidderNo}
+        noBid={gate.kind === "view_only" ? gate.reason : null}
+        userId={userId}
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

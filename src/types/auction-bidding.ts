@@ -1,5 +1,7 @@
 // Đấu giá trực tuyến: trạng thái lô, sổ trả giá, nhật ký, sổ tiền đặt trước,
-// biên bản. Bảng + RPC + RLS: supabase/migrations/20260913000001_online_bidding.sql.
+// biên bản. Bảng + RPC + RLS: supabase/migrations/20260913000001_online_bidding.sql;
+// đặt giá xuống + bỏ phiếu kín (trạng thái 'tied', auction_sealed_bids):
+// 20261018190000_descending_sealed_methods.sql.
 //
 // Cả 5 bảng đều bị REVOKE INSERT/UPDATE/DELETE khỏi anon + authenticated và
 // KHÔNG có một policy ghi nào. Vì vậy type `Insert` / `Update` sinh tự động ở
@@ -8,7 +10,8 @@
 
 import type { Tables } from "@/integrations/supabase/types";
 
-export type LotStatus = "pending" | "open" | "paused" | "closed" | "withdrawn";
+/** `tied` = bỏ phiếu kín: vòng vừa xong có nhiều người cùng giá cao nhất, chờ vòng phụ. */
+export type LotStatus = "pending" | "open" | "paused" | "tied" | "closed" | "withdrawn";
 export type LotResult = "sold" | "unsold";
 export type LotPaymentStatus = "pending" | "paid" | "defaulted";
 
@@ -24,7 +27,13 @@ export type LotEventKind =
   | "withdraw_lot"
   | "finalize"
   | "minutes"
-  | "payment";
+  | "payment"
+  /** Đặt giá xuống: người đầu tiên chấp nhận giá. */
+  | "accept"
+  /** Bỏ phiếu kín: đã nộp phiếu — payload KHÔNG có số tiền. */
+  | "sealed_bid"
+  | "tie"
+  | "tie_round";
 
 /** `reversed` = tổ chức đưa tiền đặt trước ngược về "chưa nhận". */
 export type DepositEventKind =
@@ -47,6 +56,8 @@ export type LotState = Omit<LotStateRow, "status" | "result" | "payment_status">
 };
 
 export type LotBid = Tables<"auction_bids">;
+/** Phiếu kín. RLS: người nộp đọc phiếu mình; người khác chỉ đọc vòng đã công bố. */
+export type SealedBid = Tables<"auction_sealed_bids">;
 export type LotEvent = Omit<LotEventRow, "kind"> & { kind: LotEventKind };
 export type DepositEvent = Omit<DepositEventRow, "kind"> & { kind: DepositEventKind };
 export type SessionMinutes = Tables<"auction_session_minutes">;
@@ -55,6 +66,7 @@ export const LOT_STATUS_LABELS: Record<LotStatus, string> = {
   pending: "Chưa mở",
   open: "Đang trả giá",
   paused: "Tạm dừng",
+  tied: "Bằng giá — chờ vòng phụ",
   closed: "Đã đóng",
   withdrawn: "Đã rút",
 };
@@ -71,18 +83,22 @@ export const LOT_PAYMENT_STATUS_LABELS: Record<LotPaymentStatus, string> = {
 };
 
 export const LOT_EVENT_LABELS: Record<LotEventKind, string> = {
-  open: "Mở lô",
+  open: "Mở tài sản",
   pause: "Tạm dừng",
   resume: "Tiếp tục",
   bid: "Trả giá",
   bid_rejected: "Trả giá bị từ chối",
   extend: "Gia hạn",
   withdraw_bid: "Rút giá đã trả",
-  close: "Đóng lô",
-  withdraw_lot: "Rút lô khỏi phiên",
+  close: "Đóng tài sản",
+  withdraw_lot: "Rút tài sản khỏi phiên",
   finalize: "Chốt kết quả phiên",
   minutes: "Phát hành biên bản",
   payment: "Xác nhận thanh toán",
+  accept: "Chấp nhận giá",
+  sealed_bid: "Nộp phiếu kín",
+  tie: "Bằng giá",
+  tie_round: "Mở vòng phụ",
 };
 
 export const DEPOSIT_EVENT_LABELS: Record<DepositEventKind, string> = {
@@ -119,6 +135,30 @@ export interface PlaceBidOk {
   extended: boolean;
   bidder_no: number;
   duplicate?: true;
+}
+
+/** accept_descending_price — `amount` là giá MÁY CHỦ ghi nhận (≤ giá người dùng thấy). */
+export interface AcceptDescendingOk {
+  ok: true;
+  bid_id: string;
+  amount: number;
+  bidder_no: number;
+  duplicate?: true;
+}
+
+export interface SubmitSealedBidOk {
+  ok: true;
+  bid_id: string;
+  amount: number;
+  round_no: number;
+  bidder_no: number;
+  duplicate?: true;
+}
+
+export interface OpenTieRoundOk {
+  ok: true;
+  ends_at: string;
+  round_no: number;
 }
 
 /** Trả về của org_open_lot — `ends_at` là mốc đóng ĐÃ CHỐT, có thể bị giờ kết

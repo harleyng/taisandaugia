@@ -43,8 +43,8 @@ export const PITCH_ONE = [
 
 export const PITCH_MULTI = [
   "Phiên {code} có nhiều tài sản khớp nhu cầu của anh/chị, giá khởi điểm từ {minPrice}, đấu giá ngày {date}.",
-  "Anh/chị quan tâm nhiều loại tài sản? Phiên {code} ngày {date} có vài lô phù hợp, giá khởi điểm từ {minPrice}.",
-  "{org} gửi anh/chị các lô phù hợp trong phiên {code} (đấu giá ngày {date}), giá khởi điểm từ {minPrice}.",
+  "Anh/chị quan tâm nhiều loại tài sản? Phiên {code} ngày {date} có vài tài sản phù hợp, giá khởi điểm từ {minPrice}.",
+  "{org} gửi anh/chị các tài sản phù hợp trong phiên {code} (đấu giá ngày {date}), giá khởi điểm từ {minPrice}.",
 ] as const;
 
 /** Một câu gợi ý cách xem tài sản theo nhóm tài sản — không nêu dữ kiện. */

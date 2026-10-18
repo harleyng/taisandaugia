@@ -17,10 +17,14 @@ interface Props {
   onClose: () => void;
 }
 
-/** Tải lên / thay tệp một tài liệu phiên. Parent chỉ mount khi mở ⇒ state luôn mới. */
+/**
+ * Tải lên / thay tệp một tài liệu phiên. Parent chỉ mount khi mở ⇒ state luôn mới.
+ * "Tài liệu khác" (other) không có tên mặc định — người tải tự đặt tên.
+ */
 export function UploadCaseDocumentDialog({ session, docType, existing, onClose }: Props) {
   const save = useSaveCaseDocumentFile();
-  const [title, setTitle] = useState(existing?.title ?? DOC_TYPE_LABELS[docType]);
+  const isOther = docType === "other";
+  const [title, setTitle] = useState(existing?.title ?? (isOther ? "" : DOC_TYPE_LABELS[docType]));
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const titleOk = title.trim().length >= 3 && title.trim().length <= 200;
@@ -46,7 +50,7 @@ export function UploadCaseDocumentDialog({ session, docType, existing, onClose }
               value={title}
               maxLength={200}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Vd: Quy chế cuộc đấu giá số 12/2026/QC"
+              placeholder={isOther ? "Vd: Quyết định phê duyệt giá khởi điểm số 45/QĐ-UBND" : "Vd: Quy chế cuộc đấu giá số 12/2026/QC"}
             />
           </div>
           <div className="space-y-1.5">

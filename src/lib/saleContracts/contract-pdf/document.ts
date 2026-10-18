@@ -167,7 +167,7 @@ export function buildSaleDocDefinition(input: SalePdfInput): TDocumentDefinition
   const { buyer, seller, org, asset, sellerIsRegistry } = input;
   const cl = saleClauses(input.template?.clauses);
   const templateVersion = input.template?.version ?? HDMB_TEMPLATE_VERSION;
-  const lotLine = asset.lot_no ? `Lô ${asset.lot_no}` : null;
+  const lotLine = asset.lot_no ? `Tài sản ${asset.lot_no}` : null;
 
   const scheduleTable: Content[] = input.installments.length
     ? [
@@ -289,7 +289,7 @@ export function buildSaleDocDefinition(input: SalePdfInput): TDocumentDefinition
         ["Loại tài sản", val(input.categoryLabel)],
         ["Nơi có tài sản", val(joinAddr(asset.district, asset.province))],
         ["Phiên đấu giá", val(asset.session_code)],
-        ["Lô số", val(asset.lot_no)],
+        ["Tài sản số", val(asset.lot_no)],
       ]),
       {
         text: "Tài sản được mua bán theo hiện trạng tại thời điểm đấu giá. Bên mua đã xem tài sản và chấp nhận hiện trạng đó.",

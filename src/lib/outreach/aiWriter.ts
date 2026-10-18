@@ -154,7 +154,7 @@ export function writeSharedPost(ctx: WriterContext, o: WriteOptions, src: string
   out.push(
     ctx.lots
       .map((l) => {
-        const lines = [`• Lô ${l.lot_no}: ${l.title}${l.starting_price ? ` — giá khởi điểm ${l.starting_price}` : ""}`];
+        const lines = [`• Tài sản ${l.lot_no}: ${l.title}${l.starting_price ? ` — giá khởi điểm ${l.starting_price}` : ""}`];
         if (o.len !== "s") {
           if (has("vitri") && l.place) lines.push(`  Vị trí: ${l.place}`);
           if ((has("htrang") || o.len === "l") && l.condition) lines.push(`  ${firstSentence(l.condition)}`);

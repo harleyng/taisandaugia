@@ -97,9 +97,9 @@ describe("hợp đồng mua bán (cổng tổ chức)", () => {
     expect(row).toMatchObject({ needsAction: true, actionLabel: "Quá hạn ký", overdue: true, tone: "warning" });
   });
 
-  it("dòng phụ = mã phiên + lô; bên mua kèm số báo danh; mở trang chi tiết mua bán", () => {
+  it("dòng phụ = mã phiên + tài sản; bên mua kèm số báo danh; mở trang chi tiết mua bán", () => {
     const row = fromOrgSale(sale(), NOW);
-    expect(row.brief).toMatchObject({ code: "PDG000014", category: "Lô 2" });
+    expect(row.brief).toMatchObject({ code: "PDG000014", category: "Tài sản 2" });
     expect(row.counterpartyRole).toBe("Bên mua · SBD 07");
     expect(row.href).toBe("/portal/hop-dong/mua-ban/s1");
   });

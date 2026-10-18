@@ -51,7 +51,7 @@ export function SessionControlTab({ session }: { session: AuctionSessionWithItem
       return (
         <DetailEmpty icon={<Gavel />} title="Phiên đã huỷ">
           {session.cancelled_reason
-            ? `Lý do: ${session.cancelled_reason}. Các lô còn lại đã được rút tự động.`
+            ? `Lý do: ${session.cancelled_reason}. Các tài sản còn lại đã được rút tự động.`
             : "Phiên này đã bị huỷ nên không còn điều hành được."}
         </DetailEmpty>
       );

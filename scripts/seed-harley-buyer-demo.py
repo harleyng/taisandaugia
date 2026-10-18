@@ -25,8 +25,13 @@ Ngày giờ tính theo LÚC CHẠY. Phiên 7 chỉ mở điểm danh tới giờ
 
     python3 scripts/seed-harley-buyer-demo.py              # seed (dừng nếu đã seed)
     python3 scripts/seed-harley-buyer-demo.py --dry-run    # chạy hết rồi ROLLBACK
+    python3 scripts/seed-harley-buyer-demo.py --docs       # chỉ gắn tài liệu phiên (hỏi đáp) vào bộ ĐÃ seed
+                                                           # (seed đầy đủ tự chạy bước này; kèm --dry-run được)
     python3 scripts/seed-harley-buyer-demo.py --teardown   # gỡ sạch (gồm cả hồ sơ/lượt trả giá người dùng tự tạo
                                                            # trong 12 phiên này) + tệp PDF trong storage
+
+Mỗi phiên có 4 tài liệu đã xác nhận (thông báo, quy chế, tiền đặt trước, lịch xem tài sản) với điều
+khoản phủ đủ 20 câu chuẩn ⇒ hỏi đáp /sessions/:id/hoi-dap trả lời được kèm trích dẫn.
 
 Mọi id có tiền tố ba7e (KHÔNG dùng f10d — scripts/demo-bidding-backfill.sql tự duyệt hồ sơ f10d, sẽ
 phá trạng thái "chờ duyệt"). Đọc SUPABASE_SERVICE_ROLE_KEY + SUPABASE_DB_URI từ .env.local.
@@ -648,15 +653,312 @@ def remove_sale_files():
     print(f"  xoá {len(names)} tệp trong {SALE_BUCKET}/{prefix}")
 
 
+# ─── Tài liệu phiên (hỏi đáp) ─────────────────────────────────────────────────
+# Mỗi phiên 4 tài liệu ĐÃ XÁC NHẬN, điều khoản phủ đủ 20 câu chuẩn (standardQuestions.ts) ⇒ trang
+# /sessions/:id/hoi-dap trả lời được kèm trích dẫn. Văn bản dựng từ dữ liệu phiên ĐỌC Ở DB (giờ phiên
+# 7/8 tính theo lúc seed), nên chạy SAU khi seed — `--docs` gắn được vào bộ đã seed mà không đụng trạng thái.
+CASE_BUCKET = "case-documents"
+ORG_ADDRESS = "Số 12, ngõ 95 Chùa Bộc, Đống Đa, Hà Nội"
+ORG_CONTACT = "điện thoại 024 3856 1234, email info@daugiavn.com"
+DOC_KINDS = [  # doc_type, tiền tố số điều, số bắt đầu, tiêu đề, tên tệp
+    ("notice", "Mục", 1, "Thông báo đấu giá tài sản", "thong-bao-dau-gia"),
+    ("rules", "Điều", 3, "Quy chế cuộc đấu giá", "quy-che-dau-gia"),
+    ("deposit_terms", "Khoản", 1, "Quy định về tiền đặt trước", "quy-dinh-tien-dat-truoc"),
+    ("viewing_schedule", "Mục", 1, "Lịch xem tài sản", "lich-xem-tai-san"),
+]
+
+
+def doc_id(k, i):
+    return sid("b005", k * 10 + i)
+
+
+def clause_id(k, n):
+    return sid("b006", k * 100 + n)
+
+
+def vn_time(x):
+    return x.astimezone(VN).strftime("%H:%M ngày %d/%m/%Y")
+
+
+def money(v):
+    return f"{v:,}₫"
+
+
+def spell(text):
+    return text.replace("TP. ", "Thành phố ")
+
+
+def docs_facts():
+    rows = psql(f"""
+select json_build_object('k', right(s.id::text, 2)::int, 'id', s.id, 'code', s.code, 'status', s.status,
+  'format', s.auction_format, 'venue', s.venue, 'fee', s.dossier_fee, 'created_at', s.created_at,
+  'reg_start', s.registration_start_at, 'reg_end', s.registration_end_at, 'view_start', s.viewing_start_at,
+  'view_end', s.viewing_end_at, 'starts_at', s.starts_at, 'max_steps', s.max_bid_steps,
+  'extension', s.extension_seconds, 'checkin_lead', s.checkin_lead_minutes,
+  'lots', (select json_agg(json_build_object('title', i.title, 'price', i.starting_price, 'deposit', i.deposit_amount,
+                  'step', i.bid_step, 'address', l.address) order by i.id)
+             from auction_session_items i left join listings l on l.id = i.listing_id where i.session_id = s.id))
+  from auction_sessions s where s.id = any({lit(SESSION_IDS)}::uuid[]) order by s.id;""", rows=True)
+    out = []
+    for r in rows:
+        f = json.loads(r)
+        for key in ("created_at", "reg_start", "reg_end", "view_start", "view_end", "starts_at"):
+            f[key] = datetime.fromisoformat(f[key])
+        out.append(f)
+    return out
+
+
+def doc_clauses(f):
+    """{doc_type: [(tiêu đề, thân, chủ đề)]} — văn bản ĐÃ ĐIỀN đủ, không còn [[CẦN NHẬP]]."""
+    online = f["format"] == "truc_tuyen"
+    # Engine tách câu ở ". " ⇒ "TP. Thủ Đức" trong tên tài sản cắt cụt đoạn trích (mất số tiền phía sau).
+    lots = [(j, {**l, "title": spell(l["title"])}) for j, l in enumerate(f["lots"], start=1)]
+
+    def per_lot(line):
+        return "\n".join(line(j, l) for j, l in lots)
+
+    venue = f["venue"] if online else f"{f['venue']}, {ORG_ADDRESS}"
+    lead = f["checkin_lead"]
+    lead_txt = f"{lead // 60} giờ" if lead % 60 == 0 else f"{lead} phút"
+    ext = f["extension"] // 60
+    schedule = f"Thời gian tổ chức cuộc đấu giá: {vn_time(f['starts_at'])}."
+    if online:
+        schedule += (f"\nNgười tham gia điểm danh trực tuyến bằng mã OTP, mở trước giờ đấu {lead_txt}; "
+                     "người không điểm danh trước giờ đấu được coi là không tham gia cuộc đấu giá.")
+    step_body = per_lot(lambda j, l: f"Tài sản {j}: bước giá {money(l['step'])}.")
+    if online:
+        step_body += (f"\nMỗi lượt trả giá phải cao hơn giá đang dẫn đầu ít nhất 1 bước giá và tối đa {f['max_steps']} "
+                      f"bước giá. Lượt trả giá hợp lệ trong {ext} phút cuối làm thời gian trả giá gia hạn thêm {ext} phút.")
+    else:
+        step_body += "\nNgười tham gia trả giá cao hơn giá đã trả liền trước ít nhất một bước giá."
+    deposit_body = per_lot(lambda j, l: f"Tài sản {j} – {l['title']}: tiền đặt trước là {money(l['deposit'])}.")
+    if len(lots) > 1:
+        deposit_body += "\nNgười đăng ký nhiều tài sản trong phiên nộp tổng tiền đặt trước của các tài sản đã đăng ký."
+
+    def addr(l):
+        a = l.get("address") or {}
+        return spell(", ".join(x for x in (a.get("street"), a.get("ward"), a.get("district"), a.get("province")) if x))
+
+    return {
+        "notice": [
+            ("Tài sản đấu giá và giá khởi điểm", per_lot(lambda j, l: f"Tài sản {j} – {l['title']}: giá khởi điểm "
+                                                         f"{money(l['price'])}."), ["starting_price"]),
+            ("Thời gian, địa điểm bán hồ sơ tham gia đấu giá",
+             f"Thời gian bán hồ sơ tham gia đấu giá: từ {vn_time(f['reg_start'])} đến {vn_time(f['reg_end'])}.\n"
+             f"Địa điểm bán hồ sơ: trụ sở {ORG_NAME}, {ORG_ADDRESS}; hoặc mua trực tuyến tại trang phiên trên "
+             "Tài Sản Đấu Giá, thanh toán qua VNPay.", ["document_sale"]),
+            ("Hạn đăng ký tham gia đấu giá",
+             f"Hạn chót nộp hồ sơ đăng ký tham gia đấu giá là {vn_time(f['reg_end'])}.", ["registration_deadline"]),
+            ("Tiền mua hồ sơ tham gia đấu giá",
+             f"Tiền mua hồ sơ tham gia đấu giá là {money(f['fee'])}/hồ sơ. Tiền mua hồ sơ không được hoàn lại, trừ "
+             "trường hợp cuộc đấu giá không được tổ chức.", ["document_fee"]),
+            ("Thời gian tổ chức cuộc đấu giá", schedule, ["schedule"]),
+            ("Địa điểm tổ chức cuộc đấu giá", f"Địa điểm tổ chức cuộc đấu giá: {venue}.", ["venue"]),
+            ("Hình thức, phương thức đấu giá",
+             ("Hình thức đấu giá: đấu giá trực tuyến trên Tài Sản Đấu Giá." if online
+              else "Hình thức đấu giá: đấu giá trực tiếp bằng lời nói tại cuộc đấu giá.")
+             + "\nPhương thức đấu giá: trả giá lên.", ["format"]),
+        ],
+        "rules": [
+            ("Đối tượng được tham gia đấu giá",
+             "Đối tượng được tham gia đấu giá: cá nhân, tổ chức có đủ năng lực hành vi dân sự, có nhu cầu mua tài sản, "
+             "đã nộp hồ sơ hợp lệ và tiền đặt trước đúng hạn.\nNhững người không được tham gia đấu giá: người bị mất "
+             "hoặc hạn chế năng lực hành vi dân sự; người làm việc tại " + ORG_NAME + " và cha, mẹ, vợ, chồng, con, "
+             "anh chị em ruột của họ; người có quyền quyết định bán tài sản và người ký hợp đồng dịch vụ đấu giá; "
+             "các trường hợp khác theo Điều 38 Luật Đấu giá tài sản.", ["eligibility"]),
+            ("Hồ sơ đăng ký tham gia đấu giá",
+             f"Thành phần hồ sơ đăng ký tham gia đấu giá gồm các giấy tờ: đơn đăng ký tham gia đấu giá theo mẫu của "
+             f"{ORG_NAME}; bản sao CCCD hoặc hộ chiếu (cá nhân), hoặc giấy chứng nhận đăng ký doanh nghiệp kèm CCCD "
+             "của người đại diện theo pháp luật (tổ chức); giấy uỷ quyền nếu đăng ký qua người được uỷ quyền; chứng "
+             "từ nộp tiền đặt trước. Hồ sơ nộp trực tuyến được xác thực danh tính qua VNeID.", ["documents_required"]),
+            ("Uỷ quyền tham gia đấu giá",
+             "Người đăng ký có thể uỷ quyền cho người khác tham gia đấu giá: giấy uỷ quyền phải được công chứng hoặc "
+             "chứng thực, ghi rõ phạm vi uỷ quyền tham gia và trả giá tại phiên này. Người được uỷ quyền xuất trình "
+             "CCCD bản gốc khi điểm danh và không được đồng thời đăng ký tham gia đấu giá cùng tài sản.", ["proxy"]),
+            ("Bước giá", step_body, ["bid_step"]),
+            ("Các trường hợp đấu giá không thành",
+             "Cuộc đấu giá không thành trong các trường hợp: hết hạn đăng ký mà không có người đăng ký tham gia; tại "
+             "cuộc đấu giá không có người trả giá; giá trả cao nhất thấp hơn giá khởi điểm; người trúng đấu giá từ "
+             "chối ký biên bản đấu giá; người đã trả giá rút lại giá đã trả mà không có người trả giá tiếp theo; các "
+             "trường hợp khác theo Điều 52 Luật Đấu giá tài sản.", ["auction_failed"]),
+            ("Rút lại giá đã trả, từ chối kết quả trúng đấu giá",
+             "Người đã trả giá mà rút lại giá đã trả hoặc từ chối kết quả trúng đấu giá thì không được nhận lại tiền "
+             "đặt trước và bị truất quyền tham gia cuộc đấu giá. Cuộc đấu giá tiếp tục từ giá của người trả giá liền "
+             "kề trước đó.", ["withdrawal"]),
+            ("Thanh toán tiền trúng đấu giá",
+             f"Người trúng đấu giá thanh toán tiền trúng đấu giá trong thời hạn 30 ngày kể từ ngày kết thúc cuộc đấu "
+             f"giá, bằng chuyển khoản vào tài khoản của {ORG_NAME}. Tiền đặt trước được chuyển thành tiền mua tài sản; "
+             "phần còn lại nộp theo hợp đồng mua bán tài sản đấu giá.", ["payment"]),
+        ],
+        "deposit_terms": [
+            ("Khoản tiền đặt trước", deposit_body, ["deposit"]),
+            ("Thời hạn nộp tiền đặt trước",
+             f"Người đăng ký nộp tiền đặt trước chậm nhất đến {vn_time(f['reg_end'])}. Tiền đặt trước phải được báo "
+             "Có vào tài khoản trước thời điểm này.", ["deposit_deadline"]),
+            ("Phương thức nộp tiền đặt trước",
+             f"Tiền đặt trước nộp bằng chuyển khoản vào tài khoản số DEMO-0000-2222 (tài khoản dữ liệu mẫu) của "
+             f"{ORG_NAME}, nội dung chuyển khoản: mã phiên {f['code']}, mã hồ sơ, họ tên, số CCCD.", ["deposit_method"]),
+            ("Hoàn trả tiền đặt trước",
+             "Tiền đặt trước của người không trúng đấu giá được hoàn trả trong thời hạn 03 ngày làm việc kể từ ngày "
+             "kết thúc cuộc đấu giá. Trường hợp cuộc đấu giá không được tổ chức, tiền đặt trước được hoàn trả trong "
+             "thời hạn 03 ngày làm việc kể từ ngày thông báo huỷ phiên.", ["deposit_refund"]),
+            ("Các trường hợp không được nhận lại tiền đặt trước",
+             "Người tham gia đấu giá không được nhận lại tiền đặt trước trong các trường hợp: đã nộp tiền đặt trước "
+             "nhưng không tham gia cuộc đấu giá (không điểm danh) mà không có lý do bất khả kháng; bị truất quyền "
+             "tham gia đấu giá; từ chối ký biên bản đấu giá; rút lại giá đã trả; từ chối kết quả trúng đấu giá.",
+             ["deposit_forfeit"]),
+        ],
+        "viewing_schedule": [
+            ("Thời gian xem tài sản",
+             f"Người đăng ký tham gia đấu giá được xem tài sản từ {vn_time(f['view_start'])} đến "
+             f"{vn_time(f['view_end'])}, trong giờ hành chính các ngày làm việc.", ["viewing"]),
+            ("Địa điểm xem tài sản", "Địa điểm xem tài sản: tại nơi có tài sản.\n"
+             + per_lot(lambda j, l: f"Tài sản {j}: {addr(l)}."), ["viewing"]),
+            ("Đăng ký lịch xem tài sản",
+             f"Để đăng ký lịch xem tài sản, người đăng ký liên hệ: {ORG_NAME}, {ORG_CONTACT}, trước ít nhất 01 ngày "
+             "làm việc.", ["viewing"]),
+        ],
+    }
+
+
+def case_docs(facts):
+    """[(phiên, doc_id, doc_type, tiêu đề, path, tên tệp, created_at, [(id, ref, tiêu đề, thân, chủ đề, thứ tự)])]."""
+    out = []
+    for f in facts:
+        k, clauses = f["k"], doc_clauses(f)
+        for i, (dtype, prefix, start, title, slug) in enumerate(DOC_KINDS, start=1):
+            did, at = doc_id(k, i), f["created_at"] + timedelta(hours=1, minutes=5 * i)
+            name = f"{slug}-{f['code']}.pdf"
+            path = f"{ORG}/{f['id']}/{did}/{int(at.timestamp() * 1000)}-{name}"
+            rows = [(clause_id(k, i * 10 + n), f"{prefix} {start + n - 1}", h, b, t, (i * 10 + n) * 10)
+                    for n, (h, b, t) in enumerate(clauses[dtype], start=1)]
+            out.append((f, did, dtype, f"{title} – phiên {f['code']}", path, name, at, rows))
+    return out
+
+
+def case_doc_pdf(title, code, rows):
+    """Bản scan nhiều trang A4, ngắt dòng theo bề rộng trang."""
+    w, h, x0, size = 1240, 1754, 90, 26
+    fnt, bold = hdmb.font(size), hdmb.font(size + 2)
+    pages, cur = [], None
+
+    def page():
+        img = hdmb.Image.new("RGB", (w, h), "#F7F7F3")
+        d = hdmb.ImageDraw.Draw(img)
+        d.rectangle([40, 40, w - 40, h - 40], outline="#C9C9C2", width=3)
+        d.text((x0, h - 120), hdmb.DEMO_STAMP, font=hdmb.font(24), fill="#9A6B00")
+        pages.append(img)
+        return d
+
+    def wrap(d, text, f):
+        lines, line = [], ""
+        for word in text.split(" "):
+            t = f"{line} {word}".strip()
+            if d.textlength(t, font=f) <= w - 2 * x0:
+                line = t
+            else:
+                lines.append(line)
+                line = word
+        return lines + [line]
+
+    d, y = page(), 100
+    d.text((x0, y), ORG_NAME.upper(), font=hdmb.font(28), fill="#1F6F54")
+    d.text((x0, y + 50), title.upper(), font=hdmb.font(36), fill="#20242B")
+    d.text((x0, y + 110), f"Mã phiên {code} · dữ liệu minh hoạ", font=hdmb.font(24), fill="#6B6F76")
+    y += 190
+    for _id, ref, heading, body, _t, _o in rows:
+        blocks = [(f"{ref}. {heading}", bold, "#20242B")] + [(p, fnt, "#30343B") for p in body.split("\n")]
+        for text, f, color in blocks:
+            for line in wrap(d, text, f):
+                if y > h - 180:
+                    d, y = page(), 100
+                d.text((x0, y), line, font=f, fill=color)
+                y += 40
+        y += 22
+    buf = hdmb.io.BytesIO()
+    pages[0].save(buf, "PDF", resolution=150, save_all=True, append_images=pages[1:])
+    return buf.getvalue()
+
+
+def docs_sql(docs, commit):
+    s = list(od.SQL_HEADER)
+    s.append(f"select case when exists (select 1 from case_documents where id = {lit(doc_id(1, 1))}) "
+             f"then pg_temp.ok('{{\"ok\":false,\"reason\":\"da_co_tai_lieu_phien\"}}') end;")
+    # Guard chặn ghi vào phiên ĐÃ HUỶ (phiên 12) và tự đặt confirmed_at = now() ⇒ tắt để ghi đúng mốc.
+    s += ["alter table case_documents disable trigger case_documents_guard;",
+          "alter table case_document_clauses disable trigger case_document_clauses_guard;"]
+    for f, did, dtype, title, path, name, at, rows in docs:
+        ok = at + timedelta(minutes=25)
+        s.append(f"insert into case_documents (id, session_id, organization_id, doc_type, title, storage_path, "
+                 f"original_filename, mime_type, size_bytes, extraction_status, extraction_engine, extracted_at, review_status, "
+                 f"confirmed_at, confirmed_by, uploaded_by, created_at, updated_at) values ({lit(did)}, {lit(f['id'])}, "
+                 f"{lit(ORG)}, {lit(dtype)}, {lit(title)}, {lit(path)}, {lit(name)}, 'application/pdf', {f['_sizes'][did]}, "
+                 f"'extracted', 'mock-v1', {ts(at)}, 'confirmed', {ts(ok)}, {lit(OWNER)}, {lit(OWNER)}, {ts(at)}, {ts(ok)});")
+        for cid, ref, heading, body, topics, order in rows:
+            s.append(f"insert into case_document_clauses (id, document_id, session_id, organization_id, clause_ref, heading, "
+                     f"body, topics, sort_order, status, source, confirmed_at, confirmed_by, created_by, created_at, updated_at) "
+                     f"values ({lit(cid)}, {lit(did)}, {lit(f['id'])}, {lit(ORG)}, {lit(ref)}, {lit(heading)}, {lit(body)}, "
+                     f"array[{', '.join(lit(t) for t in topics)}]::text[], {order}, "
+                     f"'confirmed', 'extracted', {ts(at + timedelta(minutes=20))}, {lit(OWNER)}, {lit(OWNER)}, {ts(at)}, "
+                     f"{ts(at + timedelta(minutes=20))});")
+    s += ["alter table case_documents enable trigger case_documents_guard;",
+          "alter table case_document_clauses enable trigger case_document_clauses_guard;", f"""
+do $check$
+declare bad text;
+begin
+  select string_agg(s.code, ', ') into bad from auction_sessions s
+   where s.id = any({lit(SESSION_IDS)}::uuid[])
+     and (select count(distinct t) from case_document_clauses c join case_documents d on d.id = c.document_id,
+                 unnest(c.topics) t
+           where c.session_id = s.id and c.status = 'confirmed' and d.review_status = 'confirmed') < 20;
+  if bad is not null then raise exception 'Phiên chưa phủ đủ 20 chủ đề: %', bad; end if;
+end $check$;""",
+          f"select s.code || ': ' || count(c.*) || ' điều khoản citable' from auction_sessions s "
+          f"cross join lateral public.case_citable_clauses(s.id) c where s.id = any({lit(SESSION_IDS)}::uuid[]) "
+          f"group by s.code order by s.code;",
+          "commit;" if commit else "rollback;"]
+    return "\n".join(s) + "\n"
+
+
+def seed_docs(commit):
+    docs = case_docs(docs_facts())
+    if len(docs) != 4 * len(SES):
+        sys.exit("Chưa seed đủ 12 phiên — chạy seed trước.")
+    for f, did, _t, title, path, _n, _a, rows in docs:
+        blob = case_doc_pdf(title.split(" – ")[0], f["code"], rows)
+        f.setdefault("_sizes", {})[did] = len(blob)
+        if not hdmb.upload(od.KEY, path, blob, bucket=CASE_BUCKET):
+            sys.exit(f"Không tải được {CASE_BUCKET}/{path}.")
+    print(f"  tải {len(docs)} tài liệu phiên lên {CASE_BUCKET}")
+    print(psql(docs_sql(docs, commit)))
+
+
+def remove_case_files():
+    names = []
+    for k in SES:
+        for i in range(1, len(DOC_KINDS) + 1):
+            prefix = f"{ORG}/{session_id(k)}/{doc_id(k, i)}/"
+            names += [prefix + o["name"] for o in api("POST", f"/storage/v1/object/list/{CASE_BUCKET}", {"prefix": prefix}) or []]
+    if names:
+        api("DELETE", f"/storage/v1/object/{CASE_BUCKET}", {"prefixes": names})
+    print(f"  xoá {len(names)} tệp trong {CASE_BUCKET}")
+
+
 def main():
     args = set(sys.argv[1:])
     if "--teardown" in args:
         print("Gỡ bộ demo người mua harleyngx…")
         psql(teardown_sql())
         remove_sale_files()
+        remove_case_files()
         print("Xong.")
         return
     commit = "--dry-run" not in args
+    if "--docs" in args:
+        print("Gắn tài liệu phiên cho bộ demo đã seed…" + ("" if commit else " (dry-run, ROLLBACK)"))
+        seed_docs(commit)
+        print("Xong.")
+        return
     missing = psql(f"select 'thiếu ' || x from unnest(array[{', '.join(lit(p[0]) for p in PEOPLE.values())}, {lit(OWNER)}]) x "
                    f"where not exists (select 1 from auth.users u where u.id = x::uuid)", rows=True)
     if missing:
@@ -664,7 +966,10 @@ def main():
     print(f"Seed bộ demo người mua harleyngx (bây giờ {NOW:%Y-%m-%d %H:%M})…" + ("" if commit else " (dry-run, ROLLBACK)"))
     upload_draft()
     print(psql(seed_sql(commit)))
-    print("Xong." if commit else "Dry-run xong — không ghi gì vào DB (tệp dự thảo PDF vẫn nằm trong storage).")
+    if commit:
+        seed_docs(True)
+    print("Xong." if commit else "Dry-run xong — không ghi gì vào DB (tệp dự thảo PDF vẫn nằm trong storage; "
+                                 "bước tài liệu phiên bị bỏ qua vì cần phiên đã ghi).")
 
 
 if __name__ == "__main__":

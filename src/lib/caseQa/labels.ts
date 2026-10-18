@@ -7,7 +7,7 @@ import type {
   EscalationStatus,
   MyQuestionState,
   QaState,
-  UploadableDocType,
+  SingleDocType,
 } from "@/types/case-qa";
 
 // Nhãn UI dùng "Tài liệu phiên", KHÔNG dùng "hồ sơ" — trên sàn "hồ sơ" đã là hồ sơ
@@ -18,6 +18,7 @@ export const DOC_TYPE_LABELS: Record<CaseDocType, string> = {
   rules: "Quy chế cuộc đấu giá",
   deposit_terms: "Điều kiện tiền đặt trước & thời hạn",
   viewing_schedule: "Lịch xem tài sản",
+  other: "Tài liệu khác",
   clarification: "Giải đáp bổ sung của tổ chức",
 };
 
@@ -26,17 +27,19 @@ export const DOC_TYPE_HINTS: Record<CaseDocType, string> = {
   rules: "Quy chế cuộc đấu giá: đối tượng, hồ sơ đăng ký, bước giá, các trường hợp đấu giá không thành, thanh toán.",
   deposit_terms: "Khoản tiền đặt trước, thời hạn và cách nộp, hoàn trả và các trường hợp không được nhận lại.",
   viewing_schedule: "Thời gian, địa điểm và cách đăng ký xem tài sản.",
+  other: "Giấy tờ khác người mua cần biết: quyết định phê duyệt giá, sơ đồ, giấy chứng nhận, biên bản…",
   clarification: "Nội dung tổ chức bổ sung khi người mua hỏi điều tài liệu gốc chưa nêu.",
 };
 
-export const UPLOADABLE_DOC_TYPES: readonly UploadableDocType[] = ["notice", "rules", "deposit_terms", "viewing_schedule"];
+/** Bốn loại cố định — mỗi loại một ô. "other" có khu "Tài liệu khác" riêng, nhiều tài liệu. */
+export const UPLOADABLE_DOC_TYPES: readonly SingleDocType[] = ["notice", "rules", "deposit_terms", "viewing_schedule"];
 
 export const ESCALATION_REASON_LABELS: Record<EscalationReason, string> = {
   no_documents: "Phiên chưa có tài liệu đã xác nhận",
   no_match: "Tài liệu phiên không nêu nội dung này",
   out_of_scope: "Ngoài phạm vi tài liệu phiên (tư vấn, dự đoán, phiên khác…)",
   low_confidence: "Độ tin cậy thấp",
-  ambiguous: "Chưa rõ hỏi lô tài sản nào",
+  ambiguous: "Chưa rõ hỏi tài sản nào",
   conflict: "Các tài liệu nêu số liệu khác nhau",
   partial_match: "Chỉ trả lời được một phần câu hỏi",
   citation_invalid: "Trích dẫn không khớp điều khoản đã xác nhận",

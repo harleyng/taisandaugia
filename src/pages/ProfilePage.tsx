@@ -15,8 +15,9 @@ import { NotificationsTab } from "@/components/profile/tabs/NotificationsTab";
 import { SavedAssetsTab } from "@/components/profile/tabs/SavedAssetsTab";
 import { CompanyTab } from "@/components/profile/tabs/CompanyTab";
 import { MyAssetsTab } from "@/components/profile/tabs/MyAssetsTab";
-import { BiddingContractsTab } from "@/components/profile/tabs/BiddingContractsTab";
 import { resolveDisplayName } from "@/lib/displayName";
+import { AuctionContractsTab } from "@/components/profile/tabs/AuctionContractsTab";
+import { MY_CONTRACTS_GROUP_PARAM } from "@/lib/biddingContracts/paths";
 
 const VALID_TABS: ProfileTab[] = [
   "profile",
@@ -50,6 +51,7 @@ const ProfilePage = () => {
   const setActiveTab = (tab: ProfileTab) => {
     const next = new URLSearchParams(searchParams);
     next.delete("from");
+    next.delete(MY_CONTRACTS_GROUP_PARAM);
     if (tab === "profile") next.delete("tab");
     else next.set("tab", tab);
     setSearchParams(next, { replace: true });
@@ -118,7 +120,7 @@ const ProfilePage = () => {
             {activeTab === "notifications" && <NotificationsTab />}
             {activeTab === "company" && <CompanyTab />}
             {activeTab === "my-assets" && <MyAssetsTab />}
-            {activeTab === "auction-contracts" && <BiddingContractsTab />}
+            {activeTab === "auction-contracts" && <AuctionContractsTab />}
           </div>
         </div>
       </main>

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard, Layers, Wrench, Gavel, MapPinned } from "lucide-react";
+import { Menu, User, Heart, LogOut, ChevronDown, Home, LayoutGrid, UserCircle, Coins, Gift, Building2, BarChart2, LayoutDashboard, Layers, Wrench, Gavel, MapPinned, FileSignature } from "lucide-react";
 import { RewardTasksDialog } from "@/components/onboarding/RewardTasksDialog";
 import { useOnboardingTasks } from "@/hooks/useOnboardingTasks";
 import logo from "@/assets/logo.png";
@@ -32,6 +32,7 @@ import { useIsVerifiedCompany } from "@/hooks/useIsVerifiedCompany";
 import { useCredits } from "@/hooks/useCredits";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { resolveDisplayName } from "@/lib/displayName";
+import { MY_CONTRACTS_PATH } from "@/lib/biddingContracts/paths";
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -186,6 +187,14 @@ export const Header = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           {session ? (
             <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(MY_CONTRACTS_PATH)}
+                className={`hidden lg:inline-flex ${transparent ? "text-white/90 hover:bg-white/10 hover:text-white" : "text-muted-foreground"}`}
+              >
+                Hồ sơ đấu giá
+              </Button>
               {hasIncompleteTasks && (
                 <button
                   onClick={() => setRewardOpen(true)}
@@ -271,6 +280,10 @@ export const Header = () => {
                     <DropdownMenuItem onClick={() => navigate("/profile?tab=my-assets")} className="px-4 py-2.5 cursor-pointer">
                       <Layers className="mr-3 h-4 w-4" />
                       Tài sản của tôi
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(MY_CONTRACTS_PATH)} className="px-4 py-2.5 cursor-pointer">
+                      <FileSignature className="mr-3 h-4 w-4" />
+                      Hồ sơ đấu giá của tôi
                     </DropdownMenuItem>
                   </div>
 
@@ -448,6 +461,13 @@ export const Header = () => {
                       >
                         <Layers className="h-5 w-5" />
                         Tài sản của tôi
+                      </Link>
+                      <Link
+                        to={MY_CONTRACTS_PATH}
+                        className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <FileSignature className="h-5 w-5" />
+                        Hồ sơ đấu giá của tôi
                       </Link>
                       {isVerifiedCompany && (
                         <Link

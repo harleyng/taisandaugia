@@ -164,11 +164,12 @@ export function useSaveSessionForm() {
   });
 }
 
-/** Ba cột quy tắc trả giá trực tuyến — lưu bằng câu UPDATE riêng, xem useSaveSessionForm. */
+/** Cột quy tắc trả giá trực tuyến — lưu bằng câu UPDATE riêng, xem useSaveSessionForm. */
 export interface SessionBiddingRules {
   bidding_method: string;
   extension_seconds: number;
   max_bid_steps: number;
+  price_drop_seconds: number;
 }
 
 /**

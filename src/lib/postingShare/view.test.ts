@@ -92,7 +92,7 @@ describe("registrationLeft", () => {
 
 describe("helpers thẻ giá & liên hệ", () => {
   it("dòng phụ phiên, SĐT, diện tích quy giá", () => {
-    expect(sessionSubline(session)).toBe("Phiên PDG000012 · Lô 1");
+    expect(sessionSubline(session)).toBe("Phiên PDG000012 · Tài sản 1");
     expect(sessionSubline({ ...session, code: null, lotNo: null })).toBe("Phiên");
     expect(heroPriceParts(8_650_000_000)).toEqual({ value: "8.65", unit: "tỷ" });
     expect(heroPriceParts(450_000_000)).toEqual({ value: "450", unit: "triệu" });

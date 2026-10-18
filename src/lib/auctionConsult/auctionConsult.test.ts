@@ -135,13 +135,13 @@ describe("suggestion mapping", () => {
     const out = formatMismatches(
       "truc_tiep",
       [
-        { asset_posting_id: "p1", title: "Lô A" },
-        { asset_posting_id: "p2", title: "Lô B" },
+        { asset_posting_id: "p1", title: "Tài sản A" },
+        { asset_posting_id: "p2", title: "Tài sản B" },
         { asset_posting_id: null, title: "Tin công khai" },
       ],
       map,
     );
-    expect(out).toEqual([{ title: "Lô A", version: 2, format: "truc_tuyen" }]);
+    expect(out).toEqual([{ title: "Tài sản A", version: 2, format: "truc_tuyen" }]);
   });
 
   it("maps a duration to the Open-lot dialog choice", () => {

@@ -180,7 +180,7 @@ export function fromOrgSale(c: SaleContract, now: Date = new Date()): PortalCont
       id: c.id,
       code: asset.session_code ?? null,
       title: asset.title ?? null,
-      category: [asset.lot_no ? `Lô ${asset.lot_no}` : null, category].filter(Boolean).join(" · ") || null,
+      category: [asset.lot_no ? `Tài sản ${asset.lot_no}` : null, category].filter(Boolean).join(" · ") || null,
       location: null,
       imageUrl: null,
     },

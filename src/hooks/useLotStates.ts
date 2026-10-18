@@ -81,6 +81,10 @@ export function useLotStates(sessionId?: string | null) {
           queryClient.setQueryData<LotState[]>(qk.bidding.lotStates(sessionId), (prev) =>
             mergeLotState(prev, payload),
           );
+          // auction_sealed_bids KHÔNG nằm trong realtime (phiếu kín) — một thay đổi
+          // trạng thái lô (nộp phiếu / bằng giá / đóng) là tín hiệu đọc lại phiếu.
+          const lotId = (payload.new as Partial<LotState> | null)?.lot_id;
+          if (lotId) queryClient.invalidateQueries({ queryKey: qk.bidding.sealedBids(sessionId, lotId) });
         },
       )
       .on(

@@ -18,6 +18,9 @@ export const REGISTRATION_STEPS = [
   { key: "confirm", title: "Xác nhận" },
 ] as const;
 
+/** Thanh bước hiển thị 5 chặng: 4 bước form + "Thanh toán" (sau khi giữ suất). */
+export const REGISTRATION_STEPPER = [...REGISTRATION_STEPS.map((s) => s.title), "Thanh toán"] as const;
+
 export type RegistrationStepIndex = 0 | 1 | 2 | 3;
 export const LAST_STEP: RegistrationStepIndex = 3;
 
@@ -27,6 +30,7 @@ const ROOT_FIELD_STEP: Record<string, RegistrationStepIndex> = {
   phone: 0,
   email: 0,
   attendee: 2,
+  lot_ids: 3,
   consent: 3,
 };
 

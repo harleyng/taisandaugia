@@ -1,41 +1,52 @@
-import { FileSignature } from "lucide-react";
-import { InfoCardShell } from "@/components/shared/InfoCardShell";
+import { KvBox } from "@/components/auction-sessions/detail/ui";
+import { CheckList } from "@/components/buyer-contracts/ui";
 import { formatVnd } from "@/lib/advertising/slug";
 import { formatDateTime } from "@/lib/auctionSessions/datetime";
 import type { PublicSessionDetail } from "@/types/auction-session";
-import { AUCTION_FORMAT_LABELS } from "@/types/asset-posting";
+import type { ContractSummary } from "@/types/bidding-contract";
 
-/** Cột phải trang đăng ký: phiên đang đăng ký + những gì xảy ra sau khi thanh toán. */
-export function RegistrationSessionAside({ session }: { session: PublicSessionDetail }) {
-  const rows: [string, string][] = [
-    ["Mã phiên", session.code],
-    ["Tổ chức đấu giá", session.auction_organizations?.name ?? "—"],
-    ["Hình thức", AUCTION_FORMAT_LABELS[session.auction_format] ?? session.auction_format],
-    ["Bắt đầu", formatDateTime(session.starts_at)],
-    ...(session.registration_end_at ? ([["Hạn mua hồ sơ", formatDateTime(session.registration_end_at)]] as [string, string][]) : []),
-  ];
+/** Cột phải trang mua hồ sơ: phiên đang đăng ký + những gì cần chuẩn bị. */
+export function RegistrationSessionAside({ session, summary }: { session: PublicSessionDetail; summary: ContractSummary | null }) {
+  const image = [...session.auction_session_items].sort((a, b) => a.lot_no - b.lot_no).find((l) => l.image_url)?.image_url;
+  const max = session.max_registrants;
+  const taken = summary ? summary.paid_count + summary.held_count : null;
+  const slots =
+    max != null && taken != null ? `${taken}/${max} · còn ${Math.max(0, max - taken)} suất` : taken != null ? `${taken} hồ sơ` : "—";
 
   return (
-    <InfoCardShell title="Phiên đăng ký" icon={<FileSignature className="h-5 w-5 text-foreground" />} bodyClassName="space-y-4">
-      <p className="font-semibold text-foreground">{session.title}</p>
-      <dl className="space-y-2 text-sm">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex justify-between gap-3">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className="text-right font-medium text-foreground">{value}</dd>
+    <>
+      <section className="flex flex-col gap-3 rounded-2xl bg-card p-4">
+        <div className="flex gap-3">
+          <div className="h-14 w-[72px] shrink-0 overflow-hidden rounded-lg bg-muted">
+            {image && <img src={image} alt="" className="h-full w-full object-cover" />}
           </div>
-        ))}
-      </dl>
-      <div className="flex items-baseline justify-between gap-2 border-t border-border pt-3">
-        <span className="text-sm text-muted-foreground">Giá hồ sơ</span>
-        <span className="text-xl font-bold text-primary">{formatVnd(session.dossier_fee ?? 0)}</span>
-      </div>
-      <ol className="list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
-        <li>Thanh toán tiền hồ sơ qua VNPay.</li>
-        <li>Tổ chức đấu giá duyệt hồ sơ (có thể yêu cầu bổ sung).</li>
-        <li>Nộp tiền đặt trước theo hướng dẫn của tổ chức.</li>
-        <li>Điểm danh trước giờ đấu giá để nhận số báo danh.</li>
-      </ol>
-    </InfoCardShell>
+          <div className="min-w-0">
+            {session.code && <span className="font-mono text-xs text-muted-foreground">{session.code}</span>}
+            <div className="text-sm font-semibold leading-snug text-foreground">{session.title}</div>
+          </div>
+        </div>
+        <KvBox
+          rows={[
+            { label: "Giá hồ sơ", value: <b>{formatVnd(session.dossier_fee ?? 0)}</b> },
+            { label: "Hạn mua hồ sơ", value: formatDateTime(session.registration_end_at) },
+            { label: "Đã đăng ký", value: slots },
+            { label: "Đấu giá", value: formatDateTime(session.starts_at) },
+          ]}
+        />
+        <p className="text-xs text-muted-foreground">
+          Phí hồ sơ không hoàn lại, trừ khi phiên bị huỷ hoặc tổ chức từ chối hồ sơ.
+        </p>
+      </section>
+      <section className="flex flex-col gap-3 rounded-2xl bg-card p-4">
+        <h3 className="text-[15px] font-semibold text-foreground">Cần chuẩn bị</h3>
+        <CheckList
+          items={[
+            { children: "CCCD gắn chip hoặc hộ chiếu" },
+            { children: "Giấy ĐKDN, nếu đứng tên tổ chức" },
+            { children: "Giấy uỷ quyền công chứng, nếu nhờ người khác dự phiên" },
+          ]}
+        />
+      </section>
+    </>
   );
 }

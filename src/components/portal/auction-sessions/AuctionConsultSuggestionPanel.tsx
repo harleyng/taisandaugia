@@ -110,8 +110,8 @@ export function AuctionConsultSuggestionPanel({ suggestion: s, currentValues, se
           </p>
           {s.lot_duration_minutes && (
             <p>
-              Thời lượng lô: <span className="font-medium text-foreground">{s.lot_duration_minutes} phút</span> — áp dụng khi
-              Mở lô
+              Thời lượng tài sản: <span className="font-medium text-foreground">{s.lot_duration_minutes} phút</span> — áp dụng khi
+              Mở tài sản
             </p>
           )}
           {(s.rationale || noteKeys.length > 0) && (

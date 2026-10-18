@@ -7,15 +7,15 @@ import type { AuctionSessionItem } from "@/types/auction-session";
 
 /**
  * "Thứ tự lô" ở cột phải (design `.ox-q`): ô số lô đổi màu theo trạng thái, lô
- * đang đấu tô nền đỏ (tạm dừng: vàng), lô đã trúng hiện giá trúng + số báo danh.
+ * đang đấu tô nền xanh dương (tạm dừng: vàng), lô đã trúng hiện giá trúng + số báo danh.
  */
 
 const ROW: Partial<Record<LotViewKey, string>> = {
-  live: "bg-destructive/10",
+  live: "bg-[hsl(var(--tier-info-bg))]",
   paused: "bg-[hsl(var(--tier-warn-bg))]",
 };
 const NO: Partial<Record<LotViewKey, string>> = {
-  live: "bg-destructive text-destructive-foreground",
+  live: "bg-[hsl(var(--tier-info))] text-white",
   paused: "bg-warning text-white",
   won: "bg-primary/10 text-primary",
 };
@@ -28,7 +28,7 @@ interface Props {
 
 export function LotQueueCard({ lots, done }: Props) {
   return (
-    <DetailCard title="Thứ tự lô" aside={<span className="tabular-nums">{done}/{lots.length} đã đóng</span>}>
+    <DetailCard title="Thứ tự tài sản" aside={<span className="tabular-nums">{done}/{lots.length} đã đóng</span>}>
       <ol className="m-0 list-none px-3 pb-2.5 pt-1.5">
         {lots.map(({ lot, state, key }) => (
           <li

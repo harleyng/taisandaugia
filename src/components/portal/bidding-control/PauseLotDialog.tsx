@@ -36,10 +36,10 @@ export function PauseLotDialog({ lot, pending, onOpenChange, onConfirm }: Props)
     <Dialog open={!!lot} onOpenChange={close}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Tạm dừng lô {lot?.lot_no}?</DialogTitle>
+          <DialogTitle>Tạm dừng tài sản {lot?.lot_no}?</DialogTitle>
           <DialogDescription>
             Người tham gia không trả giá được cho tới khi bạn tiếp tục. Đồng hồ được giữ nguyên: khoảng thời gian tạm
-            dừng sẽ được cộng bù vào giờ đóng lô. Lý do hiển thị công khai trong phòng đấu giá.
+            dừng sẽ được cộng bù vào giờ đóng tài sản. Lý do hiển thị công khai trong phòng đấu giá.
           </DialogDescription>
         </DialogHeader>
 

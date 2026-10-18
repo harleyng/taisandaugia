@@ -14,13 +14,14 @@
 
 import type { LotState } from "@/types/auction-bidding";
 
-export type LotPhase = "pending" | "open" | "extended" | "paused" | "closed" | "withdrawn";
+export type LotPhase = "pending" | "open" | "extended" | "paused" | "tied" | "closed" | "withdrawn";
 
 export const LOT_PHASE_LABELS: Record<LotPhase, string> = {
   pending: "Chưa mở",
   open: "Đang trả giá",
   extended: "Đang trả giá (đã gia hạn)",
   paused: "Tạm dừng",
+  tied: "Bằng giá — chờ vòng phụ",
   closed: "Đã đóng",
   withdrawn: "Đã rút",
 };
@@ -41,6 +42,8 @@ export function lotPhaseOf(state: LotState | null, now: Date = new Date()): LotP
   if (state.status === "closed") return "closed";
   if (state.status === "pending") return "pending";
   if (state.status === "paused") return "paused";
+  // Bỏ phiếu kín: vòng đã xong nhưng lô CHƯA đóng — chờ tổ chức mở vòng phụ.
+  if (state.status === "tied") return "tied";
 
   // Còn lại là 'open': hết giờ thì coi như đã đóng dù cron chưa chạy.
   if (!lotIsOpen(state, now)) return "closed";

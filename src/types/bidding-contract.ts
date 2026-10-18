@@ -187,6 +187,8 @@ export interface RegistrationPayload {
   principal: IdentityPayload;
   organization?: OrganizationPayload | null;
   proxy?: ProxyPayload | null;
+  /** auction_session_items.id đăng ký trả giá (20261018160000). Thiếu ⇒ giữ lựa chọn đã lưu. */
+  lot_ids?: string[];
 }
 
 // ─── Điểm danh (20261008100300) ─────────────────────────────────────────────

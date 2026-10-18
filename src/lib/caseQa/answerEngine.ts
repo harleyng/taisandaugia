@@ -79,19 +79,26 @@ function trimSpan(body: string, start: number, end: number) {
   return { start, end };
 }
 
-/** "Lô 2: …" / "Lô số 2 – …" → 2. So khớp trên token nên không phụ thuộc NFC/NFD. */
-function lotNoOf(text: string): number | null {
-  const t = tokensVi(text);
-  if (t[0] !== "lo") return null;
-  const n = t[1] === "so" ? t[2] : t[1];
+/**
+ * Số thứ tự tài sản ngay sau tiền tố "Tài sản" / "Lô" (tên cũ, còn trong điều khoản đã lưu),
+ * có thể kèm "số". `null` nếu vị trí i không phải tiền tố đó.
+ */
+function lotNoAt(t: readonly string[], i: number): number | null {
+  const after = t[i] === "lo" ? i + 1 : t[i] === "tai" && t[i + 1] === "san" ? i + 2 : -1;
+  if (after < 0) return null;
+  const n = t[after] === "so" ? t[after + 1] : t[after];
   return n && /^\d+$/.test(n) ? Number(n) : null;
+}
+
+/** "Tài sản 2: …" / "Lô số 2 – …" → 2. So khớp trên token nên không phụ thuộc NFC/NFD. */
+function lotNoOf(text: string): number | null {
+  return lotNoAt(tokensVi(text), 0);
 }
 
 function askedLot(words: readonly string[]): number | null {
   for (let i = 0; i < words.length; i++) {
-    if (words[i] !== "lo") continue;
-    const n = words[i + 1] === "so" ? words[i + 2] : words[i + 1];
-    if (n && /^\d+$/.test(n)) return Number(n);
+    const n = lotNoAt(words, i);
+    if (n != null) return n;
   }
   return null;
 }

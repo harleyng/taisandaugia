@@ -49,8 +49,14 @@ describe("roomGateOf", () => {
     expect(roomGateOf(input({ session: session({ auction_format: "truc_tuyen" }) }))).toEqual({ kind: "open" });
   });
 
-  it("hình thức ngoài trả giá lên thì chưa hỗ trợ", () => {
-    expect(roomGateOf(input({ session: session({ bidding_method: "descending" }) }))).toEqual({
+  it("đặt giá xuống và bỏ phiếu kín đều mở được phòng", () => {
+    for (const m of ["descending", "sealed"]) {
+      expect(roomGateOf(input({ session: session({ bidding_method: m }) }))).toEqual({ kind: "open" });
+    }
+  });
+
+  it("phương thức lạ thì chưa hỗ trợ", () => {
+    expect(roomGateOf(input({ session: session({ bidding_method: "dutch" }) }))).toEqual({
       kind: "method_unsupported",
     });
   });

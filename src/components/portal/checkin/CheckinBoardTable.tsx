@@ -162,6 +162,11 @@ export function CheckinBoardTable(props: Props) {
                         {board === "exc" && c.absence_note && (
                           <small className="max-w-[16rem] text-xs text-muted-foreground">{c.absence_note}</small>
                         )}
+                        {board === "abs" && c.absence_appeal_at && (
+                          <small className="max-w-[16rem] truncate text-xs font-medium text-primary" title={c.absence_appeal_note ?? undefined}>
+                            Người tham gia đã gửi lý do vắng
+                          </small>
+                        )}
                       </div>
                     </td>
                     <td className={cn(TD, "whitespace-nowrap tabular-nums")}>{time ?? DASH}</td>

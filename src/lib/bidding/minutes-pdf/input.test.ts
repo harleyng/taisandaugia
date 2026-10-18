@@ -68,14 +68,14 @@ describe("buildMinutesPdfInput", () => {
     expect(dump).not.toContain(ADDRESS);
   });
 
-  it("lô không bán được thì không có người trúng", () => {
+  it("tài sản không bán được thì không có người trúng", () => {
     const input = buildMinutesPdfInput(
       args({ stateByLot: new Map([["lot1", state("lot1", { result: "unsold", bid_count: 0 })]]) }),
     );
     expect(input.lots[0]).toMatchObject({ result: "unsold", winnerName: null, winningAmount: null });
   });
 
-  it("lô đã rút mang theo lý do", () => {
+  it("tài sản đã rút mang theo lý do", () => {
     const lot2 = buildMinutesPdfInput(args()).lots[1];
     expect(lot2.withdrawn).toBe(true);
     expect(lot2.withdrawReason).toBe("Chủ tài sản rút tài sản");
@@ -87,7 +87,7 @@ describe("buildMinutesPdfInput", () => {
     expect(input.bidderNoCount).toBe(2);
   });
 
-  it("xếp lô theo số lô dù đầu vào lộn xộn", () => {
+  it("xếp tài sản theo số tài sản dù đầu vào lộn xộn", () => {
     const a = args();
     const input = buildMinutesPdfInput({ ...a, lots: [a.lots[1], a.lots[0]] });
     expect(input.lots.map((l) => l.lotNo)).toEqual([1, 2]);

@@ -88,7 +88,7 @@ export function SessionsTable({ rows, onOpen }: Props) {
                 <td className={cn(TD, "whitespace-nowrap text-right tabular-nums")}>
                   {s.item_count > 0 ? (
                     <>
-                      <b className="block font-semibold">{s.item_count} lô</b>
+                      <b className="block font-semibold">{s.item_count} tài sản</b>
                       <small className="block text-xs text-muted-foreground">
                         {formatMoneyShort(s.total_starting_price)}
                       </small>

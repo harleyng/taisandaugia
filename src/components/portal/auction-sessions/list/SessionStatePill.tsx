@@ -2,16 +2,19 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ROW_STATE_LABELS, type SessionRowState } from "@/lib/auctionSessions/sessionList";
 
-export type PillTone = "muted" | "info" | "warning" | "live" | "ok";
+export type PillTone = "muted" | "info" | "warning" | "live" | "ok" | "bad";
 
 // Design dùng xanh dương / tím cho "nhận hồ sơ" / "sắp đấu". Xanh dương lấy token
 // --tier-info sẵn có; tím không có token ⇒ "sắp đấu" dùng tông cảnh báo (vàng).
+// "Đang diễn ra / đang trả giá" (live) cũng xanh dương theo yêu cầu 18/10; đỏ
+// chỉ còn cho trạng thái xấu (bad).
 const TONES: Record<PillTone, string> = {
   muted: "bg-muted text-muted-foreground",
   info: "bg-[hsl(var(--tier-info-bg))] text-[hsl(var(--tier-info))]",
   warning: "bg-warning/15 text-[hsl(var(--tier-warn-strong))]",
-  live: "bg-destructive/10 text-destructive",
+  live: "bg-[hsl(var(--tier-info-bg))] text-[hsl(var(--tier-info))]",
   ok: "bg-primary/10 text-primary",
+  bad: "bg-destructive/10 text-destructive",
 };
 
 const STATE_TONE: Record<SessionRowState, PillTone> = {

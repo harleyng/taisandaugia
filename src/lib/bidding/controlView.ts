@@ -7,12 +7,13 @@
 import { lotPhaseOf } from "./lotPhase";
 import type { LotState } from "@/types/auction-bidding";
 
-export type LotViewKey = "wait" | "live" | "paused" | "won" | "unsold" | "pulled" | "closed";
+export type LotViewKey = "wait" | "live" | "paused" | "tied" | "won" | "unsold" | "pulled" | "closed";
 
 export const LOT_VIEW_LABELS: Record<LotViewKey, string> = {
   wait: "Chờ đấu",
   live: "Đang trả giá",
   paused: "Tạm dừng",
+  tied: "Bằng giá",
   won: "Đã trúng",
   unsold: "Không thành",
   pulled: "Đã rút",
@@ -28,6 +29,8 @@ export function lotViewKeyOf(state: LotState | null, now: Date): LotViewKey {
       return "live";
     case "paused":
       return "paused";
+    case "tied":
+      return "tied";
     case "withdrawn":
       return "pulled";
     case "closed":

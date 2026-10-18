@@ -21,7 +21,7 @@ const PHONE_RE = /^0\d{9}$/;
 // Mẫu gồm cả câu tài liệu trả lời được lẫn câu PHẢI chuyển người.
 const SAMPLES = [
   ...STANDARD_QUESTIONS.slice(0, 5).map((q) => q.question),
-  "Có nên mua lô này không?",
+  "Có nên mua tài sản này không?",
   "Có chỗ đậu xe khi đi xem tài sản không?",
 ];
 

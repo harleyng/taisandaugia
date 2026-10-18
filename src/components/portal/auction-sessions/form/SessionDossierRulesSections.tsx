@@ -1,9 +1,14 @@
 import type { UseFormReturn } from "react-hook-form";
 import { Lock } from "lucide-react";
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SessionFormValues } from "@/lib/auctionSessions/sessionForm";
+import {
+  BIDDING_METHOD_DESCRIPTIONS,
+  BIDDING_METHOD_LABELS,
+  BIDDING_METHODS,
+  type BiddingMethod,
+} from "@/lib/bidding/methods";
 import { FormSection, SuffixNumberInput } from "./formParts";
 
 type Form = UseFormReturn<SessionFormValues>;
@@ -61,22 +66,18 @@ export function SessionDossierSection({ form, no, saleReady }: { form: Form; no:
   );
 }
 
-const METHODS = [
-  { value: "ascending", label: "Trả giá lên", available: true },
-  { value: "descending", label: "Đặt giá xuống — sắp ra mắt", available: false },
-  { value: "sealed", label: "Bỏ phiếu kín — sắp ra mắt", available: false },
-];
-
 /**
  * 5 · Quy tắc trả giá trực tuyến. `locked` khi lô đầu tiên đã mở —
- * auction_sessions_bidding_guard từ chối đổi ba cột này từ lúc đó.
+ * auction_sessions_bidding_guard từ chối đổi các cột này từ lúc đó.
+ * Mỗi phương thức chỉ hiện (và chỉ kiểm) trường của nó.
  */
 export function SessionRulesSection({ form, no, locked }: { form: Form; no: number; locked: boolean }) {
+  const method = form.watch("bidding_method");
   return (
     <FormSection
       no={no}
       title="Quy tắc trả giá trực tuyến"
-      description="Bị khoá khi lô đầu tiên được mở — kiểm tra kỹ trước ngày đấu."
+      description="Bị khoá khi tài sản đầu tiên được mở — kiểm tra kỹ trước ngày đấu."
     >
       {locked && (
         <div className="flex items-start gap-2.5 rounded-[10px] bg-muted px-3.5 py-3 text-[13px] font-medium text-muted-foreground">
@@ -85,62 +86,101 @@ export function SessionRulesSection({ form, no, locked }: { form: Form; no: numb
         </div>
       )}
       <div className="grid gap-3.5 md:grid-cols-3">
-        {/* Chỉ một hình thức dùng được — không phải trường của form (formToBiddingRules cố định). */}
-        <div className="space-y-2">
-          <Label htmlFor="bidding-method">Hình thức trả giá</Label>
-          <Select value="ascending" disabled={locked}>
-            <SelectTrigger id="bidding-method">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {METHODS.map((m) => (
-                <SelectItem key={m.value} value={m.value} disabled={!m.available}>
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
         <FormField
           control={form.control}
-          name="extension_seconds"
-          render={({ field, fieldState }) => (
+          name="bidding_method"
+          render={({ field }) => (
             <FormItem>
-              <FormLabel>Gia hạn khi có giá cuối</FormLabel>
-              <FormControl>
-                <SuffixNumberInput
-                  unit="giây"
-                  value={field.value}
-                  onChange={field.onChange}
-                  disabled={locked}
-                  invalid={!!fieldState.error}
-                />
-              </FormControl>
-              <FormDescription>0 = không gia hạn.</FormDescription>
+              <FormLabel>Phương thức trả giá</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange} disabled={locked}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {BIDDING_METHODS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {BIDDING_METHOD_LABELS[m]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="max_bid_steps"
-          render={({ field, fieldState }) => (
-            <FormItem>
-              <FormLabel>Số bước giá tối đa mỗi lượt</FormLabel>
-              <FormControl>
-                <SuffixNumberInput
-                  unit="bước"
-                  value={field.value}
-                  onChange={field.onChange}
-                  disabled={locked}
-                  invalid={!!fieldState.error}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {method === "ascending" && (
+          <>
+            <FormField
+              control={form.control}
+              name="extension_seconds"
+              render={({ field, fieldState }) => (
+                <FormItem>
+                  <FormLabel>Gia hạn khi có giá cuối</FormLabel>
+                  <FormControl>
+                    <SuffixNumberInput
+                      unit="giây"
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={locked}
+                      invalid={!!fieldState.error}
+                    />
+                  </FormControl>
+                  <FormDescription>0 = không gia hạn.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="max_bid_steps"
+              render={({ field, fieldState }) => (
+                <FormItem>
+                  <FormLabel>Số bước giá tối đa mỗi lượt</FormLabel>
+                  <FormControl>
+                    <SuffixNumberInput
+                      unit="bước"
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={locked}
+                      invalid={!!fieldState.error}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+        {method === "descending" && (
+          <FormField
+            control={form.control}
+            name="price_drop_seconds"
+            render={({ field, fieldState }) => (
+              <FormItem>
+                <FormLabel>Giảm một bước giá sau mỗi</FormLabel>
+                <FormControl>
+                  <SuffixNumberInput
+                    unit="giây"
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={locked}
+                    invalid={!!fieldState.error}
+                  />
+                </FormControl>
+                <FormDescription>Từ 10 đến 3600 giây.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
       </div>
+      <p className="text-[13px] leading-relaxed text-muted-foreground">
+        {BIDDING_METHOD_DESCRIPTIONS[method as BiddingMethod] ?? ""}
+        {method === "descending" && " Đặt giá sàn cho từng tài sản ở tab Tài sản."}
+        {method === "sealed" && " Đấu giá viên đặt thời gian nhận phiếu khi mở từng tài sản."}
+      </p>
     </FormSection>
   );
 }

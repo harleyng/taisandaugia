@@ -66,7 +66,7 @@ export interface PipelineSessionRow {
 }
 
 export interface PipelineLotStateRow {
-  status: "pending" | "open" | "paused" | "closed" | "withdrawn";
+  status: "pending" | "open" | "paused" | "tied" | "closed" | "withdrawn";
   result: "sold" | "unsold" | null;
   winning_amount: number | null;
   payment_status: "pending" | "paid" | "defaulted" | null;

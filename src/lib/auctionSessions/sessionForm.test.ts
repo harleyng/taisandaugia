@@ -138,6 +138,28 @@ describe("quy tắc trả giá + luật form tạo / sửa", () => {
       bidding_method: "ascending",
       extension_seconds: 60,
       max_bid_steps: 5,
+      price_drop_seconds: 60,
     });
+  });
+
+  it("mỗi phương thức chỉ kiểm trường của nó", () => {
+    const issues = (v: ReturnType<typeof valid>) => {
+      const r = sessionFormSchema.safeParse(v);
+      return r.success ? [] : r.error.issues.map((i) => i.path.join("."));
+    };
+    // Trả giá lên: nhịp giảm hỏng không chặn; gia hạn hỏng thì chặn.
+    expect(issues({ ...valid(), price_drop_seconds: "5" })).toEqual([]);
+    expect(issues({ ...valid(), extension_seconds: "9999" })).toContain("extension_seconds");
+    // Đặt giá xuống: nhịp giảm 10..3600; gia hạn hỏng không chặn.
+    expect(issues({ ...valid(), bidding_method: "descending", price_drop_seconds: "5" })).toContain("price_drop_seconds");
+    expect(issues({ ...valid(), bidding_method: "descending", extension_seconds: "9999" })).toEqual([]);
+    // Bỏ phiếu kín: không có trường riêng.
+    expect(issues({ ...valid(), bidding_method: "sealed", max_bid_steps: "0", price_drop_seconds: "" })).toEqual([]);
+  });
+
+  it("formToBiddingRules lưu phương thức + mặc định cho trường ẩn bị hỏng", () => {
+    expect(
+      formToBiddingRules({ ...valid(), bidding_method: "descending", price_drop_seconds: "30", extension_seconds: "x" }),
+    ).toEqual({ bidding_method: "descending", extension_seconds: 60, max_bid_steps: 5, price_drop_seconds: 30 });
   });
 });

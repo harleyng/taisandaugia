@@ -31,7 +31,7 @@ const deposit = (over: Partial<EngineClause> = {}): EngineClause => ({
   doc_title: "Điều kiện tiền đặt trước",
   clause_ref: "Khoản 1",
   heading: "Khoản tiền đặt trước",
-  body: "Lô 1: tiền đặt trước 250,000,000₫.",
+  body: "Tài sản 1: tiền đặt trước 250,000,000₫.",
   topics: ["deposit"],
   sort_order: 10,
   citable: true,
@@ -88,7 +88,7 @@ describe("answerCaseQuestion — không bao giờ trả lời thiếu trích d�
   });
 
   it("mọi kết quả (kể cả câu linh tinh) đều thoả bất biến", () => {
-    for (const q of [...PARAPHRASES, "ok", "???", "Có chỗ đậu xe không?", "tiền", "Lô 9 tiền đặt trước?"]) {
+    for (const q of [...PARAPHRASES, "ok", "???", "Có chỗ đậu xe không?", "tiền", "Tài sản 9 tiền đặt trước?"]) {
       expectGrounded(ask(q), CASE);
     }
   });
@@ -151,7 +151,7 @@ describe("answerCaseQuestion — điều khoản nháp", () => {
   });
 });
 
-describe("answerCaseQuestion — lô, mâu thuẫn", () => {
+describe("answerCaseQuestion — tài sản, mâu thuẫn", () => {
   const fourLots = buildFilledCase({
     lots: [1, 2, 3, 4].map((n) => ({
       lot_no: n,
@@ -162,23 +162,23 @@ describe("answerCaseQuestion — lô, mâu thuẫn", () => {
     })),
   });
 
-  it("4 lô, không nói lô nào ⇒ hỏi lại", () => {
+  it("4 tài sản, không nói tài sản nào ⇒ hỏi lại", () => {
     expect(ask("Tiền đặt trước là bao nhiêu?", fourLots)).toMatchObject({ outcome: "escalate", reason: "ambiguous" });
   });
 
-  it("nói rõ lô ⇒ đúng một trích dẫn của lô đó", () => {
-    const p = ask("Tiền đặt trước lô 2 là bao nhiêu?", fourLots);
+  it("nói rõ tài sản ⇒ đúng một trích dẫn của tài sản đó", () => {
+    const p = ask("Tiền đặt trước tài sản 2 là bao nhiêu?", fourLots);
     expect(p.outcome).toBe("answer");
     expect(p.citations).toHaveLength(1);
-    expect(p.citations[0].quote).toContain("Lô 2");
-    expect(p.citations[0].quote).not.toContain("Lô 3");
+    expect(p.citations[0].quote).toContain("Tài sản 2");
+    expect(p.citations[0].quote).not.toContain("Tài sản 3");
   });
 
-  it("2 lô, không nói lô ⇒ một trích dẫn gồm cả hai dòng", () => {
+  it("2 tài sản, không nói tài sản ⇒ một trích dẫn gồm cả hai dòng", () => {
     const p = ask("Tiền đặt trước là bao nhiêu?");
     expect(p.citations).toHaveLength(1);
-    expect(p.citations[0].quote).toContain("Lô 1");
-    expect(p.citations[0].quote).toContain("Lô 2");
+    expect(p.citations[0].quote).toContain("Tài sản 1");
+    expect(p.citations[0].quote).toContain("Tài sản 2");
   });
 
   it("hai tài liệu nêu số tiền khác nhau ⇒ không tự chọn", () => {
@@ -188,7 +188,7 @@ describe("answerCaseQuestion — lô, mâu thuẫn", () => {
       document_id: "doc-clar",
       doc_type: "clarification",
       doc_title: "Giải đáp bổ sung",
-      body: "Lô 2: tiền đặt trước điều chỉnh thành 200,000,000₫.",
+      body: "Tài sản 2: tiền đặt trước điều chỉnh thành 200,000,000₫.",
     };
     expect(ask("Tiền đặt trước là bao nhiêu?", [...CASE, clarification])).toMatchObject({
       outcome: "escalate",
@@ -199,9 +199,9 @@ describe("answerCaseQuestion — lô, mâu thuẫn", () => {
 
 describe("splitSentences", () => {
   it("giữ vị trí ký tự và không cắt TP.HCM / số tiền", () => {
-    const body = "Địa điểm: 12 Lê Lợi, TP.HCM. Tiền: 50.000.000₫;\nLô 2: xong.";
+    const body = "Địa điểm: 12 Lê Lợi, TP.HCM. Tiền: 50.000.000₫;\nTài sản 2: xong.";
     const spans = splitSentences(body);
-    expect(spans.map((s) => s.text)).toEqual(["Địa điểm: 12 Lê Lợi, TP.HCM.", "Tiền: 50.000.000₫;", "Lô 2: xong."]);
+    expect(spans.map((s) => s.text)).toEqual(["Địa điểm: 12 Lê Lợi, TP.HCM.", "Tiền: 50.000.000₫;", "Tài sản 2: xong."]);
     for (const s of spans) expect(body.slice(s.start, s.end)).toBe(s.text);
   });
 });

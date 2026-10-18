@@ -78,7 +78,7 @@ describe("buildMinutesDocDefinition", () => {
     expect(s).toContain("Độc lập – Tự do – Hạnh phúc");
   });
 
-  it("mọi lô đều xuất hiện, kèm lý do rút", () => {
+  it("mọi tài sản đều xuất hiện, kèm lý do rút", () => {
     const s = all().join("\n");
     expect(s).toContain("Đất thổ cư 88.5m² — Đồng Nai");
     expect(s).toContain("Nhà phố 449.6m²");
@@ -144,7 +144,7 @@ describe("buildMinutesDocDefinition", () => {
     expect(blank).not.toContain("Trần Văn Bình");
   });
 
-  it("tổng hợp đếm đúng: lô đã rút không nằm trong thành / không thành", () => {
+  it("tổng hợp đếm đúng: tài sản đã rút không nằm trong thành / không thành", () => {
     const s = all().join("\n");
     expect(s).toContain("Tổng số tài sản đưa ra đấu giá");
     const dd = buildMinutesDocDefinition(base);
@@ -155,7 +155,7 @@ describe("buildMinutesDocDefinition", () => {
     expect(at("Số tài sản đã rút khỏi phiên")).toBe("1");
   });
 
-  it("phiên không có lô nào thành thì nói thẳng, không để mục trống", () => {
+  it("phiên không có tài sản nào thành thì nói thẳng, không để mục trống", () => {
     const none = { ...base, lots: [lot({ result: "unsold", winningAmount: null, winnerName: null, winnerBidderNo: null })] };
     expect(all(none).join("\n")).toContain("không có tài sản nào đấu giá thành");
   });

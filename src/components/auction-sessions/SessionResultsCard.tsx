@@ -52,7 +52,7 @@ export function SessionResultsCard({ session }: { session: PublicSessionDetail }
               <Card key={lot.id} className="rounded-2xl p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
-                    <p className="text-xs text-muted-foreground">Lô {lot.lot_no}</p>
+                    <p className="text-xs text-muted-foreground">Tài sản {lot.lot_no}</p>
                     <p className="font-medium text-foreground">{lot.title}</p>
                     {withdrawn ? (
                       st?.withdraw_reason && (

@@ -29,7 +29,7 @@ export function Lot3dDialog({ open, onOpenChange, lotNo, title, imageUrl, model,
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            Lô {lotNo} · {title}
+            Tài sản {lotNo} · {title}
           </DialogTitle>
           <DialogDescription>
             {initial === "vr"

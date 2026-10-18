@@ -39,11 +39,10 @@ export function useSelfCheckIn(contractId?: string | null) {
       assertBiddingRpcOk(data);
       return data as unknown as CheckInResult;
     },
-    onSuccess: (r) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.biddingContracts.all });
-      toast.success(`Đã điểm danh — số báo danh của bạn là ${r.bidder_no}.`);
     },
-    // Không toast lỗi: dialog OTP hiện lỗi ngay dưới ô nhập (còn bao nhiêu lần thử).
+    // Không toast: dialog OTP hiện số báo danh / lỗi ngay dưới ô nhập (còn bao nhiêu lần thử).
   });
 
   return { requestOtp, confirm };

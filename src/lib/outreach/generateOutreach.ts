@@ -71,7 +71,7 @@ export function generateOutreach(input: OutreachInput): OutreachDraft {
   const lotLine = (l: OutreachLot) => {
     const place = lotPlace(l);
     const price = l.starting_price != null ? `giá khởi điểm ${vnd(l.starting_price)}` : "giá khởi điểm theo thông báo đấu giá";
-    return `Lô ${l.lot_no}: ${l.title}${place ? ` (${place})` : ""} — ${price}`;
+    return `Tài sản ${l.lot_no}: ${l.title}${place ? ` (${place})` : ""} — ${price}`;
   };
   const schedule = [
     s.viewing_start_at || s.viewing_end_at ? `Xem tài sản: ${viRange(s.viewing_start_at, s.viewing_end_at)}` : "",
@@ -82,7 +82,7 @@ export function generateOutreach(input: OutreachInput): OutreachDraft {
   ];
   const deposits = lots.filter((l) => l.deposit_amount != null);
   const participation = [
-    deposits.length ? `Tiền đặt trước: ${deposits.map((l) => `Lô ${l.lot_no} ${vnd(l.deposit_amount)}`).join("; ")}` : "",
+    deposits.length ? `Tiền đặt trước: ${deposits.map((l) => `Tài sản ${l.lot_no} ${vnd(l.deposit_amount)}`).join("; ")}` : "",
     s.dossier_fee != null ? `Tiền mua hồ sơ: ${vnd(s.dossier_fee)}` : "",
     AUCTION_FORMAT_TEXT[s.auction_format] ? `Hình thức: ${AUCTION_FORMAT_TEXT[s.auction_format]}` : "",
   ];
@@ -91,7 +91,7 @@ export function generateOutreach(input: OutreachInput): OutreachDraft {
   const highlights = lots
     .map((l) => {
       const d = caseLot(input.caseFile, l.id).description.trim();
-      return d ? `Lô ${l.lot_no}: ${excerpt(d, 220)}` : "";
+      return d ? `Tài sản ${l.lot_no}: ${excerpt(d, 220)}` : "";
     })
     .filter(Boolean);
   const parent = parentSlugOf(lots[0]?.category_slug);
@@ -117,7 +117,7 @@ export function generateOutreach(input: OutreachInput): OutreachDraft {
   const zalo = paragraphs([
     pickT(OPENERS.zalo, "zalo"),
     `${s.title} (mã ${code})`,
-    bullets(lots.map((l) => `Lô ${l.lot_no}: ${l.title}${l.starting_price != null ? ` — ${vnd(l.starting_price)}` : ""}`)),
+    bullets(lots.map((l) => `Tài sản ${l.lot_no}: ${l.title}${l.starting_price != null ? ` — ${vnd(l.starting_price)}` : ""}`)),
     [
       s.viewing_start_at ? `🗓 Xem tài sản từ ${viDateTime(s.viewing_start_at)}` : "",
       s.registration_end_at ? `📝 Nhận hồ sơ đến ${viDateTime(s.registration_end_at)}` : "",
@@ -188,14 +188,14 @@ export function generateOutreach(input: OutreachInput): OutreachDraft {
       .map((l) => {
         const kind = l.category_slug ? categoryLabel(l.category_slug) : "";
         const extra = caseLot(input.caseFile, l.id).description.trim();
-        const head = `Lô ${l.lot_no}: ${noDot(l.title)}${kind ? ` (${kind.toLowerCase()})` : ""}.`;
+        const head = `Tài sản ${l.lot_no}: ${noDot(l.title)}${kind ? ` (${kind.toLowerCase()})` : ""}.`;
         return extra ? `${head} ${extra}` : head;
       })
       .join("\n"),
     asset_condition: lots
       .map((l) => {
         const c = noDot(caseLot(input.caseFile, l.id).condition);
-        return `Lô ${l.lot_no}: ${c || "tài sản được giới thiệu theo hiện trạng thực tế tại thời điểm xem tài sản"}.`;
+        return `Tài sản ${l.lot_no}: ${c || "tài sản được giới thiệu theo hiện trạng thực tế tại thời điểm xem tài sản"}.`;
       })
       .join("\n"),
   };

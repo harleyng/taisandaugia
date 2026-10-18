@@ -36,7 +36,7 @@ export function WonLotsNotice({ lots }: { lots: MyWonLot[] }) {
           <div key={l.lot_id} className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
               <p>
-                <strong>Bạn đã trúng đấu giá lô {l.auction_session_items?.lot_no ?? "—"}</strong>
+                <strong>Bạn đã trúng đấu giá tài sản {l.auction_session_items?.lot_no ?? "—"}</strong>
                 {l.auction_session_items?.title ? ` · ${l.auction_session_items.title}` : ""}
                 {l.winning_amount != null && ` — giá trúng ${formatVnd(l.winning_amount)}`}.
                 {l.payment_due_at && ` Hạn thanh toán ${formatDateTime(l.payment_due_at)}.`}

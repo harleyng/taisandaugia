@@ -40,7 +40,7 @@ export function WithdrawLotDialog({ lot, state, pending, onOpenChange, onConfirm
     <Dialog open={!!lot} onOpenChange={close}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Rút lô {lot?.lot_no} khỏi phiên?</DialogTitle>
+          <DialogTitle>Rút tài sản {lot?.lot_no} khỏi phiên?</DialogTitle>
           <DialogDescription>
             {lot?.title} sẽ dừng hẳn, không nhận thêm lượt trả giá nào và không thể mở lại. Lý do hiển thị công khai.
           </DialogDescription>
@@ -50,14 +50,14 @@ export function WithdrawLotDialog({ lot, state, pending, onOpenChange, onConfirm
           // Tiền đặt trước tính theo PHIÊN chứ không theo lô, nên rút lô không
           // hoàn tiền cho ai — nói rõ để không bị hiểu nhầm là đã xử lý xong.
           <InfoBox variant="amber" className="text-sm">
-            Lô đã có {bidCount} lượt trả giá. Rút lô không hoàn tiền đặt trước — tiền đặt trước tính theo phiên và được
+            Tài sản đã có {bidCount} lượt trả giá. Rút tài sản không hoàn tiền đặt trước — tiền đặt trước tính theo phiên và được
             xử lý khi chốt kết quả.
           </InfoBox>
         )}
 
         <div className="space-y-1.5">
           <Label>
-            Lý do rút lô <span className="text-destructive">*</span>
+            Lý do rút tài sản <span className="text-destructive">*</span>
           </Label>
           <Textarea
             rows={3}
@@ -69,7 +69,7 @@ export function WithdrawLotDialog({ lot, state, pending, onOpenChange, onConfirm
 
         <DialogFooter>
           <Button variant="outline" onClick={() => close(false)} disabled={pending}>
-            Giữ lô
+            Giữ tài sản
           </Button>
           <Button
             variant="destructive"
@@ -78,7 +78,7 @@ export function WithdrawLotDialog({ lot, state, pending, onOpenChange, onConfirm
             className="gap-1.5"
           >
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Rút lô
+            Rút tài sản
           </Button>
         </DialogFooter>
       </DialogContent>

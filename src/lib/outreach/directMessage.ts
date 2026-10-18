@@ -44,7 +44,7 @@ export function composeDirectMessage(i: DirectMessageInput): string {
     `Chào anh/chị ${i.contactName.trim()},`,
     i.pitch.trim(),
     lots
-      .map((l) => `• Lô ${l.lot_no}: ${l.title}${l.starting_price != null ? ` — giá khởi điểm ${vnd(l.starting_price)}` : ""}`)
+      .map((l) => `• Tài sản ${l.lot_no}: ${l.title}${l.starting_price != null ? ` — giá khởi điểm ${vnd(l.starting_price)}` : ""}`)
       .join("\n"),
     [
       `Đấu giá: ${viDateTime(i.session.starts_at)}.`,

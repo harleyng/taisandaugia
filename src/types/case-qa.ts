@@ -2,9 +2,11 @@
 // Bảng + RPC: supabase/migrations/20260912000002_case_documents.sql và
 // 20260912000003_case_chat.sql. Engine mock: src/lib/caseQa/.
 
-export type CaseDocType = "notice" | "rules" | "deposit_terms" | "viewing_schedule" | "clarification";
+export type CaseDocType = "notice" | "rules" | "deposit_terms" | "viewing_schedule" | "other" | "clarification";
 /** Loại tài liệu tải tệp lên được. "clarification" sinh từ câu hỏi chuyển tiếp, không có tệp. */
 export type UploadableDocType = Exclude<CaseDocType, "clarification">;
+/** Loại cố định — mỗi phiên tối đa MỘT tài liệu. "other" (Tài liệu khác) được nhiều tài liệu. */
+export type SingleDocType = Exclude<UploadableDocType, "other">;
 
 export type ReviewStatus = "draft" | "confirmed";
 export type ClauseSource = "extracted" | "manual";

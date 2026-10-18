@@ -36,7 +36,8 @@ import {
   PAYMENT_DUTY,
 } from "./clauses";
 import { tienBangChu } from "./soThanhChu";
-import type { MinutesLotRow, MinutesPdfInput } from "./input";
+import { BIDDING_METHOD_LABELS, biddingMethodOf, secondsText } from "@/lib/bidding/methods";
+import type { MinutesLotRow, MinutesPdfInput, MinutesSession } from "./input";
 
 const t = themeOf("FORMAL");
 const SIDE_MARGIN = MARGIN + 16;
@@ -124,6 +125,24 @@ function lotRow(lot: MinutesLotRow): TableCell[] {
   ];
 }
 
+
+/** Dòng quy tắc trả giá theo phương thức (trả giá lên giữ nguyên hai dòng cũ). */
+function methodMinutesRows(session: MinutesSession): [string, string][] {
+  const method = biddingMethodOf(session.biddingMethod);
+  if (method === "descending") {
+    return [["Nhịp giảm giá", `1 bước giá mỗi ${secondsText(session.priceDropSeconds ?? 60)}, không thấp hơn giá sàn`]];
+  }
+  if (method === "sealed") {
+    return [
+      ["Số phiếu mỗi vòng", "Một phiếu kín cho mỗi người, không sửa"],
+      ["Khi bằng giá", "Mở vòng phụ cho những người cùng trả giá cao nhất"],
+    ];
+  }
+  return [
+    ["Thời gian gia hạn mỗi lượt", `${session.extensionSeconds} giây`],
+    ["Số bước giá tối đa mỗi lượt", String(session.maxBidSteps)],
+  ];
+}
 export function buildMinutesDocDefinition(input: MinutesPdfInput): TDocumentDefinitions {
   const { session, org, auctioneer, lots } = input;
   const sold = lots.filter((l) => l.result === "sold" && !l.withdrawn);
@@ -189,11 +208,10 @@ export function buildMinutesDocDefinition(input: MinutesPdfInput): TDocumentDefi
           : BLANK,
       ],
       ["Hình thức đấu giá", AUCTION_FORMAT_LABELS[session.auctionFormat] ?? val(session.auctionFormat)],
-      ["Phương thức đấu giá", "Trả giá lên"],
+      ["Phương thức đấu giá", BIDDING_METHOD_LABELS[biddingMethodOf(session.biddingMethod)]],
       ["Thời gian bắt đầu", fmtMoment(session.startsAt)],
       ["Thời gian kết thúc", fmtMoment(session.endsAt)],
-      ["Thời gian gia hạn mỗi lượt", `${session.extensionSeconds} giây`],
-      ["Số bước giá tối đa mỗi lượt", String(session.maxBidSteps)],
+      ...methodMinutesRows(session),
       ["Địa điểm", val(session.venue) === BLANK ? "Sàn đấu giá trực tuyến taisandaugia.vn" : val(session.venue)],
       ["Số hồ sơ tham gia đã bán", String(input.dossierCount)],
       ["Số người được cấp số báo danh", String(input.bidderNoCount)],
@@ -204,7 +222,7 @@ export function buildMinutesDocDefinition(input: MinutesPdfInput): TDocumentDefi
       dataTable(
         t,
         [
-          { text: "Lô", width: 22 },
+          { text: "STT", width: 22 },
           { text: "Tài sản" },
           { text: "Giá khởi điểm", align: "right", width: "auto" },
           { text: "Lượt", width: 28 },
@@ -235,7 +253,7 @@ export function buildMinutesDocDefinition(input: MinutesPdfInput): TDocumentDefi
             (l): Content => ({
               text:
                 `Ông/Bà ${val(l.winnerName)}, số báo danh ${formatBidderNo(l.winnerBidderNo) ?? BLANK}, ` +
-                `trúng đấu giá lô ${l.lotNo} — ${l.title} với giá ${moneyWithWords(l.winningAmount)}; ` +
+                `trúng đấu giá tài sản ${l.lotNo} — ${l.title} với giá ${moneyWithWords(l.winningAmount)}; ` +
                 `hạn thanh toán đến ${fmtMoment(l.paymentDueAt)}.`,
               margin: [0, 0, 0, 4],
             }),

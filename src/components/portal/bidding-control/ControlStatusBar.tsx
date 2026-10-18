@@ -10,8 +10,9 @@ import { LOT_VIEW_LABELS, type LotViewKey } from "@/lib/bidding/controlView";
 
 const SEG: Record<LotViewKey, string> = {
   wait: "bg-border",
-  live: "bg-destructive",
+  live: "bg-[hsl(var(--tier-info))]",
   paused: "bg-warning",
+  tied: "bg-warning",
   won: "bg-primary",
   unsold: "bg-warning",
   pulled: "bg-muted-foreground/60",
@@ -48,12 +49,12 @@ export function ControlStatusBar({ label, value, meta, actions, lots, done, pres
             <i
               key={l.lotNo}
               className={cn("h-1.5 flex-1 rounded-full", SEG[l.key])}
-              title={`Lô ${l.lotNo} · ${LOT_VIEW_LABELS[l.key]}`}
+              title={`Tài sản ${l.lotNo} · ${LOT_VIEW_LABELS[l.key]}`}
             />
           ))}
         </div>
         <span className="tabular-nums">
-          <b className="text-foreground">{done}</b>/{lots.length} lô đã đóng
+          <b className="text-foreground">{done}</b>/{lots.length} tài sản đã đóng
         </span>
         <span className="h-3.5 w-px bg-border" />
         <span className="tabular-nums">

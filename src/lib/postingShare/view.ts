@@ -64,7 +64,7 @@ export function registrationLeft(session: SharedPostingSession, now: Date = new 
 
 /** "Phiên PDG000012 · Lô 1" — dòng phụ dưới tên tổ chức đấu giá. */
 export function sessionSubline(session: SharedPostingSession): string {
-  return [session.code ? `Phiên ${session.code}` : session.title, session.lotNo ? `Lô ${session.lotNo}` : null]
+  return [session.code ? `Phiên ${session.code}` : session.title, session.lotNo ? `Tài sản ${session.lotNo}` : null]
     .filter(Boolean)
     .join(" · ");
 }

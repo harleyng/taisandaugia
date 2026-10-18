@@ -1,115 +1,160 @@
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { KycImageThumb } from "@/components/ekyc/KycImageThumb";
+import { CheckRow, InfoGrid } from "@/components/buyer-contracts/ui";
 import { formatVnd } from "@/lib/advertising/slug";
 import type { RegistrationStepIndex } from "@/lib/biddingContracts/registrationSteps";
-import { BUYER_KIND_LABELS } from "@/types/bidding-contract";
-import { IdentitySummary } from "./IdentitySummary";
+import type { AuctionSessionItem } from "@/types/auction-session";
+import { BUYER_KIND_LABELS, ID_TYPE_LABELS } from "@/types/bidding-contract";
+import { StepCard } from "./StepCard";
 import type { StepProps } from "./types";
 
 interface Props extends StepProps {
   orgName: string;
   fee: number;
+  lots: AuctionSessionItem[];
+  /** Danh tính dùng bản VNeID đã lưu (ghi "· VNeID" cạnh số giấy tờ). */
+  vneid: boolean;
   onEdit: (step: RegistrationStepIndex) => void;
 }
 
-function Section({ title, step, onEdit, disabled, children }: {
+const mask = (n: string) => (n ? `••• ••• ${n.slice(-4)}` : "—");
+
+function Summary({ title, step, onEdit, disabled, rows, first }: {
   title: string;
   step: RegistrationStepIndex;
   onEdit: (s: RegistrationStepIndex) => void;
   disabled: boolean;
-  children: React.ReactNode;
+  rows: { label: string; value: React.ReactNode; full?: boolean }[];
+  first?: boolean;
 }) {
   return (
-    <section className="space-y-3 rounded-xl border border-border p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={() => onEdit(step)} disabled={disabled}>
+    <div className={first ? "py-3.5" : "border-t border-border py-3.5"}>
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <h3 className="text-[15px] font-semibold text-foreground">{title}</h3>
+        <button type="button" className="text-[13px] font-medium text-primary disabled:opacity-50" onClick={() => onEdit(step)} disabled={disabled}>
           Sửa
-        </Button>
+        </button>
       </div>
-      {children}
-    </section>
+      <InfoGrid rows={rows} />
+    </div>
   );
 }
 
-const Row = ({ label, value }: { label: string; value: string }) => (
-  <div className="grid gap-x-4 text-sm sm:grid-cols-[10rem_1fr]">
-    <span className="text-muted-foreground">{label}</span>
-    <span className="font-medium text-foreground">{value}</span>
-  </div>
-);
-
-/** Bước 4 — xem lại toàn bộ + đồng ý chia sẻ thông tin ⇒ giữ chỗ ⇒ VNPay. */
-export function RegistrationReview({ values, patch, errors, busy, orgName, fee, onEdit }: Props) {
+/** Bước 4 — xem lại, chọn tài sản đăng ký, đồng ý chia sẻ thông tin ⇒ giữ suất ⇒ thanh toán. */
+export function RegistrationReview({ values, patch, errors, busy, orgName, fee, lots, vneid, onEdit }: Props) {
   const org = values.buyer_kind === "organization";
   const o = values.organization;
+  const p = values.principal;
   const x = values.proxy;
+  const picked = new Set(values.lot_ids);
+  const depositTotal = lots.filter((l) => picked.has(l.id)).reduce((a, l) => a + (l.deposit_amount ?? 0), 0);
+  const contact = `${values.phone} · ${values.email}`;
+
+  const toggle = (id: string) =>
+    patch({ lot_ids: picked.has(id) ? values.lot_ids.filter((v) => v !== id) : [...values.lot_ids, id] });
 
   return (
-    <div className="space-y-4">
-      <Section title="Người đăng ký" step={0} onEdit={onEdit} disabled={busy}>
-        <Row label="Đăng ký với tư cách" value={BUYER_KIND_LABELS[values.buyer_kind]} />
-        {org && (
-          <>
-            <Row label="Tên tổ chức" value={o.name} />
-            <Row label="Mã số thuế" value={o.tax_code} />
-            <Row label="Địa chỉ trụ sở" value={o.address} />
-            {o.reg_doc_path && <KycImageThumb path={o.reg_doc_path} alt="Giấy chứng nhận ĐKKD" className="h-24 w-36" />}
-          </>
-        )}
-        <Row label="Số điện thoại" value={values.phone} />
-        <Row label="Email" value={values.email} />
-      </Section>
+    <>
+      <StepCard title="Kiểm tra thông tin" className="gap-0">
+        <Summary
+          first
+          title="Người đăng ký"
+          step={0}
+          onEdit={onEdit}
+          disabled={busy}
+          rows={
+            org
+              ? [
+                  { label: "Tổ chức", value: o.name || "—" },
+                  { label: "Mã số thuế", value: o.tax_code || "—" },
+                  { label: "Liên hệ", value: contact },
+                ]
+              : [
+                  { label: "Loại", value: BUYER_KIND_LABELS[values.buyer_kind] },
+                  { label: "Liên hệ", value: contact },
+                ]
+          }
+        />
+        <Summary
+          title={org ? "Người đại diện theo pháp luật" : "Danh tính"}
+          step={1}
+          onEdit={onEdit}
+          disabled={busy}
+          rows={[
+            { label: "Họ tên", value: p.full_name || "—" },
+            {
+              label: ID_TYPE_LABELS[p.id_type],
+              value: (
+                <>
+                  <span className="font-mono">{mask(p.id_number)}</span>
+                  {vneid ? " · VNeID" : ""}
+                </>
+              ),
+            },
+            { label: "Địa chỉ", value: p.address || "—" },
+          ]}
+        />
+        <Summary
+          title="Người dự phiên"
+          step={2}
+          onEdit={onEdit}
+          disabled={busy}
+          rows={
+            values.attendee === "self"
+              ? [{ label: "Người dự phiên", value: `Chính ${org ? "người đại diện" : "người đăng ký"}` }]
+              : [
+                  { label: "Người được uỷ quyền", value: `${x.full_name || "—"} · ${ID_TYPE_LABELS[x.id_type]} ${mask(x.id_number)}` },
+                  { label: "Giấy uỷ quyền", value: x.poa_doc_path ? "Đã tải lên" : "Chưa tải lên" },
+                ]
+          }
+        />
+      </StepCard>
 
-      <Section title={org ? "Người đại diện theo pháp luật" : "Danh tính"} step={1} onEdit={onEdit} disabled={busy}>
-        <IdentitySummary value={values.principal} />
-      </Section>
+      {lots.length > 0 && (
+        <StepCard
+          title="Tài sản đăng ký"
+          sub="Chọn tài sản bạn muốn trả giá. Tiền đặt trước tính theo từng tài sản, nộp sau khi mua hồ sơ."
+        >
+          <div className="flex flex-col gap-2">
+            {lots.map((l) => (
+              <CheckRow
+                key={l.id}
+                checked={picked.has(l.id)}
+                disabled={busy}
+                onToggle={() => toggle(l.id)}
+                aside={
+                  <>
+                    <span className="block text-xs text-muted-foreground">Đặt trước</span>
+                    <b className="block text-foreground">{formatVnd(l.deposit_amount ?? 0)}</b>
+                  </>
+                }
+              >
+                <b className="block text-sm font-semibold">
+                  Tài sản {l.lot_no} · {l.title}
+                </b>
+                {l.starting_price != null && (
+                  <span className="text-xs text-muted-foreground">Khởi điểm {formatVnd(l.starting_price)}</span>
+                )}
+              </CheckRow>
+            ))}
+          </div>
+          {errors.root.lot_ids && <p className="text-sm font-medium text-destructive">{errors.root.lot_ids}</p>}
+          <div className="flex items-baseline justify-between gap-3 border-t border-border pt-3">
+            <span className="text-xs text-muted-foreground">Tổng tiền đặt trước · nộp sau</span>
+            <b className="text-[17px] text-foreground">{formatVnd(depositTotal)}</b>
+          </div>
+        </StepCard>
+      )}
 
-      <Section title="Người dự phiên" step={2} onEdit={onEdit} disabled={busy}>
-        {values.attendee === "self" ? (
-          <p className="text-sm text-foreground">{org ? "Người đại diện theo pháp luật tự dự phiên." : "Tôi tự dự phiên."}</p>
-        ) : (
-          <>
-            <IdentitySummary value={x} extra={[["Số điện thoại", x.phone]]} />
-            {x.poa_doc_path && (
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Giấy uỷ quyền</p>
-                <KycImageThumb path={x.poa_doc_path} alt="Giấy uỷ quyền" className="h-24 w-36" />
-              </div>
-            )}
-          </>
-        )}
-      </Section>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted px-4 py-3 text-sm">
-        <span className="text-muted-foreground">Tiền hồ sơ</span>
-        <span className="text-lg font-bold text-primary">{formatVnd(fee)}</span>
-      </div>
-
-      <div className="space-y-1.5">
-        <div className="flex items-start gap-2">
-          <Checkbox
-            id="reg-consent"
-            checked={values.consent}
-            onCheckedChange={(v) => patch({ consent: v === true })}
-            disabled={busy}
-            className="mt-0.5"
-            aria-invalid={!!errors.root.consent}
-          />
-          <Label htmlFor="reg-consent" className="text-sm font-normal leading-snug">
-            Tôi đồng ý chia sẻ các thông tin và ảnh giấy tờ trên với {orgName} để lập và duyệt hồ sơ tham gia đấu giá, và
-            cam kết thông tin là chính xác. <span className="text-destructive">*</span>
-          </Label>
-        </div>
+      <StepCard>
+        <CheckRow checked={values.consent} disabled={busy} onToggle={() => patch({ consent: !values.consent })}>
+          Tôi đồng ý chia sẻ thông tin và ảnh giấy tờ trên với <b>{orgName}</b> để duyệt hồ sơ, cam kết thông tin là chính
+          xác và đã đọc Quy chế cuộc đấu giá. <span className="text-destructive">*</span>
+        </CheckRow>
         {errors.root.consent && <p className="text-sm font-medium text-destructive">{errors.root.consent}</p>}
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        Sau khi xác nhận, suất đăng ký được giữ 15 phút để bạn hoàn tất thanh toán. Tổ chức đấu giá sẽ duyệt hồ sơ sau khi
-        bạn thanh toán; hồ sơ bị từ chối được hoàn tiền hồ sơ.
-      </p>
-    </div>
+        <div className="flex items-baseline justify-between gap-3 border-t border-border pt-3">
+          <span className="text-foreground">Phí hồ sơ</span>
+          <b className="text-[22px] text-primary">{formatVnd(fee)}</b>
+        </div>
+      </StepCard>
+    </>
   );
 }

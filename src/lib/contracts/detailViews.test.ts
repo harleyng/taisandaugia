@@ -153,7 +153,7 @@ describe("mua bán", () => {
     const s = saleSummary(sale());
     expect(s.bigValue).toBe("12.4 tỷ");
     expect(s.progress).toBe(30);
-    expect(s.rows.find((r) => r.label === "Phiên")?.value).toBe("PDG000112 · Lô 1");
+    expect(s.rows.find((r) => r.label === "Phiên")?.value).toBe("PDG000112 · Tài sản 1");
     expect(s.rows.find((r) => r.label === "Tổ chức")?.value).toBe("ĐGHD Sài Gòn Phát");
   });
 });

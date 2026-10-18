@@ -266,7 +266,7 @@ export const SALE_CANCEL_KIND_LABELS: Record<SaleCancelKind, string> = {
 /** Hậu quả tiền đặt trước của từng loại huỷ — hiện ngay trong hộp thoại huỷ. */
 export const SALE_CANCEL_CONSEQUENCES: Record<SaleCancelKind, string> = {
   buyer_refused:
-    "Tiền đặt trước của người trúng đấu giá bị MẤT và lô được ghi nhận là không thanh toán.",
+    "Tiền đặt trước của người trúng đấu giá bị MẤT và tài sản được ghi nhận là không thanh toán.",
   seller_refused: "Tiền đặt trước của người trúng đấu giá chuyển sang chờ hoàn trả.",
   mutual: "Tiền đặt trước của người trúng đấu giá chuyển sang chờ hoàn trả.",
 };

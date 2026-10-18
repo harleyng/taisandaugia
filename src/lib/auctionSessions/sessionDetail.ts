@@ -142,12 +142,13 @@ export function scheduleTimeline(s: ScheduleSession, now: Date = new Date()): Ti
 
 // ---- Kết quả lô ----
 
-export type LotResultKey = "wait" | "live" | "paused" | "won" | "unsold" | "closed" | "pulled";
+export type LotResultKey = "wait" | "live" | "paused" | "tied" | "won" | "unsold" | "closed" | "pulled";
 
 export const LOT_RESULT_DISPLAY: Record<LotResultKey, string> = {
   wait: "Chờ đấu",
   live: "Đang trả giá",
   paused: "Tạm dừng",
+  tied: "Chờ vòng phụ",
   won: "Đã trúng",
   unsold: "Không thành",
   closed: "Đã đóng",
@@ -166,6 +167,7 @@ export function lotResultOf(
   if (!state || state.status === "pending") return { key: "wait", amount: null };
   if (state.status === "open") return { key: "live", amount: null };
   if (state.status === "paused") return { key: "paused", amount: null };
+  if (state.status === "tied") return { key: "tied", amount: null };
   if (state.status === "withdrawn") return { key: "pulled", amount: null };
   if (state.result === "sold") return { key: "won", amount: state.winning_amount };
   if (state.result === "unsold") return { key: "unsold", amount: null };

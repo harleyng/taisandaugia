@@ -120,7 +120,7 @@ describe("lotActionsFor", () => {
     expect(a.open.disabledReason).toMatch(/không có quyền/i);
   });
 
-  it("lô chưa mở: mở được và rút được, không dừng/tiếp được", () => {
+  it("tài sản chưa mở: mở được và rút được, không dừng/tiếp được", () => {
     const a = lotActionsFor(null, NOW, { canOperate: true, window: LIVE });
     expect(a.open.enabled).toBe(true);
     expect(a.withdraw.enabled).toBe(true);
@@ -128,7 +128,7 @@ describe("lotActionsFor", () => {
     expect(a.resume.enabled).toBe(false);
   });
 
-  it("lô đang mở: dừng được và rút được, không mở lại được", () => {
+  it("tài sản đang mở: dừng được và rút được, không mở lại được", () => {
     const a = lotActionsFor(lotState(), NOW, { canOperate: true, window: LIVE });
     expect(a.pause.enabled).toBe(true);
     expect(a.withdraw.enabled).toBe(true);
@@ -136,7 +136,7 @@ describe("lotActionsFor", () => {
     expect(a.resume.enabled).toBe(false);
   });
 
-  it("lô đã gia hạn vẫn là đang mở", () => {
+  it("tài sản đã gia hạn vẫn là đang mở", () => {
     const a = lotActionsFor(lotState({ extension_count: 2 }), NOW, { canOperate: true, window: LIVE });
     expect(a.pause.enabled).toBe(true);
   });
@@ -149,7 +149,7 @@ describe("lotActionsFor", () => {
     expect(a.withdraw.enabled).toBe(false);
   });
 
-  it("lô tạm dừng: tiếp tục được và rút được, KHÔNG dừng tiếp được", () => {
+  it("tài sản tạm dừng: tiếp tục được và rút được, KHÔNG dừng tiếp được", () => {
     const a = lotActionsFor(lotState({ status: "paused", paused_at: NOW.toISOString() } as Partial<LotState>), NOW, {
       canOperate: true,
       window: LIVE,
@@ -159,7 +159,7 @@ describe("lotActionsFor", () => {
     expect(a.pause.enabled).toBe(false);
   });
 
-  it("lô đã đóng / đã rút thì không còn thao tác nào", () => {
+  it("tài sản đã đóng / đã rút thì không còn thao tác nào", () => {
     for (const status of ["closed", "withdrawn"] as const) {
       const a = lotActionsFor(lotState({ status }), NOW, { canOperate: true, window: LIVE });
       expect([a.open.enabled, a.pause.enabled, a.resume.enabled, a.withdraw.enabled]).toEqual([
@@ -178,21 +178,44 @@ describe("lotActionsFor", () => {
     expect(a.withdraw.enabled).toBe(false);
   });
 
-  it("phiên đã hết giờ vẫn TẠM DỪNG được lô còn đang mở", () => {
+  it("phiên đã hết giờ vẫn TẠM DỪNG được tài sản còn đang mở", () => {
     const stillOpen = lotState({ ends_at: "2026-10-01T11:00:00Z" });
     const a = lotActionsFor(stillOpen, NOW, { canOperate: true, window: { reason: "ended" } });
     expect(a.pause.enabled).toBe(true);
     expect(a.open.enabled).toBe(false);
   });
 
-  it("phiên đã chốt kết quả thì không mở lô mới", () => {
+  it("phiên đã chốt kết quả thì không mở tài sản mới", () => {
     const a = lotActionsFor(null, NOW, { canOperate: true, window: { reason: "finalized" } });
     expect(a.open.enabled).toBe(false);
     expect(a.open.disabledReason).toMatch(/chốt kết quả/i);
   });
+
+  const tied = () => lotState({ status: "tied", tie_amount: 1, tied_bidder_nos: [3, 8] } as Partial<LotState>);
+
+  it("bằng giá: mở vòng phụ + rút được, không mở/dừng/tiếp", () => {
+    const a = lotActionsFor(tied(), NOW, { canOperate: true, window: LIVE });
+    expect(a.openTieRound.enabled).toBe(true);
+    expect(a.withdraw.enabled).toBe(true);
+    expect([a.open.enabled, a.pause.enabled, a.resume.enabled]).toEqual([false, false, false]);
+  });
+
+  it("bằng giá SAU giờ kết thúc phiên vẫn mở vòng phụ / rút được; đã chốt thì không", () => {
+    const ended = lotActionsFor(tied(), NOW, { canOperate: true, window: { reason: "ended" } });
+    expect(ended.openTieRound.enabled).toBe(true);
+    expect(ended.withdraw.enabled).toBe(true);
+    const fin = lotActionsFor(tied(), NOW, { canOperate: true, window: { reason: "finalized" } });
+    expect(fin.openTieRound.enabled).toBe(false);
+    expect(fin.withdraw.enabled).toBe(false);
+  });
+
+  it("mở vòng phụ chỉ bật khi bằng giá", () => {
+    expect(lotActionsFor(lotState(), NOW, { canOperate: true, window: LIVE }).openTieRound.enabled).toBe(false);
+    expect(lotActionsFor(tied(), NOW, { canOperate: false, window: LIVE }).openTieRound.enabled).toBe(false);
+  });
 });
 
-describe("thời lượng mở lô", () => {
+describe("thời lượng mở tài sản", () => {
   it("mặc định nằm trong khoảng hợp lệ", () => {
     expect(isValidDurationMinutes(DEFAULT_DURATION_MINUTES)).toBe(true);
   });

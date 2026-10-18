@@ -15,24 +15,46 @@ const ev = (kind: LotEventKind, payload: Record<string, unknown> = {}, lotId: st
     at: "2026-10-01T10:00:00Z",
   }) as unknown as LotEvent;
 
+describe("describeLotEvent — đặt giá xuống / bỏ phiếu kín", () => {
+  it("chấp nhận giá có số tiền + số báo danh", () => {
+    const t = describeLotEvent(ev("accept", { amount: 980_000_000, bidder_no: 7 }), LOTS);
+    expect(t.label).toBe("Chấp nhận giá");
+    expect(t.detail).toMatch(/980,000,000/);
+  });
+
+  it("nộp phiếu kín KHÔNG lộ số tiền dù payload có", () => {
+    const t = describeLotEvent(ev("sealed_bid", { bidder_no: 7, round_no: 1, amount: 123_000_000 }), LOTS);
+    expect(t.detail).not.toMatch(/123/);
+    expect(t.detail).toMatch(/vòng 1/);
+  });
+
+  it("bằng giá + vòng phụ nêu giá và các số báo danh", () => {
+    const tie = describeLotEvent(ev("tie", { round_no: 1, tie_amount: 1_100_000_000, bidder_nos: [3, 8] }), LOTS);
+    expect(tie.detail).toMatch(/1,100,000,000/);
+    const round = describeLotEvent(ev("tie_round", { round_no: 2, duration_seconds: 600, bidder_nos: [3, 8] }), LOTS);
+    expect(round.detail).toMatch(/vòng phụ 1/);
+    expect(round.detail).toMatch(/10 phút/);
+  });
+});
+
 describe("describeLotEvent", () => {
-  it("gắn số lô, và bỏ tiền tố với sự kiện cấp phiên", () => {
-    expect(describeLotEvent(ev("pause", { reason: "x" }), LOTS).lotLabel).toBe("Lô 2");
+  it("gắn số tài sản, và bỏ tiền tố với sự kiện cấp phiên", () => {
+    expect(describeLotEvent(ev("pause", { reason: "x" }), LOTS).lotLabel).toBe("Tài sản 2");
     expect(describeLotEvent(ev("finalize", {}, null), LOTS).lotLabel).toBeNull();
   });
 
-  it("lô không có trong map thì không bịa số", () => {
+  it("tài sản không có trong map thì không bịa số", () => {
     expect(describeLotEvent(ev("pause", {}, "lot-9"), LOTS).lotLabel).toBeNull();
   });
 
-  it("mở lô có thời lượng nói rõ mở bao lâu", () => {
+  it("mở tài sản có thời lượng nói rõ mở bao lâu", () => {
     const t = describeLotEvent(ev("open", { duration_seconds: 900, ends_at: "2026-10-01T10:15:00Z" }), LOTS);
-    expect(t.label).toBe("Mở lô");
+    expect(t.label).toBe("Mở tài sản");
     expect(t.detail).toContain("Mở 15 phút");
     expect(t.detail).toContain("đóng lúc");
   });
 
-  it("mở lô không chọn thời lượng thì nói 'đến hết phiên'", () => {
+  it("mở tài sản không chọn thời lượng thì nói 'đến hết phiên'", () => {
     expect(describeLotEvent(ev("open", { ends_at: "2026-12-31T00:00:00Z" }), LOTS).detail).toContain(
       "đến hết phiên",
     );
@@ -76,25 +98,25 @@ describe("describeLotEvent", () => {
     expect(t.detail).toContain("không được hoàn trả");
   });
 
-  it("đóng lô phân biệt đấu giá thành và không thành", () => {
+  it("đóng tài sản phân biệt đấu giá thành và không thành", () => {
     expect(
       describeLotEvent(ev("close", { result: "sold", winning_amount: 6_400_000_000, bidder_no: 1 }), LOTS).detail,
     ).toContain("Đấu giá thành");
     expect(describeLotEvent(ev("close", { result: "unsold" }), LOTS).detail).toContain("Không thành");
   });
 
-  it("rút lô do huỷ phiên được dịch thành câu chữ", () => {
+  it("rút tài sản do huỷ phiên được dịch thành câu chữ", () => {
     expect(describeLotEvent(ev("withdraw_lot", { reason: "session_cancelled" }), LOTS).detail).toContain(
       "Phiên bị huỷ",
     );
   });
 
-  it("chốt phiên tóm tắt số lô và số hồ sơ", () => {
+  it("chốt phiên tóm tắt số tài sản và số hồ sơ", () => {
     const t = describeLotEvent(
       ev("finalize", { sold: 1, unsold: 1, withdrawn: 0, applied: 1, pending_refund: 1 }, null),
       LOTS,
     );
-    expect(t.detail).toContain("1 lô đấu giá thành");
+    expect(t.detail).toContain("1 tài sản đấu giá thành");
     expect(t.detail).toContain("1 hồ sơ chờ hoàn trả");
   });
 
@@ -111,7 +133,7 @@ describe("describeLotEvent", () => {
 
   it("payload rỗng hay lạ vẫn trả nhãn, không ném lỗi", () => {
     expect(describeLotEvent(ev("bid", {}), LOTS).detail).toBe("");
-    expect(describeLotEvent(ev("open", { duration_seconds: "bậy" }), LOTS).label).toBe("Mở lô");
+    expect(describeLotEvent(ev("open", { duration_seconds: "bậy" }), LOTS).label).toBe("Mở tài sản");
     const weird = { ...ev("bid"), kind: "khong_co_that" } as unknown as LotEvent;
     expect(describeLotEvent(weird, LOTS).label).toBe("khong_co_that");
   });

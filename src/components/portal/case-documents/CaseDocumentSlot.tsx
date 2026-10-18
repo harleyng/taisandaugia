@@ -52,6 +52,14 @@ export function CaseDocumentSlot({ session, docType, doc, readOnly }: Props) {
   const clauses = doc?.case_document_clauses ?? [];
   const drafts = clauses.filter((c) => c.status === "draft").length;
   const isClarification = docType === "clarification";
+  // Tài liệu khác không có tên loại riêng ⇒ lấy tên tài liệu làm tiêu đề dòng.
+  const isOther = docType === "other";
+  const heading = isOther && doc ? doc.title : DOC_TYPE_LABELS[docType];
+  const subtitle = !doc
+    ? DOC_TYPE_HINTS[docType]
+    : isOther
+      ? (doc.original_filename ?? "")
+      : `${doc.title}${doc.original_filename ? ` · ${doc.original_filename}` : ""}`;
   const confirmed = doc?.review_status === "confirmed";
   const running = extraction.state.phase === "running";
 
@@ -107,7 +115,7 @@ export function CaseDocumentSlot({ session, docType, doc, readOnly }: Props) {
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
-            <p className="font-medium text-foreground">{DOC_TYPE_LABELS[docType]}</p>
+            <p className="font-medium text-foreground">{heading}</p>
             {statusBadge}
             {doc?.extraction_engine && (
               <Badge variant="outline" className="gap-1 text-[11px]" title="Điều khoản dựng từ dữ liệu phiên, không đọc nội dung tệp">
@@ -116,9 +124,7 @@ export function CaseDocumentSlot({ session, docType, doc, readOnly }: Props) {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            {doc ? `${doc.title}${doc.original_filename ? ` · ${doc.original_filename}` : ""}` : DOC_TYPE_HINTS[docType]}
-          </p>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -197,7 +203,7 @@ export function CaseDocumentSlot({ session, docType, doc, readOnly }: Props) {
         <AlertDialog open={dialog === "delete"} onOpenChange={(v) => !v && setDialog(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Xoá {DOC_TYPE_LABELS[docType].toLowerCase()}?</AlertDialogTitle>
+              <AlertDialogTitle>Xoá {isOther ? `“${doc.title}”` : DOC_TYPE_LABELS[docType].toLowerCase()}?</AlertDialogTitle>
               <AlertDialogDescription>
                 Xoá tệp và {clauses.length} điều khoản. Các câu trả lời đã gửi trích dẫn tài liệu này sẽ hiện “tài liệu đã
                 thay đổi” với người mua.

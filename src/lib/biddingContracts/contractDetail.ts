@@ -45,6 +45,13 @@ export const DEPOSIT_PILL: Record<DepositStatus, Pill> = {
   forfeited: { label: "Không hoàn trả", tone: "live" },
 };
 
+/** Nhãn tiền đặt trước phía tổ chức: còn 'pending' mà người mua đã báo nộp ⇒ "Chờ đối soát" (20261018160000). */
+export function depositPillOf(c: { deposit_status: DepositStatus; deposit_reported_at?: string | null }): Pill {
+  return c.deposit_status === "pending" && c.deposit_reported_at
+    ? { label: "Chờ đối soát", tone: "info" }
+    : DEPOSIT_PILL[c.deposit_status];
+}
+
 /** Hồ sơ bị từ chối: status 'refunded' (hoàn tiền hồ sơ) đi cùng review 'rejected'. */
 export const isRejected = (c: Pick<ContractWithSession, "status" | "review_status">) =>
   c.status === "refunded" || c.review_status === "rejected";

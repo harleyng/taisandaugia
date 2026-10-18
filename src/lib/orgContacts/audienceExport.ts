@@ -17,7 +17,7 @@ export function audienceSheetRows(
   groupName: (id: string) => string | undefined,
 ): string[][] {
   const lotById = new Map(lots.map((l) => [l.id, l]));
-  const header = ["Mã khách", "Họ tên", "Công ty", "Điện thoại", "Zalo", "Email", "Lô khớp", "Nhóm"];
+  const header = ["Mã khách", "Họ tên", "Công ty", "Điện thoại", "Zalo", "Email", "Tài sản khớp", "Nhóm"];
   const body = rows
     .filter((r) => r.eligible)
     .map((r) => [
@@ -30,7 +30,7 @@ export function audienceSheetRows(
       r.matched_item_ids
         .map((id) => lotById.get(id))
         .filter((l): l is LotRef => !!l)
-        .map((l) => `Lô ${l.lot_no}: ${l.title}`)
+        .map((l) => `Tài sản ${l.lot_no}: ${l.title}`)
         .join("; "),
       r.group_ids.map(groupName).filter(Boolean).join(", "),
     ]);

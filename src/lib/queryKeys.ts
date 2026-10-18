@@ -188,6 +188,12 @@ export const qk = {
     publicById: (id?: string | null) => ["public-auction-sessions", "detail", id] as const,
     publicByAuctionOrg: (auctionOrgId?: string | null) =>
       ["public-auction-sessions", "org", auctionOrgId] as const,
+    /** Tài liệu phiên công khai — dưới prefix caseQa.bySession để portal sửa tài liệu là làm mới luôn. */
+    publicDocuments: (sessionId?: string | null) => ["case-qa", sessionId, "public-documents"] as const,
+    orgStats: (auctionOrgId?: string | null) => ["public-auction-sessions", "org-stats", auctionOrgId] as const,
+    seatCounts: (ids: string[]) => ["bidding-contracts", "seat-counts", ids.join(",")] as const,
+    openWatch: (userId?: string | null, sessionId?: string | null) =>
+      ["session-open-watch", userId, sessionId] as const,
   },
 
   // ─── Hỏi đáp tài liệu phiên + hộp thư tổ chức ────────────────────────────
@@ -219,6 +225,13 @@ export const qk = {
   biddingContracts: {
     all: ["bidding-contracts"] as const,
     mine: (userId?: string | null) => ["bidding-contracts", "mine", userId] as const,
+    /** "Hồ sơ của tôi" trên sàn — hồ sơ kèm phiên, tổ chức, lô và lô đã chọn. */
+    mineFull: (userId?: string | null) => ["bidding-contracts", "mine-full", userId] as const,
+    mineByCode: (userId?: string | null, code?: string | null) => ["bidding-contracts", "mine-code", userId, code] as const,
+    /** my_contract_deposit_info — tài khoản nhận + số tiền đặt trước phải nộp. */
+    depositInfo: (contractId?: string | null) => ["bidding-contracts", "deposit-info", contractId] as const,
+    /** auction_contract_lots của một hồ sơ. */
+    lotIds: (contractId?: string | null) => ["bidding-contracts", "lot-ids", contractId] as const,
     mineBySession: (userId?: string | null, sessionId?: string | null) =>
       ["bidding-contracts", "mine", userId, sessionId] as const,
     summary: (sessionId?: string | null) => ["bidding-contracts", "summary", sessionId] as const,
@@ -259,6 +272,9 @@ export const qk = {
     lotBids: (sessionId?: string | null, lotId?: string | null) =>
       ["bidding", sessionId, "lot-bids", lotId] as const,
     lotEvents: (sessionId?: string | null) => ["bidding", sessionId, "events"] as const,
+    /** Phiếu kín của một lô (phiếu mình + vòng đã công bố — RLS lọc). */
+    sealedBids: (sessionId?: string | null, lotId?: string | null) =>
+      ["bidding", sessionId, "sealed-bids", lotId] as const,
     /** Phiên đã có lô rời trạng thái chờ chưa — quyết định khoá form quy tắc. */
     started: (sessionId?: string | null) => ["bidding", sessionId, "started"] as const,
     /** Kết quả từng lô cho TRANG CÔNG KHAI — query thường, không mở kênh realtime. */
@@ -583,6 +599,8 @@ export const qk = {
     /** "public" đứng sau nên `all` phủ được — xem LUẬT PREFIX ở đầu file. */
     public: ["craft-villages", "public"] as const,
     mapState: (postingId?: string | null) => ["craft-villages", "map-state", postingId] as const,
+    /** Trang "Hồ sơ làng nghề" của một Trạm. */
+    profile: (workspaceId?: string | null) => ["craft-villages", "profile", workspaceId] as const,
   },
   // ─── Hồ sơ online (link công khai /hs/:code của hồ sơ số hoá) ─────────────
   postingShare: {
@@ -599,8 +617,6 @@ export const qk = {
   shareLinks: {
     all: ["share-links"] as const,
     workspace: (workspaceId?: string | null, campaignId?: string | null) =>
-    /** Trang "Hồ sơ làng nghề" của một Trạm. */
-    profile: (workspaceId?: string | null) => ["craft-villages", "profile", workspaceId] as const,
       ["share-links", "workspace", workspaceId, campaignId ?? null] as const,
     detail: (linkId?: string | null) => ["share-links", "detail", linkId] as const,
     series: (linkId?: string | null, from?: string | null, to?: string | null, device?: string | null) =>

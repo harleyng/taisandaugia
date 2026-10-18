@@ -1,5 +1,5 @@
 import { DotPill } from "@/components/portal/auction-sessions/list/SessionStatePill";
-import { DEPOSIT_PILL, REVIEW_PILL } from "@/lib/biddingContracts/contractDetail";
+import { depositPillOf, REVIEW_PILL } from "@/lib/biddingContracts/contractDetail";
 import { cn } from "@/lib/utils";
 import type { ContractWithSession } from "@/types/bidding-contract";
 
@@ -37,7 +37,7 @@ export function OrgContractsTable({ rows, onOpen }: Props) {
             const name = c.org_name ?? c.full_name;
             const s = c.auction_sessions;
             const rv = REVIEW_PILL[c.review_status];
-            const dp = DEPOSIT_PILL[c.deposit_status];
+            const dp = depositPillOf(c);
             return (
               <tr
                 key={c.id}

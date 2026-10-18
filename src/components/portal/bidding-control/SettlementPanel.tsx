@@ -38,6 +38,7 @@ const TONE: Record<LotViewKey, PillTone> = {
   wait: "muted",
   live: "live",
   paused: "warning",
+  tied: "warning",
   won: "ok",
   unsold: "warning",
   pulled: "muted",
@@ -76,7 +77,7 @@ export function SettlementPanel({ session, lots, stateByLot, contracts, canFinal
     target && confirmPayment.mutate({ lotId: target.id, paid }, { onSuccess: () => setTarget(null) });
 
   const kpis: [string, string, string?][] = [
-    ["Lô thành công", String(won.length), ` / ${lots.length}`],
+    ["Tài sản thành công", String(won.length), ` / ${lots.length}`],
     ["Tổng giá trúng", formatMoneyShort(total)],
     ["Chênh so với khởi điểm", `+${base ? Math.round((total / base - 1) * 100) : 0}%`],
     ["Hoàn trả đặt trước", String(refunded), " người"],
@@ -129,14 +130,14 @@ export function SettlementPanel({ session, lots, stateByLot, contracts, canFinal
                   ) : status === "paid" ? (
                     <DotPill tone="ok">Đã thanh toán</DotPill>
                   ) : status === "defaulted" ? (
-                    <DotPill tone="live">Không thanh toán</DotPill>
+                    <DotPill tone="bad">Không thanh toán</DotPill>
                   ) : canFinalize ? (
                     <Button
                       size="sm"
                       variant="outline"
                       className="h-8 rounded-lg px-[11px] text-[12.5px] font-semibold"
                       disabled={hasSale || (confirmPayment.isPending && target?.id === lot.id)}
-                      title={hasSale ? "Lô đã có hợp đồng mua bán — ghi nhận thanh toán trong hợp đồng" : undefined}
+                      title={hasSale ? "Tài sản đã có hợp đồng mua bán — ghi nhận thanh toán trong hợp đồng" : undefined}
                       onClick={() => setTarget(lot)}
                     >
                       Xác nhận thanh toán
@@ -175,7 +176,7 @@ export function SettlementPanel({ session, lots, stateByLot, contracts, canFinal
           <DialogHeader>
             <DialogTitle>Xác nhận thanh toán</DialogTitle>
             <DialogDescription>
-              Lô {target?.lot_no} · {target?.title}
+              Tài sản {target?.lot_no} · {target?.title}
               {winning != null && ` — giá trúng ${formatVnd(winning)}`}
             </DialogDescription>
           </DialogHeader>

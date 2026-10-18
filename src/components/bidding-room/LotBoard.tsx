@@ -1,73 +1,185 @@
-import { Card } from "@/components/ui/card";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { formatVnd } from "@/lib/advertising/slug";
+import { groupNumber } from "@/lib/advertising/slug";
+import { formatDateTime } from "@/lib/auctionSessions/datetime";
+import { formatBidderNo } from "@/lib/biddingContracts/paths";
 import { formatCountdown } from "@/lib/bidding/countdown";
-import { lotPhaseOf, remainingMs } from "@/lib/bidding/lotPhase";
+import { isLivePhase, clockText, displayPrice, hasLeader, pausedRemainingMs, remainingPercent, roomUrgency } from "@/lib/bidding/roomView";
+import { remainingMs, type LotPhase } from "@/lib/bidding/lotPhase";
 import type { LotState } from "@/types/auction-bidding";
 import type { AuctionSessionItem } from "@/types/auction-session";
-import { LotPhaseBadge } from "./LotPhaseBadge";
+import type { BiddingMethod } from "@/lib/bidding/methods";
+import { methodBoardPane } from "./BoardPricePanes";
 
-/** Danh sách lô của phiên — chọn lô để trả giá. */
+/**
+ * Bảng giá nền tối (design `.board`): giá cao nhất + người dẫn đầu bên trái,
+ * đồng hồ bên phải. Đồng hồ là giờ MÁY CHỦ; chưa đồng bộ xong thì hiện "—".
+ */
 
 interface Props {
-  lots: AuctionSessionItem[];
-  stateByLot: Map<string, LotState>;
+  lot: AuctionSessionItem;
+  state: LotState | null;
+  phase: LotPhase;
   now: Date;
   clockReady: boolean;
-  selectedLotId: string | null;
-  onSelect: (lot: AuctionSessionItem) => void;
   myBidderNo: number;
+  activeLotNo: number | null;
+  method: BiddingMethod;
+  /** Đặt giá xuống: giây giữa hai lần giảm. */
+  dropSeconds: number;
 }
 
-export function LotBoard({ lots, stateByLot, now, clockReady, selectedLotId, onSelect, myBidderNo }: Props) {
-  return (
-    <Card className="rounded-2xl p-4">
-      <h2 className="mb-3 text-sm font-bold text-foreground">Các lô trong phiên ({lots.length})</h2>
-      <div className="space-y-2">
-        {lots.map((lot) => {
-          const state = stateByLot.get(lot.id) ?? null;
-          const phase = lotPhaseOf(state, now);
-          const leading = state?.leading_bidder_no != null && state.leading_bidder_no === myBidderNo;
-          // Lô tạm dừng: ends_at chưa được cộng bù nên đếm ngược lúc này là sai.
-          const countdown = phase === "paused" || !clockReady ? null : formatCountdown(remainingMs(state, now));
-          const selected = lot.id === selectedLotId;
+const BIG = "my-1.5 mb-2 text-[clamp(28px,3.4vw,42px)] font-[750] leading-[1.15] tracking-[-.01em] tabular-nums";
+const LBL = "text-xs font-medium text-[hsl(var(--tier-std-card-muted))]";
+const SUB = "flex flex-wrap items-center gap-2 text-[12.5px] text-[hsl(var(--tier-std-card-muted))]";
 
-          return (
-            <button
-              key={lot.id}
-              type="button"
-              onClick={() => onSelect(lot)}
-              aria-current={selected}
-              className={cn(
-                "w-full rounded-xl border p-3 text-left transition-colors",
-                selected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/60",
-              )}
-            >
-              <div className="mb-1 flex items-start justify-between gap-2">
-                <p className="text-xs font-semibold text-muted-foreground">Lô {lot.lot_no}</p>
-                <LotPhaseBadge phase={phase} extensionCount={state?.extension_count ?? 0} />
-              </div>
-              <p className="mb-1.5 line-clamp-2 text-sm font-medium text-foreground">{lot.title}</p>
-              <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
-                <span className="text-sm font-bold text-primary">
-                  {formatVnd(state?.current_price ?? lot.starting_price)}
-                </span>
-                {countdown && <span className="text-xs text-muted-foreground">{countdown.text}</span>}
-              </div>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                <span className="text-xs text-muted-foreground">
-                  {state?.current_price == null ? "Giá khởi điểm" : `${state.bid_count} lượt trả giá`}
-                </span>
-                {leading && (
-                  <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
-                    Bạn đang dẫn đầu
-                  </span>
+export function LotBoard({ lot, state, phase, now, clockReady, myBidderNo, activeLotNo, method, dropSeconds }: Props) {
+  const pane = methodBoardPane({ method, lot, state, phase, now, clockReady, dropSeconds, myBidderNo });
+  const price = pane ? pane.price : displayPrice(lot, state);
+  const leader = hasLeader(state) ? state!.leading_bidder_no! : null;
+  const leaderIsMe = leader === myBidderNo;
+  const priceLabel =
+    pane?.label ??
+    (phase === "closed" && leader != null ? "Giá trúng" : state?.current_price == null ? "Giá khởi điểm" : "Giá cao nhất hiện tại");
+
+  // Nháy số khi giá đổi trên CÙNG một lô (không nháy khi chỉ đổi lô đang xem).
+  const prev = useRef<{ lotId: string; price: number | null } | null>(null);
+  const [flash, setFlash] = useState(0);
+  useEffect(() => {
+    const p = prev.current;
+    prev.current = { lotId: lot.id, price };
+    if (p && p.lotId === lot.id && p.price !== price) setFlash((n) => n + 1);
+  }, [lot.id, price]);
+
+  return (
+    <div className="mx-3 mb-3 mt-3.5 grid overflow-hidden rounded-xl bg-[hsl(var(--sidebar-background))] text-primary-foreground md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="px-[22px] py-5">
+        <div className={LBL}>{priceLabel}</div>
+        <div key={flash} className={cn(BIG, "origin-left", flash > 0 && "animate-room-flash")}>
+          {groupNumber(price)}
+          <span className="ml-1 text-[clamp(18px,1.8vw,22px)] font-medium text-[hsl(var(--tier-std-card-muted))]">₫</span>
+        </div>
+        <div className={SUB}>
+          {pane ? (
+            pane.sub
+          ) : leader != null ? (
+            <>
+              Dẫn đầu
+              <span
+                className={cn(
+                  "whitespace-nowrap rounded-md px-[7px] py-0.5 font-mono text-xs font-bold",
+                  leaderIsMe
+                    ? "bg-[hsl(var(--tier-gold))] text-[hsl(var(--tier-gold-fg))]"
+                    : "bg-[hsl(var(--sidebar-primary))] text-primary-foreground",
                 )}
-              </div>
-            </button>
-          );
-        })}
+              >
+                {formatBidderNo(leader)}
+                {leaderIsMe && " · Bạn"}
+              </span>
+              · {state?.bid_count ?? 0} lượt trả giá
+            </>
+          ) : (
+            "Chưa có lượt trả giá"
+          )}
+        </div>
       </div>
-    </Card>
+
+      <div className="border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-accent))] px-[22px] py-5 max-md:border-t md:border-l">
+        <TimeBox lot={lot} state={state} phase={phase} now={now} clockReady={clockReady} activeLotNo={activeLotNo} />
+      </div>
+    </div>
+  );
+}
+
+const BAR_FILL = {
+  normal: "bg-[hsl(var(--tier-mint))]",
+  soon: "bg-[hsl(var(--tier-gold))]",
+  urgent: "bg-destructive",
+};
+const BIG_TONE = { normal: "", soon: "text-[hsl(var(--tier-gold))]", urgent: "text-destructive" };
+
+function TimeBox({
+  lot,
+  state,
+  phase,
+  now,
+  clockReady,
+  activeLotNo,
+}: Omit<Props, "myBidderNo" | "method" | "dropSeconds"> & { activeLotNo: number | null }) {
+  if (isLivePhase(phase)) {
+    const ms = clockReady ? remainingMs(state, now) : null;
+    const cd = formatCountdown(ms);
+    const urgency = roomUrgency(ms);
+    const endsAt = state?.ends_at;
+    return (
+      <>
+        <div className={LBL}>Thời gian còn lại</div>
+        <div className={cn(BIG, BIG_TONE[urgency])}>{cd?.text ?? "—"}</div>
+        <div className="mb-2 h-1 overflow-hidden rounded bg-[hsl(var(--sidebar-border))]">
+          <i
+            className={cn("block h-full transition-[width] duration-1000 ease-linear", BAR_FILL[urgency])}
+            style={{ width: `${remainingPercent(state, ms)}%` }}
+          />
+        </div>
+        {endsAt && (
+          <div className={SUB}>
+            Đóng lúc {cd?.showAbsolute ? formatDateTime(endsAt) : clockText(endsAt)}
+            {state!.extension_count > 0 && ` · đã gia hạn ${state!.extension_count} lần`}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  if (phase === "paused") {
+    const ms = pausedRemainingMs(state);
+    return (
+      <>
+        <div className={LBL}>Thời gian còn lại</div>
+        <div className={BIG}>{formatCountdown(ms)?.text ?? "—"}</div>
+        <div className="mb-2 h-1 overflow-hidden rounded bg-[hsl(var(--sidebar-border))]">
+          <i className="block h-full bg-[hsl(var(--tier-gold))]" style={{ width: `${remainingPercent(state, ms)}%` }} />
+        </div>
+        <div className={SUB}>Đồng hồ dừng — giữ nguyên thời gian</div>
+      </>
+    );
+  }
+
+  if (phase === "tied") {
+    return (
+      <>
+        <div className={LBL}>Trạng thái</div>
+        <div className={BIG}>Chờ vòng phụ</div>
+        <div className={SUB}>Đấu giá viên mở vòng phụ cho những người bằng giá</div>
+      </>
+    );
+  }
+
+  if (phase === "pending") {
+    return (
+      <>
+        <div className={LBL}>Trạng thái</div>
+        <div className={BIG}>Chưa mở</div>
+        <div className={SUB}>
+          {activeLotNo != null && activeLotNo !== lot.lot_no
+            ? `Mở sau khi tài sản ${activeLotNo} đóng`
+            : "Đấu giá viên mở lần lượt từng tài sản"}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className={LBL}>Kết thúc</div>
+      <div className={BIG}>{phase === "withdrawn" ? "Đã rút" : "Đã đóng"}</div>
+      <div className={SUB}>
+        {phase === "withdrawn"
+          ? "Tài sản không còn đấu giá trong phiên"
+          : hasLeader(state)
+            ? `${state!.bid_count} lượt trả giá hợp lệ`
+            : "Không có lượt hợp lệ"}
+      </div>
+    </>
   );
 }

@@ -71,18 +71,18 @@ export function ApplicantCard({ contract: c }: { contract: ContractWithSession }
 }
 
 /**
- * Thẻ "Lô đăng ký" (design `lotH`). Hồ sơ mua theo PHIÊN nên người tham gia đăng ký
- * mọi lô; tiền đặt trước phải nộp = tổng tiền đặt trước các lô.
+ * Thẻ "Lô đăng ký" (design `lotH`): các lô người mua chọn khi mua hồ sơ (hồ sơ cũ
+ * không chọn = mọi lô); tiền đặt trước phải nộp = tổng tiền đặt trước các lô đó.
  */
 export function LotsCard({ items, required }: { items: AuctionSessionItem[]; required: number | null }) {
   const lots = [...items].sort((a, b) => (a.lot_no ?? 0) - (b.lot_no ?? 0));
   return (
-    <HsCard title="Lô đăng ký" aside={`${lots.length} lô`}>
+    <HsCard title="Tài sản đăng ký" aside={`${lots.length} tài sản`}>
       <div className="rounded-[10px] text-[13.5px] shadow-[inset_0_0_0_1px_hsl(var(--border))]">
         {lots.map((i) => (
           <div key={i.id} className="flex justify-between gap-3 border-t px-3.5 py-2.5 first:border-t-0">
             <span className="min-w-0 truncate">
-              <b className="font-semibold">Lô {i.lot_no}</b> · {i.title}
+              <b className="font-semibold">Tài sản {i.lot_no}</b> · {i.title}
             </span>
             <span className="shrink-0 tabular-nums">{i.deposit_amount != null ? formatVnd(i.deposit_amount) : "—"}</span>
           </div>

@@ -34,6 +34,12 @@ const lotState = (patch: Partial<LotState> = {}): LotState => ({
   leading_bidder_no: null,
   bid_count: 0,
   extension_count: 0,
+  price_anchor_at: null,
+  price_anchor_amount: null,
+  round_no: 1,
+  round_bid_count: 0,
+  tie_amount: null,
+  tied_bidder_nos: null,
   result: null,
   winner_contract_id: null,
   winning_amount: null,
@@ -72,7 +78,7 @@ describe("nextMinBid / maxBid", () => {
     expect(maxBid(lotState({ current_price: START }), lot, 10)).toBe(START + 10 * STEP);
   });
 
-  it("lô thiếu giá khởi điểm / bước giá ⇒ null", () => {
+  it("tài sản thiếu giá khởi điểm / bước giá ⇒ null", () => {
     expect(nextMinBid(lotState(), { starting_price: null, bid_step: STEP })).toBeNull();
     expect(nextMinBid(lotState(), { starting_price: START, bid_step: null })).toBeNull();
   });
@@ -87,7 +93,7 @@ describe("validateBid — các chốt trước khi xét số tiền", () => {
     expect(validateBid({ ...base, userId: null })).toBe("not_authenticated");
   });
 
-  it("không có lô ⇒ lot_not_found; lô thiếu cấu hình giá ⇒ lot_not_configured", () => {
+  it("không có tài sản ⇒ lot_not_found; tài sản thiếu cấu hình giá ⇒ lot_not_configured", () => {
     expect(validateBid({ ...base, lot: null })).toBe("lot_not_found");
     expect(validateBid({ ...base, lot: { starting_price: null, bid_step: STEP } })).toBe("lot_not_configured");
     expect(validateBid({ ...base, lot: { starting_price: START, bid_step: 0 } })).toBe("lot_not_configured");
@@ -99,11 +105,17 @@ describe("validateBid — các chốt trước khi xét số tiền", () => {
     expect(validateBid({ ...base, now: at("2026-10-10T08:59:00Z") })).toBe("session_not_live");
   });
 
+  it("phiên đặt giá xuống / bỏ phiếu kín ⇒ method_mismatch (place_bid chỉ cho trả giá lên)", () => {
+    expect(validateBid({ ...base, session: session({ bidding_method: "descending" }) })).toBe("method_mismatch");
+    expect(validateBid({ ...base, session: session({ bidding_method: "sealed" }) })).toBe("method_mismatch");
+    expect(validateBid({ ...base, session: session({ bidding_method: "ascending" }) })).toBeNull();
+  });
+
   it("đấu giá trực tuyến thuần cũng hợp lệ", () => {
     expect(validateBid({ ...base, session: session({ auction_format: "truc_tuyen" }) })).toBeNull();
   });
 
-  it("lô chưa mở / đã rút ⇒ lot_not_open; không có dòng trạng thái cũng vậy", () => {
+  it("tài sản chưa mở / đã rút ⇒ lot_not_open; không có dòng trạng thái cũng vậy", () => {
     expect(validateBid({ ...base, state: null })).toBe("lot_not_open");
     expect(validateBid({ ...base, state: lotState({ status: "pending" }) })).toBe("lot_not_open");
     expect(validateBid({ ...base, state: lotState({ status: "withdrawn" }) })).toBe("lot_not_open");
@@ -184,7 +196,7 @@ describe("quickSteps", () => {
     ]);
   });
 
-  it("lô chưa cấu hình giá ⇒ rỗng", () => {
+  it("tài sản chưa cấu hình giá ⇒ rỗng", () => {
     expect(quickSteps(lotState(), { starting_price: null, bid_step: null }, 10)).toEqual([]);
   });
 });

@@ -128,7 +128,7 @@ describe("các bên — hợp đồng phải nêu ĐỦ hai bên", () => {
   });
 });
 
-describe("bên bán là thực thể danh bạ (lô tin đăng)", () => {
+describe("bên bán là thực thể danh bạ (tài sản tin đăng)", () => {
   const registry = buildSaleDocDefinition({
     ...base,
     sellerIsRegistry: true,

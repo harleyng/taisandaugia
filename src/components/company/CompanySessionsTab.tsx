@@ -56,7 +56,7 @@ export function CompanySessionsTab({ auctionOrgId }: { auctionOrgId: string }) {
         </h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {rows.map((s) => (
-            <SessionCard key={s.id} session={s} hideOrg />
+            <SessionCard key={s.id} session={s} />
           ))}
         </div>
       </section>

@@ -39,13 +39,13 @@ describe("audienceSheetRows", () => {
     expect(aoa[1][0]).toBe("LH000001");
   });
 
-  it("ghi đúng các lô khách đã khớp và tên nhóm", () => {
+  it("ghi đúng các tài sản khách đã khớp và tên nhóm", () => {
     const aoa = audienceSheetRows(
       [row({ matched_item_ids: ["l1", "l3"], group_ids: ["g1", "g-xoa"] })],
       lots,
       (id) => (id === "g1" ? "VIP" : undefined),
     );
-    expect(aoa[1][6]).toBe("Lô 1: Nhà phố Q5; Lô 3: Ô tô");
+    expect(aoa[1][6]).toBe("Tài sản 1: Nhà phố Q5; Tài sản 3: Ô tô");
     expect(aoa[1][7]).toBe("VIP");
   });
 });

@@ -63,7 +63,7 @@ export function factLines(a: AssetFacts): FactLine[] {
       { label: "Hình thức", value: a.auction_format ? (AUCTION_FORMAT_TEXT[a.auction_format] ?? "") : "" },
       {
         label: "Mã phiên",
-        value: a.session_code ? `${a.session_code}${a.lot_no != null ? ` · lô ${a.lot_no}` : ""}` : "",
+        value: a.session_code ? `${a.session_code}${a.lot_no != null ? ` · tài sản ${a.lot_no}` : ""}` : "",
       },
     );
   }

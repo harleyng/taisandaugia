@@ -73,7 +73,7 @@ export function OwnerSaleContractsTable({ rows, emptyText }: { rows: SaleContrac
                 <td className="px-4 py-3">
                   <div className="max-w-[16rem] truncate">{asset.title ?? "—"}</div>
                   <div className="text-xs text-muted-foreground">
-                    {[asset.session_code ? `Phiên ${asset.session_code}` : null, asset.lot_no ? `Lô ${asset.lot_no}` : null]
+                    {[asset.session_code ? `Phiên ${asset.session_code}` : null, asset.lot_no ? `Tài sản ${asset.lot_no}` : null]
                       .filter(Boolean)
                       .join(" · ") || "—"}
                   </div>

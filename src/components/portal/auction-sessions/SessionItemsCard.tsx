@@ -23,6 +23,7 @@ import type { AuctionSessionItem, AuctionSessionWithItems } from "@/types/auctio
 import { AddSessionItemDialog } from "./AddSessionItemDialog";
 import { DetailNote, TabHeader } from "./DetailCard";
 import { EditSessionItemDialog } from "./EditSessionItemDialog";
+import { MissingFloorNotice } from "./MissingFloorNotice";
 import { RemoveSessionItemDialog } from "./RemoveSessionItemDialog";
 import { DESIGN_BTN } from "./SessionDetailHero";
 import { DotPill, type PillTone } from "./list/SessionStatePill";
@@ -33,6 +34,7 @@ const RESULT_TONE: Record<LotResultKey, PillTone> = {
   wait: "muted",
   live: "live",
   paused: "warning",
+  tied: "warning",
   won: "ok",
   unsold: "warning",
   closed: "muted",
@@ -99,12 +101,12 @@ export function SessionItemsCard({ session, auctionOrgId, canUpdate, editable }:
       ? "Phiên đã huỷ — không thay đổi tài sản được nữa"
       : !canUpdate
         ? "Vai trò của bạn chưa được cấp quyền sửa phiên"
-        : "Đã đến giờ đấu — không thêm, sửa hay gỡ lô được nữa";
+        : "Đã đến giờ đấu — không thêm, sửa hay gỡ tài sản được nữa";
 
   const header = (
     <TabHeader
       title="Tài sản trong phiên"
-      description="Các lô tài sản đưa ra đấu giá trong phiên, kèm giá khởi điểm, tiền đặt trước và bước giá."
+      description="Các tài sản đưa ra đấu giá trong phiên, kèm giá khởi điểm, tiền đặt trước và bước giá."
       actions={
         <Button
           className={DESIGN_BTN}
@@ -122,6 +124,8 @@ export function SessionItemsCard({ session, auctionOrgId, canUpdate, editable }:
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {header}
+
+      {canEdit && <MissingFloorNotice session={session} />}
 
       {mismatches.length > 0 && (
         <DetailNote icon={<AlertTriangle />}>
@@ -150,7 +154,7 @@ export function SessionItemsCard({ session, auctionOrgId, canUpdate, editable }:
             <table className="w-full border-collapse text-[13.5px]">
               <thead>
                 <tr>
-                  <th className={cn(TH, "w-14 pl-[22px]")}>Lô</th>
+                  <th className={cn(TH, "w-14 pl-[22px]")}>STT</th>
                   <th className={TH}>Tài sản</th>
                   <th className={TH}>Chủ tài sản</th>
                   <th className={cn(TH, "text-right")}>Giá khởi điểm</th>
@@ -221,14 +225,14 @@ export function SessionItemsCard({ session, auctionOrgId, canUpdate, editable }:
                               disabled={!canEdit}
                               onClick={() => setEditing(item)}
                             >
-                              Sửa lô
+                              Sửa tài sản
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-[13px] font-medium text-destructive focus:bg-destructive/10 focus:text-destructive"
                               disabled={!canEdit || lockLastLot}
                               onClick={() => setRemoving(item)}
                             >
-                              Gỡ lô
+                              Gỡ tài sản
                             </DropdownMenuItem>
                             {(!canEdit || lockLastLot) && (
                               <p className="max-w-[220px] px-2 pb-1.5 pt-1 text-[11.5px] leading-snug text-muted-foreground">
@@ -252,7 +256,7 @@ export function SessionItemsCard({ session, auctionOrgId, canUpdate, editable }:
             </span>
             <div className="flex items-center gap-3">
               <span>
-                {pg.start + 1}–{Math.min(pg.start + PAGE_SIZE, items.length)} / {items.length} lô
+                {pg.start + 1}–{Math.min(pg.start + PAGE_SIZE, items.length)} / {items.length} tài sản
               </span>
               <div className="flex items-center gap-0.5">
                 <Button
@@ -301,6 +305,7 @@ export function SessionItemsCard({ session, auctionOrgId, canUpdate, editable }:
           <EditSessionItemDialog
             item={editing}
             sessionFormat={session.auction_format}
+            biddingMethod={session.bidding_method}
             onOpenChange={(open) => !open && setEditing(null)}
           />
           <RemoveSessionItemDialog item={removing} onOpenChange={(open) => !open && setRemoving(null)} />

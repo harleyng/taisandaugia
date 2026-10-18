@@ -1,4 +1,5 @@
-// Luật trả giá lên (ascending) phía client.
+// Luật trả giá lên (ascending) phía client. Đặt giá xuống: descending.ts; bỏ
+// phiếu kín: sealed.ts — cả hai dùng chung cổng đầu (lotGateOf) ở đây.
 //
 // BẢN SAO PHÍA CLIENT của các chốt trong place_bid
 // (supabase/migrations/20260913000001_online_bidding.sql:698-803) — sửa một bên
@@ -6,13 +7,14 @@
 // ô nhập chắc chắn lỗi, và để báo sai ngay khi người dùng đang gõ.
 //
 // THỨ TỰ KIỂM TRA là chuẩn tắc, chép đúng comment của place_bid (:698-702):
-//   not_authenticated → lot_not_found → session_not_live → lot_not_open
+//   not_authenticated → lot_not_found → method_mismatch → session_not_live → lot_not_open
 //   → lot_paused → lot_closed → not_eligible → already_leading → invalid_nonce
 //   → bid_too_low → bid_step_mismatch → bid_too_many_steps
 //
 // Số học: mọi số tiền là SỐ NGUYÊN VNĐ (cột NUMERIC(18,0)).
 
 import { lotIsOpen } from "./lotPhase";
+import type { BiddingMethod } from "./methods";
 import type { LotState } from "@/types/auction-bidding";
 import type { SessionPublishStatus } from "@/lib/auctionSessions/phase";
 
@@ -31,7 +33,13 @@ export type BidRejectReason =
   | "invalid_nonce"
   | "bid_too_low"
   | "bid_step_mismatch"
-  | "bid_too_many_steps";
+  | "bid_too_many_steps"
+  // Phương thức (20261018190000)
+  | "method_mismatch"
+  | "round_closed"
+  | "not_in_tie_round"
+  | "already_submitted"
+  | "price_changed";
 
 /** Lô: ảnh chụp giá trong auction_session_items. */
 export interface BidLot {
@@ -45,6 +53,8 @@ export interface BidSession {
   auction_format: string;
   starts_at: string;
   max_bid_steps: number;
+  /** Thiếu = coi như trả giá lên (dữ liệu cũ / test). */
+  bidding_method?: string;
 }
 
 export interface ValidateBidInput {
@@ -93,24 +103,47 @@ export function maxBid(state: LotState | null, lot: BidLot | null, maxBidSteps: 
 }
 
 /**
- * `null` = hợp lệ. Ngược lại trả ĐÚNG chuỗi reason mà SQL sẽ trả về, để câu
- * chữ hiện ra lúc gõ và lúc server từ chối là một.
+ * Cổng chung của ba RPC trả giá (place_bid / accept_descending_price /
+ * submit_sealed_bid), từ not_authenticated tới not_eligible. `null` = qua cổng.
+ * `tied` (bỏ phiếu kín, chờ vòng phụ) trả `round_closed`.
  */
-export function validateBid(input: ValidateBidInput): BidRejectReason | null {
-  const { amount, lot, state, session, bidderNo, eligible, userId, nonce, now = new Date() } = input;
+export function lotGateOf(
+  input: Omit<ValidateBidInput, "amount" | "nonce">,
+  method: BiddingMethod,
+): BidRejectReason | null {
+  const { lot, state, session, bidderNo, eligible, userId, now = new Date() } = input;
 
   if (!userId) return "not_authenticated";
   if (!lot) return "lot_not_found";
+  if ((session.bidding_method ?? "ascending") !== method) return "method_mismatch";
   if (lot.starting_price == null || !lot.bid_step || lot.bid_step <= 0) return "lot_not_configured";
   if (!sessionIsLive(session, now)) return "session_not_live";
 
   if (!state || state.status === "pending" || state.status === "withdrawn") return "lot_not_open";
+  if (state.status === "tied") return "round_closed";
   if (state.status === "paused") return "lot_paused";
   if (!lotIsOpen(state, now)) return "lot_closed";
 
   if (!eligible || bidderNo == null) return "not_eligible";
+  return null;
+}
+
+export const nonceInvalid = (nonce: string | undefined) =>
+  nonce !== undefined && (nonce.length < NONCE_MIN || nonce.length > NONCE_MAX);
+
+/**
+ * `null` = hợp lệ. Ngược lại trả ĐÚNG chuỗi reason mà SQL sẽ trả về, để câu
+ * chữ hiện ra lúc gõ và lúc server từ chối là một.
+ */
+export function validateBid(input: ValidateBidInput): BidRejectReason | null {
+  const { amount, lot, state, session, bidderNo, nonce } = input;
+
+  const gate = lotGateOf(input, "ascending");
+  if (gate) return gate;
+  if (!lot || lot.starting_price == null || !lot.bid_step || !state) return "lot_not_found";
+
   if (state.current_bid_id && state.leading_bidder_no === bidderNo) return "already_leading";
-  if (nonce !== undefined && (nonce.length < NONCE_MIN || nonce.length > NONCE_MAX)) return "invalid_nonce";
+  if (nonceInvalid(nonce)) return "invalid_nonce";
 
   const min = nextMinBid(state, lot)!;
   const max = maxBid(state, lot, session.max_bid_steps)!;

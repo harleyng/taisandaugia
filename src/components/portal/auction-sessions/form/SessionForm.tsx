@@ -48,7 +48,11 @@ export function SessionForm({ session, stateLabel, onSaved, onCancel }: Props) {
   const onSubmit = (v: SessionFormValues) => {
     // Quy tắc chỉ gửi khi có nghĩa + còn đổi được + thật sự đổi (tạo mới thì luôn gửi).
     const rulesChanged =
-      !session || v.extension_seconds !== original.extension_seconds || v.max_bid_steps !== original.max_bid_steps;
+      !session ||
+      v.bidding_method !== original.bidding_method ||
+      v.extension_seconds !== original.extension_seconds ||
+      v.max_bid_steps !== original.max_bid_steps ||
+      v.price_drop_seconds !== original.price_drop_seconds;
     const rules = isOnlineFormat(v.auction_format) && !rulesLocked && rulesChanged ? formToBiddingRules(v) : null;
     save.mutate({ id: session?.id, input: formToSessionInput(v), rules }, { onSuccess: ({ id }) => onSaved(id) });
   };

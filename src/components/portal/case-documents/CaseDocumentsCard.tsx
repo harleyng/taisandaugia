@@ -7,6 +7,7 @@ import { useCaseDocuments } from "@/hooks/useCaseDocuments";
 import { UPLOADABLE_DOC_TYPES } from "@/lib/caseQa/labels";
 import type { AuctionSessionWithItems } from "@/types/auction-session";
 import { CaseDocumentSlot } from "./CaseDocumentSlot";
+import { OtherCaseDocuments } from "./OtherCaseDocuments";
 import { QaCoverageCard } from "./QaCoverageCard";
 import { SessionEscalationsMini } from "./SessionEscalationsMini";
 
@@ -19,7 +20,9 @@ interface Props {
 export function CaseDocumentsCard({ session, readOnly }: Props) {
   const navigate = useNavigate();
   const { data: docs = [], isLoading } = useCaseDocuments(session.id);
-  const byType = new Map(docs.map((d) => [d.doc_type, d]));
+  // "other" có nhiều tài liệu mỗi phiên ⇒ tách riêng, không đưa vào map một-loại-một-tài-liệu.
+  const byType = new Map(docs.filter((d) => d.doc_type !== "other").map((d) => [d.doc_type, d]));
+  const others = docs.filter((d) => d.doc_type === "other");
   const clarification = byType.get("clarification");
 
   return (
@@ -55,6 +58,7 @@ export function CaseDocumentsCard({ session, readOnly }: Props) {
           {clarification && (
             <CaseDocumentSlot session={session} docType="clarification" doc={clarification} readOnly={readOnly} />
           )}
+          <OtherCaseDocuments session={session} docs={others} readOnly={readOnly} />
         </div>
       )}
 

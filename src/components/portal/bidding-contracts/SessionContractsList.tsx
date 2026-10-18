@@ -4,7 +4,7 @@ import { Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DotPill } from "@/components/portal/auction-sessions/list/SessionStatePill";
 import {
-  DEPOSIT_PILL,
+  depositPillOf,
   REVIEW_FILTERS,
   REVIEW_PILL,
   depositFilterOptions,
@@ -125,7 +125,7 @@ export function SessionContractsList({ sessionId, sessionCancelled, rows, isLoad
               shown.map((c) => {
                 const action = rowActionOf(c, sessionCancelled);
                 const rv = REVIEW_PILL[c.review_status];
-                const dp = DEPOSIT_PILL[c.deposit_status];
+                const dp = depositPillOf(c);
                 return (
                   <tr
                     key={c.id}

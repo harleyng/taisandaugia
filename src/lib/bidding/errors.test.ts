@@ -53,6 +53,16 @@ describe("biddingReasonMessage", () => {
     expect(biddingReasonMessage("already_finalized")).toMatch(/đã được chốt/i);
     expect(biddingReasonMessage("not_authorized")).toMatch(/không có quyền/i);
   });
+
+  it("another_lot_live nêu đích danh lô đang chiếm sân khấu", () => {
+    expect(biddingReasonMessage("another_lot_live", { lot_no: 2, status: "open" })).toBe(
+      "Lô 2 đang mở — chờ lô đóng hoặc rút lô đó trước khi mở lô khác.",
+    );
+    expect(biddingReasonMessage("another_lot_live", { lot_no: 1, status: "paused" })).toBe(
+      "Lô 1 đang tạm dừng — tiếp tục cho lô chạy hết giờ hoặc rút lô đó trước khi mở lô khác.",
+    );
+    expect(biddingReasonMessage("another_lot_live")).toMatch(/chỉ mở một lô/);
+  });
 });
 
 describe("biddingErrorMessage", () => {

@@ -39,6 +39,7 @@ export const BIDDING_REASON_MESSAGES: Record<string, string> = {
   // org_*
   reason_required: "Vui lòng nhập lý do (ít nhất 3 ký tự).",
   invalid_duration: "Thời lượng mở lô phải từ 1 phút đến 24 giờ.",
+  another_lot_live: "Đang có lô khác mở hoặc tạm dừng — mỗi phiên chỉ mở một lô tại một thời điểm.",
   invalid_status: "Trạng thái vừa thay đổi. Tải lại trang để xem tình trạng mới nhất.",
   already_finalized: "Phiên đã được chốt kết quả trước đó.",
   lots_not_closed: "Còn lô chưa đóng — đóng hết các lô trước khi chốt kết quả phiên.",
@@ -97,6 +98,14 @@ export function biddingReasonMessage(
   const opensAt = typeof details?.opens_at === "string" ? new Date(details.opens_at) : null;
   if (reason === "window_not_open" && opensAt && !Number.isNaN(opensAt.getTime())) {
     return `Chưa đến giờ điểm danh — mở lúc ${opensAt.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}.`;
+  }
+  // 20261018140000: mỗi phiên chỉ một lô mở/tạm dừng — nêu đích danh lô đang chiếm.
+  const liveLotNo = num(details?.lot_no);
+  if (reason === "another_lot_live" && liveLotNo != null) {
+    // Không có thao tác "đóng lô" tay — lô đóng theo giờ, nên chỉ gợi ý chờ hoặc rút.
+    return details?.status === "paused"
+      ? `Lô ${liveLotNo} đang tạm dừng — tiếp tục cho lô chạy hết giờ hoặc rút lô đó trước khi mở lô khác.`
+      : `Lô ${liveLotNo} đang mở — chờ lô đóng hoặc rút lô đó trước khi mở lô khác.`;
   }
   const left = num(details?.attempts_left);
   if (reason === "otp_invalid" && left != null) {

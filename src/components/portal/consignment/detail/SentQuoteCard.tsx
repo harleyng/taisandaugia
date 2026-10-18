@@ -9,7 +9,7 @@ import { CardAux, DetailCard, InfoList, InfoRow, Note } from './DetailCard'
 import { FeesTable } from './FeesTable'
 import { fmtDate } from './format'
 
-/** "Báo giá bạn đã gửi" — chỉ khi chưa có hợp đồng (có rồi thì xem Chi phí đã chốt). */
+/** "Báo giá bạn đã gửi" — kể cả khi đã có hợp đồng (chi phí chốt trong hợp đồng xem ở trang hợp đồng). */
 export function SentQuoteCard({ request: r }: { request: OrgServiceRequest }) {
   const [docUrl, setDocUrl] = useState<string | null>(null)
 

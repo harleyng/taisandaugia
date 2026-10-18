@@ -1,18 +1,12 @@
-import { useNavigate } from "react-router-dom";
-import { ExternalLink, Gavel } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { InfoBox } from "@/components/shared/InfoBox";
+import { Gavel } from "lucide-react";
 import { BiddingControlRoom } from "@/components/portal/bidding-control/BiddingControlRoom";
-import { RosterSummaryCard } from "@/components/portal/checkin/RosterSummaryCard";
 import { useHasOrgPermissionIn } from "@/hooks/useOrgPermissions";
-import { useCheckinSummary } from "@/hooks/useSessionCheckin";
-import { sessionCheckinPath } from "@/lib/biddingContracts/paths";
 import { controlGateOf } from "@/lib/bidding/controlAccess";
 import type { AuctionSessionWithItems } from "@/types/auction-session";
+import { DetailEmpty } from "../DetailCard";
 
 /**
- * Tab "Điều hành phiên" — phòng điều hành phiên đấu giá trực tuyến.
+ * Tab "Điều hành" (/portal/phien-dau-gia/:id/dieu-hanh — design pdg-ops `controlTab`, không có tiêu đề tab).
  *
  * Tab chỉ làm CỔNG TĨNH và giải quyết quyền; mọi thứ sống (realtime, đồng hồ,
  * mutation) nằm trong <BiddingControlRoom> — xem chú thích ở đó.
@@ -23,8 +17,6 @@ import type { AuctionSessionWithItems } from "@/types/auction-session";
  * phiên nháp cũng không có gì để điều hành nên cổng đã chặn từ trước.
  */
 export function SessionControlTab({ session }: { session: AuctionSessionWithItems }) {
-  const navigate = useNavigate();
-
   // Xét theo tổ chức CỦA PHIÊN, không theo tổ chức đang chọn ở OrgSwitcher:
   // mở link phòng điều hành của tổ chức khác trong khi đang là OWNER của tổ
   // chức mình thì nếu hỏi nhầm chỗ sẽ bày ra nút mà server luôn từ chối.
@@ -32,21 +24,8 @@ export function SessionControlTab({ session }: { session: AuctionSessionWithItem
   const canOperate = useHasOrgPermissionIn(orgId, "dieu-hanh-dau-gia", "operate");
   const canViewContracts = useHasOrgPermissionIn(orgId, "ho-so-tham-gia", "view");
   const canFinalize = useHasOrgPermissionIn(orgId, "dieu-hanh-dau-gia", "finalize");
-  // Hoàn trả tiền đặt trước thuộc MODULE HỒ SƠ, không phải điều hành — cùng cách
-  // org_mark_deposit_refunded gác quyền (xem chú thích useOrgBidding).
-  const canRefund = useHasOrgPermissionIn(orgId, "ho-so-tham-gia", "update");
 
   const gate = controlGateOf({ loading: false, session });
-  // Số có mặt trước khi mở lô — chỉ tải khi phòng điều hành thật sự dựng.
-  const { data: checkinSummary } = useCheckinSummary(gate.kind === "ready" ? session.id : null);
-
-  const notice = (title: string, body: string) => (
-    <Card className="rounded-2xl p-10 text-center">
-      <Gavel className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-      <h2 className="mb-2 text-lg font-bold text-foreground">{title}</h2>
-      <p className="mx-auto max-w-md text-sm text-muted-foreground">{body}</p>
-    </Card>
-  );
 
   switch (gate.kind) {
     // loading / not_found do trang cha xử lý trước khi dựng tab.
@@ -54,66 +33,37 @@ export function SessionControlTab({ session }: { session: AuctionSessionWithItem
     case "not_found":
       return null;
 
+    case "not_online":
+      return (
+        <DetailEmpty icon={<Gavel />} title="Phiên đấu giá trực tiếp">
+          Phiên tổ chức tại địa điểm đã công bố nên không có phòng điều hành trực tuyến.
+        </DetailEmpty>
+      );
+
     case "draft":
-      return notice(
-        "Phiên chưa được công bố",
-        "Chỉ điều hành được phiên đã công bố. Hãy hoàn tất thông tin, thêm lô tài sản rồi công bố phiên.",
+      return (
+        <DetailEmpty icon={<Gavel />} title="Phiên chưa công bố">
+          Chỉ điều hành được phiên đã công bố. Hoàn tất thông tin, thêm tài sản rồi công bố phiên.
+        </DetailEmpty>
       );
 
     case "cancelled":
-      return notice(
-        "Phiên đã huỷ",
-        session.cancelled_reason
-          ? `Lý do: ${session.cancelled_reason}. Các lô còn lại đã được rút tự động.`
-          : "Phiên này đã bị huỷ nên không còn điều hành được.",
-      );
-
-    case "not_online":
-      return notice(
-        "Phiên đấu giá trực tiếp",
-        "Phiên được tổ chức trực tiếp tại địa điểm đã công bố nên không có phòng điều hành trực tuyến. Đổi hình thức sang trực tuyến hoặc kết hợp nếu muốn nhận trả giá qua sàn.",
+      return (
+        <DetailEmpty icon={<Gavel />} title="Phiên đã huỷ">
+          {session.cancelled_reason
+            ? `Lý do: ${session.cancelled_reason}. Các lô còn lại đã được rút tự động.`
+            : "Phiên này đã bị huỷ nên không còn điều hành được."}
+        </DetailEmpty>
       );
 
     case "ready":
       return (
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {canOperate ? (
-              <p className="text-sm text-muted-foreground">
-                Mở lô, tạm dừng và chốt kết quả ngay tại đây; người trả giá thấy thay đổi theo thời gian thực.
-              </p>
-            ) : (
-              <InfoBox variant="amber" className="flex-1 text-sm">
-                Bạn có quyền theo dõi phiên nhưng không được điều hành.
-              </InfoBox>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => navigate(`/sessions/${session.id}/dau-gia`)}
-            >
-              <ExternalLink className="h-4 w-4" />
-              Phòng đấu giá trên sàn
-            </Button>
-          </div>
-
-          {!session.finalized_at && (
-            <RosterSummaryCard
-              session={session}
-              summary={checkinSummary}
-              canClose={canOperate}
-              compact
-              onOpenRoster={() => navigate(sessionCheckinPath(session.id))}
-            />
-          )}
-
+        <div className="flex min-w-0 flex-col gap-4">
           <BiddingControlRoom
             session={session}
             canOperate={canOperate}
             canViewContracts={canViewContracts}
             canFinalize={canFinalize}
-            canRefund={canRefund}
           />
         </div>
       );

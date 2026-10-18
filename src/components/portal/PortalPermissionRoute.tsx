@@ -18,14 +18,17 @@ export function PortalPermissionRoute({
   anyOf,
   children,
 }: {
-  module: string;
+  /** Mảng = qua được khi có quyền ở MỘT trong các module (trang gộp nhiều loại). */
+  module: string | string[];
   action?: OrgAction;
   /** Qua được khi có MỘT trong các quyền này (thay cho `action`). */
   anyOf?: OrgAction[];
   children: ReactNode;
 }) {
   const { ready, isOwner, matrix } = useOrgPermissions();
-  const allowed = isOwner || (anyOf ?? [action]).some((a) => orgMatrixHas(matrix, module, a));
+  const modules = Array.isArray(module) ? module : [module];
+  const allowed =
+    isOwner || modules.some((m) => (anyOf ?? [action]).some((a) => orgMatrixHas(matrix, m, a)));
 
   if (!ready) {
     return (

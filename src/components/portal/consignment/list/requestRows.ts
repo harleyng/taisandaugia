@@ -19,9 +19,11 @@ const CLOSED: Partial<Record<ServiceRequestStatus, string>> = {
 
 export const isOpen = (r: OrgServiceRequest) => r.status === 'sent' || r.status === 'seen'
 
-/** Việc của tổ chức: còn phải báo giá, hoặc hợp đồng chờ tổ chức soạn / xác nhận. */
-export const needsAction = (r: OrgServiceRequest) =>
-  isOpen(r) || r.contract_status === 'drafting' || r.contract_status === 'awaiting_confirmation'
+/**
+ * Việc của tổ chức Ở HỘP THƯ: còn phải báo giá. Việc của hợp đồng (soạn / ký / xác
+ * nhận) thuộc menu "Hợp đồng" và được đếm ở badge của menu đó.
+ */
+export const needsAction = (r: OrgServiceRequest) => isOpen(r)
 
 export const REQUEST_TABS: { key: RequestTab; label: string; match: (r: OrgServiceRequest) => boolean }[] = [
   { key: 'tat-ca', label: 'Tất cả', match: () => true },
@@ -65,16 +67,8 @@ export function requestTodo(r: OrgServiceRequest): RequestTodo | null {
     const tail = d < 0 ? ' · quá hạn' : d === 0 ? ' · hôm nay' : ` · còn ${d} ngày`
     return { title: 'Gửi báo giá', due: `Hạn ${dayMonth(r.respond_by)}${tail}`, urgent: d <= 2 }
   }
-  switch (r.contract_status) {
-    case 'drafting':
-      return { title: 'Soạn và chia sẻ dự thảo', due: null, urgent: false }
-    case 'awaiting_signatures':
-      return { title: 'Tải bản đã ký', due: null, urgent: false }
-    case 'awaiting_confirmation':
-      return { title: 'Xác nhận bản đã ký', due: null, urgent: false }
-    default:
-      return null
-  }
+  // Hợp đồng đã chuyển sang menu "Hợp đồng" — hộp thư không nhắc việc ký nữa.
+  return null
 }
 
 export const requestLocation = (r: OrgServiceRequest) => [r.district, r.province].filter(Boolean).join(', ')

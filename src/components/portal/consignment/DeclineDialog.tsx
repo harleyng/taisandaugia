@@ -6,14 +6,15 @@ import {
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const REASONS = [
   'Ngoài địa bàn hoạt động',
   'Không đủ nhân sự trong thời gian kỳ vọng',
   'Giá khởi điểm chưa phù hợp',
   'Pháp lý chưa rõ ràng',
-  'Khác',
 ]
+const OTHER = 'Khác'
 
 interface DeclineDialogProps {
   title?: string
@@ -23,20 +24,21 @@ interface DeclineDialogProps {
   isPending: boolean
 }
 
-/** Từ chối một yêu cầu ký gửi: chọn một lý do có sẵn, ghi chú thêm nếu cần. */
+/** Từ chối một yêu cầu ký gửi: chọn một lý do có sẵn, hoặc "Khác" rồi tự nhập lý do. */
 export function DeclineDialog({ title, open, onOpenChange, onConfirm, isPending }: DeclineDialogProps) {
-  const [reason, setReason] = useState(REASONS[0])
-  const [note, setNote] = useState('')
+  const [reason, setReason] = useState('')
+  const [other, setOther] = useState('')
 
   useEffect(() => {
     if (!open) return
-    setReason(REASONS[0])
-    setNote('')
+    setReason('')
+    setOther('')
   }, [open])
 
+  const isOther = reason === OTHER
+  const finalReason = isOther ? other.trim() : reason
   const submit = () => {
-    const extra = note.trim()
-    onConfirm(extra ? `${reason} — ${extra}` : reason)
+    if (finalReason) onConfirm(finalReason)
   }
 
   return (
@@ -44,47 +46,47 @@ export function DeclineDialog({ title, open, onOpenChange, onConfirm, isPending 
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Từ chối yêu cầu</DialogTitle>
-          <DialogDescription>
-            {title ? `${title}. ` : ''}Chủ tài sản sẽ thấy lý do bạn chọn.
-          </DialogDescription>
+          {title && <DialogDescription>{title}</DialogDescription>}
         </DialogHeader>
 
         <div className="flex flex-col gap-3.5">
-          <div role="radiogroup" aria-label="Lý do từ chối" className="flex flex-wrap gap-2">
-            {REASONS.map((r) => (
-              <label
-                key={r}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-2 text-[13px] has-[:checked]:border-primary"
-              >
-                <input
-                  type="radio"
-                  name="decline-reason"
-                  value={r}
-                  checked={reason === r}
-                  onChange={() => setReason(r)}
-                  className="accent-primary"
-                />
-                {r}
-              </label>
-            ))}
-          </div>
           <div className="space-y-1.5">
-            <Label htmlFor="decline-note">Ghi chú thêm</Label>
-            <Textarea
-              id="decline-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Không bắt buộc"
-              className="min-h-[84px]"
-            />
+            <Label htmlFor="decline-reason">
+              Lý do từ chối <span className="text-destructive">*</span>
+            </Label>
+            <Select value={reason} onValueChange={setReason}>
+              <SelectTrigger id="decline-reason">
+                <SelectValue placeholder="Chọn lý do" />
+              </SelectTrigger>
+              <SelectContent>
+                {[...REASONS, OTHER].map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          {isOther && (
+            <div className="space-y-1.5">
+              <Label htmlFor="decline-other">
+                Lý do khác <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="decline-other"
+                value={other}
+                onChange={(e) => setOther(e.target.value)}
+                placeholder="Nhập lý do từ chối"
+                className="min-h-[84px]"
+                autoFocus
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             Huỷ
           </Button>
-          <Button variant="destructive" onClick={submit} disabled={isPending} className="gap-2">
+          <Button variant="destructive" onClick={submit} disabled={isPending || !finalReason} className="gap-2">
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             Từ chối yêu cầu
           </Button>

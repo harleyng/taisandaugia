@@ -2,7 +2,7 @@
 // tiết (detailView). THUẦN — luật thao tác vẫn ở lib/consignment/contractState.
 
 import { canConfirm, hasConfirmed } from "@/lib/consignment/contractState";
-import { feeTotalRequired } from "@/lib/quotePlan";
+import { feeItemLabel, feeTotalRequired } from "@/lib/quotePlan";
 import { AUCTION_FORMAT_LABELS } from "@/types/asset-posting";
 import type { ConsignmentContract, ContractEvent } from "@/types/consignment-contract";
 import { formatMoneyFull, formatMoneyShort } from "@/utils/money";
@@ -122,7 +122,7 @@ export function consignmentTerms(c: Pick<Contract, "terms">): TermsView {
   const rows = items.length
     ? items.map((i, idx) => ({
         key: `f${idx}`,
-        title: i.label,
+        title: feeItemLabel(i),
         sub: i.optional ? "Tuỳ chọn · không tính vào tổng" : null,
         value: formatMoneyFull(i.amount),
         dim: i.optional,

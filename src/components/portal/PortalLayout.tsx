@@ -3,8 +3,9 @@ import { Outlet } from 'react-router-dom'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { OrgProvider } from '@/contexts/OrgContext'
 import { PortalSidebar } from './PortalSidebar'
-import { PortalTopBar } from './PortalTopBar'
+import { PortalMobileBar } from './PortalMobileBar'
 import { PortalNoOrgGate } from './PortalNoOrgGate'
+import { PortalGuideButton } from './PortalGuideButton'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
@@ -82,17 +83,19 @@ function PortalShell() {
 
       {/* Main column */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <PortalTopBar onMenuClick={() => setDrawerOpen(true)} />
+        <PortalMobileBar onMenuClick={() => setDrawerOpen(true)} />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
-          {/* Tầng 3 — lỗi ở một trang con không xoá sidebar/topbar, người
+          {/* Tầng 3 — lỗi ở một trang con không xoá sidebar, người
               dùng vẫn điều hướng đi nơi khác được. */}
           <ErrorBoundary label='Cổng tổ chức' compact>
             <Outlet />
           </ErrorBoundary>
         </main>
       </div>
+
+      <PortalGuideButton />
     </div>
   )
 }

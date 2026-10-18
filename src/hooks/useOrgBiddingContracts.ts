@@ -10,8 +10,10 @@ import type {
   ContractStatus,
   ContractWithSession,
   DepositActionStatus,
+  DepositMethod,
   ReviewDecision,
 } from "@/types/bidding-contract";
+import type { DepositEvent } from "@/types/auction-bidding";
 
 /**
  * Hồ sơ tham gia — phía TỔ CHỨC (/portal).
@@ -68,6 +70,69 @@ export function useSessionBiddingContracts(sessionId?: string | null) {
   });
 }
 
+/**
+ * Hồ sơ của MỘT phiên cho tab "Hồ sơ tham gia": đã thanh toán + đã bị từ chối
+ * (lịch sử duyệt). Key riêng vì useSessionBiddingContracts chỉ lấy 'paid' cho màn
+ * điều hành / điểm danh; dùng chung prefix nên invalidate `all` làm mới cả hai.
+ */
+export function useSessionContractsWithRejected(sessionId?: string | null) {
+  return useQuery({
+    queryKey: qk.biddingContracts.bySessionWithRejected(sessionId),
+    enabled: !!sessionId,
+    queryFn: async (): Promise<ContractWithSession[]> => {
+      const { data, error } = await supabase
+        .from("auction_bidding_contracts")
+        .select(CONTRACT_WITH_SESSION_SELECT)
+        .eq("session_id", sessionId!)
+        .in("status", ["paid", "refunded"])
+        .order("paid_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as ContractWithSession[];
+    },
+  });
+}
+
+/**
+ * MỘT hồ sơ theo mã trong một phiên — trang /portal/phien-dau-gia/:id/ho-so/:code.
+ * Lọc theo phiên chứ không theo tổ chức đang chọn (cùng lý do với
+ * useSessionBiddingContracts); RLS chặn người ngoài tổ chức. Gồm cả hồ sơ đã bị
+ * từ chối (refunded) để xem lại lịch sử.
+ */
+export function useSessionContractByCode(sessionId?: string | null, code?: string | null) {
+  return useQuery({
+    queryKey: qk.biddingContracts.byCode(sessionId, code),
+    enabled: !!sessionId && !!code,
+    queryFn: async (): Promise<ContractWithSession | null> => {
+      const { data, error } = await supabase
+        .from("auction_bidding_contracts")
+        .select(CONTRACT_WITH_SESSION_SELECT)
+        .eq("session_id", sessionId!)
+        .eq("code", code!)
+        .in("status", ["paid", "refunded"])
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as unknown as ContractWithSession | null;
+    },
+  });
+}
+
+/** Sổ tiền đặt trước (chỉ ghi thêm) của một hồ sơ — cho thẻ "Lịch sử". */
+export function useContractDepositEvents(contractId?: string | null) {
+  return useQuery({
+    queryKey: qk.biddingContracts.depositEvents(contractId),
+    enabled: !!contractId,
+    queryFn: async (): Promise<DepositEvent[]> => {
+      const { data, error } = await supabase
+        .from("auction_deposit_events")
+        .select("*")
+        .eq("contract_id", contractId!)
+        .order("at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as DepositEvent[];
+    },
+  });
+}
+
 /** Tổ chức đã có hợp đồng hợp tác bán hồ sơ qua sàn chưa (gợi ý trong form phiên). */
 export function useDossierSaleReady() {
   const { organizationId } = useSessionOrg();
@@ -96,15 +161,31 @@ const DEPOSIT_TOAST: Record<DepositActionStatus, string> = {
   forfeited: "Đã ghi nhận không hoàn trả tiền đặt trước.",
 };
 
+export interface SetDepositInput {
+  contractId: string;
+  status: DepositActionStatus;
+  amount?: number;
+  note?: string;
+  /** Chi tiết khoản nộp (20261011120000) — chỉ có tác dụng khi status = received. */
+  method?: DepositMethod;
+  /** Bắt buộc khi chuyển khoản; "" = xoá mã cũ. */
+  txnRef?: string;
+  /** ISO — ngày nhận do chuyên viên nhập. */
+  receivedAt?: string;
+}
+
 export function useSetContractDeposit() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (v: { contractId: string; status: DepositActionStatus; amount?: number; note?: string }) => {
+    mutationFn: async (v: SetDepositInput) => {
       const { error } = await supabase.rpc("org_set_contract_deposit", {
         _contract_id: v.contractId,
         _status: v.status,
         _amount: v.amount,
         _note: v.note,
+        _method: v.method,
+        _txn_ref: v.txnRef,
+        _received_at: v.receivedAt,
       });
       if (error) throw error;
       return v.status;

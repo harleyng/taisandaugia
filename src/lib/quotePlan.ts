@@ -18,6 +18,13 @@ import { AUCTION_FORMAT_LABELS, type AuctionFormat } from "@/types/asset-posting
 import type { QuoteFeeItem, QuotePlan } from "@/types/consignment";
 import { formatVnd } from "@/lib/advertising/slug";
 
+/** Nhãn hiển thị của một khoản phí — khoản tính theo % kèm tỷ lệ gốc. */
+export function feeItemLabel(item: QuoteFeeItem): string {
+  return item.unit === "%" && item.rate != null
+    ? `${item.label} (${String(item.rate).replace(".", ",")}%)`
+    : item.label;
+}
+
 /** Tổng MỌI khoản phí, gồm cả khoản tuỳ chọn — chỉ để hiển thị "tối đa". */
 export function feeTotal(items: QuoteFeeItem[] | null | undefined): number {
   return (items ?? []).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
@@ -178,6 +185,8 @@ export const quoteFeeItemSchema = z.object({
   label: z.string().trim().min(1, "Khoản mục phải có tên"),
   amount: z.number().nonnegative("Số tiền không được âm"),
   optional: z.boolean(),
+  unit: z.enum(["vnd", "%"]).optional(),
+  rate: z.number().nonnegative().nullable().optional(),
 });
 
 export const quotePlanSchema = z.object({

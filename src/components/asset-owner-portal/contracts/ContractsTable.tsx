@@ -9,6 +9,8 @@ interface ContractsTableProps {
   rows: ContractListRow[];
   briefOf: (row: ContractListRow) => PostingBrief | null;
   onOpen: (row: ContractListRow) => void;
+  /** Vạch vàng bên trái dòng có việc của bạn — cổng tổ chức tắt. */
+  markNeedsAction?: boolean;
 }
 
 /** "26/09" — cột Cập nhật. */
@@ -18,9 +20,10 @@ const TH = "whitespace-nowrap border-b bg-muted/30 px-3.5 py-[11px] text-left te
 
 /**
  * Bảng hợp đồng (design "Hop Dong - Danh sach & Chi tiet"): Hợp đồng · Tài sản · Bên kia ·
- * Giá trị · Trạng thái · Cập nhật. Dòng có việc của bạn có vạch vàng bên trái.
+ * Giá trị · Trạng thái · Cập nhật. Dòng có việc của bạn có vạch vàng bên trái (trừ khi
+ * `markNeedsAction={false}`).
  */
-export function ContractsTable({ rows, briefOf, onOpen }: ContractsTableProps) {
+export function ContractsTable({ rows, briefOf, onOpen, markNeedsAction = true }: ContractsTableProps) {
   return (
     <section className="overflow-hidden rounded-2xl bg-card shadow-card">
       <div className="overflow-x-auto">
@@ -51,7 +54,7 @@ export function ContractsTable({ rows, briefOf, onOpen }: ContractsTableProps) {
                   <td
                     className={cn(
                       "px-3.5 py-[13px] pl-[22px] align-middle",
-                      r.needsAction && "shadow-[inset_3px_0_0_hsl(var(--warning))]",
+                      markNeedsAction && r.needsAction && "shadow-[inset_3px_0_0_hsl(var(--warning))]",
                     )}
                   >
                     <b className="block whitespace-nowrap font-semibold text-foreground">{r.code ?? "Chưa có mã"}</b>

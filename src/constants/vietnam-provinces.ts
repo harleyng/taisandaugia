@@ -22,3 +22,12 @@ export const VIETNAM_PROVINCE_NAMES: readonly string[] = [
   "Thanh Hóa", "Thừa Thiên Huế", "Tiền Giang", "Trà Vinh", "Tuyên Quang",
   "Vĩnh Long", "Vĩnh Phúc", "Yên Bái",
 ];
+
+/** 34 tỉnh/thành sau sáp nhập 2025 — bộ lọc khu vực gộp cả hai bộ tên (dữ liệu cũ ghi tên cũ). */
+export const VIETNAM_PROVINCE_NAMES_2025: readonly string[] = [
+  "Hà Nội", "Huế", "Lai Châu", "Điện Biên", "Sơn La", "Lạng Sơn", "Quảng Ninh", "Thanh Hoá",
+  "Nghệ An", "Hà Tĩnh", "Cao Bằng", "Tuyên Quang", "Lào Cai", "Thái Nguyên", "Phú Thọ",
+  "Bắc Ninh", "Hưng Yên", "Hải Phòng", "Ninh Bình", "Quảng Trị", "Đà Nẵng", "Quảng Ngãi",
+  "Gia Lai", "Khánh Hoà", "Lâm Đồng", "Đắk Lắk", "TP. Hồ Chí Minh", "Đồng Nai", "Tây Ninh",
+  "Cần Thơ", "Vĩnh Long", "Đồng Tháp", "Cà Mau", "An Giang",
+];

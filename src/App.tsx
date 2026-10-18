@@ -6,13 +6,14 @@ import { AuthDialogProvider } from "@/contexts/AuthDialogContext";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { TermsGate } from "@/components/auth/TermsGate";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { AdminPermissionRoute } from "@/components/admin/AdminPermissionRoute";
 import { SERVICE_KIND_MODULES } from "@/lib/serviceRequests/kinds";
+import { portalSaleContractPath, portalSaleContractsPath } from "@/lib/saleContracts/files";
 import { PortalLayout } from "@/components/portal/PortalLayout";
 import { PortalPermissionRoute } from "@/components/portal/PortalPermissionRoute";
 import { OwnerPortalLayout } from "@/components/owner-portal/OwnerPortalLayout";
@@ -126,15 +127,20 @@ const LichSuDauGiaPage = lazy(() => import("./pages/portal/nang-luc/LichSuDauGia
 const TaiChinhPage = lazy(() => import("./pages/portal/nang-luc/TaiChinhPage"));
 const YeuCauKyGuiPage = lazy(() => import("./pages/portal/YeuCauKyGuiPage"));
 const YeuCauKyGuiDetailPage = lazy(() => import("./pages/portal/YeuCauKyGuiDetailPage"));
+const YeuCauKyGuiQuotePage = lazy(() => import("./pages/portal/YeuCauKyGuiQuotePage"));
 const PhienDauGiaPage = lazy(() => import("./pages/portal/PhienDauGiaPage"));
 const PhienDauGiaDetailPage = lazy(() => import("./pages/portal/PhienDauGiaDetailPage"));
+const PhienDauGiaFormPage = lazy(() => import("./pages/portal/PhienDauGiaFormPage"));
 const PhienDauGiaQaPreviewPage = lazy(() => import("./pages/portal/PhienDauGiaQaPreviewPage"));
 const BidderCardPrintPage = lazy(() => import("./pages/portal/BidderCardPrintPage"));
+const SessionRosterPrintPage = lazy(() => import("./pages/portal/SessionRosterPrintPage"));
 const HoiDapPage = lazy(() => import("./pages/portal/HoiDapPage"));
 const KhachHangPage = lazy(() => import("./pages/portal/KhachHangPage"));
 const KhachHangDetailPage = lazy(() => import("./pages/portal/KhachHangDetailPage"));
 const HoSoThamGiaPage = lazy(() => import("./pages/portal/HoSoThamGiaPage"));
-const HopDongMuaBanPage = lazy(() => import("./pages/portal/HopDongMuaBanPage"));
+const HoSoThamGiaDetailPage = lazy(() => import("./pages/portal/HoSoThamGiaDetailPage"));
+const HopDongPage = lazy(() => import("./pages/portal/HopDongPage"));
+const HopDongKyGuiDetailPage = lazy(() => import("./pages/portal/HopDongKyGuiDetailPage"));
 const HopDongMuaBanDetailPage = lazy(() => import("./pages/portal/HopDongMuaBanDetailPage"));
 const PortalCreditsPage = lazy(() => import("./pages/portal/PortalCreditsPage"));
 const ApplicationsPage = lazy(() => import("./pages/ApplicationsPage"));
@@ -234,6 +240,16 @@ function RedirectServiceRequestId({ kind }: { kind: string }) {
 function RedirectOwnerSaleContractId() {
   const { id } = useParams<{ id: string }>()
   return <Navigate to={`/chu-tai-san/hop-dong/mua-ban/${id}`} replace />
+}
+
+// Cổng tổ chức: "Hợp đồng mua bán" cũng gộp vào "Hợp đồng" (giữ cả ?session= của link cũ).
+function RedirectPortalSaleContracts() {
+  const [params] = useSearchParams()
+  return <Navigate to={portalSaleContractsPath(params.get("session"))} replace />
+}
+function RedirectPortalSaleContractId() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={portalSaleContractPath(id ?? "")} replace />
 }
 
 // Chi tiết gói của Trạm chuyển từ /admin/goi-thue-bao/:id sang menu con "Áp dụng gói".
@@ -437,6 +453,8 @@ const App = () => (
                     nên không bọc PortalPermissionRoute): RLS abc_select_org là cổng —
                     thiếu quyền view/checkin thì query trả rỗng. */}
                 <Route path="phien-dau-gia/:id/diem-danh/:contractId/the" element={<BidderCardPrintPage />} />
+                {/* Danh sách điểm danh A4 — cùng cổng RLS như thẻ SBD. */}
+                <Route path="phien-dau-gia/:id/diem-danh/in" element={<SessionRosterPrintPage />} />
                 <Route element={<PortalLayout />}>
                   <Route index element={<Navigate to="/portal/dashboard" replace />} />
                   <Route path="dashboard" element={<DashboardPage />} />
@@ -504,6 +522,14 @@ const App = () => (
                       </PortalPermissionRoute>
                     }
                   />
+                  <Route
+                    path="yeu-cau-ky-gui/:id/bao-gia"
+                    element={
+                      <PortalPermissionRoute module="yeu-cau-ky-gui" action="update">
+                        <YeuCauKyGuiQuotePage />
+                      </PortalPermissionRoute>
+                    }
+                  />
 
                   {/* Credit */}
                   <Route
@@ -518,7 +544,15 @@ const App = () => (
                     path="phien-dau-gia/moi"
                     element={
                       <PortalPermissionRoute module="phien-dau-gia">
-                        <PhienDauGiaDetailPage />
+                        <PhienDauGiaFormPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="phien-dau-gia/:id/sua"
+                    element={
+                      <PortalPermissionRoute module="phien-dau-gia">
+                        <PhienDauGiaFormPage />
                       </PortalPermissionRoute>
                     }
                   />
@@ -557,6 +591,17 @@ const App = () => (
                       </PortalPermissionRoute>
                     }
                   />
+                  {/* Chi tiết một hồ sơ (thay ContractReviewSheet) — mở cả từ tab Điểm danh
+                      ("Xem hồ sơ gốc") nên nhân viên chỉ có quyền "checkin" vẫn vào được; RLS
+                      vẫn là cổng dữ liệu. */}
+                  <Route
+                    path="phien-dau-gia/:id/ho-so/:code"
+                    element={
+                      <PortalPermissionRoute module="ho-so-tham-gia" anyOf={["view", "checkin"]}>
+                        <HoSoThamGiaDetailPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
                   {/* Điểm danh: nhân viên cửa có thể chỉ có quyền "checkin". */}
                   <Route
                     path="phien-dau-gia/:id/diem-danh"
@@ -592,24 +637,35 @@ const App = () => (
                       </PortalPermissionRoute>
                     }
                   />
-                  {/* Hợp đồng mua bán — giai đoạn sau khi phiên chốt kết quả.
-                      Danh sách và chi tiết cùng một mã quyền. */}
+                  {/* Hợp đồng — ký gửi (quyền yeu-cau-ky-gui) + mua bán (quyền
+                      hop-dong-mua-ban). Danh sách vào được khi có MỘT trong hai;
+                      chi tiết mỗi loại giữ mã quyền của loại đó. */}
                   <Route
-                    path="hop-dong-mua-ban"
+                    path="hop-dong"
                     element={
-                      <PortalPermissionRoute module="hop-dong-mua-ban">
-                        <HopDongMuaBanPage />
+                      <PortalPermissionRoute module={["yeu-cau-ky-gui", "hop-dong-mua-ban"]}>
+                        <HopDongPage />
                       </PortalPermissionRoute>
                     }
                   />
                   <Route
-                    path="hop-dong-mua-ban/:id"
+                    path="hop-dong/ky-gui/:id"
+                    element={
+                      <PortalPermissionRoute module="yeu-cau-ky-gui">
+                        <HopDongKyGuiDetailPage />
+                      </PortalPermissionRoute>
+                    }
+                  />
+                  <Route
+                    path="hop-dong/mua-ban/:id"
                     element={
                       <PortalPermissionRoute module="hop-dong-mua-ban">
                         <HopDongMuaBanDetailPage />
                       </PortalPermissionRoute>
                     }
                   />
+                  <Route path="hop-dong-mua-ban" element={<RedirectPortalSaleContracts />} />
+                  <Route path="hop-dong-mua-ban/:id" element={<RedirectPortalSaleContractId />} />
                   <Route
                     path="phien-dau-gia/:id/tiep-thi"
                     element={

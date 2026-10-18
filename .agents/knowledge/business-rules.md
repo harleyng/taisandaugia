@@ -30,6 +30,7 @@
 - **Thông báo đấu giá:** câu chữ khoá theo phiên bản trong code; trình soạn chỉ điền ô `draft` (mô tả, hiện trạng), ô `case` do tổ chức nhập, ô `fact` đọc từ phiên. Mẫu `2026-09-12` **đang chờ pháp chế rà soát**.
 - **Đánh dấu đã gửi:** chỉ khi phiên `published` và còn trong giai đoạn nhận hồ sơ; liên hệ từng khách chỉ với khách đang đủ điều kiện; nhật ký append-only. Phiên đã huỷ khoá mọi ghi.
 - **Quyền:** xem gói = `phien-dau-gia.view`; soạn / sửa / đánh dấu kênh = `phien-dau-gia.update`; xem người nhận = thêm `khach-hang.view`; ghi nhận liên hệ khách = `khach-hang.update`.
+- **v2 (2026-10-18, mig `20261018120000`):** kênh đăng tin do tổ chức tự quản (`session_outreach_channels`; mỗi gói đúng 1 kênh Cổng thông tin — không viết riêng, không gỡ; "Sao chép" của Cổng = thông báo mẫu khoá). Bản tin chung ghép mô tả / hiện trạng / pháp lý THEO LÔ. Nhóm khách theo tiêu chí (`session_outreach_segments`) khớp CHỈ ở `outreach_criteria_contacts`: có ≥1 dòng nhu cầu thoả mọi chiều đã lọc (loại cha–con hai chiều, khu vực, khoảng giá GIAO nhau) + đủ điều kiện gửi + có địa chỉ của kênh nhận tin đã chọn. Nhóm dựng sẵn `auto` = `org_session_audience`. Liên hệ nhóm ghi `segment_key 'seg:<id>'`, server kiểm khách còn thuộc nhóm. "Gửi" vẫn là ghi nhận — chưa gửi thật.
 
 ## Credits — the paywall economy
 
@@ -853,6 +854,8 @@ Người mua mua hồ sơ của một **PHIÊN** đã công bố trên `/session
 - **Kênh suy từ hình thức:** `truc_tiep` ⇒ nhân viên quét QR phiếu tại cửa (`org_check_in`); `truc_tuyen` ⇒ người mua tự điểm danh + OTP 6 số (5 phút, tối đa 5 lần; mô phỏng trả `demo_code`). **`ca_hai` không điểm danh được** ⇒ đã bỏ khỏi form phiên (schema vẫn nhận để mở phiên cũ nhưng không cho lưu; DB CHECK giữ vì dữ liệu cũ). `ca_hai` ở phía chủ tài sản (wizard, báo giá, tư vấn) vẫn giữ — nghĩa là "hình thức nào cũng được".
 - **Trả giá đòi `checked_in_at`** (`place_bid`); phòng đấu giá chặn `not_checked_in` / `absent`.
 - **Chốt danh sách:** cron `close_due_rosters` (mỗi phút) chốt phiên `published` khi qua `starts_at + grace`; hồ sơ đủ điều kiện mà chưa điểm danh ⇒ VẮNG + cọc `forfeited` (trigger ghi sổ). Đấu giá viên (`dieu-hanh-dau-gia:operate`) chốt sớm được từ `starts_at`. Miễn trừ vắng (`ho-so-tham-gia:update`) ⇒ `pending_refund`. Có mặt < 2 ⇒ cảnh báo, không tự huỷ.
+- **Chi tiết khoản đặt trước (mig `20261011120000`):** `deposit_method` (`bank_transfer` | `cash` | `bank_guarantee`) + `deposit_txn_ref`; ngày nhận (`deposit_received_at`) do chuyên viên nhập, không được ở tương lai. Chuyển khoản ⇒ BẮT BUỘC mã giao dịch (đối soát sao kê, chặn cả ở RPC). Chuyển về "chưa nhận" xoá cả ba. Tệp chứng từ chưa làm.
+- **Màn tổ chức:** xem / duyệt / ghi nhận đặt trước ở TRANG `/portal/phien-dau-gia/:id/ho-so/:code` (không còn sheet). Nút duyệt chỉ khi `pending`/`needs_info` (design); thu hồi hồ sơ đã duyệt không có trên UI dù server cho tới lúc điểm danh. Hồ sơ mua theo phiên ⇒ phải nộp = tổng tiền đặt trước mọi lô.
 
 ## Đấu giá trực tuyến (trả giá lên) — phiên `truc_tuyen` / `ca_hai`
 
@@ -863,6 +866,7 @@ Engine ở SQL, migration `20260913000001` (kế hoạch + các bước UI còn 
 - **Giá hợp lệ**: lượt đầu ≥ giá khởi điểm; sau đó ≥ giá hiện tại + 1 bước; phải nằm trên lưới `giá khởi điểm + k × bước giá`; nhảy tối đa `max_bid_steps` bước (mặc định 10). Người đang dẫn đầu không tự trả giá đè (`already_leading`).
 - **Thời gian = server.** Lô đóng khi `ends_at` qua; lượt hợp lệ khi còn < `extension_seconds` (mặc định 300) ⇒ `ends_at = now + extension_seconds`. Tạm dừng: không nhận giá, tiếp tục cộng lại thời gian dừng. Mốc kết thúc ban đầu = giờ kết thúc phiên.
 - **Rút lại giá đang dẫn đầu chỉ ảnh hưởng LÔ đó** (người dùng chọn 2026-09-12): lô quay về lượt hợp lệ trước; tiền đặt trước (tính theo PHIÊN) bị tịch thu ngay ⇒ không trả giá thêm ở đâu nữa, nhưng vẫn giữ dẫn đầu lô khác và vẫn trúng.
+- **Mỗi phiên chỉ MỘT lô mở/tạm dừng tại một thời điểm** (người dùng chọn 2026-10-18, mig `20261018140000`): lô đấu lần lượt, lô sau chỉ mở khi lô trước `closed`/`withdrawn`. `org_open_lot` khoá theo phiên rồi trả `another_lot_live` (+ `lot_no`, `status`); lô `open` đã quá `ends_at` mà cron chưa đóng thì đóng tại chỗ. Chốt cứng: unique index một phần `uq_auction_lot_states_one_live (session_id) WHERE status IN ('open','paused')` — seed/SQL tay cũng phải đấu lần lượt.
 - **Kết quả**: có lượt hợp lệ ⇒ `sold`, người trúng = người dẫn đầu, hạn thanh toán = giờ đóng + 30 ngày; không ⇒ `unsold`. Tổ chức xác nhận thanh toán thủ công; không thanh toán ⇒ tịch thu tiền đặt trước (`applied → forfeited`).
 - **Chốt phiên** chỉ khi mọi lô `closed`/`withdrawn` (lô chưa mở phải rút trước). Tiền `received`: người trúng ⇒ `applied`, người không trúng ⇒ `pending_refund` ⇒ `refunded` (quyền `ho-so-tham-gia.update`). Đã `forfeited` thì giữ nguyên.
 - **Biên bản công khai SAU chốt** (người dùng chọn 2026-09-12) ⇒ PDF biên bản chỉ ghi họ tên + số báo danh người trúng, **không CCCD / địa chỉ**. Công khai lượt trả giá chỉ theo số báo danh.
@@ -957,6 +961,20 @@ giá (Điều 72), công chứng (chỉ ghi nhận), sổ thanh toán tổ chứ
 
 - Gộp ở client (`useOwnerContracts`, chuẩn hoá `src/lib/contracts/rows.ts`). **Việc cần làm lấy từ RPC tóm tắt của từng loại**, không suy từ trạng thái: `owner_consignment_summary.owner_action ∈ {confirm_contract, add_address}` (chỉ áp cho đúng hợp đồng mở của hồ sơ), `owner_sale_contract_summary.owner_action ≠ none`, `owner_service_contracts.needs_acceptance AND can_accept`. Badge nav `owner-contracts` = tổng ba số đó (`useOwnerContractActionCount`).
 - Báo giá dịch vụ chờ chính mình đồng ý mở hộp thoại đồng ý NGAY ở danh sách; chờ đồng nghiệp (người gửi yêu cầu khác) ⇒ chỉ ghi chú, không đếm.
+
+## Menu "Hợp đồng" — cổng tổ chức đấu giá (2026-10-10)
+
+`/portal/hop-dong` thay menu "Hợp đồng mua bán" (route cũ `/portal/hop-dong-mua-ban[?session=]` và `/:id` redirect). Tab `?loai=tat-ca|can-xu-ly|ky-gui|mua-ban` + `?q=`; tab Mua bán thêm `?session=` / `?giai-doan=` / `?qua-han=1`. Dùng chung `ContractsTable` của chủ tài sản (chuẩn hoá `src/lib/contracts/portalRows.ts`).
+
+| Loại | Nguồn | Bên kia | Mở ở | Mã quyền |
+|---|---|---|---|---|
+| Ký gửi (HDKG) | RPC `org_consignment_contract_list(auction_org_id)` (`20261010120000`, SECURITY DEFINER, chỉ TÊN bên A theo luật hiện danh tính của `org_consignment_contract`) | chủ tài sản | `/portal/hop-dong/ky-gui/:contractId` — RPC `org_consignment_contract_by_id` (`20261010130000`, bọc `org_consignment_contract` + `request_id`) | `yeu-cau-ky-gui` |
+| Mua bán (HDMB) | `auction_sale_contracts` theo `organization_id` | người trúng | `/portal/hop-dong/mua-ban/:id` | `hop-dong-mua-ban` |
+
+- Menu/route hiện khi có `view` ở MỘT trong hai mã (`module` mảng trong `nav-config` + `PortalPermissionRoute`); thiếu quyền loại nào thì loại đó không tải, không có tab.
+- "Cần xử lý" PHẢI khớp badge: ký gửi `org_action` ≡ `contracts_action` của `org_service_request_counts`; mua bán `orgSaleActionOf` ≡ `action_needed` của `org_sale_contract_counts` (+ quá hạn ký / bàn giao). Badge `hop-dong` = `contracts_action + action_needed + overdue`; badge Yêu cầu ký gửi nay CHỈ đếm yêu cầu mới. Sửa luật một nơi phải sửa cả nơi kia.
+- **Hợp đồng ký gửi KHÔNG còn nằm trong Yêu cầu ký gửi** (10/10): mọi thao tác (chia sẻ dự thảo / tải bản ký / xác nhận / huỷ / Tạo phiên), danh tính + giấy tờ sở hữu Bên A chỉ ở trang hợp đồng. Trang yêu cầu chỉ còn thanh "Hợp đồng ký gửi · mã · trạng thái — Mở hợp đồng" (đọc dòng từ `org_consignment_contract_list`, KHÔNG gọi `org_consignment_contract`), không còn địa chỉ đầy đủ; tab "Cần bạn xử lý" của hộp thư chỉ còn yêu cầu chờ báo giá.
+- HDCU (dịch vụ sàn ↔ chủ tài sản) và hợp đồng hợp tác `supplier_contracts` (sàn ↔ tổ chức, chỉ admin đọc) CHƯA vào menu này.
 
 ## Hợp đồng cung ứng dịch vụ (HDCU) — đồng ý trước khi trả (2026-09-27)
 

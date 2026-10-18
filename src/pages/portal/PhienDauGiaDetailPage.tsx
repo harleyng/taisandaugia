@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ClipboardCheck, FileText, Gavel, Info, Loader2, Megaphone, Package, ShieldAlert, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ChevronRight, Loader2, ShieldAlert } from "lucide-react";
+import { ConsignmentCanvas } from "@/components/portal/consignment/ConsignmentCanvas";
 import { SessionDetailHero } from "@/components/portal/auction-sessions/SessionDetailHero";
-import { SessionFormCard } from "@/components/portal/auction-sessions/SessionFormCard";
+import {
+  SessionDetailTabs,
+  type SessionTab,
+  type TabCount,
+} from "@/components/portal/auction-sessions/SessionDetailTabs";
 import { SessionCheckinTab } from "@/components/portal/auction-sessions/tabs/SessionCheckinTab";
 import { SessionContractsTab } from "@/components/portal/auction-sessions/tabs/SessionContractsTab";
 import { SessionControlTab } from "@/components/portal/auction-sessions/tabs/SessionControlTab";
@@ -14,18 +16,45 @@ import { SessionInfoTab } from "@/components/portal/auction-sessions/tabs/Sessio
 import { SessionItemsTab } from "@/components/portal/auction-sessions/tabs/SessionItemsTab";
 import { SessionOutreachTab } from "@/components/portal/auction-sessions/tabs/SessionOutreachTab";
 import { useAuctionSession, useSessionOrg } from "@/hooks/useAuctionSessions";
+import { useCaseDocuments } from "@/hooks/useCaseDocuments";
+import { useSessionBiddingContracts } from "@/hooks/useOrgBiddingContracts";
 import { useHasOrgPermission, useHasOrgPermissionIn } from "@/hooks/useOrgPermissions";
+import { UPLOADABLE_DOC_TYPES } from "@/lib/caseQa/labels";
+import { sessionRowState } from "@/lib/auctionSessions/sessionList";
 
-export type SessionTab = "thong-tin" | "tai-san" | "tai-lieu" | "ho-so" | "diem-danh" | "tiep-thi" | "dieu-hanh";
+export type { SessionTab };
 
+const LIST = "/portal/phien-dau-gia";
 const ONLINE_FORMATS = new Set(["truc_tuyen", "ca_hai"]);
-/** ca_hai tạm bỏ — không điểm danh trên hệ thống (checkinChannelOf). */
-const CHECKIN_FORMATS = new Set(["truc_tiep", "truc_tuyen"]);
+
+function Crumb({ current }: { current?: string }) {
+  return (
+    <nav aria-label="Đường dẫn" className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+      <Link to={LIST} className="shrink-0 hover:text-foreground">
+        Phiên đấu giá
+      </Link>
+      {current && (
+        <>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="truncate font-semibold text-foreground">{current}</span>
+        </>
+      )}
+    </nav>
+  );
+}
+
+function StateBox({ children }: { children: ReactNode }) {
+  return (
+    <div className="space-y-3 rounded-2xl bg-card p-10 text-center text-sm text-muted-foreground shadow-card">{children}</div>
+  );
+}
 
 /**
- * /portal/phien-dau-gia/moi và /portal/phien-dau-gia/:id — hero tóm tắt + 3 tab.
+ * /portal/phien-dau-gia/:id — thẻ đầu trang + hàng tab nhóm (design "Phien Dau Gia -
+ * Cong Cong Ty", pdg-detail.js). Tạo / sửa phiên là trang form riêng
+ * (PhienDauGiaFormPage: /moi, /:id/sua).
  *
- * Tab chạy trên ĐƯỜNG DẪN chứ không phải state hay ?tab=: ba route cũ
+ * Tab chạy trên ĐƯỜNG DẪN chứ không phải state hay ?tab=: các route cũ
  * (`:id`, `:id/tiep-thi`, `:id/dieu-hanh`) vẫn còn nguyên, và quan trọng hơn,
  * `/dieu-hanh` được gác ở cấp route bằng module RIÊNG `dieu-hanh-dau-gia`
  * (App.tsx) — gộp thành một route là mất lớp gác đó.
@@ -33,187 +62,104 @@ const CHECKIN_FORMATS = new Set(["truc_tiep", "truc_tuyen"]);
 export default function PhienDauGiaDetailPage({ tab = "thong-tin" }: { tab?: SessionTab }) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isNew = !id;
   const { auctionOrgId, isApproved, loading: orgLoading } = useSessionOrg();
   const { data: session, isLoading, error } = useAuctionSession(id);
-  const canCreate = useHasOrgPermission("phien-dau-gia", "create");
   const canUpdate = useHasOrgPermission("phien-dau-gia", "update");
   const canDelete = useHasOrgPermission("phien-dau-gia", "delete");
   const canViewContracts = useHasOrgPermission("ho-so-tham-gia", "view");
-  const canUpdateContracts = useHasOrgPermission("ho-so-tham-gia", "update");
   // Theo tổ chức của PHIÊN — xem chú thích ở useHasOrgPermissionIn.
   const canRunAuction = useHasOrgPermissionIn(session?.organization_id, "dieu-hanh-dau-gia", "view");
   const canCheckIn = useHasOrgPermissionIn(session?.organization_id, "ho-so-tham-gia", "checkin");
-  // Chế độ sửa nằm trên URL chứ không phải state: nút "Chỉnh sửa" bấm được từ
-  // mọi tab, mà mỗi tab là một route — state sẽ mất khi điều hướng.
-  const [searchParams] = useSearchParams();
-  const editing = tab === "thong-tin" && searchParams.get("sua") === "1";
-
-  const backToList = () => navigate("/portal/phien-dau-gia");
-
-  const shell = (content: ReactNode) => (
-    <div className="space-y-5 px-6 py-6">
-      <Button variant="ghost" size="sm" className="-ml-2 gap-1.5" onClick={backToList}>
-        <ArrowLeft className="h-4 w-4" />
-        Danh sách phiên
-      </Button>
-      {content}
-    </div>
+  // Số trên tab: tài liệu đã xác nhận, hồ sơ chờ duyệt (chỉ khi đang nhận hồ sơ).
+  const state = session ? sessionRowState(session) : null;
+  const { data: docs = [] } = useCaseDocuments(session && session.status !== "cancelled" ? session.id : null);
+  const { data: contracts = [] } = useSessionBiddingContracts(
+    session && state === "reg" && canViewContracts ? session.id : null,
   );
+  // Link cũ "?sua=1" (chế độ sửa trong tab Thông tin) ⇒ chuyển sang trang form.
+  const [searchParams] = useSearchParams();
+  const legacyEdit = searchParams.get("sua") === "1";
 
-  if (orgLoading || (!isNew && isLoading)) {
-    return shell(
-      <Card className="flex items-center justify-center gap-2 rounded-2xl p-10 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Đang tải phiên…
-      </Card>,
-    );
-  }
+  if (legacyEdit && id) return <Navigate to={`${LIST}/${id}/sua`} replace />;
 
-  const blocked = !isNew
-    ? error || !session
-      ? "Không tìm thấy phiên, hoặc bạn không có quyền xem phiên này."
-      : null
-    : !isApproved || !auctionOrgId
-      ? "Tổ chức cần được duyệt KYC và liên kết với danh bạ tổ chức đấu giá trước khi tạo phiên."
-      : !canCreate
-        ? "Vai trò của bạn chưa được cấp quyền tạo phiên đấu giá."
-        : null;
-
-  if (blocked) {
-    return shell(
-      <Card className="space-y-3 rounded-2xl p-10 text-center">
-        <ShieldAlert className="mx-auto h-9 w-9 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{blocked}</p>
-      </Card>,
-    );
-  }
-
-  // Phiên chưa tồn tại thì chưa có gì để chia tab — chỉ mỗi form khai báo.
-  if (!session) {
-    return shell(
-      <>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Tạo phiên đấu giá</h1>
-          <p className="text-sm text-muted-foreground">
-            Khai báo thông tin và lịch phiên, lưu nháp rồi thêm tài sản trước khi công bố.
+  if (orgLoading || isLoading) {
+    return (
+      <ConsignmentCanvas>
+        <Crumb />
+        <StateBox>
+          <p className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Đang tải phiên…
           </p>
-        </div>
-        <SessionFormCard
-          session={null}
-          readOnly={!canCreate}
-          onCreated={(newId) => navigate(`/portal/phien-dau-gia/${newId}`, { replace: true })}
-        />
-        <Card className="rounded-2xl border-dashed p-6 text-center text-sm text-muted-foreground">
-          Lưu nháp phiên để bắt đầu thêm tài sản.
-        </Card>
-      </>,
+        </StateBox>
+      </ConsignmentCanvas>
     );
   }
 
-  const tabPath = (value: SessionTab) =>
-    `/portal/phien-dau-gia/${session.id}${value === "thong-tin" ? "" : `/${value}`}`;
+  if (error || !session) {
+    return (
+      <ConsignmentCanvas>
+        <Crumb />
+        <StateBox>
+          <ShieldAlert className="mx-auto h-9 w-9" />
+          <p>Không tìm thấy phiên, hoặc bạn không có quyền xem phiên này.</p>
+        </StateBox>
+      </ConsignmentCanvas>
+    );
+  }
 
-  // Hai tab dưới đây chỉ hiện khi có gì để xem — nhưng VẪN hiện nếu người dùng
-  // đang đứng sẵn ở route đó, để họ không mất lối ra khỏi tab đang mở.
+  const tabPath = (value: SessionTab) => `${LIST}/${session.id}${value === "thong-tin" ? "" : `/${value}`}`;
+
+  // Tab vận hành chỉ hiện khi có gì để xem — nhưng VẪN hiện nếu người dùng đang
+  // đứng sẵn ở route đó, để họ không mất lối ra khỏi tab đang mở.
   // Hồ sơ: chỉ phiên đã công bố mới bán được hồ sơ.
-  const showContractsTab = (session.status !== "draft" && canViewContracts) || tab === "ho-so";
+  // Điểm danh: mọi phiên đã công bố như design (phiên "Cả hai" chỉ xem danh sách);
+  // nhân viên cửa có thể chỉ có quyền "checkin" mà không có "view".
   // Điều hành: phiên trực tiếp không có phòng điều hành; quyền xét theo tổ chức
   // CỦA PHIÊN.
-  // Điểm danh: phiên đã công bố, hình thức trực tiếp / trực tuyến; nhân viên cửa
-  // có thể chỉ có quyền "checkin" mà không có "view".
-  const showCheckinTab =
-    (session.status !== "draft" && CHECKIN_FORMATS.has(session.auction_format) && (canViewContracts || canCheckIn)) ||
-    tab === "diem-danh";
-  const showControlTab = (ONLINE_FORMATS.has(session.auction_format) && canRunAuction) || tab === "dieu-hanh";
+  const visible = new Set<SessionTab>(["tiep-thi", tab]);
+  if (session.status !== "draft" && canViewContracts) visible.add("ho-so");
+  if (session.status !== "draft" && (canViewContracts || canCheckIn)) visible.add("diem-danh");
+  if (ONLINE_FORMATS.has(session.auction_format) && canRunAuction) visible.add("dieu-hanh");
 
-  return shell(
-    <>
+  const confirmedDocs = UPLOADABLE_DOC_TYPES.filter((t) =>
+    docs.some((d) => d.doc_type === t && d.review_status === "confirmed"),
+  ).length;
+  const pending = contracts.filter((c) => c.review_status === "pending").length;
+  const counts: Partial<Record<SessionTab, TabCount>> = {
+    "tai-san": { text: String(session.auction_session_items.length) },
+  };
+  if (session.status !== "cancelled" && confirmedDocs < UPLOADABLE_DOC_TYPES.length) {
+    counts["tai-lieu"] = { text: `${confirmedDocs}/${UPLOADABLE_DOC_TYPES.length}` };
+  }
+  if (pending > 0) counts["ho-so"] = { text: String(pending), attention: true };
+
+  return (
+    <ConsignmentCanvas>
+      <Crumb current={`${session.code} · ${session.title}`} />
+
       <SessionDetailHero
         session={session}
         isApproved={isApproved}
         canUpdate={canUpdate}
         canDelete={canDelete}
-        editing={editing}
-        onEdit={() => navigate(`${tabPath("thong-tin")}?sua=1`)}
-        onDeleted={backToList}
+        onEdit={() => navigate(`${LIST}/${session.id}/sua`)}
+        onDeleted={() => navigate(LIST)}
       />
 
-      <Tabs value={tab} onValueChange={(v) => navigate(tabPath(v as SessionTab))}>
-        <TabsList className="h-auto flex-wrap justify-start">
-          <TabsTrigger value="thong-tin" className="gap-1.5">
-            <Info className="h-4 w-4" />
-            Thông tin
-          </TabsTrigger>
-          <TabsTrigger value="tai-san" className="gap-1.5">
-            <Package className="h-4 w-4" />
-            Tài sản trong phiên
-            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-              {session.auction_session_items.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="tai-lieu" className="gap-1.5">
-            <FileText className="h-4 w-4" />
-            Tài liệu phiên
-          </TabsTrigger>
-          {showContractsTab && (
-            <TabsTrigger value="ho-so" className="gap-1.5">
-              <Users className="h-4 w-4" />
-              Hồ sơ tham gia
-            </TabsTrigger>
-          )}
-          {showCheckinTab && (
-            <TabsTrigger value="diem-danh" className="gap-1.5">
-              <ClipboardCheck className="h-4 w-4" />
-              Điểm danh
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="tiep-thi" className="gap-1.5">
-            <Megaphone className="h-4 w-4" />
-            Tiếp thị phiên
-          </TabsTrigger>
-          {showControlTab && (
-            <TabsTrigger value="dieu-hanh" className="gap-1.5">
-              <Gavel className="h-4 w-4" />
-              Điều hành phiên
-            </TabsTrigger>
-          )}
-        </TabsList>
+      <SessionDetailTabs tab={tab} visible={visible} counts={counts} onSelect={(t) => navigate(tabPath(t))} />
 
-        {/* Mỗi tab là một route riêng nên chỉ một TabsContent được dựng mỗi lần —
-            không tab nào chạy query nền sau lưng tab đang mở. */}
-        <TabsContent value="thong-tin" className="mt-4">
-          <SessionInfoTab
-            session={session}
-            editing={editing}
-            onExitEdit={() => navigate(tabPath("thong-tin"), { replace: true })}
-          />
-        </TabsContent>
-
-        <TabsContent value="tai-san" className="mt-4">
-          <SessionItemsTab session={session} auctionOrgId={auctionOrgId} canUpdate={canUpdate} />
-        </TabsContent>
-
-        <TabsContent value="tai-lieu" className="mt-4">
-          <SessionDocumentsTab session={session} canUpdate={canUpdate} />
-        </TabsContent>
-
-        <TabsContent value="ho-so" className="mt-4">
-          <SessionContractsTab session={session} canView={canViewContracts} canUpdate={canUpdateContracts} />
-        </TabsContent>
-
-        <TabsContent value="diem-danh" className="mt-4">
-          <SessionCheckinTab session={session} />
-        </TabsContent>
-
-        <TabsContent value="tiep-thi" className="mt-4">
-          <SessionOutreachTab session={session} />
-        </TabsContent>
-
-        <TabsContent value="dieu-hanh" className="mt-4">
-          <SessionControlTab session={session} />
-        </TabsContent>
-      </Tabs>
-    </>,
+      {/* Mỗi tab là một route riêng nên chỉ một tab được dựng mỗi lần — không tab
+          nào chạy query nền sau lưng tab đang mở. */}
+      {tab === "thong-tin" && <SessionInfoTab session={session} />}
+      {tab === "tai-san" && <SessionItemsTab session={session} auctionOrgId={auctionOrgId} canUpdate={canUpdate} />}
+      {tab === "tai-lieu" && <SessionDocumentsTab session={session} canUpdate={canUpdate} />}
+      {tab === "ho-so" && (
+        <SessionContractsTab session={session} canView={canViewContracts} />
+      )}
+      {tab === "diem-danh" && <SessionCheckinTab session={session} />}
+      {tab === "tiep-thi" && <SessionOutreachTab session={session} />}
+      {tab === "dieu-hanh" && <SessionControlTab session={session} />}
+    </ConsignmentCanvas>
   );
 }

@@ -2745,10 +2745,12 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           deposit_amount_received: number | null
+          deposit_method: string | null
           deposit_note: string | null
           deposit_received_at: string | null
           deposit_status: string
           deposit_status_changed_at: string | null
+          deposit_txn_ref: string | null
           deposit_updated_by: string | null
           email: string
           fee_amount: number
@@ -2818,10 +2820,12 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           deposit_amount_received?: number | null
+          deposit_method?: string | null
           deposit_note?: string | null
           deposit_received_at?: string | null
           deposit_status?: string
           deposit_status_changed_at?: string | null
+          deposit_txn_ref?: string | null
           deposit_updated_by?: string | null
           email: string
           fee_amount: number
@@ -2891,10 +2895,12 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           deposit_amount_received?: number | null
+          deposit_method?: string | null
           deposit_note?: string | null
           deposit_received_at?: string | null
           deposit_status?: string
           deposit_status_changed_at?: string | null
+          deposit_txn_ref?: string | null
           deposit_updated_by?: string | null
           email?: string
           fee_amount?: number
@@ -10917,6 +10923,68 @@ export type Database = {
           },
         ]
       }
+      session_outreach_channels: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          custom_body: string
+          custom_cta: string
+          custom_head: string
+          id: string
+          kind: string
+          name: string
+          own_content: boolean
+          pack_id: string
+          post_options: Json | null
+          scheduled_at: string | null
+          sort_order: number
+          target: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          custom_body?: string
+          custom_cta?: string
+          custom_head?: string
+          id?: string
+          kind: string
+          name: string
+          own_content?: boolean
+          pack_id: string
+          post_options?: Json | null
+          scheduled_at?: string | null
+          sort_order?: number
+          target?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          custom_body?: string
+          custom_cta?: string
+          custom_head?: string
+          id?: string
+          kind?: string
+          name?: string
+          own_content?: boolean
+          pack_id?: string
+          post_options?: Json | null
+          scheduled_at?: string | null
+          sort_order?: number
+          target?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_outreach_channels_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "session_outreach_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_outreach_edits: {
         Row: {
           actor_id: string | null
@@ -11009,10 +11077,15 @@ export type Database = {
           created_by: string | null
           generated_at: string | null
           generator_label: string | null
+          greetings: Json
           id: string
           input_signature: string | null
           notice_template_version: string
           organization_id: string
+          post_edited: boolean
+          post_options: Json
+          post_text: string
+          post_written_at: string | null
           session_id: string
           updated_at: string
         }
@@ -11022,10 +11095,15 @@ export type Database = {
           created_by?: string | null
           generated_at?: string | null
           generator_label?: string | null
+          greetings?: Json
           id?: string
           input_signature?: string | null
           notice_template_version: string
           organization_id: string
+          post_edited?: boolean
+          post_options?: Json
+          post_text?: string
+          post_written_at?: string | null
           session_id: string
           updated_at?: string
         }
@@ -11035,10 +11113,15 @@ export type Database = {
           created_by?: string | null
           generated_at?: string | null
           generator_label?: string | null
+          greetings?: Json
           id?: string
           input_signature?: string | null
           notice_template_version?: string
           organization_id?: string
+          post_edited?: boolean
+          post_options?: Json
+          post_text?: string
+          post_written_at?: string | null
           session_id?: string
           updated_at?: string
         }
@@ -11062,6 +11145,8 @@ export type Database = {
       session_outreach_sends: {
         Row: {
           channel: string | null
+          channel_id: string | null
+          channel_label: string | null
           contact_id: string | null
           contact_method: string | null
           id: string
@@ -11075,6 +11160,8 @@ export type Database = {
         }
         Insert: {
           channel?: string | null
+          channel_id?: string | null
+          channel_label?: string | null
           contact_id?: string | null
           contact_method?: string | null
           id?: string
@@ -11088,6 +11175,8 @@ export type Database = {
         }
         Update: {
           channel?: string | null
+          channel_id?: string | null
+          channel_label?: string | null
           contact_id?: string | null
           contact_method?: string | null
           id?: string
@@ -11101,6 +11190,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "session_outreach_sends_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "session_outreach_channels"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "session_outreach_sends_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -11109,6 +11205,41 @@ export type Database = {
           },
           {
             foreignKeyName: "session_outreach_sends_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "session_outreach_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_outreach_segments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          criteria: Json
+          id: string
+          name: string
+          pack_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          criteria: Json
+          id?: string
+          name: string
+          pack_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          criteria?: Json
+          id?: string
+          name?: string
+          pack_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_outreach_segments_pack_id_fkey"
             columns: ["pack_id"]
             isOneToOne: false
             referencedRelation: "session_outreach_packs"
@@ -13273,6 +13404,29 @@ export type Database = {
         Returns: Json
       }
       org_consignment_contract: { Args: { _request_id: string }; Returns: Json }
+      org_consignment_contract_by_id: {
+        Args: { _contract_id: string }
+        Returns: Json
+      }
+      org_consignment_contract_list: {
+        Args: { _auction_org_id: string }
+        Returns: {
+          child_slug: string
+          code: string
+          contract_no: string
+          created_at: string
+          id: string
+          org_action: string
+          owner_name: string
+          posting_code: string
+          service_fee: number
+          service_request_id: string
+          signed_at: string
+          status: string
+          title: string
+          updated_at: string
+        }[]
+      }
       org_create_contact_group: {
         Args: {
           _contact_ids: string[]
@@ -13488,8 +13642,11 @@ export type Database = {
         Args: {
           _amount?: number
           _contract_id: string
+          _method?: string
           _note?: string
+          _received_at?: string
           _status: string
+          _txn_ref?: string
         }
         Returns: undefined
       }
@@ -13517,6 +13674,14 @@ export type Database = {
         Returns: Json
       }
       outcome_reason_is_legal: { Args: { p_reason: string }; Returns: boolean }
+      outreach_add_channel: {
+        Args: { _kind: string; _name: string; _pack_id: string; _target?: string }
+        Returns: string
+      }
+      outreach_add_segment: {
+        Args: { _criteria: Json; _name: string; _pack_id: string }
+        Returns: string
+      }
       outreach_apply_generation: {
         Args: {
           _fields: Json
@@ -13545,6 +13710,14 @@ export type Database = {
         }
         Returns: number
       }
+      outreach_post_channel: {
+        Args: { _channel_id: string; _text: string }
+        Returns: string
+      }
+      outreach_remove_channel: {
+        Args: { _channel_id: string }
+        Returns: undefined
+      }
       outreach_reset_field: {
         Args: { _key: string; _pack_id: string }
         Returns: boolean
@@ -13553,8 +13726,37 @@ export type Database = {
         Args: { _case_file: Json; _pack_id: string }
         Returns: boolean
       }
+      outreach_save_greeting: {
+        Args: { _body: string; _pack_id: string; _subject: string; _via: string }
+        Returns: boolean
+      }
+      outreach_save_post: {
+        Args: { _generated?: boolean; _options?: Json; _pack_id: string; _text: string }
+        Returns: boolean
+      }
+      outreach_segment_estimate: {
+        Args: { _criteria: Json; _pack_id: string }
+        Returns: number
+      }
+      outreach_segment_members: {
+        Args: { _pack_id: string; _segment: string }
+        Returns: {
+          code: string
+          contact_id: string
+          contacted_at: string
+          contacted_via: string
+          email: string
+          full_name: string
+          phone: string
+          zalo: string
+        }[]
+      }
       outreach_send_window_open: {
         Args: { _session_id: string }
+        Returns: boolean
+      }
+      outreach_update_channel: {
+        Args: { _channel_id: string; _patch: Json }
         Returns: boolean
       }
       outreach_writable_pack: {
@@ -13565,6 +13767,7 @@ export type Database = {
           created_by: string | null
           generated_at: string | null
           generator_label: string | null
+          greetings: Json
           id: string
           input_signature: string | null
           notice_template_version: string

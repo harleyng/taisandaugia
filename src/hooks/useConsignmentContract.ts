@@ -20,7 +20,7 @@ import type { ConsignmentContract, OrgContractDetail } from "@/types/consignment
  *
  * Chủ tài sản đọc thẳng bảng (RLS cc_owner_read). Tổ chức KHÔNG có policy đọc —
  * dòng hợp đồng chứa CCCD / địa chỉ chủ tài sản — nên đi qua RPC
- * org_consignment_contract. Mọi ghi đi qua RPC consignment_contract_* (trả
+ * org_consignment_contract_by_id (bọc org_consignment_contract). Mọi ghi đi qua RPC consignment_contract_* (trả
  * {ok:false, reason} ⇒ assertRpcOk).
  */
 
@@ -73,18 +73,16 @@ export function usePostingContracts(postingId: string | null) {
   });
 }
 
-/** Bản chiếu hợp đồng cho tổ chức; null khi yêu cầu chưa có hợp đồng. */
-export function useOrgConsignmentContract(requestId: string | null) {
+/** Trang chi tiết hợp đồng phía tổ chức — theo id HỢP ĐỒNG; kèm id yêu cầu để làm mới cache. */
+export function useOrgConsignmentContractById(contractId: string | null | undefined) {
   return useQuery({
-    queryKey: qk.consignment.orgContract(requestId),
-    enabled: !!requestId,
-    queryFn: async (): Promise<OrgContractDetail | null> => {
-      const { data, error } = await supabase.rpc("org_consignment_contract", { _request_id: requestId! });
+    queryKey: qk.consignment.orgContractById(contractId),
+    enabled: !!contractId,
+    queryFn: async (): Promise<OrgContractDetail & { request_id: string }> => {
+      const { data, error } = await supabase.rpc("org_consignment_contract_by_id", { _contract_id: contractId! });
       if (error) throw error;
-      const res = data as { ok?: boolean; reason?: string } | null;
-      if (res?.ok === false && res.reason === "no_contract") return null;
-      assertRpcOk(res);
-      return res as unknown as OrgContractDetail;
+      assertRpcOk(data);
+      return data as unknown as OrgContractDetail & { request_id: string };
     },
   });
 }
@@ -103,7 +101,8 @@ function useInvalidateContract(ctx: ContractCtx) {
       queryClient.invalidateQueries({ queryKey: qk.myPostings(userId) });
       queryClient.invalidateQueries({ queryKey: qk.consignment.ownerSummary(userId) });
     } else {
-      queryClient.invalidateQueries({ queryKey: qk.consignment.orgContract(ctx.requestId) });
+      // Cả bản theo yêu cầu lẫn bản theo id hợp đồng (trang menu "Hợp đồng").
+      queryClient.invalidateQueries({ queryKey: qk.consignment.orgContractAll });
       queryClient.invalidateQueries({ queryKey: qk.consignment.orgRequests(ctx.auctionOrgId) });
       queryClient.invalidateQueries({ queryKey: qk.consignment.orgCounts(ctx.auctionOrgId) });
     }

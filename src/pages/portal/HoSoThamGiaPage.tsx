@@ -1,179 +1,180 @@
-import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Loader2, Search, ShieldAlert } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AssignBidderNoDialog } from "@/components/portal/bidding-contracts/AssignBidderNoDialog";
-import { BiddingContractsTable } from "@/components/portal/bidding-contracts/BiddingContractsTable";
-import { ContractDepositDialog } from "@/components/portal/bidding-contracts/ContractDepositDialog";
-import { ContractReviewSheet } from "@/components/portal/bidding-contracts/ContractReviewSheet";
+import { useMemo, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Download, Loader2, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { OwnerTabBar } from "@/components/asset-owner-portal/ui/OwnerTabs";
+import { ListPager } from "@/components/portal/auction-sessions/list/ListPager";
+import { OrgContractFilters } from "@/components/portal/bidding-contracts/OrgContractFilters";
+import { OrgContractsTable } from "@/components/portal/bidding-contracts/OrgContractsTable";
+import { ConsignmentCanvas } from "@/components/portal/consignment/ConsignmentCanvas";
 import { useSessionOrg } from "@/hooks/useAuctionSessions";
 import { useOrgBiddingContracts } from "@/hooks/useOrgBiddingContracts";
-import { useHasOrgPermission } from "@/hooks/useOrgPermissions";
+import { useUrlFilterState } from "@/hooks/useUrlFilterState";
+import { PAGE_SIZES, paginate } from "@/lib/auctionSessions/sessionList";
+import { contractsCsv, REVIEW_FILTERS, type DepositFilter, type ReviewFilter } from "@/lib/biddingContracts/contractDetail";
 import {
-  ALL_SESSIONS,
-  EMPTY_CONTRACT_FILTERS,
-  filterOrgContracts,
-  type OrgContractFilters,
-} from "@/lib/biddingContracts/filters";
-import {
-  DEPOSIT_STATUS_LABELS,
-  REVIEW_STATUS_LABELS,
-  type ContractWithSession,
-  type DepositStatus,
-  type ReviewStatus,
-} from "@/types/bidding-contract";
+  depositChoices,
+  matchesReviewTab,
+  passesOrgListFilters,
+  sessionsOfContracts,
+  sortOrgContracts,
+  type OrgListFilters,
+} from "@/lib/biddingContracts/orgContractList";
+import { sessionContractPath, type ContractDetailState } from "@/lib/biddingContracts/paths";
+import { saveBlob } from "@/lib/pdf/saveBlob";
+import { DEPOSIT_STATUS_LABELS, type ContractWithSession } from "@/types/bidding-contract";
 
-/** /portal/ho-so-tham-gia — hồ sơ tham gia đã thanh toán (và đã từ chối) của tổ chức. */
+/** Tab trên URL viết bằng slug tiếng Việt như danh sách phiên. */
+const TAB_SLUG: Record<ReviewFilter, string> = {
+  all: "tat-ca",
+  pending: "cho-duyet",
+  needs_info: "can-bo-sung",
+  approved: "da-duyet",
+  rejected: "tu-choi",
+};
+const SLUG_TAB = Object.fromEntries(Object.entries(TAB_SLUG).map(([k, v]) => [v, k])) as Record<string, ReviewFilter>;
+
+const DEFAULTS = { tab: "tat-ca", q: "", phien: "", "dat-truoc": "all", trang: "1", so: "10" };
+const ALLOWED = {
+  tab: Object.values(TAB_SLUG),
+  "dat-truoc": ["all", ...Object.keys(DEPOSIT_STATUS_LABELS)],
+  so: PAGE_SIZES.map(String),
+};
+
+function Shell({ children }: { children: ReactNode }) {
+  return (
+    <ConsignmentCanvas>
+      <div className="space-y-3 rounded-2xl bg-card p-10 text-center shadow-card">{children}</div>
+    </ConsignmentCanvas>
+  );
+}
+
+/**
+ * /portal/ho-so-tham-gia — hồ sơ tham gia của mọi phiên trong tổ chức (design
+ * "Phien Dau Gia - Cong Cong Ty": pdg-hslist.js). Bấm một dòng mở trang chi tiết
+ * /portal/phien-dau-gia/:id/ho-so/:code; đường dẫn ở đó quay về đúng danh sách này.
+ */
 export default function HoSoThamGiaPage() {
-  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { loading: orgLoading } = useSessionOrg();
-  const { data: rows = [], isLoading, error } = useOrgBiddingContracts();
-  const canUpdate = useHasOrgPermission("ho-so-tham-gia", "update");
-  const [filters, setFilters] = useState<OrgContractFilters>(() => ({
-    ...EMPTY_CONTRACT_FILTERS,
-    sessionId: searchParams.get("session") ?? ALL_SESSIONS,
-  }));
-  const [depositFor, setDepositFor] = useState<ContractWithSession | null>(null);
-  const [bidderFor, setBidderFor] = useState<ContractWithSession | null>(null);
-  // Giữ id chứ không giữ object: sau mỗi lần duyệt danh sách tải lại, sheet hiện bản mới.
-  const [reviewId, setReviewId] = useState<string | null>(null);
+  const { data: contracts = [], isLoading, error } = useOrgBiddingContracts();
+  const [f, , setFilters] = useUrlFilterState(DEFAULTS, ALLOWED);
 
-  // Lấy danh sách phiên từ chính hồ sơ: người chỉ có quyền hồ sơ (không có quyền
-  // phiên) vẫn lọc được.
-  const sessions = useMemo(() => {
-    const map = new Map<string, NonNullable<ContractWithSession["auction_sessions"]>>();
-    for (const r of rows) if (r.auction_sessions) map.set(r.session_id, r.auction_sessions);
-    return [...map.values()].sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at));
-  }, [rows]);
+  const tab = SLUG_TAB[f.tab] ?? "all";
+  const filters: OrgListFilters = { sessionId: f.phien, deposit: f["dat-truoc"] as DepositFilter, q: f.q };
+  // Mọi thay đổi lọc đưa về trang 1.
+  const setFilterValues = (patch: Partial<OrgListFilters>) => {
+    const next: Record<string, string> = { trang: "1" };
+    if (patch.sessionId !== undefined) next.phien = patch.sessionId;
+    if (patch.deposit !== undefined) next["dat-truoc"] = patch.deposit;
+    if (patch.q !== undefined) next.q = patch.q;
+    setFilters(next);
+  };
 
-  const visible = useMemo(() => filterOrgContracts(rows, filters), [rows, filters]);
-  const paid = rows.filter((r) => r.status === "paid");
-  const awaitingReview = paid.filter((r) => r.review_status === "pending").length;
-  const received = paid.filter((r) => r.deposit_status === "received").length;
-  const numbered = paid.filter((r) => r.bidder_no != null).length;
-  const patch = (p: Partial<OrgContractFilters>) => setFilters((f) => ({ ...f, ...p }));
+  const all = useMemo(() => sortOrgContracts(contracts), [contracts]);
+  const sessions = useMemo(() => sessionsOfContracts(contracts), [contracts]);
+  const filtered = all.filter((r) => passesOrgListFilters(r, filters));
+  const rows = filtered.filter((r) => matchesReviewTab(r, tab));
+  const size = Number(f.so);
+  const pg = paginate(rows, Number(f.trang) || 1, size);
+  const hasFilter = !!(filters.q.trim() || filters.sessionId || filters.deposit !== "all");
+
+  const open = (c: ContractWithSession) =>
+    navigate(sessionContractPath(c.session_id, c.code), {
+      state: { fromList: `${location.pathname}${location.search}` } satisfies ContractDetailState,
+    });
+  const exportList = () =>
+    saveBlob(
+      new Blob([contractsCsv(rows, { withSession: true })], { type: "text/csv;charset=utf-8" }),
+      "ho-so-tham-gia.csv",
+    );
 
   if (orgLoading || isLoading) {
     return (
-      <div className="px-6 py-6">
-        <Card className="flex items-center justify-center gap-2 rounded-2xl p-10 text-sm text-muted-foreground">
+      <Shell>
+        <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Đang tải hồ sơ tham gia…
-        </Card>
-      </div>
+        </p>
+      </Shell>
     );
   }
 
   if (error) {
     return (
-      <div className="px-6 py-6">
-        <Card className="space-y-3 rounded-2xl p-10 text-center">
-          <ShieldAlert className="mx-auto h-9 w-9 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Không tải được hồ sơ tham gia. Vui lòng tải lại trang.</p>
-        </Card>
-      </div>
+      <Shell>
+        <ShieldAlert className="mx-auto h-9 w-9 text-muted-foreground" />
+        <p className="font-semibold text-foreground">Không tải được hồ sơ tham gia</p>
+        <p className="text-sm text-muted-foreground">Vui lòng tải lại trang.</p>
+      </Shell>
     );
   }
 
   return (
-    <div className="space-y-5 px-6 py-6">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Hồ sơ tham gia đấu giá</h1>
-        <p className="text-sm text-muted-foreground">
-          Người mua đã thanh toán tiền hồ sơ qua sàn. Duyệt hồ sơ và xác nhận tiền đặt trước; số báo danh được cấp khi
-          người tham gia điểm danh.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          { label: "Hồ sơ đã bán", value: paid.length },
-          { label: "Chờ duyệt", value: awaitingReview },
-          { label: "Đã nhận tiền đặt trước", value: received },
-          { label: "Đã cấp số báo danh", value: numbered },
-        ].map((s) => (
-          <Card key={s.label} className="rounded-2xl p-4">
-            <p className="text-xs text-muted-foreground">{s.label}</p>
-            <p className="text-2xl font-bold text-foreground">{s.value}</p>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="space-y-4 rounded-2xl p-5">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_14rem_12rem_14rem]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={filters.q}
-              onChange={(e) => patch({ q: e.target.value })}
-              placeholder="Tìm theo tên, SĐT, CCCD, mã hồ sơ, số báo danh"
-              className="pl-9"
-            />
-          </div>
-          <Select value={filters.sessionId} onValueChange={(v) => patch({ sessionId: v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_SESSIONS}>Tất cả phiên</SelectItem>
-              {sessions.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.code} · {s.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filters.review} onValueChange={(v) => patch({ review: v as ReviewStatus | "all" })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Mọi trạng thái duyệt</SelectItem>
-              {Object.entries(REVIEW_STATUS_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filters.deposit} onValueChange={(v) => patch({ deposit: v as DepositStatus | "all" })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Mọi trạng thái đặt trước</SelectItem>
-              {Object.entries(DEPOSIT_STATUS_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <ConsignmentCanvas>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[22px] font-bold tracking-[-0.01em] text-foreground">Hồ sơ tham gia</h1>
+          <p className="mt-0.5 max-w-[640px] text-[13.5px] text-muted-foreground">
+            Xét duyệt điều kiện tham gia của người mua và theo dõi tiền đặt trước ở tất cả các phiên.
+          </p>
         </div>
+        <Button
+          variant="outline"
+          className="h-9 gap-1.5 rounded-lg px-3.5 text-[13px] font-semibold"
+          disabled={rows.length === 0}
+          onClick={exportList}
+        >
+          <Download className="h-4 w-4" />
+          Xuất danh sách
+        </Button>
+      </header>
 
-        <BiddingContractsTable
-          rows={visible}
-          showSession
-          canUpdate={canUpdate}
-          onReview={(r) => setReviewId(r.id)}
-          onDeposit={setDepositFor}
-          onBidderNo={setBidderFor}
-          emptyText={rows.length === 0 ? undefined : "Không có hồ sơ khớp bộ lọc."}
+      <section className="rounded-2xl bg-card shadow-card">
+        <div className="border-b px-4 pt-1.5 sm:px-[22px]">
+          <OwnerTabBar
+            aria-label="Lọc hồ sơ theo trạng thái duyệt"
+            listClassName="-mb-px shadow-none"
+            value={tab}
+            onValueChange={(v) => setFilters({ tab: TAB_SLUG[v], trang: "1" })}
+            items={REVIEW_FILTERS.map(([key, label]) => ({
+              value: key,
+              label,
+              count: filtered.filter((r) => matchesReviewTab(r, key)).length,
+            }))}
+          />
+        </div>
+        <OrgContractFilters
+          values={filters}
+          sessions={sessions}
+          deposits={depositChoices(contracts)}
+          onChange={setFilterValues}
         />
-      </Card>
 
-      <ContractReviewSheet
-        contract={rows.find((r) => r.id === reviewId) ?? null}
-        onOpenChange={(open) => !open && setReviewId(null)}
-      />
-      {canUpdate && (
-        <>
-          <ContractDepositDialog contract={depositFor} onOpenChange={(open) => !open && setDepositFor(null)} />
-          <AssignBidderNoDialog contract={bidderFor} onOpenChange={(open) => !open && setBidderFor(null)} />
-        </>
-      )}
-    </div>
+        {rows.length > 0 ? (
+          <>
+            <OrgContractsTable rows={pg.slice} onOpen={open} />
+            <ListPager
+              page={pg.page}
+              pages={pg.pages}
+              size={size}
+              start={pg.start}
+              total={rows.length}
+              unit="hồ sơ"
+              onPage={(p) => setFilters({ trang: String(p) })}
+              onSize={(n) => setFilters({ so: String(n), trang: "1" })}
+            />
+          </>
+        ) : (
+          <div className="p-10 text-center text-sm text-muted-foreground">
+            <b className="mb-1 block text-[15px] font-semibold text-foreground">
+              {contracts.length ? "Không có hồ sơ nào khớp" : "Chưa có hồ sơ tham gia nào"}
+            </b>
+            {hasFilter && "Thử từ khoá hoặc bộ lọc khác."}
+          </div>
+        )}
+      </section>
+    </ConsignmentCanvas>
   );
 }

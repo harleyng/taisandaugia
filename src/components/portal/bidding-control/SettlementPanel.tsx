@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,224 +9,194 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { InfoBox } from "@/components/shared/InfoBox";
+import { DetailCard, DetailCardFooter } from "@/components/portal/auction-sessions/DetailCard";
+import { DotPill, type PillTone } from "@/components/portal/auction-sessions/list/SessionStatePill";
+import { DESIGN_BTN } from "@/components/portal/auction-sessions/SessionDetailHero";
+import { cn } from "@/lib/utils";
 import { formatVnd } from "@/lib/advertising/slug";
-import { useConfirmWinnerPayment, useMarkDepositRefunded } from "@/hooks/useOrgBidding";
-import { useCreateSaleContract, useOrgSaleContracts } from "@/hooks/useSaleContracts";
-import { useHasOrgPermissionIn } from "@/hooks/useOrgPermissions";
-import { portalSaleContractPath } from "@/lib/saleContracts/files";
+import { formatMoneyShort } from "@/utils/money";
+import { formatBidderNo } from "@/lib/biddingContracts/paths";
+import { LOT_VIEW_LABELS, type LotViewKey } from "@/lib/bidding/controlView";
+import { useConfirmWinnerPayment } from "@/hooks/useOrgBidding";
+import { useOrgSaleContracts } from "@/hooks/useSaleContracts";
 import type { LotState } from "@/types/auction-bidding";
 import type { AuctionSessionItem, AuctionSessionWithItems } from "@/types/auction-session";
 import type { ContractWithSession } from "@/types/bidding-contract";
-import { DepositSettlementTable } from "./DepositSettlementTable";
-import { IssueMinutesCard } from "./IssueMinutesCard";
-import { WinnerPaymentCard } from "./WinnerPaymentCard";
+import { IssueMinutesDialog } from "./IssueMinutesDialog";
 
 /**
- * Việc còn lại sau khi chốt kết quả: thanh toán của người trúng, tiền đặt trước,
- * biên bản.
+ * Sau khi chốt kết quả (design pdg-ops `endedView`): 4 chỉ số + danh sách
+ * "Kết quả & thanh toán" mỗi lô một dòng + nút "Biên bản đấu giá".
  *
- * Vỏ chứa riêng để BiddingControlRoom chỉ còn lo realtime / đồng hồ / điều hành
- * lô. KHÔNG hook nào ở đây mở kênh realtime — trạng thái lô nhận qua prop từ
- * chỗ mount useLotStates duy nhất.
- *
- * Từ giai đoạn hợp đồng mua bán: đây là nơi tổ chức LẬP hợp đồng cho từng lô đã
- * bán. Quyền lấy theo tổ chức CỦA PHIÊN (useHasOrgPermissionIn), không theo
- * OrgSwitcher — người dùng có thể đang chọn tổ chức khác.
+ * org_confirm_winner_payment MỘT CHIỀU và từ chối `sale_contract_exists` khi lô
+ * đã có hợp đồng mua bán (sổ tiền của hợp đồng là sự thật) — nên lúc đó nút tắt
+ * kèm lý do. Hợp đồng lập ở tab Hồ sơ tham gia (design `saleCard`).
  */
+
+const TONE: Record<LotViewKey, PillTone> = {
+  wait: "muted",
+  live: "live",
+  paused: "warning",
+  won: "ok",
+  unsold: "warning",
+  pulled: "muted",
+  closed: "muted",
+};
 
 interface Props {
   session: AuctionSessionWithItems;
-  lots: AuctionSessionItem[];
+  lots: { lot: AuctionSessionItem; state: LotState | null; key: LotViewKey }[];
   stateByLot: Map<string, LotState>;
   contracts: ContractWithSession[];
   canFinalize: boolean;
-  canRefund: boolean;
-  now: Date;
 }
 
-type PaymentTarget = { lot: AuctionSessionItem; state: LotState | null; paid: boolean };
-
-export function SettlementPanel({ session, lots, stateByLot, contracts, canFinalize, canRefund, now }: Props) {
-  const navigate = useNavigate();
+export function SettlementPanel({ session, lots, stateByLot, contracts, canFinalize }: Props) {
   const confirmPayment = useConfirmWinnerPayment(session.id);
-  const markRefunded = useMarkDepositRefunded(session.id);
-  const canManageSale = useHasOrgPermissionIn(session.organization_id, "hop-dong-mua-ban", "update");
   const { data: saleContracts = [] } = useOrgSaleContracts(session.organization_id);
-  const createContract = useCreateSaleContract();
+  const [target, setTarget] = useState<AuctionSessionItem | null>(null);
+  const [minutesOpen, setMinutesOpen] = useState(false);
 
-  const [payment, setPayment] = useState<PaymentTarget | null>(null);
-  const [refund, setRefund] = useState<ContractWithSession | null>(null);
-  const [note, setNote] = useState("");
-
-  /** Chỉ hợp đồng CÒN SỐNG mới chặn nút cũ — lô đã huỷ hợp đồng thì lập lại được. */
-  const contractByLot = useMemo(() => {
-    const m = new Map<string, (typeof saleContracts)[number]>();
-    for (const c of saleContracts) {
-      if (c.session_id === session.id && c.status !== "cancelled") m.set(c.lot_id, c);
-    }
-    return m;
-  }, [saleContracts, session.id]);
-
-  const lotsWithoutContract = lots.filter(
-    (l) => stateByLot.get(l.id)?.result === "sold" && !contractByLot.has(l.id),
+  /** Chỉ hợp đồng CÒN SỐNG mới chặn — lô đã huỷ hợp đồng thì ghi nhận được. */
+  const lotsWithSale = useMemo(
+    () =>
+      new Set(saleContracts.filter((c) => c.session_id === session.id && c.status !== "cancelled").map((c) => c.lot_id)),
+    [saleContracts, session.id],
   );
+  const byId = new Map(contracts.map((c) => [c.id, c]));
 
-  const closeRefund = () => {
-    setRefund(null);
-    setNote("");
-  };
+  const won = lots.filter((l) => l.key === "won" && l.state?.winning_amount != null);
+  const total = won.reduce((a, l) => a + (l.state?.winning_amount ?? 0), 0);
+  const base = won.reduce((a, l) => a + (l.lot.starting_price ?? 0), 0);
+  const refunded = contracts.filter((c) => c.status === "paid" && c.deposit_status === "refunded").length;
+  const winning = target ? stateByLot.get(target.id)?.winning_amount : null;
+
+  const confirm = (paid: boolean) =>
+    target && confirmPayment.mutate({ lotId: target.id, paid }, { onSuccess: () => setTarget(null) });
+
+  const kpis: [string, string, string?][] = [
+    ["Lô thành công", String(won.length), ` / ${lots.length}`],
+    ["Tổng giá trúng", formatMoneyShort(total)],
+    ["Chênh so với khởi điểm", `+${base ? Math.round((total / base - 1) * 100) : 0}%`],
+    ["Hoàn trả đặt trước", String(refunded), " người"],
+  ];
 
   return (
     <>
-      <WinnerPaymentCard
-        lots={lots}
+      <section className="grid grid-cols-1 rounded-2xl bg-card shadow-card sm:grid-flow-col sm:auto-cols-fr">
+        {kpis.map(([k, v, em]) => (
+          <div key={k} className="border-t px-6 py-3.5 first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0">
+            <small className="block text-xs text-muted-foreground">{k}</small>
+            <strong className="mt-0.5 block text-xl font-bold tabular-nums tracking-[-0.015em] text-foreground">
+              {v}
+              {em && <em className="text-[13px] font-medium not-italic text-muted-foreground">{em}</em>}
+            </strong>
+          </div>
+        ))}
+      </section>
+
+      <DetailCard title="Kết quả & thanh toán">
+        <ol className="m-0 list-none px-3 pb-2.5 pt-1.5">
+          {lots.map(({ lot, state, key }) => {
+            const winner = state?.winner_contract_id ? byId.get(state.winner_contract_id) : undefined;
+            const status = state?.payment_status;
+            const hasSale = lotsWithSale.has(lot.id);
+            return (
+              <li
+                key={lot.id}
+                className="grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2.5 border-t px-2.5 py-3 first:border-t-0"
+              >
+                <span
+                  className={cn(
+                    "grid h-7 w-7 place-items-center rounded-lg text-[12.5px] font-bold tabular-nums",
+                    key === "won" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {lot.lot_no}
+                </span>
+                <span className="min-w-0">
+                  <b className="block truncate text-[13px] font-medium text-muted-foreground">{lot.title}</b>
+                  <small className="text-xs tabular-nums text-muted-foreground">
+                    {key === "won" && state?.winning_amount != null
+                      ? `Trúng ${formatVnd(state.winning_amount)} · SBD ${formatBidderNo(winner?.bidder_no ?? state.leading_bidder_no) ?? "—"}`
+                      : LOT_VIEW_LABELS[key]}
+                  </small>
+                </span>
+                <span className="text-right">
+                  {key !== "won" ? (
+                    <DotPill tone={TONE[key]}>{LOT_VIEW_LABELS[key]}</DotPill>
+                  ) : status === "paid" ? (
+                    <DotPill tone="ok">Đã thanh toán</DotPill>
+                  ) : status === "defaulted" ? (
+                    <DotPill tone="live">Không thanh toán</DotPill>
+                  ) : canFinalize ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-lg px-[11px] text-[12.5px] font-semibold"
+                      disabled={hasSale || (confirmPayment.isPending && target?.id === lot.id)}
+                      title={hasSale ? "Lô đã có hợp đồng mua bán — ghi nhận thanh toán trong hợp đồng" : undefined}
+                      onClick={() => setTarget(lot)}
+                    >
+                      Xác nhận thanh toán
+                    </Button>
+                  ) : (
+                    <DotPill tone="warning">Chờ thanh toán</DotPill>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        <DetailCardFooter>
+          <span className="flex-1" />
+          <Button variant="outline" className={DESIGN_BTN} onClick={() => setMinutesOpen(true)}>
+            <Download className="h-4 w-4" />
+            Biên bản đấu giá
+          </Button>
+        </DetailCardFooter>
+      </DetailCard>
+
+      <IssueMinutesDialog
+        open={minutesOpen}
+        onOpenChange={setMinutesOpen}
+        session={session}
+        lots={lots.map((l) => l.lot)}
         stateByLot={stateByLot}
         contracts={contracts}
         canFinalize={canFinalize}
-        now={now}
-        pendingLotId={
-          confirmPayment.isPending || createContract.isPending ? payment?.lot.id ?? null : null
-        }
-        onConfirm={(lot, paid) => setPayment({ lot, state: stateByLot.get(lot.id) ?? null, paid })}
-        contractByLot={contractByLot}
-        canManageSale={canManageSale}
-        onCreateContract={(lot) =>
-          createContract.mutate(
-            { lotId: lot.id, sessionId: session.id },
-            { onSuccess: (res) => navigate(portalSaleContractPath(res.id)) },
-          )
-        }
-        onOpenContract={(c) => navigate(portalSaleContractPath(c.id))}
       />
 
-      {canManageSale && lotsWithoutContract.length >= 2 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/40 p-4">
-          <p className="text-sm text-muted-foreground">
-            Còn {lotsWithoutContract.length} lô đã bán chưa có hợp đồng mua bán.
-          </p>
-          <Button
-            size="sm"
-            disabled={createContract.isPending}
-            onClick={() => {
-              // Tuần tự chứ không Promise.all: mỗi lô là một RPC có khoá tư vấn
-              // riêng, bắn song song chỉ làm chúng xếp hàng chờ nhau. Một lô lỗi
-              // (vd. `seller_unresolved`) không được chặn các lô còn lại.
-              void (async () => {
-                for (const lot of lotsWithoutContract) {
-                  try {
-                    await createContract.mutateAsync({ lotId: lot.id, sessionId: session.id });
-                  } catch {
-                    /* toast đã hiện trong onError của mutation */
-                  }
-                }
-              })();
-            }}
-          >
-            {createContract.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-            Tạo hợp đồng cho tất cả lô đã bán
-          </Button>
-        </div>
-      ) : null}
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <DepositSettlementTable
-          contracts={contracts}
-          canRefund={canRefund}
-          pendingContractId={markRefunded.isPending ? refund?.id ?? null : null}
-          onRefund={setRefund}
-        />
-        <IssueMinutesCard
-          session={session}
-          lots={lots}
-          stateByLot={stateByLot}
-          contracts={contracts}
-          canFinalize={canFinalize}
-        />
-      </div>
-
-      {/* org_confirm_winner_payment MỘT CHIỀU: lô đã ghi nhận không sửa lại
-          được, và "không thanh toán" tịch thu luôn tiền đặt trước. */}
-      <Dialog open={!!payment} onOpenChange={(next) => !confirmPayment.isPending && !next && setPayment(null)}>
+      {/* MỘT CHIỀU: ghi nhận xong không sửa lại được, và "không thanh toán"
+          tịch thu luôn tiền đặt trước. */}
+      <Dialog open={!!target} onOpenChange={(next) => !confirmPayment.isPending && !next && setTarget(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {payment?.paid ? "Xác nhận đã thanh toán?" : "Ghi nhận không thanh toán?"}
-            </DialogTitle>
+            <DialogTitle>Xác nhận thanh toán</DialogTitle>
             <DialogDescription>
-              Lô {payment?.lot.lot_no} · {payment?.lot.title}
-              {payment?.state?.winning_amount != null && ` — giá trúng ${formatVnd(payment.state.winning_amount)}`}
+              Lô {target?.lot_no} · {target?.title}
+              {winning != null && ` — giá trúng ${formatVnd(winning)}`}
             </DialogDescription>
           </DialogHeader>
 
-          <InfoBox variant={payment?.paid ? "muted" : "amber"} className="text-sm">
-            {payment?.paid
-              ? "Ghi nhận xong không sửa lại được. Chỉ xác nhận khi đã nhận đủ tiền."
-              : "Ghi nhận xong không sửa lại được. Tiền đặt trước của người trúng sẽ bị tịch thu, không hoàn trả."}
+          <InfoBox variant="amber" className="text-sm">
+            Ghi nhận xong không sửa lại được. Chỉ xác nhận khi đã nhận đủ tiền. Chọn “Không thanh toán” nếu người trúng
+            bỏ cuộc — tiền đặt trước của họ bị tịch thu, không hoàn trả.
           </InfoBox>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPayment(null)} disabled={confirmPayment.isPending}>
-              Huỷ
-            </Button>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
-              variant={payment?.paid ? "default" : "destructive"}
-              className="gap-1.5"
+              variant="outline"
+              className="text-destructive hover:text-destructive"
               disabled={confirmPayment.isPending}
-              onClick={() =>
-                payment &&
-                confirmPayment.mutate(
-                  { lotId: payment.lot.id, paid: payment.paid },
-                  { onSuccess: () => setPayment(null) },
-                )
-              }
+              onClick={() => confirm(false)}
             >
+              Không thanh toán
+            </Button>
+            <Button className="gap-1.5" disabled={confirmPayment.isPending} onClick={() => confirm(true)}>
               {confirmPayment.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {payment?.paid ? "Đã thanh toán" : "Không thanh toán"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!refund} onOpenChange={(next) => !markRefunded.isPending && !next && closeRefund()}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Ghi nhận đã hoàn trả tiền đặt trước?</DialogTitle>
-            <DialogDescription>
-              {refund?.full_name}
-              {refund?.deposit_amount_received != null && ` — ${formatVnd(refund.deposit_amount_received)}`}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-1.5">
-            <Label>Ghi chú</Label>
-            <Textarea
-              rows={2}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="VD: mã giao dịch ngân hàng, ngày chuyển khoản"
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeRefund} disabled={markRefunded.isPending}>
-              Huỷ
-            </Button>
-            <Button
-              className="gap-1.5"
-              disabled={markRefunded.isPending}
-              onClick={() =>
-                refund &&
-                markRefunded.mutate(
-                  { contractId: refund.id, note: note.trim() || undefined },
-                  { onSuccess: closeRefund },
-                )
-              }
-            >
-              {markRefunded.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Đã hoàn trả
+              Đã thanh toán
             </Button>
           </DialogFooter>
         </DialogContent>

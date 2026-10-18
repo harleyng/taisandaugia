@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, FileText, Loader2, Wand2 } from "lucide-react";
+import { Copy, Loader2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -51,6 +51,8 @@ interface Draft {
 }
 
 interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   session: AuctionSessionWithItems;
   lots: AuctionSessionItem[];
   stateByLot: Map<string, LotState>;
@@ -58,7 +60,8 @@ interface Props {
   canFinalize: boolean;
 }
 
-export function IssueMinutesCard({ session, lots, stateByLot, contracts, canFinalize }: Props) {
+/** Mở từ nút "Biên bản đấu giá" ở chân thẻ Thanh toán & hoàn trả (design `controlTab`). */
+export function IssueMinutesDialog({ open, onOpenChange, session, lots, stateByLot, contracts, canFinalize }: Props) {
   const { data: minutes = [], isLoading: minutesLoading } = useSessionMinutes(session.id);
   const { data: auctioneers = [] } = useSessionAuctioneers(session.organization_id);
   const { data: org } = useOutreachOrgInfo(session.auction_org_id);
@@ -193,99 +196,102 @@ export function IssueMinutesCard({ session, lots, stateByLot, contracts, canFina
   };
 
   return (
-    <Card className="rounded-2xl p-5">
-      <h2 className="mb-1 flex items-center gap-2 font-semibold text-foreground">
-        <FileText className="h-4 w-4 text-primary" />
-        Biên bản đấu giá
-      </h2>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Biên bản do sàn lập từ diễn biến đã ghi nhận. Sau khi phát hành, ai cũng xem được ở trang phiên.
-      </p>
+    // Đang tải lên / ghi nhận thì không cho đóng: đóng giữa chừng là mất bản nháp
+    // đã tải lên, mà tệp đó không tải lại cùng đường dẫn được (xem chú thích đầu file).
+    <Dialog open={open} onOpenChange={(next) => !(uploading || issue.isPending) && onOpenChange(next)}>
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Biên bản đấu giá</DialogTitle>
+          <DialogDescription>
+            Biên bản do sàn lập từ diễn biến đã ghi nhận. Sau khi phát hành, ai cũng xem được ở trang phiên.
+          </DialogDescription>
+        </DialogHeader>
 
-      {canFinalize && (
-        <div className="space-y-3">
-          {orgUnknown && (
-            <InfoBox variant="amber" className="text-sm">
-              Phiên chưa gắn với tổ chức đấu giá trên sàn nên chưa lập được biên bản.
-            </InfoBox>
-          )}
-
-          <div className="space-y-1.5">
-            <Label>Đấu giá viên điều hành cuộc đấu giá</Label>
-            <Select value={auctioneerId} onValueChange={setAuctioneerId} disabled={busy}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_AUCTIONEER}>— Để trống, ký tay —</SelectItem>
-                {auctioneers.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.fullName}
-                    {a.licenseNumber ? ` — Thẻ số ${a.licenseNumber}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button variant="outline" className="w-full gap-1.5" onClick={build} disabled={busy || orgUnknown}>
-            {building ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-            {building ? "Đang lập biên bản…" : draft ? "Lập lại biên bản" : "Tạo biên bản"}
-          </Button>
-
-          {draft && (
-            <div className="space-y-2 rounded-xl border border-border p-3">
-              <p className="text-sm font-medium text-foreground">{draft.fileName}</p>
-              <InfoBox variant="amber" className="text-xs">
-                Rà soát trước khi phát hành — tệp đã phát hành không sửa và không xoá được.
+        {canFinalize && (
+          <div className="space-y-3">
+            {orgUnknown && (
+              <InfoBox variant="amber" className="text-sm">
+                Phiên chưa gắn với tổ chức đấu giá trên sàn nên chưa lập được biên bản.
               </InfoBox>
-              {draft.uploaded && !issue.isPending && (
-                <InfoBox variant="amber" className="text-xs">
-                  Tệp đã tải lên nhưng chưa ghi nhận trên sàn. Bấm “Thử ghi nhận lại” — hệ thống dùng lại đúng tệp đã
-                  tải, không tạo tệp mới.
-                </InfoBox>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {previewUrl && (
-                  <Button variant="outline" size="sm" onClick={() => window.open(previewUrl, "_blank", "noopener")}>
-                    Xem thử
-                  </Button>
-                )}
-                <Button size="sm" className="gap-1.5" onClick={publish} disabled={busy}>
-                  {(uploading || issue.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {draft.uploaded ? "Thử ghi nhận lại" : "Phát hành biên bản"}
-                </Button>
-              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label>Đấu giá viên điều hành cuộc đấu giá</Label>
+              <Select value={auctioneerId} onValueChange={setAuctioneerId} disabled={busy}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_AUCTIONEER}>— Để trống, ký tay —</SelectItem>
+                  {auctioneers.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.fullName}
+                      {a.licenseNumber ? ` — Thẻ số ${a.licenseNumber}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            <Button variant="outline" className="w-full gap-1.5" onClick={build} disabled={busy || orgUnknown}>
+              {building ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+              {building ? "Đang lập biên bản…" : draft ? "Lập lại biên bản" : "Tạo biên bản"}
+            </Button>
+
+            {draft && (
+              <div className="space-y-2 rounded-xl border border-border p-3">
+                <p className="text-sm font-medium text-foreground">{draft.fileName}</p>
+                <InfoBox variant="amber" className="text-xs">
+                  Rà soát trước khi phát hành — tệp đã phát hành không sửa và không xoá được.
+                </InfoBox>
+                {draft.uploaded && !issue.isPending && (
+                  <InfoBox variant="amber" className="text-xs">
+                    Tệp đã tải lên nhưng chưa ghi nhận trên sàn. Bấm “Thử ghi nhận lại” — hệ thống dùng lại đúng tệp đã
+                    tải, không tạo tệp mới.
+                  </InfoBox>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {previewUrl && (
+                    <Button variant="outline" size="sm" onClick={() => window.open(previewUrl, "_blank", "noopener")}>
+                      Xem thử
+                    </Button>
+                  )}
+                  <Button size="sm" className="gap-1.5" onClick={publish} disabled={busy}>
+                    {(uploading || issue.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {draft.uploaded ? "Thử ghi nhận lại" : "Phát hành biên bản"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-4 space-y-2 border-t border-border pt-4">
+          <p className="text-sm font-medium text-foreground">Biên bản đã phát hành</p>
+          {minutesLoading ? (
+            <p className="text-sm text-muted-foreground">Đang tải…</p>
+          ) : minutes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Chưa phát hành biên bản nào.</p>
+          ) : (
+            minutes.map((m: SessionMinutes) => (
+              <div key={m.id} className="space-y-1.5 rounded-xl bg-muted p-3">
+                <p className="text-sm text-foreground">
+                  Biên bản lần {m.sequence_no} · ghi nhận lúc {formatDateTime(m.issued_at)}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ContractFileButton path={m.pdf_path} bucket={MINUTES_BUCKET} label="Mở biên bản" />
+                  <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => copyHash(m.content_hash)}>
+                    <Copy className="h-3.5 w-3.5" />
+                    Chép mã kiểm tra
+                  </Button>
+                </div>
+                <p className="break-all font-mono text-xs text-muted-foreground">SHA-256 {m.content_hash}</p>
+                <p className="text-xs text-muted-foreground">Tải tệp về và tính SHA-256 để đối chiếu.</p>
+              </div>
+            ))
           )}
         </div>
-      )}
-
-      <div className="mt-4 space-y-2 border-t border-border pt-4">
-        <p className="text-sm font-medium text-foreground">Biên bản đã phát hành</p>
-        {minutesLoading ? (
-          <p className="text-sm text-muted-foreground">Đang tải…</p>
-        ) : minutes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Chưa phát hành biên bản nào.</p>
-        ) : (
-          minutes.map((m: SessionMinutes) => (
-            <div key={m.id} className="space-y-1.5 rounded-xl bg-muted p-3">
-              <p className="text-sm text-foreground">
-                Biên bản lần {m.sequence_no} · ghi nhận lúc {formatDateTime(m.issued_at)}
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <ContractFileButton path={m.pdf_path} bucket={MINUTES_BUCKET} label="Mở biên bản" />
-                <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => copyHash(m.content_hash)}>
-                  <Copy className="h-3.5 w-3.5" />
-                  Chép mã kiểm tra
-                </Button>
-              </div>
-              <p className="break-all font-mono text-xs text-muted-foreground">SHA-256 {m.content_hash}</p>
-              <p className="text-xs text-muted-foreground">Tải tệp về và tính SHA-256 để đối chiếu.</p>
-            </div>
-          ))
-        )}
-      </div>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

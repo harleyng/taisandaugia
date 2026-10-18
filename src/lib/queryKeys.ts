@@ -72,7 +72,13 @@ export const qk = {
   consignment: {
     orgRequests: (auctionOrgId?: string | null) => ["org-service-requests", auctionOrgId] as const,
     orgCounts: (auctionOrgId?: string | null) => ["org-service-request-counts", auctionOrgId] as const,
-    orgContract: (requestId?: string | null) => ["org-consignment-contract", requestId] as const,
+    /** Prefix của mọi bản chiếu hợp đồng phía tổ chức. */
+    orgContractAll: ["org-consignment-contract"] as const,
+    /** Trang chi tiết /portal/hop-dong/ky-gui/:id — mở theo id HỢP ĐỒNG. */
+    orgContractById: (contractId?: string | null) => ["org-consignment-contract", "by-id", contractId] as const,
+    /** Danh sách hợp đồng ký gửi của tổ chức (menu "Hợp đồng") — DƯỚI orgRequests nên
+     *  mọi lần làm mới hộp thư sau một thao tác hợp đồng cũng làm mới danh sách này. */
+    orgContractList: (auctionOrgId?: string | null) => ["org-service-requests", auctionOrgId, "contracts"] as const,
     postingContracts: (postingId?: string | null) => ["posting-contracts", postingId] as const,
     /** Địa chỉ Bên A của MỘT hồ sơ (cá nhân ⇒ KYC cá nhân; không gian ⇒ KYC tổ chức). */
     partyAddress: (postingId?: string | null) => ["posting-party-address", postingId] as const,
@@ -217,6 +223,8 @@ export const qk = {
       ["bidding-contracts", "mine", userId, sessionId] as const,
     summary: (sessionId?: string | null) => ["bidding-contracts", "summary", sessionId] as const,
     bySession: (sessionId?: string | null) => ["bidding-contracts", "session", sessionId] as const,
+    /** Cả hồ sơ đã bị từ chối (refunded) — tab "Hồ sơ tham gia" của phiên. */
+    bySessionWithRejected: (sessionId?: string | null) => ["bidding-contracts", "session-all", sessionId] as const,
     byOrg: (orgId?: string | null) => ["bidding-contracts", "org", orgId] as const,
     byId: (id?: string | null) => ["bidding-contracts", "id", id] as const,
     /**
@@ -227,6 +235,10 @@ export const qk = {
       ["bidding-contracts", "won", userId, [...contractIds].sort().join(",")] as const,
     /** Nhật ký duyệt của một hồ sơ. */
     reviewEvents: (contractId?: string | null) => ["bidding-contracts", "review-events", contractId] as const,
+    /** Sổ tiền đặt trước (auction_deposit_events) của một hồ sơ. */
+    depositEvents: (contractId?: string | null) => ["bidding-contracts", "deposit-events", contractId] as const,
+    /** Một hồ sơ theo mã trong một phiên — trang chi tiết hồ sơ ở portal. */
+    byCode: (sessionId?: string | null, code?: string | null) => ["bidding-contracts", "code", sessionId, code] as const,
     /** Điểm danh — nằm DƯỚI prefix để duyệt / tiền đặt trước / điểm danh cùng làm mới
      *  số đếm và kết quả tra cứu tại cửa. `checkinSummary` công khai. */
     checkinSummary: (sessionId?: string | null) => ["bidding-contracts", "checkin-summary", sessionId] as const,
@@ -310,6 +322,7 @@ export const qk = {
     bySession: (sessionId?: string | null) => ["session-outreach", sessionId] as const,
     edits: (sessionId?: string | null) => ["session-outreach", sessionId, "edits"] as const,
     sends: (sessionId?: string | null) => ["session-outreach", sessionId, "sends"] as const,
+    channels: (sessionId?: string | null) => ["session-outreach", sessionId, "channels"] as const,
   },
   outreachOrgInfo: (auctionOrgId?: string | null) => ["outreach-org-info", auctionOrgId] as const,
   orgContactGroups: (orgId?: string | null) => ["org-contact-groups", orgId] as const,

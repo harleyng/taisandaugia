@@ -132,6 +132,28 @@ export interface ContractEvent {
 /** Thông tin pháp lý còn thiếu — chặn chia sẻ dự thảo / tải bản ký. */
 export type MissingParty = "owner_address" | "org_legal_rep";
 
+/** Việc tổ chức đang phải làm với một hợp đồng ký gửi (RPC `org_consignment_contract_list`). */
+export type OrgConsignmentAction = "share_draft" | "attach_signed" | "confirm";
+
+/** Một dòng menu "Hợp đồng" của cổng tổ chức — chỉ TÊN bên A, không CCCD / địa chỉ. */
+export interface OrgConsignmentContractListRow {
+  id: string;
+  code: string | null;
+  contract_no: string | null;
+  status: ConsignmentContractStatus;
+  service_request_id: string;
+  posting_code: string | null;
+  title: string | null;
+  child_slug: string | null;
+  /** null khi hợp đồng đã huỷ — tổ chức không còn thấy chủ tài sản. */
+  owner_name: string | null;
+  service_fee: number | null;
+  created_at: string;
+  signed_at: string | null;
+  updated_at: string;
+  org_action: OrgConsignmentAction | null;
+}
+
 /** Bản chiếu RPC `org_consignment_contract` — thứ tổ chức được thấy. */
 export interface OrgContractDetail {
   contract: ConsignmentContract;

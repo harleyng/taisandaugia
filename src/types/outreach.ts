@@ -1,6 +1,7 @@
 // Gói tiếp thị phiên — bảng + RPC: supabase/migrations/20260912000013_session_outreach.sql.
 
 import type { Tables } from "@/integrations/supabase/types";
+import type { ChannelKind } from "@/lib/outreach/channels";
 import type { DirectMethod } from "@/lib/outreach/directMessage";
 
 export type OutreachEditKind = "generate" | "regenerate" | "suggest" | "edit" | "reset" | "case_file";
@@ -14,7 +15,8 @@ export type OutreachField = Omit<Tables<"session_outreach_fields">, "origin"> & 
 export type OutreachEdit = Omit<Tables<"session_outreach_edits">, "kind"> & { kind: OutreachEditKind };
 
 export type OutreachSend = Omit<Tables<"session_outreach_sends">, "channel" | "contact_method"> & {
-  channel: OutreachSendChannel | null;
+  /** Kênh cũ (gói v1) hoặc loại kênh v2 (session_outreach_channels.kind). */
+  channel: OutreachSendChannel | ChannelKind | null;
   contact_method: DirectMethod | null;
 };
 

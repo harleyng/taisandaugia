@@ -69,9 +69,12 @@ export function saleFileKindOf(path: string): SaleFileKind | null {
 
 /** Trang hợp đồng của BÊN MUA (và của bên bán khi mở từ cổng chủ tài sản). */
 export const saleContractPath = (id: string): string => `/hop-dong-mua-ban/${id}`;
-/** Trang hợp đồng phía TỔ CHỨC. */
-export const portalSaleContractPath = (id: string): string => `/portal/hop-dong-mua-ban/${id}`;
-export const PORTAL_SALE_CONTRACTS_PATH = "/portal/hop-dong-mua-ban";
+/** Trang hợp đồng phía TỔ CHỨC — nằm trong menu "Hợp đồng" của cổng tổ chức
+ *  (route cũ /portal/hop-dong-mua-ban chuyển hướng về đây). */
+export const portalSaleContractPath = (id: string): string => `/portal/hop-dong/mua-ban/${id}`;
+/** Danh sách hợp đồng của tổ chức, lọc sẵn tab Mua bán (và phiên nếu có). */
+export const portalSaleContractsPath = (sessionId?: string | null): string =>
+  `/portal/hop-dong?loai=mua-ban${sessionId ? `&session=${sessionId}` : ""}`;
 /** Hợp đồng mua bán trong menu "Hợp đồng" của cổng CHỦ TÀI SẢN (route cũ
  *  /chu-tai-san/hop-dong-mua-ban chuyển hướng về đây). */
 export const OWNER_SALE_CONTRACTS_PATH = "/chu-tai-san/hop-dong/mua-ban";

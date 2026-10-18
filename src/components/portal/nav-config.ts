@@ -27,12 +27,12 @@ export interface NavItem {
   href: string
   icon: LucideIcon
   badge?: string
-  module?: string          // mã quyền (src/lib/orgPermissions.ts) — lọc theo action 'view'
+  module?: string | string[] // mã quyền (src/lib/orgPermissions.ts) — lọc theo action 'view'; mảng = có MỘT là đủ
   countBadge?: CountBadgeKind
 }
 
 /** Badge số đếm động — PortalSidebar biết lấy số ở hook nào. */
-export type CountBadgeKind = 'yeu-cau-ky-gui' | 'hoi-dap' | 'hop-dong-mua-ban'
+export type CountBadgeKind = 'yeu-cau-ky-gui' | 'hoi-dap' | 'hop-dong'
 
 export interface NavSection {
   label: string
@@ -40,7 +40,7 @@ export interface NavSection {
   href?: string            // if section itself is a link (no sub-items)
   children?: NavItem[]
   scoreBadge?: boolean     // show capacity score badge
-  module?: string          // mã quyền cho section không có sub-items
+  module?: string | string[] // mã quyền cho section không có sub-items; mảng = có MỘT là đủ
   countBadge?: CountBadgeKind
 }
 
@@ -103,7 +103,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     // Vòng đời một cuộc đấu giá, đọc từ trên xuống: nhận việc ký gửi → mở phiên
-    // → nhận hồ sơ tham gia → ký hợp đồng mua bán.
+    // → nhận hồ sơ tham gia → hợp đồng (ký gửi với chủ tài sản + mua bán với người trúng).
     title: 'Đấu giá',
     sections: [
       {
@@ -126,11 +126,11 @@ export const NAV_GROUPS: NavGroup[] = [
         module: 'ho-so-tham-gia',
       },
       {
-        label: 'Hợp đồng mua bán',
+        label: 'Hợp đồng',
         icon: FileSignature,
-        href: '/portal/hop-dong-mua-ban',
-        module: 'hop-dong-mua-ban',
-        countBadge: 'hop-dong-mua-ban',
+        href: '/portal/hop-dong',
+        module: ['yeu-cau-ky-gui', 'hop-dong-mua-ban'],
+        countBadge: 'hop-dong',
       },
     ],
   },

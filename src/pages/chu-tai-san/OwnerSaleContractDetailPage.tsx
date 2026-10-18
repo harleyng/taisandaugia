@@ -32,7 +32,7 @@ import { qk } from "@/lib/queryKeys";
 import { dayMonth } from "@/lib/contracts/detailView";
 import { ownerSides, saleActivity, saleNextStep, saleStepper, saleSummary, saleTerms } from "@/lib/contracts/saleView";
 import { canAttachSigned, canCancel, canConfirmHandover, canConfirmSigned } from "@/lib/saleContracts/stage";
-import { PORTAL_SALE_CONTRACTS_PATH, SALE_BUCKET } from "@/lib/saleContracts/files";
+import { portalSaleContractPath, SALE_BUCKET } from "@/lib/saleContracts/files";
 import { ownerPostingPath } from "@/lib/vrTour/paths";
 import type { SaleAssetSnapshot, SaleContract, SaleSide } from "@/types/auction-sale-contract";
 
@@ -166,7 +166,7 @@ export default function OwnerSaleContractDetailPage() {
                 attachSide || confirmSide || handoverSide || data.can_act.org ? (
                   <>
                     {data.can_act.org && (
-                      <Button variant="outline" className="gap-1.5" onClick={() => navigate(`${PORTAL_SALE_CONTRACTS_PATH}/${c.id}`)}>
+                      <Button variant="outline" className="gap-1.5" onClick={() => navigate(portalSaleContractPath(c.id))}>
                         <ExternalLink className="h-4 w-4" strokeWidth={1.75} aria-hidden />
                         Mở ở cổng tổ chức
                       </Button>

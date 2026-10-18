@@ -40,15 +40,20 @@ export function useOrgAuctionSessions() {
     queryKey: qk.auctionSessions.byOrg(organizationId),
     enabled: !!organizationId,
     queryFn: async (): Promise<OrgSessionListRow[]> => {
+      // Lô chỉ lấy 2 cột (tổng giá + tìm theo tên); hồ sơ chỉ đếm dòng 'paid' = đã bán.
       const { data, error } = await supabase
         .from("auction_sessions")
-        .select("*, auction_session_items(count)")
+        .select("*, auction_session_items(title, starting_price), sold:auction_bidding_contracts(count)")
         .eq("organization_id", organizationId!)
+        .eq("sold.status", "paid")
         .order("starts_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map(({ auction_session_items, ...session }) => ({
+      return (data ?? []).map(({ auction_session_items: items, sold, ...session }) => ({
         ...(session as AuctionSession),
-        item_count: auction_session_items?.[0]?.count ?? 0,
+        item_count: items?.length ?? 0,
+        total_starting_price: (items ?? []).reduce((sum, i) => sum + Number(i.starting_price ?? 0), 0),
+        item_titles: (items ?? []).map((i) => i.title),
+        sold_count: sold?.[0]?.count ?? 0,
       }));
     },
   });
@@ -110,64 +115,60 @@ function useInvalidateSessions() {
 
 const showError = (err: unknown) => toast.error(sessionErrorMessage(err));
 
-export function useSaveAuctionSession() {
+/**
+ * Lưu form tạo / sửa phiên (trang /moi và /:id/sua) — thông tin + quy tắc trả giá
+ * trong MỘT nút Lưu, nhưng quy tắc vẫn là câu UPDATE riêng: trigger
+ * auction_sessions_bidding_guard từ chối ba cột đó khi lô đầu tiên đã mở, gộp
+ * chung một câu thì sửa tên phiên giữa chừng cũng hỏng. `rules` = null ⇒ không đụng.
+ */
+export function useSaveSessionForm() {
   const invalidate = useInvalidateSessions();
   const { organizationId } = useSessionOrg();
   return useMutation({
-    mutationFn: async ({ id, input }: { id?: string; input: SessionInput }) => {
-      if (id) {
+    mutationFn: async ({
+      id,
+      input,
+      rules,
+    }: {
+      id?: string;
+      input: SessionInput;
+      rules: SessionBiddingRules | null;
+    }) => {
+      if (!id) {
+        if (!organizationId) throw new Error("Chưa xác định được tổ chức.");
         const { data, error } = await supabase
           .from("auction_sessions")
-          .update(input)
-          .eq("id", id)
+          .insert({ ...input, ...(rules ?? {}), organization_id: organizationId })
           .select("id")
           .single();
         if (error) throw error;
-        return { id: data.id, created: false };
+        return { id: data.id, created: true };
       }
-      if (!organizationId) throw new Error("Chưa xác định được tổ chức.");
-      const { data, error } = await supabase
-        .from("auction_sessions")
-        .insert({ ...input, organization_id: organizationId })
-        .select("id")
-        .single();
+      const { error } = await supabase.from("auction_sessions").update(input).eq("id", id).select("id").single();
       if (error) throw error;
-      return { id: data.id, created: true };
+      if (rules) {
+        const { error: rulesError } = await supabase.from("auction_sessions").update(rules).eq("id", id);
+        if (rulesError) throw rulesError;
+      }
+      return { id, created: false };
     },
     onSuccess: ({ id, created }) => {
       invalidate(id);
-      toast.success(created ? "Đã tạo phiên nháp." : "Đã lưu thông tin phiên.");
+      toast.success(created ? "Đã tạo phiên nháp." : "Đã lưu thay đổi.");
     },
-    onError: showError,
+    // Lỗi giữa chừng (thông tin đã lưu, quy tắc bị từ chối) vẫn phải làm mới bản đọc.
+    onError: (err, { id }) => {
+      if (id) invalidate(id);
+      showError(err);
+    },
   });
 }
 
-/**
- * Quy tắc trả giá trực tuyến — TÁCH khỏi useSaveAuctionSession có chủ đích:
- * form chính (SessionFormCard) không đụng tới ba cột này, và ba cột này bị
- * auction_sessions_bidding_guard khoá lại ngay khi lô đầu tiên được mở, nên
- * gộp chung sẽ làm hỏng cả việc sửa tên phiên sau khi phiên đã chạy.
- */
+/** Ba cột quy tắc trả giá trực tuyến — lưu bằng câu UPDATE riêng, xem useSaveSessionForm. */
 export interface SessionBiddingRules {
   bidding_method: string;
   extension_seconds: number;
   max_bid_steps: number;
-}
-
-export function useSaveSessionBiddingRules() {
-  const invalidate = useInvalidateSessions();
-  return useMutation({
-    mutationFn: async ({ id, rules }: { id: string; rules: SessionBiddingRules }) => {
-      const { error } = await supabase.from("auction_sessions").update(rules).eq("id", id);
-      if (error) throw error;
-      return id;
-    },
-    onSuccess: (id) => {
-      invalidate(id);
-      toast.success("Đã lưu quy tắc trả giá trực tuyến.");
-    },
-    onError: showError,
-  });
 }
 
 /**

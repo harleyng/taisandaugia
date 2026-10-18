@@ -6,10 +6,11 @@ import {
   useAttachSignedContract, useCancelContract, useConfirmContract, useShareContractDraft,
 } from '@/hooks/useConsignmentContract'
 import type { OrgContractDetail } from '@/types/consignment-contract'
-import { ShareDraftDialog } from '../ShareDraftDialog'
-import type { ContractDialogKind } from './RequestActionBar'
+import { ShareDraftDialog } from '@/components/portal/consignment/ShareDraftDialog'
 
-interface ContractDialogsProps {
+export type ContractDialogKind = 'share' | 'attach' | 'confirm' | 'cancel'
+
+interface ConsignmentContractDialogsProps {
   detail: OrgContractDetail
   requestId: string
   auctionOrgId: string | null
@@ -17,8 +18,8 @@ interface ContractDialogsProps {
   onClose: () => void
 }
 
-/** Bốn hộp thoại hợp đồng mà thanh hành động mở: chia sẻ dự thảo · tải bản ký · xác nhận · huỷ. */
-export function ContractDialogs({ detail, requestId, auctionOrgId, open, onClose }: ContractDialogsProps) {
+/** Bốn hộp thoại hợp đồng ký gửi phía tổ chức: chia sẻ dự thảo · tải bản ký · xác nhận · huỷ. */
+export function ConsignmentContractDialogs({ detail, requestId, auctionOrgId, open, onClose }: ConsignmentContractDialogsProps) {
   const ctx = { side: 'org', requestId, auctionOrgId } as const
   const share = useShareContractDraft(ctx)
   const attach = useAttachSignedContract(ctx)

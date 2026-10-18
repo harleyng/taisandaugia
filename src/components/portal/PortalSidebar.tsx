@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { NAV_GROUPS, NAV_SECTIONS, NavItem, NavSection, type CountBadgeKind } from './nav-config'
 import { OrgSwitcher } from './OrgSwitcher'
+import { PortalAccountMenu } from './PortalAccountMenu'
 import { useCapacityProfile } from '@/hooks/useCapacityProfile'
 import { useOrgServiceRequestCounts } from '@/hooks/useOrgServiceRequests'
 import { useChatAttentionCounts } from '@/hooks/useOrgChat'
@@ -10,7 +11,7 @@ import { useOrgPermissions } from '@/hooks/useOrgPermissions'
 import { useSessionOrg } from '@/hooks/useAuctionSessions'
 import { useOrgSaleContractCounts } from '@/hooks/useSaleContracts'
 import { orgMatrixHas } from '@/lib/orgPermissions'
-import { ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 interface Props {
@@ -39,7 +40,6 @@ function NavItemLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
 
 export function PortalSidebar({ onNavigate }: Props) {
   const location = useLocation()
-  const navigate = useNavigate()
   const { profile } = useCapacityProfile()
   const { isOwner, matrix, ready } = useOrgPermissions()
   const { newCount, contractsActionCount } = useOrgServiceRequestCounts()
@@ -47,27 +47,28 @@ export function PortalSidebar({ onNavigate }: Props) {
 
   // Số đếm động cho badge nav; thêm loại mới thì nối vào CountBadgeKind rồi trả
   // số ở đây. Hỏi đáp chỉ đếm câu CHỜ TRẢ LỜI — cộng thêm sổ chuyển tiếp sẽ đếm
-  // trùng cùng một câu hỏi. Ký gửi = yêu cầu mới + hợp đồng tổ chức phải xử lý.
-  // Huy hiệu hợp đồng mua bán: chỉ gọi khi người dùng thực sự thấy mục đó, để
-  // AGENT không có quyền không phải ăn một lần 403 mỗi lần mở cổng.
+  // trùng cùng một câu hỏi. Ký gửi = yêu cầu mới; Hợp đồng = hợp đồng ký gửi tổ
+  // chức phải xử lý + hợp đồng mua bán cần làm / quá hạn.
+  // Số mua bán: chỉ gọi khi người dùng có quyền xem hợp đồng mua bán, để AGENT
+  // không có quyền không phải ăn một lần 403 mỗi lần mở cổng.
   const { organizationId } = useSessionOrg()
   const canViewSale = isOwner || orgMatrixHas(matrix, 'hop-dong-mua-ban', 'view')
   const { data: saleCounts } = useOrgSaleContractCounts(organizationId, ready && canViewSale)
 
   const badgeCount = (kind?: CountBadgeKind) =>
     kind === 'yeu-cau-ky-gui'
-      ? newCount + contractsActionCount
+      ? newCount
       : kind === 'hoi-dap'
         ? awaitingReply
-        : kind === 'hop-dong-mua-ban'
-          ? (saleCounts?.action_needed ?? 0) + (saleCounts?.overdue ?? 0)
+        : kind === 'hop-dong'
+          ? contractsActionCount + (saleCounts?.action_needed ?? 0) + (saleCounts?.overdue ?? 0)
           : 0
 
   // Lọc nav theo quyền 'view'. Khi CHƯA nạp xong chỉ hiện mục không gắn module —
   // tránh nháy link mà người dùng không có quyền vào.
   const visibleGroups = useMemo(() => {
-    const canView = (m?: string) =>
-      !m || isOwner || orgMatrixHas(matrix, m, 'view')
+    const canView = (m?: string | string[]) =>
+      !m || isOwner || [m].flat().some((x) => orgMatrixHas(matrix, x, 'view'))
 
     return NAV_GROUPS.map((group) => ({
       ...group,
@@ -216,17 +217,8 @@ export function PortalSidebar({ onNavigate }: Props) {
         ))}
       </nav>
 
-      {/* Bottom: back to marketplace + version */}
-      <div className="border-t border-sidebar-border px-3 py-2.5 shrink-0 space-y-2">
-        <button
-          onClick={() => { onNavigate?.(); navigate('/') }}
-          className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
-          Quay lại Marketplace
-        </button>
-        <p className="px-3 text-[10px] text-sidebar-foreground/50">TT 19/2024/TT-BTP</p>
-      </div>
+      {/* Chân sidebar: credit + hồ sơ (menu có "Quay lại Marketplace", đăng xuất) */}
+      <PortalAccountMenu onNavigate={onNavigate} />
     </aside>
   )
 }

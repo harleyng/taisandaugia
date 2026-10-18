@@ -24,6 +24,12 @@ export interface AuctionSessionWithItems extends AuctionSession {
 
 export interface OrgSessionListRow extends AuctionSession {
   item_count: number;
+  /** Tổng giá khởi điểm các lô. */
+  total_starting_price: number;
+  /** Tên các lô — để ô tìm kiếm của danh sách khớp theo tài sản. */
+  item_titles: string[];
+  /** Hồ sơ tham gia đã bán (status 'paid'). */
+  sold_count: number;
 }
 
 /** Trường tổ chức được sửa. organization_id / code / status / auction_org_id do server quản. */

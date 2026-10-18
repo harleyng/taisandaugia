@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { Loader2, QrCode, Search, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { DESIGN_BTN } from "@/components/portal/auction-sessions/SessionDetailHero";
 import { useCheckinLookup } from "@/hooks/useSessionCheckin";
 import { biddingErrorMessage, biddingReasonMessage } from "@/lib/bidding/errors";
 import { maskIdNumber } from "@/lib/biddingContracts/filters";
@@ -20,8 +19,9 @@ interface Props {
 const DEBOUNCE_MS = 300;
 
 /**
- * Bàn điểm danh tại cửa: quét QR trên phiếu (khớp đúng 1 hồ sơ ⇒ mở thẳng hộp
- * đối chiếu) hoặc tìm theo tên / số giấy tờ / mã hồ sơ / tên tổ chức.
+ * Bàn điểm danh tại cửa (design `.lookup`): máy quét phiếu gõ mã vào ô rồi Enter, hoặc
+ * quét bằng camera (khớp đúng 1 hồ sơ ⇒ mở thẳng hộp đối chiếu), hoặc tìm theo tên /
+ * số giấy tờ / mã hồ sơ / tên tổ chức.
  */
 export function CheckinLookupPanel({ sessionId, onSelect }: Props) {
   const [input, setInput] = useState("");
@@ -52,31 +52,46 @@ export function CheckinLookupPanel({ sessionId, onSelect }: Props) {
     setScannedToken(token);
   };
 
-  return (
-    <Card className="space-y-4 rounded-2xl p-5">
-      <div>
-        <h2 className="font-semibold text-foreground">Điểm danh tại cửa</h2>
-        <p className="text-xs text-muted-foreground">
-          Quét mã QR trên phiếu dự phiên, hoặc tìm theo họ tên, số CCCD / hộ chiếu, mã hồ sơ, tên tổ chức.
-        </p>
-      </div>
+  // Enter / "Tìm": máy quét phiếu gõ mã rồi Enter ⇒ cũng tự mở hộp đối chiếu như quét camera.
+  const searchNow = () => {
+    const q = input.trim();
+    setQuery(q);
+    setScannedToken(q);
+  };
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button className="gap-1.5" onClick={() => setScanning(true)}>
-          <QrCode className="h-4 w-4" />
-          Quét phiếu
-        </Button>
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
+  return (
+    <section className="space-y-3 rounded-2xl bg-card px-4 py-3.5 shadow-card">
+      <form
+        className="flex gap-2.5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          searchNow();
+        }}
+      >
+        <label className="flex h-[38px] min-w-0 flex-1 items-center gap-2 rounded-lg px-3 text-muted-foreground shadow-[inset_0_0_0_1px_hsl(var(--border))] focus-within:shadow-[0_0_0_2px_hsl(var(--primary))]">
+          <Search className="h-[18px] w-[18px] shrink-0" aria-hidden />
+          <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Họ tên, số giấy tờ, mã hồ sơ…"
-            className="pl-9"
+            placeholder="Quét mã trên phiếu hoặc nhập tên, CCCD, mã hồ sơ"
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground"
             aria-label="Tìm hồ sơ để điểm danh"
+            autoFocus
           />
-        </div>
-      </div>
+          <button
+            type="button"
+            onClick={() => setScanning(true)}
+            className="-mr-1.5 grid h-7 w-7 shrink-0 place-items-center rounded-md hover:bg-muted hover:text-foreground"
+            title="Quét phiếu bằng camera"
+            aria-label="Quét phiếu bằng camera"
+          >
+            <QrCode className="h-4 w-4" />
+          </button>
+        </label>
+        <Button type="submit" className={DESIGN_BTN}>
+          Tìm
+        </Button>
+      </form>
 
       {query.length >= 2 && (
         <div className="space-y-2">
@@ -106,7 +121,7 @@ export function CheckinLookupPanel({ sessionId, onSelect }: Props) {
       )}
 
       <TicketScanner open={scanning} onOpenChange={setScanning} onDetected={onScanned} />
-    </Card>
+    </section>
   );
 }
 

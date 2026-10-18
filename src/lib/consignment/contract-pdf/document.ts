@@ -14,7 +14,7 @@ import { MARGIN, themeOf } from '@/lib/personnel/dossier-pdf/theme'
 import { dataTable, fmtDate } from '@/lib/personnel/dossier-pdf/primitives'
 import { AUCTION_FORMAT_LABELS, type AuctionFormat } from '@/types/asset-posting'
 import { formatVnd } from '@/lib/advertising/slug'
-import { planSummary } from '@/lib/quotePlan'
+import { feeItemLabel, planSummary } from '@/lib/quotePlan'
 import type { OrgParty, OwnerParty } from '@/types/consignment-contract'
 import {
   CONTRACT_TEMPLATE_VERSION, DRAFT_NOTICE, EFFECT, LEGAL_BASES, ORG_DUTIES, OWNER_DUTIES, PAYMENT_TERMS, TERMINATION,
@@ -122,7 +122,7 @@ export function buildContractDocDefinition(input: ContractPdfInput): TDocumentDe
             { text: 'Số tiền', align: 'right', width: 'auto' },
           ],
           fees.map((f): TableCell[] => [
-            { text: f.label },
+            { text: feeItemLabel(f) },
             { text: f.optional ? 'Tuỳ chọn' : 'Bắt buộc' },
             { text: formatVnd(f.amount), alignment: 'right' },
           ]),

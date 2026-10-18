@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Loader2, SearchX, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useOrgServiceRequests, useRespondServiceRequest } from '@/hooks/useOrgServiceRequests'
-import { useOrgConsignmentContract } from '@/hooks/useConsignmentContract'
+import {
+  useOrgConsignmentContractList, useOrgServiceRequests, useRespondServiceRequest,
+} from '@/hooks/useOrgServiceRequests'
 import { ConsignmentCanvas } from '@/components/portal/consignment/ConsignmentCanvas'
-import { QuoteDialog } from '@/components/portal/consignment/quote/QuoteDialog'
+import { StateCard } from '@/components/portal/consignment/StateCard'
 import { DeclineDialog } from '@/components/portal/consignment/DeclineDialog'
 import { RequestHero } from '@/components/portal/consignment/detail/RequestHero'
-import { RequestActionBar, type ContractDialogKind } from '@/components/portal/consignment/detail/RequestActionBar'
-import { ContractCard } from '@/components/portal/consignment/detail/ContractCard'
-import { ContractDialogs } from '@/components/portal/consignment/detail/ContractDialogs'
+import { RequestActionBar } from '@/components/portal/consignment/detail/RequestActionBar'
 import { SentQuoteCard } from '@/components/portal/consignment/detail/SentQuoteCard'
 import { OwnerRequestCard } from '@/components/portal/consignment/detail/OwnerRequestCard'
 import { AssetCards } from '@/components/portal/consignment/detail/AssetCards'
@@ -18,38 +17,31 @@ import { HistoryCard } from '@/components/portal/consignment/detail/HistoryCard'
 import { Note } from '@/components/portal/consignment/detail/DetailCard'
 import { buildRequestHistory } from '@/components/portal/consignment/detail/requestHistory'
 import { fmtDate } from '@/components/portal/consignment/detail/format'
-import type { ServiceQuoteInput } from '@/types/consignment'
-
-function StateCard({ children }: { children: ReactNode }) {
-  return (
-    <ConsignmentCanvas>
-      <div className="space-y-3 rounded-2xl bg-card p-10 text-center shadow-card">{children}</div>
-    </ConsignmentCanvas>
-  )
-}
 
 /**
  * Chi tiết một yêu cầu ký gửi theo góc nhìn tổ chức (design "Yeu Cau Ky Gui - Cong
  * To Chuc v2"): banner + thanh việc tiếp theo, cột thông tin, lịch sử bên phải.
  *
  * Dữ liệu yêu cầu đến từ RPC `org_service_requests` — đã lược danh tính chủ tài
- * sản, số nhà, giấy tờ sở hữu. Những thứ đó chỉ có trong thẻ hợp đồng (RPC
- * org_consignment_contract) sau khi tổ chức được chọn.
+ * sản, số nhà, giấy tờ sở hữu. Những thứ đó (và mọi thao tác hợp đồng) nằm ở trang
+ * hợp đồng /portal/hop-dong/ky-gui/:id; trang này chỉ còn lối vào.
  */
 export default function YeuCauKyGuiDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { requests, isLoading, hasOrg, organizationId, auctionOrgId } = useOrgServiceRequests()
+  const { requests, isLoading, hasOrg } = useOrgServiceRequests()
   const respond = useRespondServiceRequest()
   const { mutate } = respond
 
   const request = useMemo(() => requests.find((r) => r.id === id) ?? null, [requests, id])
-  const contractQ = useOrgConsignmentContract(request?.contract_id ? request.id : null)
-  const contract = contractQ.data
+  // Chỉ dòng tóm tắt (mã, trạng thái, việc của tổ chức) — cùng cache với menu "Hợp đồng".
+  const contractList = useOrgConsignmentContractList(!!request?.contract_id)
+  const contract = useMemo(
+    () => (request?.contract_id ? (contractList.data ?? []).find((c) => c.id === request.contract_id) ?? null : null),
+    [contractList.data, request?.contract_id],
+  )
 
-  const [quoting, setQuoting] = useState(false)
   const [declining, setDeclining] = useState(false)
-  const [contractDialog, setContractDialog] = useState<ContractDialogKind | null>(null)
 
   // Đánh dấu đã xem ngay khi mở — chủ tài sản thấy tổ chức đã tiếp cận hồ sơ.
   const markedSeen = useRef<string | null>(null)
@@ -59,7 +51,7 @@ export default function YeuCauKyGuiDetailPage() {
     mutate({ requestId: request.id, action: 'seen' })
   }, [request?.id, request?.status, mutate])
 
-  const history = useMemo(() => (request ? buildRequestHistory(request, contract ?? null) : []), [request, contract])
+  const history = useMemo(() => (request ? buildRequestHistory(request, contract) : []), [request, contract])
 
   if (isLoading) {
     return (
@@ -97,14 +89,7 @@ export default function YeuCauKyGuiDetailPage() {
   }
 
   const r = request
-  const fullAddress = contract?.asset
-    ? [contract.asset.address, contract.asset.ward, contract.asset.district, contract.asset.province]
-        .filter(Boolean)
-        .join(', ')
-    : null
 
-  const submitQuote = (quote: ServiceQuoteInput) =>
-    mutate({ requestId: r.id, action: 'quote', quote }, { onSuccess: () => setQuoting(false) })
   const submitDecline = (reason: string) =>
     mutate({ requestId: r.id, action: 'decline', declineReason: reason }, { onSuccess: () => setDeclining(false) })
 
@@ -112,14 +97,13 @@ export default function YeuCauKyGuiDetailPage() {
     <ConsignmentCanvas>
       <RequestHero
         request={r}
-        fullAddress={fullAddress}
+        fullAddress={null}
         actionBar={
           <RequestActionBar
             request={r}
             contract={contract}
-            onQuote={() => setQuoting(true)}
+            onQuote={() => navigate(`/portal/yeu-cau-ky-gui/${r.id}/bao-gia`)}
             onDecline={() => setDeclining(true)}
-            onContract={setContractDialog}
           />
         }
       />
@@ -133,15 +117,7 @@ export default function YeuCauKyGuiDetailPage() {
 
       <div className="grid items-start gap-6 min-[1100px]:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-6">
-          {r.contract_id && (
-            <ContractCard
-              detail={contract}
-              isLoading={contractQ.isLoading}
-              failed={!!contractQ.error}
-              startingPrice={r.starting_price}
-            />
-          )}
-          {r.quoted_at && !r.contract_id && <SentQuoteCard request={r} />}
+          {r.quoted_at && <SentQuoteCard request={r} />}
           <OwnerRequestCard request={r} />
           <AssetCards request={r} hasContract={!!r.contract_id} />
         </div>
@@ -150,14 +126,6 @@ export default function YeuCauKyGuiDetailPage() {
         </aside>
       </div>
 
-      <QuoteDialog
-        request={r}
-        organizationId={organizationId}
-        open={quoting}
-        onOpenChange={setQuoting}
-        onSubmit={submitQuote}
-        isPending={respond.isPending}
-      />
       <DeclineDialog
         title={r.title}
         open={declining}
@@ -165,15 +133,6 @@ export default function YeuCauKyGuiDetailPage() {
         onConfirm={submitDecline}
         isPending={respond.isPending}
       />
-      {contract && (
-        <ContractDialogs
-          detail={contract}
-          requestId={r.id}
-          auctionOrgId={auctionOrgId}
-          open={contractDialog}
-          onClose={() => setContractDialog(null)}
-        />
-      )}
     </ConsignmentCanvas>
   )
 }

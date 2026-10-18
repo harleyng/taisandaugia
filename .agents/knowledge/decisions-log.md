@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-10-18 — Tiếp thị phiên theo file MVP (AI viết bài chung)
+
+**Context:** người dùng chỉ định file design MỚI "Phien Dau Gia - Cong Cong Ty MVP" — `pdg-mvp3.js` ghi đè tab Tiếp thị thành một thẻ "Viết cho" (bài chung + kênh) + tuỳ chọn viết + "Viết bằng AI".
+**Decision:** UI v2 (hero, ô kênh, nhóm khách, nhật ký, trang con soan/nhom-moi/lien-he) bị GỠ; bảng v2 giữ nguyên. Mig `20261018130000`: `packs.post_text/post_options/post_written_at/post_edited` + RPC `outreach_save_post`; bài riêng kênh = `channels.own_content/custom_body/post_options`. Bộ viết là mẫu tất định `lib/outreach/aiWriter.ts`; seam `writePost()` ở `hooks/useOutreachWriter.ts` (chưa có Edge Function LLM).
+**Consequences:** khi có mô hình thật chỉ đổi `writePost`; bộ viết chỉ được dùng dữ liệu phiên / lô / hồ sơ vụ việc.
+
+## 2026-10-18 — Phiên đấu giá: mỗi lúc chỉ một lô mở
+
+**Context:** màn Điều hành chỉ hiện nút "Mở lô" khi không có lô live, nhưng `org_open_lot` chỉ khoá theo LÔ ⇒ hai tab / gọi RPC thẳng mở được nhiều lô cùng lúc; seed demo harleyngx (phiên 8) còn cố ý để 2 lô cùng mở.
+**Decision:** mig `20261018140000` — `org_open_lot` giữ khoá tư vấn theo phiên (trước khoá lô), từ chối `another_lot_live`; lô `open` quá giờ chưa bị cron đóng thì `_close_lot` tại chỗ (client đã coi là đóng). Unique index một phần trên `auction_lot_states(session_id)` cho `open|paused`. Seed phiên 8/9 đấu lần lượt; demo harleyngx đã teardown + seed lại.
+**Consequences:** không có "đóng lô" tay ⇒ muốn mở lô khác giữa chừng phải chờ hết giờ hoặc rút lô. Thông điệp ở `biddingReasonMessage` nêu đích danh lô.
+
+## 2026-10-18 — Tiếp thị phiên v2: kênh tự quản, nhóm khách theo tiêu chí, câu chào
+
+**Context:** port design "Phien Dau Gia - Cong Cong Ty" (pdg-tabs.js outreachTab + pdg-mk.js…pdg-mk4.js). Design cho thêm / đổi tên / gỡ kênh, nội dung riêng + hẹn giờ từng kênh, nhóm khách lưu theo tiêu chí, câu chào Email/Zalo/SMS có biến — gói v1 chỉ có 5 kênh cứng (CHECK field_key) và phân khúc theo lô.
+**Decision:**
+- Mig `20261018120000`: bảng `session_outreach_channels` (11 loại, 1 Cổng/gói, Cổng không viết riêng / không gỡ), `session_outreach_segments` (criteria jsonb), `packs.greetings`, `sends.channel_id/channel_label`; bucket public `outreach-media` (path `{org}/{session}/…`). Vẫn CHỈ policy SELECT, ghi qua RPC kèm nhật ký `edits` (kind channel/segment/greeting).
+- Luật khớp nhóm theo tiêu chí CHỈ ở `outreach_criteria_contacts` (loại cha–con hai chiều, khu vực, khoảng giá giao nhau, kênh = có địa chỉ + notifications_enabled). Nhóm dựng sẵn `auto` = `org_session_audience` giữ nguyên. `outreach_mark_sent` nhận `segment_key 'seg:<id>'`.
+- Bản tin chung = ghép mô tả / hiện trạng / pháp lý THEO LÔ (`case_file.lots`) + `case_file.headline/cover_url` — không cột mới. "Sao chép" của Cổng = thông báo MẪU KHOÁ (renderNotice); các ô case của mẫu (người có tài sản…) đặt ở form Cổng (ngoài design).
+- Trang con: `/tiep-thi/soan[/:key]`, `/nhom-moi`, `/lien-he/:segment`; trình soạn tự lưu. "Lịch sử tương tác" của design bị ẩn (chưa có dữ liệu); tím → vàng.
+**Consequences:** field `channel:*` / `notice:*` / `pitch:*` và trình soạn mock (generateOutreach) không còn UI tiếp thị phiên (lib vẫn dùng cho marketing chủ tài sản). "Gửi ngay" vẫn là SỔ GHI NHẬN (chưa có cổng gửi thật). types.ts sửa tay (gen types 403).
+
+## 2026-10-11 — Hồ sơ tham gia: trang chi tiết thay sheet + chi tiết khoản đặt trước
+
+**Context:** port design "Phien Dau Gia - Cong Cong Ty" (pdg-tabs.js contractsTab + pdg-hoso.js). Design mở hồ sơ thành TRANG riêng, form đặt trước có hình thức / mã giao dịch / ngày nhận / chứng từ mà DB chưa có.
+**Decision:**
+- `/portal/phien-dau-gia/:id/ho-so/:code` thay `ContractReviewSheet` (đã xoá); tab Hồ sơ, menu `/portal/ho-so-tham-gia` và "Xem hồ sơ gốc" ở tab Điểm danh đều trỏ tới đây. Route gác `ho-so-tham-gia` anyOf view|checkin.
+- Mig `20261011120000`: `deposit_method` (bank_transfer|cash|bank_guarantee) + `deposit_txn_ref`; `org_set_contract_deposit` thêm `_method/_txn_ref/_received_at` (DROP bản 4 tham số). Chuyển khoản bắt buộc mã giao dịch. Tệp chứng từ CHƯA làm (nút giữ chỗ, cần bucket theo tổ chức).
+- Nút duyệt đầu trang theo ĐÚNG design: chỉ khi Chờ duyệt / Cần bổ sung — hồ sơ đã duyệt không còn nút thu hồi trên UI (server vẫn cho).
+- "Không hoàn trả" / "Chuyển về chưa nộp" / hoàn trả thường nằm trong hộp thoại Sửa (ngoài design).
+**Consequences:** hồ sơ mua theo PHIÊN ⇒ "Lô đăng ký" = mọi lô, tiền phải nộp = tổng đặt trước. Logic thuần ở `lib/biddingContracts/contractDetail.ts`. types.ts sửa tay.
+
 ## 2026-10-08 — Hồ sơ tham gia: eKYC → tổ chức duyệt → điểm danh cấp số báo danh
 
 **Context:** số báo danh cấp tay khi nhận cọc, tổ chức không duyệt giấy tờ, không ghi nhận ai có mặt ⇒ người vắng vẫn giữ quyền trả giá và cọc. Kế hoạch `docs/bidder-ekyc-checkin-plan.md` (W0 → S7, xong cùng ngày).

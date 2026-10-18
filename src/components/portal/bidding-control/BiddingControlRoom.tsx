@@ -1,16 +1,18 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
+import { ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InfoBox } from "@/components/shared/InfoBox";
-import { formatDateTime } from "@/lib/auctionSessions/datetime";
-import { bidderRosterRows } from "@/lib/biddingContracts/filters";
-import { operateWindowOf, OPERATE_BLOCK_LABELS } from "@/lib/bidding/controlAccess";
+import { UPLOADABLE_DOC_TYPES } from "@/lib/caseQa/labels";
+import { lotActionsFor, operateWindowOf } from "@/lib/bidding/controlAccess";
+import { formatSessionRemaining, isLotDone, lotViewKeyOf } from "@/lib/bidding/controlView";
 import { finalizeBlockersOf, finalizePreviewOf } from "@/lib/bidding/finalize";
-import { lotPhaseOf } from "@/lib/bidding/lotPhase";
 import type { ActorSources } from "@/lib/bidding/lotEventText";
+import { formatMoneyShort } from "@/utils/money";
+import { useCaseDocuments } from "@/hooks/useCaseDocuments";
 import { useLotStates } from "@/hooks/useLotStates";
 import { useServerClock, useServerNow } from "@/hooks/useServerClock";
+import { useCheckinSummary } from "@/hooks/useSessionCheckin";
 import {
   useFinalizeSession,
   useLotEvents,
@@ -24,29 +26,30 @@ import { useOrgMembers } from "@/hooks/useOrgMembers";
 import type { LotState } from "@/types/auction-bidding";
 import type { AuctionSessionItem, AuctionSessionWithItems } from "@/types/auction-session";
 import { BidderRoster } from "./BidderRoster";
-import { FinalizeSessionCard } from "./FinalizeSessionCard";
+import { ControlStatusBar } from "./ControlStatusBar";
 import { FinalizeSessionDialog } from "./FinalizeSessionDialog";
-import { SettlementPanel } from "./SettlementPanel";
-import { ControlLotTable } from "./ControlLotTable";
-import { LiveBidFeed } from "./LiveBidFeed";
 import { LotEventLog } from "./LotEventLog";
+import { LotIdleCard } from "./LotIdleCard";
+import { LotQueueCard } from "./LotQueueCard";
+import { LotStageCard } from "./LotStageCard";
 import { OpenLotDialog } from "./OpenLotDialog";
 import { PauseLotDialog } from "./PauseLotDialog";
+import { SettlementPanel } from "./SettlementPanel";
 import { WithdrawLotDialog } from "./WithdrawLotDialog";
 
 /**
- * Bộ điều phối phòng điều hành.
+ * Phòng điều hành — bố cục theo design pdg-ops `controlTab`:
+ *   thanh trạng thái → [chưa chốt] sân khấu lô | (Thứ tự lô + Người có mặt)
+ *                     → [đã chốt] 4 chỉ số + Kết quả & thanh toán
+ *   Nhật ký điều hành (ngoài design — người dùng giữ lại) nằm cột trái dưới sân khấu.
  *
  * TÁCH KHỎI TRANG vì useLotStates mở socket realtime trong một useEffect VÔ
- * ĐIỀU KIỆN, mà React cấm gọi hook có điều kiện — để hook trong trang thì người
- * bị cổng chặn (phiên nháp, phiên trực tiếp) cũng mở kênh. Đây cũng là NƠI DUY
- * NHẤT mount useLotStates cho phiên này: LiveBidFeed dựa vào kênh đó để tự làm
- * mới, nên không component con nào được gọi useLotStates hay useLotState —
- * useLotState gọi lại useLotStates bên trong và sẽ mở kênh thứ hai trùng tên.
+ * ĐIỀU KIỆN — để hook trong trang thì người bị cổng chặn cũng mở kênh. Đây là
+ * NƠI DUY NHẤT mount useLotStates cho phiên này: LotStageCard dựa vào kênh đó để
+ * tự làm mới lượt trả giá.
  *
  * MỘT `now` cho cả màn: giai đoạn lô, đồng hồ và việc bật/tắt nút phải đọc cùng
- * một mốc, nếu không nút "Tạm dừng" còn sáng thêm một nhịp sau khi lô đã hết giờ
- * và server sẽ trả lot_closed.
+ * một mốc, nếu không nút "Tạm dừng" còn sáng thêm một nhịp sau khi lô hết giờ.
  */
 
 interface Props {
@@ -55,21 +58,26 @@ interface Props {
   canViewContracts: boolean;
   /** dieu-hanh-dau-gia.finalize — chốt phiên, biên bản, xác nhận thanh toán. */
   canFinalize: boolean;
-  /** ho-so-tham-gia.update — MODULE KHÁC, chỉ để ghi nhận hoàn trả tiền đặt trước. */
-  canRefund: boolean;
 }
 
 type DialogKind = "open" | "pause" | "withdraw" | null;
 
-export function BiddingControlRoom({ session, canOperate, canViewContracts, canFinalize, canRefund }: Props) {
+const p2 = (n: number) => String(n).padStart(2, "0");
+const hm = (d: Date) => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+const dm = (d: Date) => `${p2(d.getDate())}/${p2(d.getMonth() + 1)}`;
+const SM = "h-8 gap-1.5 rounded-lg px-[11px] text-[12.5px] font-semibold";
+
+export function BiddingControlRoom({ session, canOperate, canViewContracts, canFinalize }: Props) {
   const navigate = useNavigate();
   const { data: states, isLoading: statesLoading } = useLotStates(session.id);
   const { ready: clockReady } = useServerClock();
   const now = useServerNow(1000);
 
   const { data: events, isLoading: eventsLoading } = useLotEvents(session.id);
-  const { data: contracts = [], isLoading: contractsLoading } = useSessionBiddingContracts(session.id);
+  const { data: contracts = [] } = useSessionBiddingContracts(session.id);
   const { data: members = [] } = useOrgMembers(session.organization_id);
+  const { data: summary } = useCheckinSummary(session.id);
+  const { data: docs = [] } = useCaseDocuments(session.id);
 
   const openLot = useOpenLot(session.id);
   const pauseLot = usePauseLot(session.id);
@@ -77,50 +85,17 @@ export function BiddingControlRoom({ session, canOperate, canViewContracts, canF
   const withdrawLot = useWithdrawLot(session.id);
   const finalizeSession = useFinalizeSession(session.id);
 
-  const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [finalizeOpen, setFinalizeOpen] = useState(false);
   const [target, setTarget] = useState<AuctionSessionItem | null>(null);
 
-  // useMemo vì `?? []` tạo mảng mới mỗi lần render, làm mọi useMemo phía dưới
-  // (xếp lô mặc định, map số lô) tính lại vô ích mỗi nhịp đồng hồ.
   const lots = useMemo(() => session.auction_session_items ?? [], [session.auction_session_items]);
-
   const stateByLot = useMemo(() => {
     const map = new Map<string, LotState>();
     for (const s of states ?? []) map.set(s.lot_id, s);
     return map;
   }, [states]);
-
-  // Lô đáng xem nhất: đang trả giá → tạm dừng → chưa mở → còn lại. Chỉ dùng khi
-  // người dùng chưa tự chọn; đã chọn rồi thì không bao giờ tự nhảy sang lô khác.
-  const defaultLot = useMemo(() => {
-    const rank = (lot: AuctionSessionItem) => {
-      const phase = lotPhaseOf(stateByLot.get(lot.id) ?? null, now);
-      if (phase === "open" || phase === "extended") return 0;
-      if (phase === "paused") return 1;
-      if (phase === "pending") return 2;
-      return 3;
-    };
-    return [...lots].sort((a, b) => rank(a) - rank(b) || a.lot_no - b.lot_no)[0] ?? null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ xếp lại khi danh sách lô / trạng thái đổi, không mỗi giây
-  }, [lots, stateByLot]);
-
-  const selected = lots.find((l) => l.id === selectedLotId) ?? defaultLot;
-
   const lotNoById = useMemo(() => new Map(lots.map((l) => [l.id, l.lot_no])), [lots]);
-
-  const rosterRows = useMemo(
-    () => (canViewContracts ? bidderRosterRows(contracts, states ?? [], session.id) : []),
-    [canViewContracts, contracts, states, session.id],
-  );
-
-  const nameByBidderNo = useMemo(() => {
-    const map = new Map<number, string>();
-    for (const r of rosterRows) if (r.bidderNo != null) map.set(r.bidderNo, r.fullName);
-    return map;
-  }, [rosterRows]);
-
   const actors: ActorSources = useMemo(
     () => ({
       members: new Map(
@@ -133,6 +108,7 @@ export function BiddingControlRoom({ session, canOperate, canViewContracts, canF
 
   const window = operateWindowOf(session, now);
   const finalized = !!session.finalized_at;
+  const started = window.reason !== "not_started";
 
   // Lô chặn tính theo GIAI ĐOẠN dẫn xuất, không theo status thô — xem finalize.ts.
   const blockers = useMemo(
@@ -145,115 +121,200 @@ export function BiddingControlRoom({ session, canOperate, canViewContracts, canF
     // eslint-disable-next-line react-hooks/exhaustive-deps -- như trên
     [lots, stateByLot, contracts],
   );
+
+  const view = lots.map((lot) => {
+    const state = stateByLot.get(lot.id) ?? null;
+    return { lot, state, key: lotViewKeyOf(state, now) };
+  });
+  const done = view.filter((v) => isLotDone(v.key)).length;
+  const current = view.find((v) => v.key === "live" || v.key === "paused");
+  const next = view.find((v) => v.key === "wait");
+  const present = summary?.checked_in ?? 0;
+  const eligible = summary?.eligible ?? 0;
+
   const pendingLotId =
     openLot.isPending || pauseLot.isPending || resumeLot.isPending || withdrawLot.isPending
       ? target?.id ?? null
       : null;
-
   const closeDialog = () => {
     setDialog(null);
     setTarget(null);
   };
-
-  const ask = (kind: Exclude<DialogKind, null>) => (lot: AuctionSessionItem) => {
+  const ask = (kind: Exclude<DialogKind, null>, lot: AuctionSessionItem) => {
     setTarget(lot);
     setDialog(kind);
   };
 
-  const select = (lot: AuctionSessionItem) => setSelectedLotId(lot.id);
+  if (statesLoading && !states) return <Skeleton className="h-64 rounded-2xl" />;
 
-  if (statesLoading && !states) {
-    return (
-      <div className="space-y-5">
-        <Skeleton className="h-64 rounded-2xl" />
-        <div className="grid gap-5 lg:grid-cols-3">
-          <Skeleton className="h-72 rounded-2xl lg:col-span-2" />
-          <Skeleton className="h-72 rounded-2xl" />
-        </div>
-      </div>
-    );
-  }
+  // ── Thanh trạng thái ────────────────────────────────────────────────────
+  const starts = new Date(session.starts_at);
+  const ends = new Date(session.ends_at);
+  const roomBtn = (
+    <Button variant="outline" className={SM} onClick={() => navigate(`/sessions/${session.id}/dau-gia`)}>
+      <ExternalLink className="h-4 w-4" />
+      Phòng đấu giá trên sàn
+    </Button>
+  );
+  const finalizeBtn = canFinalize && started && !finalized && (
+    <Button
+      className={SM}
+      disabled={blockers.length > 0}
+      title={blockers.length ? `Còn ${blockers.length} lô chưa đóng` : undefined}
+      onClick={() => setFinalizeOpen(true)}
+    >
+      Chốt kết quả phiên
+    </Button>
+  );
+  const fin = session.finalized_at ? new Date(session.finalized_at) : null;
+  const stat = finalized
+    ? { label: "Đã chốt kết quả", value: fin ? `${dm(fin)} · ${hm(fin)}` : "—" }
+    : window.reason === "not_started"
+      ? { label: "Mở phòng lúc", value: `${dm(starts)}/${starts.getFullYear()} · ${hm(starts)}` }
+      : window.reason === "ended"
+        ? { label: "Phiên đã hết giờ lúc", value: `${dm(ends)} · ${hm(ends)}` }
+        : {
+            label: "Thời gian còn lại",
+            value: formatSessionRemaining(ends.getTime() - now.getTime()),
+            meta: `· kết thúc ${hm(ends)}`,
+          };
 
-  return (
-    <>
-      {window.reason && (
-        <InfoBox variant={window.reason === "finalized" ? "muted" : "amber"} className="text-sm">
-          <strong>{OPERATE_BLOCK_LABELS[window.reason]}.</strong>{" "}
-          {window.reason === "not_started" &&
-            `Phiên bắt đầu lúc ${formatDateTime(session.starts_at)} — chưa mở lô được.`}
-          {window.reason === "ended" &&
-            `Phiên kết thúc lúc ${formatDateTime(session.ends_at)}. Lô còn mở sẽ tự đóng, không mở thêm lô mới được.`}
-          {window.reason === "finalized" &&
-            `Kết quả đã chốt lúc ${formatDateTime(session.finalized_at)}. Không mở hay đóng lô được nữa; phần còn lại là xác nhận thanh toán của người trúng, hoàn trả tiền đặt trước và phát hành biên bản.`}
-        </InfoBox>
-      )}
+  const bar = (
+    <ControlStatusBar
+      {...stat}
+      actions={
+        <>
+          {roomBtn}
+          {finalizeBtn}
+        </>
+      }
+      lots={view.map((v) => ({ lotNo: v.lot.lot_no, key: v.key }))}
+      done={done}
+      present={started ? present : null}
+      eligible={eligible}
+    />
+  );
 
-      {canFinalize && !finalized && (
-        <FinalizeSessionCard preview={preview} blockers={blockers} onFinalize={() => setFinalizeOpen(true)} />
-      )}
-
-      {/* Bảng lô chiếm TRỌN chiều ngang: nhét vào 2/3 lưới thì cột thao tác bị
-          cắt mất, mà đó lại là thứ đấu giá viên cần bấm nhanh nhất. */}
-      <ControlLotTable
-        lots={lots}
-        stateByLot={stateByLot}
+  // ── Sân khấu ────────────────────────────────────────────────────────────
+  let stage;
+  if (current) {
+    stage = (
+      <LotStageCard
+        sessionId={session.id}
+        lot={current.lot}
+        state={current.state}
+        total={lots.length}
+        paused={current.key === "paused"}
         now={now}
         clockReady={clockReady}
         canOperate={canOperate}
-        window={window}
-        selectedLotId={selected?.id ?? null}
-        pendingLotId={pendingLotId}
-        onSelect={select}
-        onOpen={ask("open")}
-        onPause={ask("pause")}
-        onResume={(lot) => {
-          setTarget(lot);
-          resumeLot.mutate(lot.id, { onSettled: () => setTarget(null) });
+        busy={pendingLotId === current.lot.id}
+        onPause={() => ask("pause", current.lot)}
+        onResume={() => {
+          setTarget(current.lot);
+          resumeLot.mutate(current.lot.id, { onSettled: () => setTarget(null) });
         }}
-        onWithdraw={ask("withdraw")}
+        onWithdraw={() => ask("withdraw", current.lot)}
       />
+    );
+  } else if (started && next) {
+    const open = lotActionsFor(next.state, now, { canOperate, window }).open;
+    stage = (
+      <LotIdleCard
+        eyebrow={`Lô tiếp theo · ${next.lot.lot_no} / ${lots.length}`}
+        pill="Chờ mở"
+        title={next.lot.title}
+        facts={[
+          ["Giá khởi điểm", next.lot.starting_price != null ? formatMoneyShort(next.lot.starting_price) : "—"],
+          ["Bước giá", next.lot.bid_step != null ? formatMoneyShort(next.lot.bid_step) : "—"],
+          ["Tiền đặt trước", next.lot.deposit_amount != null ? formatMoneyShort(next.lot.deposit_amount) : "—"],
+          ["Có mặt", `${present} người`],
+        ]}
+        control={{
+          label: `Mở lô ${next.lot.lot_no}`,
+          hint: "Người trả giá thấy lô ngay khi mở.",
+          disabled: !open.enabled || pendingLotId === next.lot.id,
+          disabledTitle: open.disabledReason ?? undefined,
+          onClick: () => ask("open", next.lot),
+        }}
+      />
+    );
+  } else if (!started) {
+    const approved = contracts.filter((c) => c.status === "paid" && c.review_status === "approved").length;
+    const docsOk = UPLOADABLE_DOC_TYPES.filter((t) =>
+      docs.some((d) => d.doc_type === t && d.review_status === "confirmed"),
+    ).length;
+    stage = (
+      <LotIdleCard
+        eyebrow="Sẵn sàng điều hành"
+        title={`Phòng mở lúc ${hm(starts)} ngày ${dm(starts)}`}
+        checks={[
+          { ok: approved > 0, title: "Danh sách đủ điều kiện", sub: `${approved} người đã duyệt` },
+          {
+            ok: docsOk >= UPLOADABLE_DOC_TYPES.length,
+            title: "Tài liệu phiên",
+            sub: `${docsOk}/${UPLOADABLE_DOC_TYPES.length} đã xác nhận`,
+          },
+          {
+            ok: !!summary?.roster_closed_at,
+            title: "Chốt điểm danh",
+            sub: `Mở ${session.checkin_lead_minutes} phút trước giờ bắt đầu`,
+          },
+          { ok: lots.length > 0, title: "Thứ tự lô", sub: `${lots.length} lô, đấu lần lượt` },
+        ]}
+        control={{
+          label: "Mở lô 1",
+          hint: "Mở được khi đến giờ bắt đầu và đã chốt điểm danh.",
+          disabled: true,
+          disabledTitle: "Chưa đến giờ",
+        }}
+      />
+    );
+  } else {
+    stage = (
+      <LotIdleCard
+        eyebrow={`Đã đóng ${done} / ${lots.length} lô`}
+        title="Không còn lô chờ mở — chốt kết quả phiên để chuyển sang thanh toán."
+      />
+    );
+  }
 
-      {/* Phiên chốt rồi thì dòng trả giá là lịch sử, việc đang làm là thanh
-          toán — nên khối này nằm TRÊN dòng trả giá. Trước khi chốt thì ẩn hẳn:
-          cả org_confirm_winner_payment lẫn org_issue_minutes đều trả not_finalized. */}
-      {finalized && (
+  // Nhật ký điều hành (ngoài design, người dùng giữ lại): cột trái dưới sân khấu.
+  const eventLog = <LotEventLog events={events} isLoading={eventsLoading} lotNoById={lotNoById} actors={actors} />;
+
+  return (
+    <>
+      {bar}
+
+      {finalized ? (
         <SettlementPanel
           session={session}
-          lots={lots}
+          lots={view}
           stateByLot={stateByLot}
           contracts={contracts}
           canFinalize={canFinalize}
-          canRefund={canRefund}
-          now={now}
         />
+      ) : (
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="flex min-w-0 flex-col gap-4">
+            {stage}
+            {started && eventLog}
+          </div>
+          <div className="flex min-w-0 flex-col gap-4">
+            <LotQueueCard lots={view} done={done} />
+            <BidderRoster
+              contracts={contracts}
+              canView={canViewContracts}
+              started={started}
+              present={present}
+              eligible={eligible}
+            />
+          </div>
+        </div>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
-          {selected ? (
-            <LiveBidFeed
-              sessionId={session.id}
-              lot={selected}
-              leadingBidId={stateByLot.get(selected.id)?.current_bid_id ?? null}
-              nameByBidderNo={nameByBidderNo}
-            />
-          ) : (
-            <Card className="rounded-2xl border-dashed p-6 text-center text-sm text-muted-foreground">
-              Thêm lô tài sản vào phiên để bắt đầu điều hành.
-            </Card>
-          )}
-          <LotEventLog events={events} isLoading={eventsLoading} lotNoById={lotNoById} actors={actors} />
-        </div>
-
-        <aside className="lg:sticky lg:top-4 lg:self-start">
-          <BidderRoster
-            rows={rosterRows}
-            isLoading={contractsLoading}
-            canView={canViewContracts}
-            onManage={() => navigate(`/portal/ho-so-tham-gia?session=${session.id}`)}
-          />
-        </aside>
-      </div>
+      {/* Đã chốt thì không còn hai cột — nhật ký xuống cuối. */}
+      {finalized && eventLog}
 
       {canFinalize && !finalized && (
         <FinalizeSessionDialog
@@ -262,9 +323,7 @@ export function BiddingControlRoom({ session, canOperate, canViewContracts, canF
           preview={preview}
           pending={finalizeSession.isPending}
           onOpenChange={setFinalizeOpen}
-          onConfirm={() =>
-            finalizeSession.mutate(session.id, { onSuccess: () => setFinalizeOpen(false) })
-          }
+          onConfirm={() => finalizeSession.mutate(session.id, { onSuccess: () => setFinalizeOpen(false) })}
         />
       )}
 
@@ -278,17 +337,14 @@ export function BiddingControlRoom({ session, canOperate, canViewContracts, canF
             pending={openLot.isPending}
             onOpenChange={(open) => !open && closeDialog()}
             onConfirm={(durationSeconds) =>
-              target &&
-              openLot.mutate({ lotId: target.id, durationSeconds }, { onSuccess: closeDialog })
+              target && openLot.mutate({ lotId: target.id, durationSeconds }, { onSuccess: closeDialog })
             }
           />
           <PauseLotDialog
             lot={dialog === "pause" ? target : null}
             pending={pauseLot.isPending}
             onOpenChange={(open) => !open && closeDialog()}
-            onConfirm={(reason) =>
-              target && pauseLot.mutate({ lotId: target.id, reason }, { onSuccess: closeDialog })
-            }
+            onConfirm={(reason) => target && pauseLot.mutate({ lotId: target.id, reason }, { onSuccess: closeDialog })}
           />
           <WithdrawLotDialog
             lot={dialog === "withdraw" ? target : null}

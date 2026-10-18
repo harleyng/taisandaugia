@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { DEPOSIT_LEGAL_RANGE } from "@/constants/quote-plan";
-import { depositOutOfLegalRange, feeTotal, feeTotalRequired, planSummary } from "@/lib/quotePlan";
+import { depositOutOfLegalRange, feeItemLabel, feeTotal, feeTotalRequired, planSummary } from "@/lib/quotePlan";
 import { formatVnd } from "@/lib/advertising/slug";
 import type { QuoteFeeItem, QuotePlan } from "@/types/consignment";
 
@@ -62,7 +62,7 @@ export function QuoteDetails({ plan, feeItems, startingPrice, className }: Quote
                 {items.map((item, i) => (
                   <tr key={`${item.key}-${i}`}>
                     <td className="px-3 py-2">
-                      {item.label}
+                      {feeItemLabel(item)}
                       {item.optional && (
                         <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                           Tuỳ chọn

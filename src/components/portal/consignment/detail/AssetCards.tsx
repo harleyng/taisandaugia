@@ -29,7 +29,7 @@ const flag = (v: boolean | null) => <Legal good={v === null ? null : !v} label={
 
 interface AssetCardsProps {
   request: OrgServiceRequest
-  /** Đã có hợp đồng ⇒ giấy tờ sở hữu nằm trong thẻ hợp đồng, bỏ dòng gợi ý. */
+  /** Đã có hợp đồng ⇒ giấy tờ sở hữu nằm ở trang hợp đồng (menu "Hợp đồng"). */
   hasContract: boolean
 }
 
@@ -81,12 +81,11 @@ export function AssetCards({ request: r, hasContract }: AssetCardsProps) {
           <InfoRow label="Đang thế chấp" value={flag(r.has_mortgage)} />
           <InfoRow label="Bị kê biên" value={flag(r.is_seized)} />
         </InfoList>
-        {!hasContract && (
-          <p className="text-xs text-muted-foreground">
-            Giấy tờ sở hữu do chủ tài sản nộp đã được sàn thẩm định; bạn xem được sau khi chủ tài sản chọn tổ chức của
-            bạn.
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          {hasContract
+            ? 'Giấy tờ sở hữu và thông tin chủ tài sản xem ở trang hợp đồng ký gửi.'
+            : 'Giấy tờ sở hữu do chủ tài sản nộp đã được sàn thẩm định; bạn xem được sau khi chủ tài sản chọn tổ chức của bạn.'}
+        </p>
       </DetailCard>
     </>
   )

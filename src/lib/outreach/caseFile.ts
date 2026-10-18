@@ -23,6 +23,10 @@ export const caseFileSchema = z.object({
   registration_conditions: text,
   auction_method: text,
   contact_person: text,
+  /** Tiêu đề bản tin chung (tab Tiếp thị). Rỗng ⇒ dùng tên phiên. */
+  headline: z.string().max(300).catch(""),
+  /** Ảnh đại diện bản tin — URL public của bucket outreach-media. */
+  cover_url: z.string().max(1000).catch(""),
   /** Bổ sung theo lô, khoá = auction_session_items.id. Lô đã gỡ khỏi phiên bị bỏ qua. */
   lots: z.record(z.string(), caseLotSchema).catch({}),
 });

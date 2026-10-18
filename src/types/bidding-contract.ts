@@ -39,6 +39,8 @@ export type DepositStatus =
  * org_confirm_winner_payment / org_mark_deposit_refunded.
  */
 export type DepositActionStatus = "pending" | "received" | "refunded" | "forfeited";
+/** Hình thức nộp tiền đặt trước (CHECK abc_deposit_method_check, 20261011120000). */
+export type DepositMethod = "bank_transfer" | "cash" | "bank_guarantee";
 export type IdType = "cccd" | "passport";
 /** Nguồn danh tính TRÊN HỒ SƠ: 'vneid' chỉ khi khớp bản VNeID đã lưu (server tự quyết). */
 export type IdentitySource = "manual" | "vneid";
@@ -75,6 +77,7 @@ export type BiddingContract = Omit<
   | "proxy_id_edited_fields"
   | "checkin_channel"
   | "checkin_attendee"
+  | "deposit_method"
 > & {
   status: ContractStatus;
   deposit_status: DepositStatus;
@@ -91,6 +94,7 @@ export type BiddingContract = Omit<
   proxy_id_edited_fields: KycField[];
   checkin_channel: CheckinChannel | null;
   checkin_attendee: CheckinAttendee | null;
+  deposit_method: DepositMethod | null;
 };
 
 /**
@@ -287,6 +291,12 @@ export const DEPOSIT_STATUS_LABELS: Record<DepositStatus, string> = {
   pending_refund: "Chờ hoàn trả",
   refunded: "Đã hoàn trả",
   forfeited: "Không hoàn trả",
+};
+
+export const DEPOSIT_METHOD_LABELS: Record<DepositMethod, string> = {
+  bank_transfer: "Chuyển khoản",
+  cash: "Tiền mặt tại quầy",
+  bank_guarantee: "Bảo lãnh ngân hàng",
 };
 
 export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = {

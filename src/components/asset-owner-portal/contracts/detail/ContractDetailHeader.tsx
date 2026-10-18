@@ -19,6 +19,8 @@ interface ContractDetailHeaderProps {
   onBack: () => void;
   /** Mở hồ sơ số hoá của tài sản; null khi không có hồ sơ. */
   onOpenPosting: (() => void) | null;
+  /** Nhãn nút mở hồ sơ (cổng tổ chức: "Yêu cầu ký gửi"). */
+  postingLabel?: string;
 }
 
 /** Đường dẫn "Hợp đồng › mã · tài sản" + thẻ đầu trang (ảnh, tên tài sản, mã / nơi / cập nhật) + thanh bước. */
@@ -34,6 +36,7 @@ export function ContractDetailHeader({
   mine,
   onBack,
   onOpenPosting,
+  postingLabel = "Hồ sơ số hoá",
 }: ContractDetailHeaderProps) {
   return (
     <>
@@ -84,7 +87,7 @@ export function ContractDetailHeader({
           {onOpenPosting && (
             <Button variant="outline" className="gap-1.5 justify-self-start" onClick={onOpenPosting}>
               <FileText className="h-4 w-4" strokeWidth={1.75} aria-hidden />
-              Hồ sơ số hoá
+              {postingLabel}
             </Button>
           )}
         </div>

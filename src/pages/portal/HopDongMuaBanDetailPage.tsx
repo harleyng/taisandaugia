@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { SaleContractBody } from "@/components/sale-contracts/SaleContractBody";
 import { SaleStageBadge } from "@/components/sale-contracts/SaleStageBadge";
 import { useSaleContractDetail } from "@/hooks/useSaleContracts";
-import { PORTAL_SALE_CONTRACTS_PATH } from "@/lib/saleContracts/files";
+import { portalSaleContractsPath } from "@/lib/saleContracts/files";
 import { ASSET_CATEGORIES } from "@/constants/category.constants";
 import type { SaleAssetSnapshot } from "@/types/auction-sale-contract";
 
@@ -14,7 +14,7 @@ const CHILD_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 /**
- * /portal/hop-dong-mua-ban/:id
+ * /portal/hop-dong/mua-ban/:id
  *
  * Quyền thao tác lấy từ `can_act` của RPC, KHÔNG từ OrgSwitcher: hợp đồng mở
  * bằng đường link có thể thuộc tổ chức khác với tổ chức đang chọn, và server
@@ -41,7 +41,7 @@ export default function HopDongMuaBanDetailPage() {
           <p className="text-sm text-muted-foreground">
             Không tìm thấy hợp đồng này, hoặc bạn không có quyền xem.
           </p>
-          <Button type="button" variant="outline" className="mt-4" onClick={() => navigate(PORTAL_SALE_CONTRACTS_PATH)}>
+          <Button type="button" variant="outline" className="mt-4" onClick={() => navigate(portalSaleContractsPath())}>
             Về danh sách hợp đồng
           </Button>
         </Card>
@@ -59,10 +59,10 @@ export default function HopDongMuaBanDetailPage() {
           variant="ghost"
           size="sm"
           className="-ml-2"
-          onClick={() => navigate(PORTAL_SALE_CONTRACTS_PATH)}
+          onClick={() => navigate(portalSaleContractsPath())}
         >
           <ArrowLeft className="mr-1 h-4 w-4" aria-hidden />
-          Hợp đồng mua bán
+          Hợp đồng
         </Button>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold">{data.contract.code}</h1>

@@ -46,8 +46,13 @@ export interface QuoteFeeItem {
   /** Key trong FEE_ITEM_PRESETS, hoặc 'khac'. */
   key: string;
   label: string;
+  /** Luôn là VNĐ — server cộng trường này vào quote_service_fee. */
   amount: number;
   optional: boolean;
+  /** '%' = khoản tính theo % giá khởi điểm; `amount` khi đó là số đã quy đổi lúc gửi. */
+  unit?: "vnd" | "%";
+  /** Tỷ lệ % gốc khi unit = '%' — để mở lại form vẫn sửa được theo %. */
+  rate?: number | null;
 }
 
 export type ServiceRequestStatus =

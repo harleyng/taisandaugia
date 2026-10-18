@@ -7,6 +7,7 @@ import { useHasOrgPermission } from '@/hooks/useOrgPermissions'
 import { assertRpcOk } from '@/lib/consignment/errors'
 import { qk } from '@/lib/queryKeys'
 import type { OrgServiceRequest, ServiceQuoteInput } from '@/types/consignment'
+import type { OrgConsignmentContractListRow } from '@/types/consignment-contract'
 
 const QUOTE_BUCKET = 'quote-docs'
 
@@ -89,6 +90,28 @@ export function useOrgServiceRequestCounts() {
     /** Hợp đồng tổ chức đang phải làm bước kế tiếp (soạn / ký / xác nhận). */
     contractsActionCount: query.data?.contractsAction ?? 0,
   }
+}
+
+/**
+ * Hợp đồng ký gửi của tổ chức — menu "Hợp đồng". Server trả sẵn `org_action`
+ * cùng luật với số `contracts_action` ở badge, nên dòng "Cần xử lý" khớp số trên menu.
+ */
+export function useOrgConsignmentContractList(enabled = true) {
+  const { auctionOrgId, isLoading: orgLoading } = useCurrentAuctionOrg()
+
+  const query = useQuery({
+    queryKey: qk.consignment.orgContractList(auctionOrgId),
+    enabled: !!auctionOrgId && enabled,
+    queryFn: async (): Promise<OrgConsignmentContractListRow[]> => {
+      const { data, error } = await supabase.rpc('org_consignment_contract_list', {
+        _auction_org_id: auctionOrgId!,
+      })
+      if (error) throw error
+      return (data ?? []) as unknown as OrgConsignmentContractListRow[]
+    },
+  })
+
+  return { ...query, isLoading: orgLoading || (!!auctionOrgId && enabled && query.isLoading) }
 }
 
 interface RespondArgs {

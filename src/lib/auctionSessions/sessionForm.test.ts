@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   defaultSessionForm,
+  formToBiddingRules,
   formToSessionInput,
   SESSION_FORMATS,
   sessionFormSchema,
+  sessionFormSchemaFor,
   sessionToForm,
 } from "./sessionForm";
 import type { AuctionSession } from "@/types/auction-session";
@@ -103,5 +105,39 @@ describe("formToSessionInput", () => {
     expect(paths({ checkin_grace_minutes: "61" })).toContain("checkin_grace_minutes");
     expect(paths({ checkin_grace_minutes: "" })).toContain("checkin_grace_minutes");
     expect(paths({ checkin_lead_minutes: "15", checkin_grace_minutes: "60" })).toEqual([]);
+  });
+});
+
+describe("quy tắc trả giá + luật form tạo / sửa", () => {
+  it("quy tắc trả giá chỉ kiểm khi hình thức trực tuyến", () => {
+    const bad = { ...valid(), extension_seconds: "4000", max_bid_steps: "0" };
+    const paths = (v: object) => {
+      const r = sessionFormSchema.safeParse(v);
+      return r.success ? [] : r.error.issues.map((i) => i.path.join("."));
+    };
+    expect(paths({ ...bad, auction_format: "truc_tuyen" })).toEqual(["extension_seconds", "max_bid_steps"]);
+    expect(paths({ ...bad, auction_format: "truc_tiep" })).toEqual([]);
+  });
+
+  it("xem tài sản phải kết thúc trước giờ đấu", () => {
+    const v = valid();
+    const r = sessionFormSchema.safeParse({ ...v, viewing_start_at: v.registration_start_at, viewing_end_at: v.ends_at });
+    expect(r.success ? [] : r.error.issues.map((i) => i.path.join("."))).toContain("viewing_end_at");
+  });
+
+  it("giờ bắt đầu ở quá khứ: chặn khi tạo / khi dời giờ, không chặn khi giữ nguyên", () => {
+    const v = valid();
+    const later = () => Date.parse(v.ends_at) + 1;
+    expect(sessionFormSchemaFor(null, later).safeParse(v).success).toBe(false);
+    expect(sessionFormSchemaFor(v.starts_at, later).safeParse(v).success).toBe(true);
+    expect(sessionFormSchemaFor("2026-01-01T09:00", later).safeParse(v).success).toBe(false);
+  });
+
+  it("formToBiddingRules đổi chuỗi sang số", () => {
+    expect(formToBiddingRules({ ...valid(), extension_seconds: "60", max_bid_steps: "5" })).toEqual({
+      bidding_method: "ascending",
+      extension_seconds: 60,
+      max_bid_steps: 5,
+    });
   });
 });

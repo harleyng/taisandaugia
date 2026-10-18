@@ -20,3 +20,18 @@ export const bidderCardPrintPath = (sessionId: string, contractId: string) =>
 
 /** Trang đăng ký tham gia (mua hồ sơ) của một phiên — 4 bước, cần đăng nhập. */
 export const sessionRegistrationPath = (sessionId: string) => `/sessions/${sessionId}/dang-ky`;
+
+/** Trang in danh sách điểm danh A4 của phiên — ngoài PortalLayout. */
+export const sessionRosterPrintPath = (sessionId: string) => `${sessionCheckinPath(sessionId)}/in`;
+
+/** Tab "Hồ sơ tham gia" của phiên trong portal tổ chức. */
+export const sessionContractsPath = (sessionId: string) => `/portal/phien-dau-gia/${sessionId}/ho-so`;
+
+/** Trang chi tiết một hồ sơ tham gia (thay ContractReviewSheet) — mã hồ sơ là UNIQUE. */
+export const sessionContractPath = (sessionId: string, code: string) =>
+  `${sessionContractsPath(sessionId)}/${encodeURIComponent(code)}`;
+
+/** location.state của trang chi tiết hồ sơ: mở từ danh sách toàn tổ chức (path + query để quay lại). */
+export interface ContractDetailState {
+  fromList?: string;
+}

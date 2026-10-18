@@ -1,12 +1,12 @@
 // "Lịch sử thao tác" của một yêu cầu ký gửi (design "Yeu Cau Ky Gui - Cong To Chuc v2").
-// Ghép từ mốc thời gian của yêu cầu (RPC org_service_requests) và sự kiện hợp
-// đồng (RPC org_consignment_contract) — không có bảng nhật ký riêng.
+// Ghép từ mốc thời gian của yêu cầu (RPC org_service_requests) và các mốc chính
+// của hợp đồng (RPC org_consignment_contract_list) — chi tiết từng bước ký nằm ở
+// trang hợp đồng /portal/hop-dong/ky-gui/:id. Không có bảng nhật ký riêng.
 
 import { feeTotalRequired } from '@/lib/quotePlan'
 import { formatVnd } from '@/lib/advertising/slug'
-import { contractFileName } from '@/lib/consignment/contractFiles'
 import type { OrgServiceRequest } from '@/types/consignment'
-import type { ContractEvent, OrgContractDetail } from '@/types/consignment-contract'
+import type { OrgConsignmentContractListRow } from '@/types/consignment-contract'
 
 export type HistoryActor = 'owner' | 'me' | 'sys'
 export type HistoryTone = 'ok' | 'err' | null
@@ -26,58 +26,11 @@ export const HISTORY_ACTOR_LABELS: Record<HistoryActor, string> = {
   sys: 'Hệ thống',
 }
 
-const pathOf = (e: ContractEvent) => (typeof e.data?.path === 'string' ? contractFileName(e.data.path) : null)
-
-function contractEvent(e: ContractEvent, detail: OrgContractDetail): HistoryEvent | null {
-  const c = detail.contract
-  const mine = e.side === 'org'
-  const who: HistoryActor = e.side === 'org' ? 'me' : e.side === 'owner' ? 'owner' : 'sys'
-  switch (e.action) {
-    case 'created':
-      return {
-        at: e.created_at,
-        title: 'Chủ tài sản chọn tổ chức của bạn',
-        sub: c.code ? `Hợp đồng ${c.code} được khởi tạo` : null,
-        who: 'owner',
-        tone: 'ok',
-      }
-    case 'draft_shared':
-      return { at: e.created_at, title: 'Bạn chia sẻ dự thảo hợp đồng', sub: pathOf(e), who: 'me', tone: null }
-    case 'signed_uploaded':
-      return {
-        at: e.created_at,
-        title: mine ? 'Bạn tải bản đã ký' : 'Chủ tài sản tải bản đã ký',
-        sub: pathOf(e),
-        who,
-        tone: null,
-      }
-    case 'confirmed':
-      return {
-        at: e.created_at,
-        title: mine ? 'Bạn xác nhận bản đã ký' : 'Chủ tài sản xác nhận bản đã ký',
-        sub: null,
-        who,
-        tone: null,
-      }
-    case 'signed':
-      return {
-        at: e.created_at,
-        title: 'Hợp đồng có hiệu lực',
-        sub: c.contract_no ? `Số ${c.contract_no}` : null,
-        who: 'sys',
-        tone: 'ok',
-      }
-    case 'cancelled': {
-      const reason = typeof e.data?.reason === 'string' ? e.data.reason : null
-      return { at: e.created_at, title: 'Hợp đồng ký gửi bị huỷ', sub: reason, who, tone: 'err' }
-    }
-    default:
-      return null
-  }
-}
-
 /** Mới nhất lên đầu. */
-export function buildRequestHistory(r: OrgServiceRequest, detail: OrgContractDetail | null): HistoryEvent[] {
+export function buildRequestHistory(
+  r: OrgServiceRequest,
+  contract: Pick<OrgConsignmentContractListRow, 'code' | 'status' | 'created_at' | 'signed_at' | 'updated_at'> | null,
+): HistoryEvent[] {
   const events: HistoryEvent[] = []
   const push = (e: HistoryEvent) => events.push(e)
 
@@ -113,13 +66,20 @@ export function buildRequestHistory(r: OrgServiceRequest, detail: OrgContractDet
     push({ at: r.updated_at, title: 'Chủ tài sản chọn tổ chức khác', sub: null, who: 'owner', tone: null })
   }
 
-  if (detail) {
-    const fromEvents = detail.events.map((e) => contractEvent(e, detail)).filter((e): e is HistoryEvent => !!e)
-    // Hợp đồng dựng trước khi có bảng sự kiện thì không có dòng 'created'.
-    if (!detail.events.some((e) => e.action === 'created')) {
-      fromEvents.push(contractEvent({ action: 'created', side: null, created_at: detail.contract.created_at, data: null }, detail)!)
+  if (contract) {
+    push({
+      at: contract.created_at,
+      title: 'Chủ tài sản chọn tổ chức của bạn',
+      sub: contract.code ? `Hợp đồng ${contract.code} được khởi tạo` : null,
+      who: 'owner',
+      tone: 'ok',
+    })
+    if (contract.signed_at) {
+      push({ at: contract.signed_at, title: 'Hợp đồng có hiệu lực', sub: null, who: 'sys', tone: 'ok' })
     }
-    events.push(...fromEvents)
+    if (contract.status === 'cancelled') {
+      push({ at: contract.updated_at, title: 'Hợp đồng ký gửi bị huỷ', sub: null, who: 'sys', tone: 'err' })
+    }
   }
 
   return events.sort((a, b) => b.at.localeCompare(a.at))

@@ -115,3 +115,23 @@ export function useLotState(sessionId: string | null | undefined, lotId: string 
   const { data, ...rest } = useLotStates(sessionId);
   return { ...rest, data: data?.find((s) => s.lot_id === lotId) ?? null };
 }
+
+/**
+ * Kết quả các lô cho bảng "Tài sản" của trang chi tiết phiên — query thuần, KHÔNG
+ * mở kênh realtime (bảng tài sản không cần nhịp từng giây như phòng điều hành).
+ * Dùng chung khoá với useLotStates nên hai màn đọc cùng một bộ nhớ đệm.
+ */
+export function useSessionLotResults(sessionId: string | null | undefined, enabled = true) {
+  return useQuery({
+    queryKey: qk.bidding.lotStates(sessionId),
+    enabled: !!sessionId && enabled,
+    queryFn: async (): Promise<LotState[]> => {
+      const { data, error } = await supabase
+        .from("auction_lot_states")
+        .select("*")
+        .eq("session_id", sessionId!);
+      if (error) throw error;
+      return (data ?? []) as unknown as LotState[];
+    },
+  });
+}

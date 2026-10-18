@@ -1,4 +1,4 @@
-import { feeTotal, feeTotalRequired } from '@/lib/quotePlan'
+import { feeItemLabel, feeTotal, feeTotalRequired } from '@/lib/quotePlan'
 import { formatVnd } from '@/lib/advertising/slug'
 import type { QuoteFeeItem } from '@/types/consignment'
 
@@ -23,7 +23,7 @@ export function FeesTable({ items, legacyServiceFee }: FeesTableProps) {
         {list.map((item, i) => (
           <div key={`${item.key}-${i}`} className={ROW}>
             <span className="text-muted-foreground">
-              {item.label}
+              {feeItemLabel(item)}
               {item.optional && (
                 <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">Tuỳ chọn</span>
               )}

@@ -22,6 +22,7 @@ import {
   Send,
   Link2,
   BarChart3,
+  Store,
   type LucideIcon,
 } from 'lucide-react'
 import type { OwnerModule } from '@/lib/ownerWorkspace/permissions'
@@ -50,6 +51,8 @@ export interface OwnerNavItem {
    * khi vai trò có quyền "Xem" ở ít nhất một module. Không có = luôn hiện (Tổng quan, Gói dịch vụ, Credit).
    */
   module?: OwnerModule | readonly OwnerModule[]
+  /** Chỉ hiện khi Trạm đang chọn là tổ chức loại Làng nghề (craft_village). */
+  craftVillageOnly?: boolean
   /**
    * Mục con = các tab của trang (href dạng `<href>?tab=<giá trị>`); mục cha khi đó chỉ
    * xổ/thu, không tự điều hướng. Mục con thừa quyền của mục cha.
@@ -180,6 +183,14 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
     title: 'Thiết lập',
     items: [
       { label: 'Chi nhánh', icon: GitBranch, href: '/chu-tai-san/chi-nhanh-amc', module: 'chi-nhanh' },
+      // Thông tin chung của làng trên bản đồ /lang-nghe — cùng quyền với thông tin đơn vị.
+      {
+        label: 'Hồ sơ làng nghề',
+        icon: Store,
+        href: '/chu-tai-san/lang-nghe',
+        module: 'chi-nhanh',
+        craftVillageOnly: true,
+      },
       { label: 'Thành viên', icon: Users, href: '/chu-tai-san/thanh-vien', module: 'thanh-vien' },
       { label: 'Vai trò', icon: ShieldCheck, href: '/chu-tai-san/vai-tro', module: 'vai-tro' },
       {
@@ -204,6 +215,12 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
 
 const asList = (m: OwnerModule | readonly OwnerModule[]): readonly OwnerModule[] =>
   typeof m === 'string' ? [m] : m
+
+/** Bỏ mục chỉ dành cho Làng nghề khi Trạm đang chọn không phải làng nghề. */
+export function withCraftVillageItems(groups: readonly OwnerNavGroup[], isCraftVillage: boolean): OwnerNavGroup[] {
+  if (isCraftVillage) return [...groups]
+  return groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.craftVillageOnly) }))
+}
 
 /** Bỏ mục mà vai trò không có quyền "Xem"; nhóm rỗng thì bỏ cả nhóm. */
 export function visibleOwnerNavGroups(

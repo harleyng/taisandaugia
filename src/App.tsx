@@ -172,6 +172,7 @@ const OwnerSubscriptionPlansPage = lazy(() => import("./pages/chu-tai-san/OwnerS
 const OwnerMembersPage = lazy(() => import("./pages/chu-tai-san/OwnerMembersPage"));
 const OwnerRolesPage = lazy(() => import("./pages/chu-tai-san/OwnerRolesPage"));
 const OwnerAuditLogPage = lazy(() => import("./pages/chu-tai-san/OwnerAuditLogPage"));
+const OwnerCraftVillagePage = lazy(() => import("./pages/chu-tai-san/OwnerCraftVillagePage"));
 const OwnerRoleDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerRoleDetailPage"));
 const OwnerLinksPage = lazy(() => import("./pages/chu-tai-san/OwnerLinksPage"));
 const OwnerOutcomesPage = lazy(() => import("./pages/chu-tai-san/OwnerOutcomesPage"));
@@ -438,6 +439,7 @@ const App = () => (
                   <Route path="hop-dong/ky-gui/:id" element={<OwnerConsignmentContractPage />} />
                   <Route path="hop-dong/mua-ban/:id" element={<OwnerSaleContractDetailPage />} />
                   <Route path="hop-dong/dich-vu/:id" element={<OwnerServiceContractPage />} />
+                  <Route path="lang-nghe" element={<OwnerCraftVillagePage />} />
                   <Route path="hop-dong-mua-ban" element={<Navigate to="/chu-tai-san/hop-dong?loai=mua-ban" replace />} />
                   <Route path="hop-dong-mua-ban/:id" element={<RedirectOwnerSaleContractId />} />
                 </Route>

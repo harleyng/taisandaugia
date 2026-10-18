@@ -158,7 +158,8 @@ export const AUDIT_ENTITY_LABELS: Record<string, string> = {
   asset_postings: "Hồ sơ số hoá",
   asset_posting_dossier_items: "Mục hồ sơ hoàn chỉnh",
   posting_share_links: "Link hồ sơ online",
-  craft_village_publications: "Bản đồ làng nghề",
+  craft_village_publications: "Hiện trong trang làng nghề",
+  craft_village_profiles: "Hồ sơ làng nghề",
   asset_3d_scans: "Mô hình 3D",
   asset_vr_tour_orders: "Đơn VR tour",
   asset_authentication_orders: "Đơn giám định",
@@ -620,6 +621,8 @@ export function auditEntityHref(entry: AuditEntry): string | null {
     case "workspace_branches":
     case "asset_owner_workspaces":
       return `${BASE}/chi-nhanh-amc`;
+    case "craft_village_profiles":
+      return `${BASE}/lang-nghe`;
     case "asset_owner_workspace_members":
     case "asset_owner_workspace_invites":
       return `${BASE}/thanh-vien`;
@@ -656,6 +659,7 @@ const MODULE_BY_SEGMENT: Record<string, OwnerModule> = {
   "dong-tien": "dong-tien",
   "bao-cao-dinh-ky": "bao-cao-dinh-ky",
   "chi-nhanh-amc": "chi-nhanh",
+  "lang-nghe": "chi-nhanh",
   "thanh-vien": "thanh-vien",
   "vai-tro": "vai-tro",
   "lien-ket": "lien-ket",

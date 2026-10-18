@@ -1,44 +1,29 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
-import { ChevronLeft, ChevronRight, Glasses, ImageOff, MapPin } from "lucide-react";
+import { ArrowLeft, Glasses, ImageOff, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VrTourViewer } from "@/components/vr-tour/VrTourViewer";
+import { CraftAssetView } from "@/components/craft-villages/CraftAssetView";
 import { villageLabel, type PublicCraftVillage } from "@/lib/craftVillages";
-import { cn } from "@/lib/utils";
 
 interface CraftVillageDialogProps {
   village: PublicCraftVillage | null;
+  /** Hồ sơ đang xem; null = lưới sản phẩm của làng. */
+  assetId: string | null;
+  onSelectAsset: (postingId: string | null) => void;
   onOpenChange: (open: boolean) => void;
 }
 
-/** Bấm ảnh làng nghề trên bản đồ ⇒ mở ảnh sản phẩm (tab đầu); có VR thì thêm tab VR tour. */
-export function CraftVillageDialog({ village, onOpenChange }: CraftVillageDialogProps) {
-  const [photo, setPhoto] = useState(0);
-  const [tab, setTab] = useState("anh");
-  useEffect(() => {
-    setPhoto(0);
-    setTab("anh");
-  }, [village?.posting_id]);
-
-  const v = village;
-  const images = v?.image_urls ?? [];
+/**
+ * Trang làng trên bản đồ: tên, tỉnh, sản phẩm chính, giới thiệu, rồi các hồ sơ làng đang hiện.
+ * Làng chỉ có một hồ sơ ⇒ mở thẳng hồ sơ đó; nhiều hồ sơ ⇒ lưới thẻ, bấm để xem ảnh / VR.
+ */
+export function CraftVillageDialog({ village: v, assetId, onSelectAsset, onOpenChange }: CraftVillageDialogProps) {
   const name = v ? villageLabel(v) : "";
-  const step = (delta: number) => setPhoto((i) => (i + delta + images.length) % images.length);
-
-  // ← → chuyển ảnh khi đang ở tab ảnh (trừ khi đang đứng trên thanh tab — Radix dùng phím mũi tên để đổi tab).
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (tab !== "anh" || images.length < 2) return;
-    if ((e.target as HTMLElement).closest('[role="tablist"]')) return;
-    if (e.key === "ArrowLeft") step(-1);
-    else if (e.key === "ArrowRight") step(1);
-    else return;
-    e.preventDefault();
-  };
+  const single = v?.assets.length === 1;
+  const asset = v ? (single ? v.assets[0] : v.assets.find((a) => a.posting_id === assetId) ?? null) : null;
 
   return (
     <Dialog open={!!v} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto" onKeyDown={onKeyDown}>
+      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
         {v && (
           <>
             <DialogHeader>
@@ -51,89 +36,61 @@ export function CraftVillageDialog({ village, onOpenChange }: CraftVillageDialog
                       <MapPin className="h-3.5 w-3.5" /> {v.province}
                     </span>
                   )}
+                  {v.assets.length > 1 && <span className="text-muted-foreground">· {v.assets.length} sản phẩm</span>}
                 </div>
               </DialogDescription>
             </DialogHeader>
 
-            <Tabs value={tab} onValueChange={setTab}>
-              <TabsList>
-                <TabsTrigger value="anh">Ảnh sản phẩm</TabsTrigger>
-                {v.vr_url && (
-                  <TabsTrigger value="vr" className="gap-1.5">
-                    <Glasses className="h-4 w-4" /> VR tour
-                  </TabsTrigger>
-                )}
-              </TabsList>
-
-              <TabsContent value="anh" className="space-y-2">
-                <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-xl bg-muted">
-                  {images[photo] ? (
-                    <img src={images[photo]} alt={`${name} — ảnh ${photo + 1}`} className="h-full w-full object-contain" />
-                  ) : (
-                    <ImageOff className="h-10 w-10 text-muted-foreground" />
-                  )}
-                  {images.length > 1 && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => step(-1)}
-                        aria-label="Ảnh trước"
-                        className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-background/80 text-foreground shadow-md transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => step(1)}
-                        aria-label="Ảnh sau"
-                        className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-background/80 text-foreground shadow-md transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <ChevronRight className="h-5 w-5" />
-                      </button>
-                      <span className="absolute bottom-3 right-3 rounded-full bg-background/80 px-2.5 py-0.5 text-xs font-medium text-foreground shadow-sm">
-                        {photo + 1} / {images.length}
-                      </span>
-                    </>
-                  )}
-                </div>
-                {images.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {images.map((src, i) => (
-                      <button
-                        key={src}
-                        type="button"
-                        onClick={() => setPhoto(i)}
-                        aria-label={`Xem ảnh ${i + 1}`}
-                        className={cn(
-                          "h-16 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-colors",
-                          i === photo ? "border-primary" : "border-transparent opacity-80 hover:opacity-100",
-                        )}
-                      >
-                        <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              {v.vr_url && (
-                <TabsContent value="vr">
-                  <VrTourViewer url={v.vr_url} title={name} />
-                </TabsContent>
-              )}
-            </Tabs>
-
-            {!v.vr_url && (
-              <p className="text-sm text-muted-foreground">VR tour của làng nghề đang được cập nhật.</p>
+            {v.intro && !asset && (
+              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{v.intro}</p>
             )}
 
-            {(v.title || v.description) && (
-              <div className="space-y-1.5 rounded-xl bg-muted/50 p-4">
-                {v.title && <h3 className="font-semibold text-foreground">{v.title}</h3>}
-                {v.description && (
-                  <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{v.description}</p>
+            {asset ? (
+              <div className="space-y-3">
+                {!single && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectAsset(null)}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Các sản phẩm của làng
+                  </button>
+                )}
+                <CraftAssetView asset={asset} villageName={name} />
+                {single && !asset.vr_url && (
+                  <p className="text-sm text-muted-foreground">VR tour của làng nghề đang được cập nhật.</p>
                 )}
               </div>
+            ) : (
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {v.assets.map((a) => (
+                  <li key={a.posting_id}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectAsset(a.posting_id)}
+                      className="group block w-full overflow-hidden rounded-2xl border border-border bg-card text-left transition-shadow hover:shadow-md"
+                    >
+                      <span className="relative block aspect-[4/3] bg-muted">
+                        {a.image_urls[0] ? (
+                          <img src={a.image_urls[0]} alt="" className="h-full w-full object-cover" loading="lazy" />
+                        ) : (
+                          <span className="grid h-full w-full place-items-center">
+                            <ImageOff className="h-6 w-6 text-muted-foreground" />
+                          </span>
+                        )}
+                        {a.vr_url && (
+                          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                            <Glasses className="h-3 w-3" /> VR
+                          </span>
+                        )}
+                      </span>
+                      <span className="line-clamp-2 p-2.5 text-sm font-medium text-foreground group-hover:text-primary">
+                        {a.title?.trim() || name}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </>
         )}

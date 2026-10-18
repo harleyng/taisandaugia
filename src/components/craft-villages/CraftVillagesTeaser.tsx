@@ -43,16 +43,16 @@ export function CraftVillagesTeaser() {
             ))
           : villages.slice(0, 16).map((v) => (
               <button
-                key={v.posting_id}
+                key={v.workspace_id}
                 type="button"
-                onClick={() => navigate(`/lang-nghe?ho-so=${v.posting_id}`)}
+                onClick={() => navigate(`/lang-nghe?lang=${v.workspace_id}`)}
                 className="group flex w-24 shrink-0 flex-col items-center gap-2 text-center"
               >
                 <span className="relative block h-20 w-20 overflow-hidden rounded-full border-[3px] border-background bg-muted shadow-md ring-2 ring-primary/30 transition-transform group-hover:scale-105">
-                  {v.image_urls[0] && (
-                    <img src={v.image_urls[0]} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  {v.cover_image && (
+                    <img src={v.cover_image} alt="" className="h-full w-full object-cover" loading="lazy" />
                   )}
-                  {v.vr_url && (
+                  {v.has_vr && (
                     <span className="absolute inset-x-0 bottom-0 flex justify-center bg-foreground/60 py-0.5 text-background">
                       <Glasses className="h-3.5 w-3.5" aria-label="Có VR tour" />
                     </span>

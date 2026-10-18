@@ -10,29 +10,48 @@ import { CraftVillageMap } from "@/components/craft-villages/CraftVillageMap";
 import { CraftVillageList } from "@/components/craft-villages/CraftVillageList";
 import { CraftVillageDialog } from "@/components/craft-villages/CraftVillageDialog";
 import { usePublicCraftVillages } from "@/hooks/useCraftVillages";
-import { matchesVillage, type PublicCraftVillage } from "@/lib/craftVillages";
+import { matchesVillage, villageOfAsset, type PublicCraftVillage } from "@/lib/craftVillages";
 
-/** /lang-nghe — bản đồ các hồ sơ làng nghề được chủ tài sản công khai (đã duyệt). `?ho-so=<id>` mở thẳng VR. */
+/**
+ * /lang-nghe — bản đồ các LÀNG nghề công khai, mỗi làng kèm các hồ sơ số hoá đang hiện.
+ * `?lang=<Trạm>` mở trang làng; `?ho-so=<hồ sơ>` mở thẳng hồ sơ đó (link cũ chỉ có ?ho-so= vẫn chạy).
+ */
 export default function CraftVillagesPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { data: villages = [], isLoading, isError } = usePublicCraftVillages();
   const [query, setQuery] = useState("");
 
-  const openId = params.get("ho-so");
-  const open = useMemo(() => villages.find((v) => v.posting_id === openId) ?? null, [villages, openId]);
+  const villageId = params.get("lang");
+  const assetId = params.get("ho-so");
+  const open = useMemo(
+    () => (villageId ? villages.find((v) => v.workspace_id === villageId) ?? null : villageOfAsset(villages, assetId)),
+    [villages, villageId, assetId],
+  );
   const filtered = useMemo(() => villages.filter((v) => matchesVillage(v, query)), [villages, query]);
 
-  const select = (v: PublicCraftVillage) => {
+  const update = (change: (next: URLSearchParams) => void) => {
     const next = new URLSearchParams(params);
-    next.set("ho-so", v.posting_id);
+    change(next);
     setParams(next, { replace: true });
   };
+  const select = (v: PublicCraftVillage) =>
+    update((next) => {
+      next.set("lang", v.workspace_id);
+      next.delete("ho-so");
+    });
+  const selectAsset = (postingId: string | null) =>
+    update((next) => {
+      if (open) next.set("lang", open.workspace_id);
+      if (postingId) next.set("ho-so", postingId);
+      else next.delete("ho-so");
+    });
   const close = (isOpen: boolean) => {
     if (isOpen) return;
-    const next = new URLSearchParams(params);
-    next.delete("ho-so");
-    setParams(next, { replace: true });
+    update((next) => {
+      next.delete("lang");
+      next.delete("ho-so");
+    });
   };
 
   return (
@@ -48,7 +67,7 @@ export default function CraftVillagesPage() {
             <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
               Hồ sơ số hoá do chính các làng nghề công khai.
               <br />
-              Bấm vào ảnh sản phẩm trên bản đồ để tham quan làng bằng VR tour 360°.
+              Bấm vào ảnh trên bản đồ để xem sản phẩm của làng và tham quan bằng VR tour 360°.
             </p>
           </div>
         </section>
@@ -62,7 +81,7 @@ export default function CraftVillagesPage() {
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
               <CraftVillageMap
                 villages={filtered}
-                selectedId={openId}
+                selectedId={open?.workspace_id ?? null}
                 onSelect={select}
                 className="h-[420px] md:h-[560px]"
               />
@@ -87,7 +106,7 @@ export default function CraftVillagesPage() {
                       <p>Chưa có làng nghề nào công khai hồ sơ.</p>
                     </div>
                   ) : (
-                    <CraftVillageList villages={filtered} selectedId={openId} onSelect={select} />
+                    <CraftVillageList villages={filtered} selectedId={open?.workspace_id ?? null} onSelect={select} />
                   )}
                 </div>
               </aside>
@@ -106,7 +125,7 @@ export default function CraftVillagesPage() {
         </div>
       </main>
       <Footer />
-      <CraftVillageDialog village={open} onOpenChange={close} />
+      <CraftVillageDialog village={open} assetId={assetId} onSelectAsset={selectAsset} onOpenChange={close} />
     </div>
   );
 }

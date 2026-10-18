@@ -1,9 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { OWNER_NAV_GROUPS, activeOwnerNavChild, ownerModulesForPath, visibleOwnerNavGroups } from './owner-nav-config'
+import {
+  OWNER_NAV_GROUPS,
+  activeOwnerNavChild,
+  ownerModulesForPath,
+  visibleOwnerNavGroups,
+  withCraftVillageItems,
+} from './owner-nav-config'
 import { HQ_VIEW_MATRIX, VIEWER_DEFAULT_MATRIX, type OwnerModule } from '@/lib/ownerWorkspace/permissions'
 
 const labels = (canView: (m: OwnerModule) => boolean) =>
   visibleOwnerNavGroups(OWNER_NAV_GROUPS, canView).flatMap((g) => g.items.map((i) => i.label))
+
+describe('withCraftVillageItems', () => {
+  const items = (isCraft: boolean) => withCraftVillageItems(OWNER_NAV_GROUPS, isCraft).flatMap((g) => g.items.map((i) => i.label))
+  it('"Hồ sơ làng nghề" chỉ hiện ở Trạm làng nghề', () => {
+    expect(items(true)).toContain('Hồ sơ làng nghề')
+    expect(items(false)).not.toContain('Hồ sơ làng nghề')
+    expect(items(false)).toHaveLength(items(true).length - 1)
+  })
+})
 
 describe('visibleOwnerNavGroups', () => {
   it('đủ quyền xem ⇒ đủ menu, có mục Vai trò', () => {

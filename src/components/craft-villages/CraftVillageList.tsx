@@ -1,5 +1,5 @@
 import { Glasses, MapPin } from "lucide-react";
-import { villageLabel, type PublicCraftVillage } from "@/lib/craftVillages";
+import { villageLabel, villageSubtitle, type PublicCraftVillage } from "@/lib/craftVillages";
 import { cn } from "@/lib/utils";
 
 interface CraftVillageListProps {
@@ -16,9 +16,9 @@ export function CraftVillageList({ villages, selectedId, onSelect }: CraftVillag
   return (
     <ul className="flex flex-col gap-1">
       {villages.map((v) => {
-        const selected = v.posting_id === selectedId;
+        const selected = v.workspace_id === selectedId;
         return (
-          <li key={v.posting_id}>
+          <li key={v.workspace_id}>
             <button
               type="button"
               onClick={() => onSelect(v)}
@@ -28,16 +28,16 @@ export function CraftVillageList({ villages, selectedId, onSelect }: CraftVillag
               )}
             >
               <span className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-background bg-muted shadow">
-                {v.image_urls[0] && <img src={v.image_urls[0]} alt="" className="h-full w-full object-cover" loading="lazy" />}
+                {v.cover_image && <img src={v.cover_image} alt="" className="h-full w-full object-cover" loading="lazy" />}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold text-foreground">{villageLabel(v)}</span>
                 <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                   <MapPin className="h-3 w-3 shrink-0" />
-                  {[v.product, v.province].filter(Boolean).join(" · ")}
+                  {villageSubtitle(v)}
                 </span>
               </span>
-              {v.vr_url && (
+              {v.has_vr && (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
                   <Glasses className="h-3 w-3" /> VR
                 </span>

@@ -599,6 +599,8 @@ export const qk = {
   shareLinks: {
     all: ["share-links"] as const,
     workspace: (workspaceId?: string | null, campaignId?: string | null) =>
+    /** Trang "Hồ sơ làng nghề" của một Trạm. */
+    profile: (workspaceId?: string | null) => ["craft-villages", "profile", workspaceId] as const,
       ["share-links", "workspace", workspaceId, campaignId ?? null] as const,
     detail: (linkId?: string | null) => ["share-links", "detail", linkId] as const,
     series: (linkId?: string | null, from?: string | null, to?: string | null, device?: string | null) =>

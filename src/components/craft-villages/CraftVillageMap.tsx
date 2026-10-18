@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Marker, type MapRef } from "@vis.gl/react-maplibre";
 import Supercluster from "supercluster";
 import { VietnamMap } from "@/components/map/VietnamMap";
-import { villageLabel, type PublicCraftVillage } from "@/lib/craftVillages";
+import { villageLabel, villageSubtitle, type PublicCraftVillage } from "@/lib/craftVillages";
 import { cn } from "@/lib/utils";
 
 interface CraftVillageMapProps {
@@ -25,7 +25,7 @@ function buildIndex(villages: PublicCraftVillage[]): Index {
   index.load(
     villages.map((v) => ({
       type: "Feature" as const,
-      properties: { villageId: v.posting_id },
+      properties: { villageId: v.workspace_id },
       geometry: { type: "Point" as const, coordinates: [Number(v.longitude), Number(v.latitude)] },
     })),
   );
@@ -38,7 +38,7 @@ function unclusteredZoom(index: Index, v: PublicCraftVillage, from: number): num
   const lat = Number(v.latitude);
   for (let z = Math.floor(from); z <= MAX_CLUSTER_ZOOM; z++) {
     const near = index.getClusters([lng - 1e-4, lat - 1e-4, lng + 1e-4, lat + 1e-4], z);
-    if (near.some((f) => !("cluster" in f.properties) && f.properties.villageId === v.posting_id)) return z;
+    if (near.some((f) => !("cluster" in f.properties) && f.properties.villageId === v.workspace_id)) return z;
   }
   return MAX_CLUSTER_ZOOM + 1;
 }
@@ -95,7 +95,7 @@ function PhotoPin({ image, fallback, count, label, sub, selected, onClick }: Pho
 }
 
 /**
- * Bản đồ Việt Nam; mỗi hồ sơ làng nghề là một thẻ ảnh sản phẩm. Thu nhỏ thì các làng gần nhau
+ * Bản đồ Việt Nam; mỗi làng nghề (Trạm) là một thẻ ảnh bìa. Thu nhỏ thì các làng gần nhau
  * gộp thành một thẻ có số đếm (bấm để phóng tới), phóng to thì tách về đúng từng làng.
  */
 export function CraftVillageMap({ villages, selectedId, onSelect, className }: CraftVillageMapProps) {
@@ -104,7 +104,7 @@ export function CraftVillageMap({ villages, selectedId, onSelect, className }: C
   const [view, setView] = useState<View | null>(null);
   const ready = view !== null;
 
-  const byId = useMemo(() => new Map(villages.map((v) => [v.posting_id, v])), [villages]);
+  const byId = useMemo(() => new Map(villages.map((v) => [v.workspace_id, v])), [villages]);
   const index = useMemo(() => buildIndex(villages), [villages]);
   const features = useMemo(() => (view ? index.getClusters(view.bbox, view.zoom) : []), [index, view]);
 
@@ -132,17 +132,17 @@ export function CraftVillageMap({ villages, selectedId, onSelect, className }: C
               .getLeaves(clusterId, Infinity)
               .map((leaf) => byId.get(leaf.properties.villageId))
               .filter((v): v is PublicCraftVillage => !!v);
-            const cover = members.find((v) => v.image_urls[0]) ?? members[0];
+            const cover = members.find((v) => v.cover_image) ?? members[0];
             const provinces = [...new Set(members.map((v) => v.province).filter(Boolean))];
             return (
               <Marker key={`c${clusterId}`} longitude={lng} latitude={lat} anchor="bottom" className="hover:!z-20">
                 <PhotoPin
-                  image={cover?.image_urls[0]}
+                  image={cover?.cover_image ?? undefined}
                   fallback={String(members.length)}
                   count={members.length}
                   label={`${members.length} làng nghề`}
                   sub={provinces.length > 3 ? `${provinces.slice(0, 3).join(", ")}…` : provinces.join(", ")}
-                  selected={members.some((v) => v.posting_id === selectedId)}
+                  selected={members.some((v) => v.workspace_id === selectedId)}
                   onClick={() =>
                     mapRef.current?.easeTo({
                       center: [lng, lat],
@@ -156,10 +156,10 @@ export function CraftVillageMap({ villages, selectedId, onSelect, className }: C
           const v = byId.get((f.properties as PointProps).villageId);
           if (!v) return null;
           const label = villageLabel(v);
-          const selected = v.posting_id === selectedId;
+          const selected = v.workspace_id === selectedId;
           return (
             <Marker
-              key={v.posting_id}
+              key={v.workspace_id}
               longitude={lng}
               latitude={lat}
               anchor="bottom"
@@ -167,11 +167,11 @@ export function CraftVillageMap({ villages, selectedId, onSelect, className }: C
               style={{ zIndex: selected ? 10 : 1 }}
             >
               <PhotoPin
-                image={v.image_urls[0]}
+                image={v.cover_image ?? undefined}
                 fallback={(v.product || label).charAt(0).toUpperCase()}
                 count={1}
                 label={label}
-                sub={[v.product, v.province].filter(Boolean).join(" · ")}
+                sub={villageSubtitle(v)}
                 selected={selected}
                 onClick={() => onSelect(v)}
               />

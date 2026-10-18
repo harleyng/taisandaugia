@@ -2726,6 +2726,11 @@ export type Database = {
       }
       auction_bidding_contracts: {
         Row: {
+          deposit_proof_path: string | null
+          deposit_reported_at: string | null
+          absence_appeal_at: string | null
+          absence_appeal_note: string | null
+          absence_appeal_path: string | null
           absence_excused_at: string | null
           absence_excused_by: string | null
           absence_note: string | null
@@ -2801,6 +2806,11 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          deposit_proof_path?: string | null
+          deposit_reported_at?: string | null
+          absence_appeal_at?: string | null
+          absence_appeal_note?: string | null
+          absence_appeal_path?: string | null
           absence_excused_at?: string | null
           absence_excused_by?: string | null
           absence_note?: string | null
@@ -2876,6 +2886,11 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          deposit_proof_path?: string | null
+          deposit_reported_at?: string | null
+          absence_appeal_at?: string | null
+          absence_appeal_note?: string | null
+          absence_appeal_path?: string | null
           absence_excused_at?: string | null
           absence_excused_by?: string | null
           absence_note?: string | null
@@ -3074,6 +3089,39 @@ export type Database = {
           },
         ]
       }
+      auction_contract_lots: {
+        Row: {
+          contract_id: string
+          created_at: string
+          item_id: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          item_id: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_contract_lots_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_bidding_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_contract_lots_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "auction_session_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auction_contract_review_events: {
         Row: {
           actor_id: string | null
@@ -3214,6 +3262,12 @@ export type Database = {
       }
       auction_lot_states: {
         Row: {
+          price_anchor_amount: number | null
+          price_anchor_at: string | null
+          round_bid_count: number
+          round_no: number
+          tie_amount: number | null
+          tied_bidder_nos: number[] | null
           bid_count: number
           closed_at: string | null
           created_at: string
@@ -3238,6 +3292,12 @@ export type Database = {
           withdraw_reason: string | null
         }
         Insert: {
+          price_anchor_amount?: number | null
+          price_anchor_at?: string | null
+          round_bid_count?: number
+          round_no?: number
+          tie_amount?: number | null
+          tied_bidder_nos?: number[] | null
           bid_count?: number
           closed_at?: string | null
           created_at?: string
@@ -3262,6 +3322,12 @@ export type Database = {
           withdraw_reason?: string | null
         }
         Update: {
+          price_anchor_amount?: number | null
+          price_anchor_at?: string | null
+          round_bid_count?: number
+          round_no?: number
+          tie_amount?: number | null
+          tied_bidder_nos?: number[] | null
           bid_count?: number
           closed_at?: string | null
           created_at?: string
@@ -3854,8 +3920,67 @@ export type Database = {
           },
         ]
       }
+      auction_sealed_bids: {
+        Row: {
+          amount: number
+          bidder_no: number
+          client_nonce: string
+          contract_id: string
+          id: string
+          lot_id: string
+          placed_at: string
+          round_no: number
+          session_id: string
+        }
+        Insert: {
+          amount: number
+          bidder_no: number
+          client_nonce: string
+          contract_id: string
+          id?: string
+          lot_id: string
+          placed_at?: string
+          round_no?: number
+          session_id: string
+        }
+        Update: {
+          amount?: number
+          bidder_no?: number
+          client_nonce?: string
+          contract_id?: string
+          id?: string
+          lot_id?: string
+          placed_at?: string
+          round_no?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_sealed_bids_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "auction_bidding_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sealed_bids_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "auction_session_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sealed_bids_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auction_session_items: {
         Row: {
+          floor_price: number | null
           asset_posting_id: string | null
           bid_step: number | null
           category_slug: string | null
@@ -3876,6 +4001,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          floor_price?: number | null
           asset_posting_id?: string | null
           bid_step?: number | null
           category_slug?: string | null
@@ -3896,6 +4022,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          floor_price?: number | null
           asset_posting_id?: string | null
           bid_step?: number | null
           category_slug?: string | null
@@ -3986,6 +4113,7 @@ export type Database = {
       }
       auction_sessions: {
         Row: {
+          price_drop_seconds: number
           auction_format: string
           auction_org_id: string | null
           bidding_method: string
@@ -4019,6 +4147,7 @@ export type Database = {
           viewing_start_at: string | null
         }
         Insert: {
+          price_drop_seconds?: number
           auction_format?: string
           auction_org_id?: string | null
           bidding_method?: string
@@ -4052,6 +4181,7 @@ export type Database = {
           viewing_start_at?: string | null
         }
         Update: {
+          price_drop_seconds?: number
           auction_format?: string
           auction_org_id?: string | null
           bidding_method?: string
@@ -5222,9 +5352,6 @@ export type Database = {
           asset_posting_id: string
           created_at: string
           is_published: boolean
-          latitude: number
-          longitude: number
-          product: string
           published_at: string | null
           updated_at: string
           updated_by: string | null
@@ -5233,9 +5360,6 @@ export type Database = {
           asset_posting_id: string
           created_at?: string
           is_published?: boolean
-          latitude: number
-          longitude: number
-          product: string
           published_at?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -5244,9 +5368,6 @@ export type Database = {
           asset_posting_id?: string
           created_at?: string
           is_published?: boolean
-          latitude?: number
-          longitude?: number
-          product?: string
           published_at?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -5257,6 +5378,66 @@ export type Database = {
             columns: ["asset_posting_id"]
             isOneToOne: true
             referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      craft_village_profiles: {
+        Row: {
+          cover_posting_id: string | null
+          created_at: string
+          intro: string | null
+          is_published: boolean
+          latitude: number
+          longitude: number
+          product: string
+          province: string | null
+          published_at: string | null
+          updated_at: string
+          updated_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          cover_posting_id?: string | null
+          created_at?: string
+          intro?: string | null
+          is_published?: boolean
+          latitude: number
+          longitude: number
+          product: string
+          province?: string | null
+          published_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          cover_posting_id?: string | null
+          created_at?: string
+          intro?: string | null
+          is_published?: boolean
+          latitude?: number
+          longitude?: number
+          product?: string
+          province?: string | null
+          published_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "craft_village_profiles_cover_posting_id_fkey"
+            columns: ["cover_posting_id"]
+            isOneToOne: false
+            referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "craft_village_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "asset_owner_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -12296,6 +12477,10 @@ export type Database = {
         Returns: Json
       }
       _vr_tour_service_id: { Args: never; Returns: string }
+      accept_descending_price: {
+        Args: { _amount: number; _lot_id: string; _nonce: string }
+        Returns: Json
+      }
       accept_org_invite: {
         Args: { _confirm_email_mismatch?: boolean; _token: string }
         Returns: Json
@@ -12673,6 +12858,22 @@ export type Database = {
       can_read_buyer_kyc_object: { Args: { _name: string }; Returns: boolean }
       close_due_rosters: { Args: never; Returns: number }
       close_session_roster: { Args: { _session_id: string }; Returns: Json }
+      buyer_report_deposit: {
+        Args: { _contract_id: string; _proof_path?: string }
+        Returns: Json
+      }
+      buyer_submit_absence_appeal: {
+        Args: { _contract_id: string; _note: string; _proof_path?: string }
+        Returns: Json
+      }
+      buyer_undo_deposit_report: {
+        Args: { _contract_id: string }
+        Returns: undefined
+      }
+      my_contract_deposit_info: {
+        Args: { _contract_id: string }
+        Returns: Json
+      }
       org_check_in: {
         Args: { _attendee?: string; _contract_id: string; _note?: string }
         Returns: Json
@@ -12684,6 +12885,10 @@ export type Database = {
       org_close_roster_now: { Args: { _session_id: string }; Returns: Json }
       org_excuse_absence: {
         Args: { _contract_id: string; _note: string }
+        Returns: Json
+      }
+      org_open_tie_round: {
+        Args: { _duration_seconds: number; _lot_id: string }
         Returns: Json
       }
       org_review_bidding_contract: {
@@ -12725,11 +12930,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      sealed_round_revealed: {
+        Args: { _lot_id: string; _round_no: number }
+        Returns: boolean
+      }
       self_check_in: {
         Args: { _attendee?: string; _code: string; _contract_id: string }
         Returns: Json
       }
       valuation_cert_readable: { Args: { _name: string }; Returns: boolean }
+      submit_sealed_bid: {
+        Args: { _amount: number; _lot_id: string; _nonce: string }
+        Returns: Json
+      }
       valuation_package: {
         Args: never
         Returns: {
@@ -13919,6 +14132,10 @@ export type Database = {
         Args: { _posting_id: string }
         Returns: Json
       }
+      owner_craft_village_profile: {
+        Args: { _workspace_id: string }
+        Returns: Json
+      }
       owner_decide_auction_consult: {
         Args: { _consultation_id: string; _decision: string; _note: string }
         Returns: Json
@@ -14294,13 +14511,20 @@ export type Database = {
           service_kind: string
         }[]
       }
-      owner_set_craft_map_publication: {
+      owner_set_craft_asset_visibility: {
+        Args: { _posting_id: string; _published: boolean }
+        Returns: Json
+      }
+      owner_set_craft_village_profile: {
         Args: {
+          _cover_posting_id: string | null
+          _intro: string | null
           _latitude: number
           _longitude: number
-          _posting_id: string
           _product: string
+          _province: string | null
           _published: boolean
+          _workspace_id: string
         }
         Returns: Json
       }
@@ -14348,6 +14572,7 @@ export type Database = {
         Args: {
           _address: string
           _kind: string
+          _org_kyc_id?: string
           _province?: string
           _ward?: string
         }
@@ -14629,17 +14854,17 @@ export type Database = {
       public_craft_villages: {
         Args: never
         Returns: {
-          description: string | null
-          image_urls: string[]
+          assets: Json
+          cover_image: string | null
+          has_vr: boolean
+          intro: string | null
           latitude: number
           longitude: number
-          posting_id: string
           product: string
           province: string | null
           published_at: string
-          title: string | null
           village_name: string
-          vr_url: string | null
+          workspace_id: string
         }[]
       }
       public_org_auctioneers: {

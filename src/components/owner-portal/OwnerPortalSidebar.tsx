@@ -6,6 +6,7 @@ import {
   activeOwnerNavChild,
   isInOwnerNavItem,
   visibleOwnerNavGroups,
+  withCraftVillageItems,
   type OwnerCountBadgeKind,
   type OwnerNavItem,
 } from './owner-nav-config'
@@ -13,6 +14,7 @@ import { useOwnerConsignmentSummary } from '@/hooks/useConsignmentContract'
 import { useOwnerContractActionCount } from '@/hooks/useOwnerContracts'
 import { usePendingClaimCount } from '@/hooks/useAssetOwnerWorkspace'
 import { useOwnerPulse } from '@/hooks/useOwnerPulse'
+import { useCraftVillageProfile } from '@/hooks/useCraftVillages'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
 import { usePendingLinkRequestCount } from '@/hooks/useOwnerWorkspaceLinks'
 import { useOwnerPortalName } from '@/hooks/useOwnerPortalName'
@@ -33,13 +35,13 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
   const portalName = useOwnerPortalName()
   // Mục chỉ hiện khi vai trò có quyền "Xem" module của nó. Tenant Cá nhân / chưa có
   // không gian / đang tải: hiện đủ như trước (trang tự nói "chưa có không gian").
-  const navGroups = useMemo(
-    () =>
-      wsLoading || isPersonal || !workspaceId
-        ? OWNER_NAV_GROUPS
-        : visibleOwnerNavGroups(OWNER_NAV_GROUPS, (m) => can(m, 'view')),
-    [wsLoading, isPersonal, workspaceId, can],
-  )
+  // "Hồ sơ làng nghề" chỉ cho Trạm loại Làng nghề (RPC trả eligible).
+  const { data: craftVillage } = useCraftVillageProfile(isPersonal ? null : workspaceId)
+  const isCraftVillage = craftVillage?.eligible === true
+  const navGroups = useMemo(() => {
+    const groups = withCraftVillageItems(OWNER_NAV_GROUPS, isCraftVillage)
+    return wsLoading || isPersonal || !workspaceId ? groups : visibleOwnerNavGroups(groups, (m) => can(m, 'view'))
+  }, [wsLoading, isPersonal, workspaceId, can, isCraftVillage])
   // Liên kết: yêu cầu của trụ sở chờ người có quyền Liên kết của chi nhánh trả lời (Phase 14).
   const { data: linkRequestCount = 0 } = usePendingLinkRequestCount(workspaceId, can('lien-ket', 'update'))
   // Thu tiền: tài sản đã bán còn chờ thu — cùng danh sách dòng "Chờ thu tiền" trên Tổng quan.

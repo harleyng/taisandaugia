@@ -10,7 +10,8 @@ Mỗi làng:
     Wikimedia Commons (giấy phép tự do, ghi công trong mô tả) tải lên bucket asset-media
   • (chỉ 12 làng gốc) 1 đơn VR tour Silver Sea đi hết chuỗi RPC thật: yêu cầu → báo giá → thanh toán (mô phỏng)
     → hẹn chụp → giao link → gắn vào hồ sơ. Việc giao link ghi 1 dòng hoa hồng vào `orders`.
-  • Bật "Công khai lên bản đồ làng nghề" qua owner_set_craft_map_publication
+  • Bật hồ sơ "Hiện trong trang làng" (owner_set_craft_asset_visibility) rồi lập + công khai
+    Hồ sơ làng nghề (owner_set_craft_village_profile: vị trí, tỉnh, sản phẩm chính, ảnh bìa)
 
 VR tour ở đây là ẢNH 360° MINH HOẠ (Mapillary/Commons, CC BY-SA 4.0, chép về asset-media) mở bằng
 trình xem Pannellum
@@ -478,8 +479,9 @@ values ({lit(v['posting'])}, {lit(u)}, :'ws', 'thu-cong-my-nghe', {lit(v['child'
                   f"select pg_temp.ok(admin_deliver_vr_tour(:'vr', {lit(delivered_vr(v))}));",
                   "select pg_temp.ok(admin_attach_vr_tour(:'vr'));"]
         s += [as_user(u),
-              f"select pg_temp.ok(owner_set_craft_map_publication({lit(v['posting'])}, true, {v['lat']}, {v['lng']}, "
-              f"{lit(v['product'])}));"]
+              f"select pg_temp.ok(owner_set_craft_asset_visibility({lit(v['posting'])}, true));",
+              f"select pg_temp.ok(owner_set_craft_village_profile(:'ws', true, {v['lat']}, {v['lng']}, "
+              f"{lit(v['province'])}, {lit(v['product'])}, null, {lit(v['posting'])}));"]
 
     s += ["set local role anon;", AS_SYSTEM, "\\echo '── Kiểm tra dưới quyền anon ──'",
           "select count(*) as lang_nghe_cong_khai, count(vr_url) as co_vr from public_craft_villages();",

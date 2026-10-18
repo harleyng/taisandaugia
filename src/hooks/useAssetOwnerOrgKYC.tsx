@@ -1,32 +1,71 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { AssetOwnerOrgKYC } from "@/types/asset-owner";
+import type { AssetOwnerOrgKYC, AssetOwnerOrgKYCStatus } from "@/types/asset-owner";
 import type { TablesInsert } from "@/integrations/supabase/types";
 import { mapOrgKycError } from "@/lib/assetOwnerKyc/orgKycValidation";
 
 type OrgKycWrite = TablesInsert<"asset_owner_org_kyc">;
 
-export function useAssetOwnerOrgKYC(userId: string | null) {
-  const queryClient = useQueryClient();
-  const qk = ["asset_owner_org_kyc", userId];
+/** id hồ sơ cụ thể · "new" = hồ sơ tổ chức mới · undefined = tự chọn. */
+export type OrgKycSelection = string | "new" | undefined;
 
-  const { data: orgKyc, isLoading } = useQuery<AssetOwnerOrgKYC | null>({
-    queryKey: qk,
+const UNFINISHED: AssetOwnerOrgKYCStatus[] = ["draft", "pending_review", "under_review", "rejected"];
+
+const listKey = (userId: string | null) => ["asset_owner_org_kyc", userId];
+
+/**
+ * Hồ sơ đang thao tác. Không chỉ định ⇒ hồ sơ còn dở mới nhất, rồi tới hồ sơ đã
+ * duyệt mới nhất (một tài khoản KYC được nhiều tổ chức — danh sách xếp mới trước).
+ */
+export function pickOrgKyc(list: AssetOwnerOrgKYC[], selection: OrgKycSelection): AssetOwnerOrgKYC | null {
+  if (selection === "new") return null;
+  if (selection) return list.find((k) => k.id === selection) ?? null;
+  return list.find((k) => UNFINISHED.includes(k.status)) ?? list[0] ?? null;
+}
+
+/** Mọi hồ sơ KYC tổ chức của tài khoản, mới nhất trước. */
+export function useAssetOwnerOrgKYCs(userId: string | null) {
+  return useQuery<AssetOwnerOrgKYC[]>({
+    queryKey: listKey(userId),
     enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("asset_owner_org_kyc")
         .select("*")
         .eq("created_by", userId!)
-        // If duplicates exist, prefer highest-priority status then latest
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as AssetOwnerOrgKYC | null;
+      return (data ?? []) as unknown as AssetOwnerOrgKYC[];
     },
   });
+}
+
+interface Options {
+  /** Gọi khi vừa tạo bản nháp mới (selection "new") — trang ghim id vào URL để lần lưu sau sửa đúng bản này. */
+  onCreated?: (id: string) => void;
+}
+
+export function useAssetOwnerOrgKYC(userId: string | null, selection?: OrgKycSelection, { onCreated }: Options = {}) {
+  const queryClient = useQueryClient();
+  const qk = listKey(userId);
+  const { data: orgKycs = [], isLoading } = useAssetOwnerOrgKYCs(userId);
+  const orgKyc = pickOrgKyc(orgKycs, selection);
+
+  // Bản nháp mới vào cache ngay ⇒ selection trỏ id mới không bị coi là "không tìm thấy"
+  // trong lúc chờ tải lại danh sách.
+  const insertDraft = async (fields: OrgKycWrite): Promise<string> => {
+    const { data, error } = await supabase
+      .from("asset_owner_org_kyc")
+      .insert({ ...fields, status: "draft" })
+      .select("*")
+      .single();
+    if (error) throw error;
+    const row = data as unknown as AssetOwnerOrgKYC;
+    queryClient.setQueryData<AssetOwnerOrgKYC[]>(qk, (prev = []) => [row, ...prev]);
+    onCreated?.(row.id);
+    return row.id;
+  };
 
   const saveDraft = useMutation({
     mutationFn: async (fields: Partial<AssetOwnerOrgKYC>): Promise<string> => {
@@ -34,29 +73,18 @@ export function useAssetOwnerOrgKYC(userId: string | null) {
       // JSONB (`Json`). Ép qua unknown đúng một lần tại ranh giới ghi thay vì
       // để cả payload thành `any`.
       const payload = { created_by: userId!, ...fields } as unknown as OrgKycWrite;
-      if (orgKyc?.id) {
-        // Update existing record
-        const { error } = await supabase
-          .from("asset_owner_org_kyc")
-          .update(payload)
-          .eq("id", orgKyc.id)
-          .select("id")
-          .single();
-        if (error) throw error;
-        return orgKyc.id;
-      } else {
-        // Upsert on created_by to prevent duplicate records
-        const { data, error } = await supabase
-          .from("asset_owner_org_kyc")
-          .upsert({ ...payload, status: "draft" }, { onConflict: "created_by" })
-          .select("id")
-          .single();
-        if (error) throw error;
-        return data.id;
-      }
+      if (!orgKyc?.id) return insertDraft(payload);
+      const { error } = await supabase
+        .from("asset_owner_org_kyc")
+        .update(payload)
+        .eq("id", orgKyc.id)
+        .select("id")
+        .single();
+      if (error) throw error;
+      return orgKyc.id;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: qk }),
-    onError: () => toast.error("Lỗi lưu nháp"),
+    onError: (err) => toast.error(mapOrgKycError(err, "Lỗi lưu nháp")),
   });
 
   const submit = useMutation({
@@ -83,17 +111,16 @@ export function useAssetOwnerOrgKYC(userId: string | null) {
     slot: "rep_id_front" | "rep_id_back" | "rep_selfie" | "establishment_doc" | "authorization_doc"
   ): Promise<string | null> => {
     if (!userId) return null;
-    // Reuse existing record or upsert a draft
+    // Chưa có hồ sơ (hồ sơ tổ chức mới) ⇒ tạo bản nháp để có id làm đường dẫn tệp.
     let recordId = orgKyc?.id;
     if (!recordId) {
-      const { data: created } = await supabase
-        .from("asset_owner_org_kyc")
-        .upsert({ created_by: userId, status: "draft" }, { onConflict: "created_by" })
-        .select("id")
-        .single();
-      recordId = created?.id;
+      try {
+        recordId = await insertDraft({ created_by: userId });
+      } catch {
+        toast.error("Không thể tạo hồ sơ nháp");
+        return null;
+      }
     }
-    if (!recordId) { toast.error("Không thể tạo hồ sơ nháp"); return null; }
     const ext = file.name.split(".").pop();
     const path = `${userId}/org_${recordId}/${slot}.${ext}`;
     const { error } = await supabase.storage
@@ -106,5 +133,5 @@ export function useAssetOwnerOrgKYC(userId: string | null) {
     return path;
   };
 
-  return { orgKyc, isLoading, saveDraft, submit, uploadDoc };
+  return { orgKyc, orgKycs, isLoading, saveDraft, submit, uploadDoc };
 }

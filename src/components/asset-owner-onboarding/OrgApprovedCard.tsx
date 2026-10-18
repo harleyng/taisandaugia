@@ -1,12 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Plus } from "lucide-react";
 import type { AssetOwnerWorkspace } from "@/types/asset-owner";
 
 interface Props {
   /** Không gian sinh ra từ CHÍNH hồ sơ này (không phải không gian đang chọn). */
   workspace: AssetOwnerWorkspace | null;
   loading: boolean;
+  /** Chọn Trạm của hồ sơ này trước khi vào cổng (tài khoản có thể có nhiều Trạm). */
+  onEnter?: () => void;
+  /** Khai thêm một tổ chức khác (một tài khoản KYC được nhiều tổ chức). */
+  onAddOrg?: () => void;
 }
 
 /**
@@ -15,7 +19,7 @@ interface Props {
  * Không gian chi nhánh (match_scope = 'entity') chỉ nhận tài sản đứng tên đúng
  * chi nhánh — không có alias để chỉnh.
  */
-export const OrgApprovedCard = ({ workspace, loading }: Props) => {
+export const OrgApprovedCard = ({ workspace, loading, onEnter, onAddOrg }: Props) => {
   const navigate = useNavigate();
 
   if (loading) {
@@ -64,12 +68,18 @@ export const OrgApprovedCard = ({ workspace, loading }: Props) => {
       )}
 
       <div className="flex flex-wrap gap-2 pt-1">
-        <Button onClick={() => navigate("/chu-tai-san/dashboard")}>
+        <Button onClick={() => { onEnter?.(); navigate("/chu-tai-san/dashboard"); }}>
           {isBranch ? "Vào Trạm Điều Hành" : "Vào cổng Chủ tài sản"}
         </Button>
         {!isBranch && (
-          <Button variant="outline" onClick={() => navigate("/chu-tai-san/chi-nhanh-amc")}>
+          <Button variant="outline" onClick={() => { onEnter?.(); navigate("/chu-tai-san/chi-nhanh-amc"); }}>
             Quản lý alias &amp; chi nhánh
+          </Button>
+        )}
+        {onAddOrg && (
+          <Button variant="ghost" onClick={onAddOrg}>
+            <Plus className="h-4 w-4" />
+            Đăng ký thêm tổ chức
           </Button>
         )}
       </div>

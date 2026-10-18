@@ -1,9 +1,11 @@
-import { Building2, Check, ChevronsUpDown, UserRound } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Building2, Check, ChevronsUpDown, Plus, UserRound } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
@@ -27,13 +29,14 @@ interface Props {
  * xem ở nơi khác, và hồ sơ Cá nhân). Mỗi tenant hiện TÊN THẬT kèm huy hiệu loại:
  * không gian ⇒ tên tổ chức + "Tổ chức" (kể cả nơi được mời); tenant Cá nhân ⇒ họ
  * tên KYC + "Cá nhân". Tên dài cắt 1 dòng, rê chuột xem đủ. Trạm chi nhánh đã
- * liên kết xếp cuối (menu không ghi vai trò — chỉ tên + loại). Không có mục
- * "đăng ký mới": mỗi tài khoản chỉ có một hồ sơ KYC tổ chức chủ tài sản.
+ * liên kết xếp cuối (menu không ghi vai trò — chỉ tên + loại). Mục cuối "Đăng ký
+ * tổ chức mới": một tài khoản KYC được nhiều tổ chức, mỗi hồ sơ duyệt = một Trạm.
  */
 export function OwnerWorkspaceSwitcher({ className }: Props) {
   const { userId, memberships, hasPersonalTenant, personalName, tenantKey, workspace, isPersonal, selectWorkspace } =
     useOwnerWorkspace()
   const { data: profile } = useProfile(userId)
+  const navigate = useNavigate()
 
   if (memberships.length + (hasPersonalTenant ? 1 : 0) < 2) return null
 
@@ -84,6 +87,11 @@ export function OwnerWorkspaceSwitcher({ className }: Props) {
               onSelect={() => selectWorkspace(PERSONAL_TENANT)}
             />
           )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="gap-2 text-primary" onClick={() => navigate('/tro-thanh-chu-tai-san?moi=1')}>
+            <Plus className="h-4 w-4 shrink-0" />
+            <span className="text-sm">Đăng ký tổ chức mới</span>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

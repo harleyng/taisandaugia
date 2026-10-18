@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -10,13 +10,15 @@ import { useAuthDialog } from "@/contexts/AuthDialogContext";
 
 import { trackFeature } from "@/lib/analytics/track";
 import { useAssetOwnerKYC } from "@/hooks/useAssetOwnerKYC";
-import { useAssetOwnerOrgKYC } from "@/hooks/useAssetOwnerOrgKYC";
+import { useAssetOwnerOrgKYC, type OrgKycSelection } from "@/hooks/useAssetOwnerOrgKYC";
 import { useOwnerWorkspaceMemberships } from "@/hooks/useOwnerWorkspace";
 
 import { BranchSelector } from "@/components/asset-owner-onboarding/BranchSelector";
 import { PreFillBanner } from "@/components/asset-owner-onboarding/PreFillBanner";
 import { StatusScreen } from "@/components/asset-owner-onboarding/StatusScreen";
 import { OrgApprovedCard } from "@/components/asset-owner-onboarding/OrgApprovedCard";
+import { OrgKycPicker } from "@/components/asset-owner-onboarding/OrgKycPicker";
+import { writeSelectedWorkspace } from "@/lib/ownerWorkspace/selection";
 
 import { PersonalInfoSection } from "@/components/asset-owner-onboarding/individual/PersonalInfoSection";
 import { EKYCSection } from "@/components/asset-owner-onboarding/individual/EKYCSection";
@@ -45,6 +47,13 @@ interface Profile {
 const AssetOwnerOnboarding = () => {
   const navigate = useNavigate();
   const { openAuthDialog } = useAuthDialog();
+  // Một tài khoản KYC được nhiều tổ chức: ?kyc=<id> mở đúng hồ sơ, ?moi=1 khai hồ sơ mới.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const kycParam = searchParams.get("kyc");
+  const isNewOrg = searchParams.get("moi") === "1";
+  const orgSelection: OrgKycSelection = kycParam ?? (isNewOrg ? "new" : undefined);
+  const selectOrgKyc = (id: string) => setSearchParams({ kyc: id }, { replace: true });
+  const startNewOrg = () => setSearchParams({ moi: "1" }, { replace: true });
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -78,7 +87,9 @@ const AssetOwnerOnboarding = () => {
 
   const userId = profile?.id ?? null;
   const { kyc, isLoading: kycLoading, saveDraft, submit, uploadEKYCFile } = useAssetOwnerKYC(userId);
-  const { orgKyc, isLoading: orgKycLoading, saveDraft: orgSaveDraft, submit: orgSubmit, uploadDoc } = useAssetOwnerOrgKYC(userId);
+  const {
+    orgKyc, orgKycs, isLoading: orgKycLoading, saveDraft: orgSaveDraft, submit: orgSubmit, uploadDoc,
+  } = useAssetOwnerOrgKYC(userId, orgSelection, { onCreated: selectOrgKyc });
   // Chỉ để hiển thị số tài sản đã được khớp tự động sau khi duyệt — mọi thao tác
   // chỉnh alias / khớp lại nay nằm ở portal (/chu-tai-san/chi-nhanh-amc).
   // Lấy đúng không gian sinh ra từ HỒ SƠ NÀY, không phải không gian đang chọn
@@ -105,13 +116,19 @@ const AssetOwnerOnboarding = () => {
     load();
   }, []);
 
-  // Restore branch from existing records
+  // Restore branch from existing records (?moi=1 ⇒ để người dùng tự chọn loại)
   useEffect(() => {
-    if (!branch) {
-      if (kyc) setBranch("individual");
-      else if (orgKyc) setBranch("organization");
-    }
-  }, [kyc, orgKyc, branch]);
+    if (branch) return;
+    if (kycParam) setBranch("organization");
+    else if (isNewOrg) return;
+    else if (kyc) setBranch("individual");
+    else if (orgKyc) setBranch("organization");
+  }, [kyc, orgKyc, branch, kycParam, isNewOrg]);
+
+  // ?kyc= trỏ hồ sơ không còn / không phải của mình ⇒ bỏ tham số, về hồ sơ mặc định.
+  useEffect(() => {
+    if (kycParam && userId && !orgKycLoading && !orgKyc) setSearchParams({}, { replace: true });
+  }, [kycParam, userId, orgKycLoading, orgKyc, setSearchParams]);
 
   // When KYC status goes back to draft (after resubmit click), re-sync form so it re-renders
   useEffect(() => {
@@ -155,6 +172,20 @@ const AssetOwnerOnboarding = () => {
       selfie_url: kyc?.selfie_url ?? null,
     }));
   }, [profile, kyc]);
+
+  // Đổi sang hồ sơ khác / hồ sơ mới ⇒ xoá form để không lẫn dữ liệu giữa hai tổ chức.
+  // Bản nháp vừa tạo từ chính form đang khai (null → id) thì giữ nguyên.
+  const prevOrgKycId = useRef<string | null>(null);
+  useEffect(() => {
+    const id = orgKyc?.id ?? null;
+    const prev = prevOrgKycId.current;
+    prevOrgKycId.current = id;
+    if (prev === null || prev === id) return;
+    setOrgForm(EMPTY_ORG_KYC_FORM);
+    setRegistryOwner(null);
+    setParentOwner(null);
+    setOrgTermsAccepted(false);
+  }, [orgKyc?.id]);
 
   // Pre-fill org form from existing record
   useEffect(() => {
@@ -365,7 +396,7 @@ const AssetOwnerOnboarding = () => {
           )}
 
           {/* ─── Đã chọn nhánh nhưng chưa submit → cho đổi lại ─── */}
-          {branch && !kyc && !orgKyc && (
+          {branch && (isNewOrg ? (branch === "organization" ? !orgKyc : !kyc) : !kyc && !orgKyc) && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Loại: <strong className="text-foreground">{branch === "individual" ? "Cá nhân" : "Tổ chức"}</strong></span>
               <button
@@ -430,11 +461,25 @@ const AssetOwnerOnboarding = () => {
           {/* ─── ORGANIZATION BRANCH ─── */}
           {branch === "organization" && (
             <>
+              {orgKycs.length > 0 && (orgKycs.length > 1 || !orgKyc) && (
+                <OrgKycPicker
+                  orgKycs={orgKycs}
+                  selectedId={orgKyc?.id ?? null}
+                  onSelect={selectOrgKyc}
+                  onNew={startNewOrg}
+                />
+              )}
+
               {/* Đã duyệt → xong. Việc khớp tài sản đã chạy tự động phía server khi
                   hồ sơ được duyệt (trigger create_workspace_on_org_approval), nên
                   không còn bước claim chi nhánh thủ công ở đây nữa. */}
               {orgKyc?.status === "approved" && (
-                <OrgApprovedCard workspace={workspace} loading={wsLoading} />
+                <OrgApprovedCard
+                  workspace={workspace}
+                  loading={wsLoading}
+                  onEnter={() => workspace && userId && writeSelectedWorkspace(userId, workspace.id)}
+                  onAddOrg={startNewOrg}
+                />
               )}
 
               {/* Tier 1 pending/under_review/rejected */}

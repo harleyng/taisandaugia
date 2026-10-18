@@ -127,6 +127,8 @@ const ORG_KYC_ERRORS: Record<string, string> = {
     "Chi nhánh này đã có Trạm Điều Hành. Hãy đề nghị Trưởng đơn vị của chi nhánh mời bạn tham gia.",
   claim_outside_branch:
     "Tài sản này đứng tên đơn vị khác. Trạm của chi nhánh chỉ nhận tài sản của chính chi nhánh hoặc của trụ sở.",
+  // Index duy nhất (người tạo, MST) trên hồ sơ chưa bị từ chối.
+  asset_owner_org_kyc_user_tax_code_uq: "Bạn đã có hồ sơ tổ chức với mã số thuế này.",
 };
 
 export function mapOrgKycError(err: unknown, fallback: string): string {

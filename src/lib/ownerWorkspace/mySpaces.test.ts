@@ -3,6 +3,7 @@ import { kycTileStatus, mySpacesState, spaceInitials, type KycTile } from "./myS
 
 const tile = (status: KycTile["status"]): KycTile => ({
   key: status,
+  kycId: status,
   kind: "organization",
   name: "X",
   status,

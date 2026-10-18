@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useMyOwnerSpaces } from "@/hooks/useMyOwnerSpaces";
-import { MY_SPACES_SUBTITLE } from "@/lib/ownerWorkspace/mySpaces";
+import { MY_SPACES_SUBTITLE, type KycTile } from "@/lib/ownerWorkspace/mySpaces";
 import { AddSpaceTile, KycStatusTile, SpaceTile } from "@/components/profile/my-assets/SpaceTiles";
 import { MyAssetsEmptyState } from "@/components/profile/my-assets/MyAssetsEmptyState";
 
@@ -17,6 +17,10 @@ export const MyAssetsTab = () => {
   const { spaces, kycTiles, state, isLoading, selectWorkspace } = useMyOwnerSpaces();
 
   const goToOnboarding = () => navigate(ONBOARDING_PATH);
+  // Thêm không gian = hồ sơ mới (không mở lại hồ sơ tổ chức đã có).
+  const addSpace = () => navigate(`${ONBOARDING_PATH}?moi=1`);
+  const openKyc = (tile: KycTile) =>
+    navigate(tile.kind === "organization" ? `${ONBOARDING_PATH}?kyc=${tile.kycId}` : ONBOARDING_PATH);
   const openSpace = (tenantId: string) => {
     selectWorkspace(tenantId);
     navigate("/chu-tai-san/dashboard");
@@ -45,9 +49,9 @@ export const MyAssetsTab = () => {
             <SpaceTile key={space.tenantId} space={space} onOpen={() => openSpace(space.tenantId)} />
           ))}
           {kycTiles.map((tile) => (
-            <KycStatusTile key={tile.key} tile={tile} onOpen={goToOnboarding} />
+            <KycStatusTile key={tile.key} tile={tile} onOpen={() => openKyc(tile)} />
           ))}
-          <AddSpaceTile onClick={goToOnboarding} />
+          <AddSpaceTile onClick={addSpace} />
         </section>
       )}
     </div>

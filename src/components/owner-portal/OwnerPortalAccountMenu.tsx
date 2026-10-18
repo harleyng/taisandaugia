@@ -46,7 +46,9 @@ export function OwnerPortalAccountMenu({ onNavigate }: Props) {
     if (!userId) return
     let cancelled = false
     Promise.all([
-      supabase.from('asset_owner_org_kyc').select('org_name').eq('created_by', userId).eq('status', 'approved').maybeSingle(),
+      // Một tài khoản có thể có nhiều tổ chức đã duyệt — chỉ cần một tên dự phòng.
+      supabase.from('asset_owner_org_kyc').select('org_name').eq('created_by', userId).eq('status', 'approved')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('asset_owner_kyc').select('full_name').eq('user_id', userId).eq('status', 'approved').maybeSingle(),
     ]).then(([org, ind]) => {
       if (!cancelled) setKycNames({ org: org.data?.org_name ?? '', individual: ind.data?.full_name ?? '' })
@@ -156,6 +158,9 @@ export function OwnerPortalAccountMenu({ onNavigate }: Props) {
           )}
           <DropdownMenuItem className="px-2 py-[5px] text-[13px]" onClick={() => go('/chu-tai-san/credits')}>
             Mua thêm credit
+          </DropdownMenuItem>
+          <DropdownMenuItem className="px-2 py-[5px] text-[13px]" onClick={() => go('/tro-thanh-chu-tai-san?moi=1')}>
+            Đăng ký tổ chức mới
           </DropdownMenuItem>
           <DropdownMenuItem className="px-2 py-[5px] text-[13px]" onClick={() => go('/')}>
             Quay lại Marketplace

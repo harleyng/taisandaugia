@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAssetOwnerKYC } from "@/hooks/useAssetOwnerKYC";
-import { useAssetOwnerOrgKYC } from "@/hooks/useAssetOwnerOrgKYC";
+import { useAssetOwnerOrgKYCs } from "@/hooks/useAssetOwnerOrgKYC";
 import { useOwnerWorkspace, useOwnerWorkspaceMemberships, type OwnerWorkspaceMembership } from "@/hooks/useOwnerWorkspace";
 import { ownerWsAccessLabel } from "@/lib/ownerWorkspace/roles";
 import { PERSONAL_TENANT } from "@/lib/ownerWorkspace/selection";
@@ -60,7 +60,7 @@ export function useMyOwnerSpaces() {
   const { userId, memberships, hasPersonalTenant, personalName, isLoading: wsLoading, selectWorkspace } =
     useOwnerWorkspace();
   const { kyc, isLoading: indLoading } = useAssetOwnerKYC(userId);
-  const { orgKyc, isLoading: orgLoading } = useAssetOwnerOrgKYC(userId);
+  const { data: orgKycs = [], isLoading: orgLoading } = useAssetOwnerOrgKYCs(userId);
   const counts = usePendingClaimCounts(memberships);
 
   const spaces = useMemo((): MyOwnerSpace[] => {
@@ -96,16 +96,20 @@ export function useMyOwnerSpaces() {
     if (kyc && ind) {
       tiles.push({
         key: `ind-${kyc.id}`,
+        kycId: kyc.id,
         kind: "individual",
         name: kyc.full_name?.trim() || "Chủ tài sản cá nhân",
         status: ind,
         rejectionReason: kyc.rejection_reason,
       });
     }
-    const org = orgKyc ? kycTileStatus(orgKyc.status) : null;
-    if (orgKyc && org) {
+    // Một tài khoản KYC được nhiều tổ chức ⇒ mỗi hồ sơ chưa duyệt một thẻ.
+    for (const orgKyc of orgKycs) {
+      const org = kycTileStatus(orgKyc.status);
+      if (!org) continue;
       tiles.push({
         key: `org-${orgKyc.id}`,
+        kycId: orgKyc.id,
         kind: "organization",
         name: orgKyc.org_name?.trim() || "Tổ chức",
         status: org,
@@ -113,7 +117,7 @@ export function useMyOwnerSpaces() {
       });
     }
     return tiles;
-  }, [kyc, orgKyc]);
+  }, [kyc, orgKycs]);
 
   return {
     spaces,

@@ -9,6 +9,8 @@ export type KycTileStatus = "draft" | "pending" | "rejected";
 /** Thẻ hồ sơ xác thực CHƯA được duyệt (đã duyệt thì thành thẻ không gian). */
 export interface KycTile {
   key: string;
+  /** id hồ sơ — thẻ tổ chức mở đúng hồ sơ đó (một tài khoản có thể có nhiều). */
+  kycId: string;
   kind: "individual" | "organization";
   name: string;
   status: KycTileStatus;

@@ -74,6 +74,9 @@ const OwnerAssetsPage = () => {
           .select("status, org_name")
           .eq("created_by", uid)
           .eq("status", "approved")
+          // Một tài khoản có thể có nhiều tổ chức đã duyệt.
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle(),
       ]);
 

@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/asset-owner-portal/ui/EmptyState";
 import { ContractsTable } from "@/components/asset-owner-portal/contracts/ContractsTable";
 import { ConsignmentCanvas } from "@/components/portal/consignment/ConsignmentCanvas";
 import { useOrgPermissions } from "@/hooks/useOrgPermissions";
-import { useSessionOrg } from "@/hooks/useAuctionSessions";
+import { useSessionOrg } from "@/hooks/useSessionOrg";
 import { useOrgSaleContracts } from "@/hooks/useSaleContracts";
 import { useOrgConsignmentContractList } from "@/hooks/useOrgServiceRequests";
 import { useUrlFilterState } from "@/hooks/useUrlFilterState";

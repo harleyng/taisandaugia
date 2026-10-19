@@ -6,8 +6,12 @@
 //
 // Tỉnh (province) KHÔNG set ở client: server tự suy từ hồ sơ tổ chức qua trigger
 // khi có user_id (xem migration 20260713000001_analytics_events.sql).
+//
+// File DÙNG CHUNG với taisanviet (giống hệt). Cột platform lấy từ APP_PLATFORM của
+// từng repo ⇒ /admin/bao-cao/truy-cap tách được hai nền tảng (20261019200000).
 
 import { supabase } from "@/integrations/supabase/client";
+import { APP_PLATFORM } from "@/lib/appPlatform";
 
 // Catalog nhãn nằm ở module thuần dùng chung (báo cáo + test không kéo supabase).
 export { FEATURE_EVENT_LABELS, featureEventLabel } from "./featureLabels";
@@ -91,6 +95,7 @@ export function trackPageView(path: string, opts: PageViewInput = {}): void {
     .from("analytics_events")
     .insert({
       session_id: getSessionId(),
+      platform: APP_PLATFORM,
       user_id: opts.userId ?? currentUserId,
       event_type: "page_view",
       path,
@@ -122,6 +127,7 @@ export function trackFeature(key: string, opts: FeatureEventInput = {}): void {
     .from("analytics_events")
     .insert({
       session_id: getSessionId(),
+      platform: APP_PLATFORM,
       user_id: opts.userId ?? currentUserId,
       event_type: "feature",
       feature_key: key,

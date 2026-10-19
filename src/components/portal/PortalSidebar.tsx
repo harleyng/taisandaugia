@@ -6,12 +6,12 @@ import { OrgSwitcher } from './OrgSwitcher'
 import { PortalAccountMenu } from './PortalAccountMenu'
 import { useCapacityProfile } from '@/hooks/useCapacityProfile'
 import { useOrgServiceRequestCounts } from '@/hooks/useOrgServiceRequests'
-import { useChatAttentionCounts } from '@/hooks/useOrgChat'
 import { useOrgPermissions } from '@/hooks/useOrgPermissions'
-import { useSessionOrg } from '@/hooks/useAuctionSessions'
+import { useSessionOrg } from '@/hooks/useSessionOrg'
 import { useOrgSaleContractCounts } from '@/hooks/useSaleContracts'
 import { orgMatrixHas } from '@/lib/orgPermissions'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { auctionUrl } from '@/lib/auctionPlatform'
+import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 interface Props {
@@ -43,12 +43,11 @@ export function PortalSidebar({ onNavigate }: Props) {
   const { profile } = useCapacityProfile()
   const { isOwner, matrix, ready } = useOrgPermissions()
   const { newCount, contractsActionCount } = useOrgServiceRequestCounts()
-  const { awaitingReply } = useChatAttentionCounts()
 
   // Số đếm động cho badge nav; thêm loại mới thì nối vào CountBadgeKind rồi trả
-  // số ở đây. Hỏi đáp chỉ đếm câu CHỜ TRẢ LỜI — cộng thêm sổ chuyển tiếp sẽ đếm
-  // trùng cùng một câu hỏi. Ký gửi = yêu cầu mới; Hợp đồng = hợp đồng ký gửi tổ
-  // chức phải xử lý + hợp đồng mua bán cần làm / quá hạn.
+  // số ở đây. Ký gửi = yêu cầu mới; Hợp đồng = hợp đồng ký gửi tổ chức phải xử
+  // lý + hợp đồng mua bán cần làm / quá hạn. (Hỏi đáp & Omnichat đã sang Sàn đấu
+  // giá trực tuyến — badge chờ trả lời hiện ở sidebar bên đó.)
   // Số mua bán: chỉ gọi khi người dùng có quyền xem hợp đồng mua bán, để AGENT
   // không có quyền không phải ăn một lần 403 mỗi lần mở cổng.
   const { organizationId } = useSessionOrg()
@@ -58,11 +57,9 @@ export function PortalSidebar({ onNavigate }: Props) {
   const badgeCount = (kind?: CountBadgeKind) =>
     kind === 'yeu-cau-ky-gui'
       ? newCount
-      : kind === 'hoi-dap'
-        ? awaitingReply
-        : kind === 'hop-dong'
-          ? contractsActionCount + (saleCounts?.action_needed ?? 0) + (saleCounts?.overdue ?? 0)
-          : 0
+      : kind === 'hop-dong'
+        ? contractsActionCount + (saleCounts?.action_needed ?? 0) + (saleCounts?.overdue ?? 0)
+        : 0
 
   // Lọc nav theo quyền 'view'. Khi CHƯA nạp xong chỉ hiện mục không gắn module —
   // tránh nháy link mà người dùng không có quyền vào.
@@ -107,6 +104,22 @@ export function PortalSidebar({ onNavigate }: Props) {
 
   /** Một mục nav (link thẳng hoặc nhóm con xổ xuống). */
   function renderSection(section: NavSection) {
+    // Mục của Sàn đấu giá trực tuyến — sang tên miền sàn, không bao giờ "đang chọn".
+    if (section.href && section.external) {
+      return (
+        <a
+          key={section.label}
+          href={auctionUrl(section.href)}
+          onClick={onNavigate}
+          className="flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        >
+          <section.icon className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{section.label}</span>
+          <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" aria-label="Mở ở Sàn đấu giá trực tuyến" />
+        </a>
+      )
+    }
+
     // Section is a direct link
     if (section.href && !section.children) {
       const count = badgeCount(section.countBadge)

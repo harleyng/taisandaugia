@@ -1,14 +1,13 @@
-import { useNavigate } from "react-router-dom";
 import { Megaphone } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { useContactOutreachHistory } from "@/hooks/useSessionOutreach";
-import { DIRECT_METHOD_LABELS } from "@/lib/outreach/directMessage";
+import { CONTACT_METHOD_LABELS, useContactOutreachHistory } from "@/hooks/useContactOutreachHistory";
+import { AUCTION_LINKS, goToAuction } from "@/lib/auctionPlatform";
 
 const when = (iso: string) => new Date(iso).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
 
-/** Những lần tổ chức đã liên hệ khách này khi tiếp thị phiên (từ nhật ký gửi). */
+/** Những lần tổ chức đã liên hệ khách này khi tiếp thị phiên (từ nhật ký gửi). Tab
+ *  Tiếp thị của phiên ở Sàn đấu giá trực tuyến ⇒ bấm tên phiên là sang sàn. */
 export function ContactOutreachHistoryCard({ contactId }: { contactId: string }) {
-  const navigate = useNavigate();
   const { data: rows = [], isLoading } = useContactOutreachHistory(contactId);
 
   return (
@@ -35,12 +34,12 @@ export function ContactOutreachHistoryCard({ contactId }: { contactId: string })
                   <button
                     type="button"
                     className="text-left font-medium text-primary hover:underline"
-                    onClick={() => sessionId && navigate(`/portal/phien-dau-gia/${sessionId}/tiep-thi`)}
+                    onClick={() => sessionId && goToAuction(AUCTION_LINKS.portalSession(sessionId, "tiep-thi"))}
                   >
                     {session ? `${session.code ?? ""} · ${session.title}` : "Phiên đã xoá"}
                   </button>
                   <span className="text-xs text-muted-foreground">
-                    {r.contact_method ? DIRECT_METHOD_LABELS[r.contact_method] : ""} · {when(r.marked_at)}
+                    {r.contact_method ? (CONTACT_METHOD_LABELS[r.contact_method] ?? r.contact_method) : ""} · {when(r.marked_at)}
                   </span>
                 </div>
                 <details>

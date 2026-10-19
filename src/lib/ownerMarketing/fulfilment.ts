@@ -5,7 +5,7 @@
 // không bao giờ đưa thông tin bên vay / chủ nợ vào nội dung (plan §M2.2).
 
 import { DEFAULT_AUDIENCE_SPEC, modesForKind } from "@/lib/marketing/audienceCriteria";
-import { viDateTime, vnd } from "@/lib/outreach/format";
+import { viDateTime, vnd } from "@/lib/messaging/format";
 import { listingTargetPath } from "@/lib/ownerMarketing/links";
 import type { AudienceSpec } from "@/types/marketing";
 import { caString, type ListingAddress, type ListingCustomAttributes } from "@/types/listing";

@@ -4,6 +4,8 @@
 // policy storage đọc hai đoạn đầu để tìm hợp đồng và kiểm quyền. Lưu PATH vào
 // DB, mở bằng createSignedUrl — getPublicUrl luôn 400 với bucket private.
 
+import { supabase } from "@/integrations/supabase/client";
+
 export const CONTRACT_BUCKET = "consignment-contracts";
 export const MAX_CONTRACT_FILE_BYTES = 10 * 1024 * 1024;
 export const CONTRACT_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
@@ -32,4 +34,15 @@ export function contractFilePath(
 export function contractFileName(path: string): string {
   const last = path.split("/").pop() ?? path;
   return last.replace(/^(draft|signed)-\d+-/, "");
+}
+
+/** URL ký tạm để mở tệp (kernel — ContractFileButton dùng chung với sàn đấu giá). */
+export async function signContractFile(
+  path: string,
+  bucket: string = CONTRACT_BUCKET,
+  expiresIn = 3600,
+): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresIn);
+  if (error) return null;
+  return data?.signedUrl ?? null;
 }

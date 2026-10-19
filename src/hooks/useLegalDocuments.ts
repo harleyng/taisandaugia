@@ -1,37 +1,32 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { APP_PLATFORM } from "@/lib/appPlatform";
 import type {
   LegalActiveVersions,
+  LegalConsent,
   LegalDocType,
   LegalDocument,
+  LegalPlatform,
   LegalVersionCreate,
 } from "@/types/legal";
 
-/** Ngày hôm nay dạng "YYYY-MM-DD" (so khớp cột effective_date kiểu DATE). */
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+// Mọi đọc/ghi đi qua RPC theo nền tảng (migration 20261019100000): đọc thẳng bảng
+// `legal_documents` giờ chỉ thấy văn bản của Tài Sản Đấu Giá — lối cũ giữ cho bản
+// production chưa deploy lại, không dùng cho code mới.
 
 /**
- * Phiên bản đang áp dụng cho mỗi loại (public đọc được, anon OK). LEAN — không kèm
+ * Phiên bản đang áp dụng cho mỗi loại của một nền tảng (anon OK). LEAN — không kèm
  * `content` vì hook này chạy ở mọi trang (login text + cổng consent). Query key
- * `["legal-active-versions"]`.
+ * `["legal-active-versions", platform]`.
  */
-export function useLegalActiveVersions() {
+export function useLegalActiveVersions(platform: LegalPlatform = APP_PLATFORM) {
   return useQuery<LegalActiveVersions>({
-    queryKey: ["legal-active-versions"],
+    queryKey: ["legal-active-versions", platform],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("legal_documents")
-        .select("doc_type, version, effective_date")
-        .order("effective_date", { ascending: false });
+      const { data, error } = await supabase.rpc("legal_active_versions", { p_platform: platform });
       if (error) throw error;
-
-      const today = todayStr();
-      const pick = (type: LegalDocType) =>
-        (data ?? []).find((r) => r.doc_type === type && r.effective_date <= today) ?? null;
-
+      const pick = (type: LegalDocType) => (data ?? []).find((r) => r.doc_type === type) ?? null;
       const t = pick("terms");
       const p = pick("privacy");
       return {
@@ -46,38 +41,55 @@ export function useLegalActiveVersions() {
 }
 
 /**
- * Phiên bản đang áp dụng KÈM nội dung, cho trang công khai render. Chọn hàng
- * `effective_date <= hôm nay` mới nhất của một loại. Query key `["legal-active-doc", docType]`.
+ * Phiên bản đang áp dụng KÈM nội dung, cho trang công khai render. Query key
+ * `["legal-active-doc", platform, docType]`.
  */
-export function useActiveLegalDoc(docType: LegalDocType) {
+export function useActiveLegalDoc(docType: LegalDocType, platform: LegalPlatform = APP_PLATFORM) {
   return useQuery<LegalDocument | null>({
-    queryKey: ["legal-active-doc", docType],
+    queryKey: ["legal-active-doc", platform, docType],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("legal_documents")
-        .select("*")
-        .eq("doc_type", docType)
-        .lte("effective_date", todayStr())
-        .order("effective_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("legal_active_document", {
+        p_platform: platform,
+        p_doc_type: docType,
+      });
       if (error) throw error;
-      return (data as LegalDocument | null) ?? null;
+      return ((data ?? [])[0] as LegalDocument | undefined) ?? null;
     },
     staleTime: 5 * 60_000,
   });
 }
 
-/** Admin: tất cả phiên bản của cả hai loại (mới nhất trước). Query key `["legal-documents"]`. */
-export function useLegalDocuments() {
-  return useQuery<LegalDocument[]>({
-    queryKey: ["legal-documents"],
+/** Query key consent của user trên một nền tảng. */
+export const legalConsentKey = (platform: LegalPlatform, userId: string | null | undefined) =>
+  ["legal-consent", platform, userId] as const;
+
+/**
+ * Phiên bản user đã đồng ý trên một nền tảng (null = chưa ghi nhận lần nào). Chỗ
+ * lưu khác nhau theo nền tảng — RPC `my_legal_consent` che đi.
+ */
+export function useMyLegalConsent(userId: string | null | undefined, platform: LegalPlatform = APP_PLATFORM) {
+  return useQuery<LegalConsent | null>({
+    queryKey: legalConsentKey(platform, userId),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("legal_documents")
-        .select("*")
-        .order("doc_type", { ascending: true })
-        .order("effective_date", { ascending: false });
+      const { data, error } = await supabase.rpc("my_legal_consent", { p_platform: platform });
+      if (error) throw error;
+      const row = (data ?? [])[0];
+      return row ? { termsVersion: row.terms_version, privacyVersion: row.privacy_version } : null;
+    },
+    enabled: !!userId,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Admin: tất cả phiên bản (cả bản Chờ áp dụng) của một nền tảng, hoặc cả hai khi
+ * bỏ trống. Query key `["legal-documents", platform | "all"]`.
+ */
+export function useLegalDocuments(platform?: LegalPlatform) {
+  return useQuery<LegalDocument[]>({
+    queryKey: ["legal-documents", platform ?? "all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_legal_documents", { p_platform: platform });
       if (error) throw error;
       return (data ?? []) as LegalDocument[];
     },
@@ -89,38 +101,37 @@ export function useLegalVersion(id: string | undefined) {
   return useQuery<LegalDocument | null>({
     queryKey: ["legal-document", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("legal_documents")
-        .select("*")
-        .eq("id", id!)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("admin_legal_document", { p_id: id! });
       if (error) throw error;
-      return (data as LegalDocument | null) ?? null;
+      return ((data ?? [])[0] as LegalDocument | undefined) ?? null;
     },
     enabled: !!id,
   });
 }
 
 /**
- * Tạo phiên bản MỚI. Phiên bản là bất biến — chỉ INSERT, không update/xoá.
+ * Tạo phiên bản MỚI. Phiên bản là bất biến — chỉ tạo, không update/xoá.
  * Invalidate cả danh sách lẫn các query "đang áp dụng".
  */
 export function useCreateLegalVersion() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: LegalVersionCreate) => {
-      const { data, error } = await supabase
-        .from("legal_documents")
-        .insert(payload)
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc("admin_create_legal_version", {
+        p_platform: payload.platform,
+        p_doc_type: payload.doc_type,
+        p_version: payload.version,
+        p_effective_date: payload.effective_date,
+        p_changelog: payload.changelog ?? undefined,
+        p_content: payload.content ?? undefined,
+      });
       if (error) throw error;
-      return data as LegalDocument;
+      return data as unknown as LegalDocument;
     },
-    onSuccess: (row) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["legal-documents"] });
       qc.invalidateQueries({ queryKey: ["legal-active-versions"] });
-      qc.invalidateQueries({ queryKey: ["legal-active-doc", row.doc_type] });
+      qc.invalidateQueries({ queryKey: ["legal-active-doc"] });
       toast.success("Đã tạo phiên bản mới");
     },
     onError: (err: unknown) => {

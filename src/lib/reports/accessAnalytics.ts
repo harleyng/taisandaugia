@@ -16,14 +16,35 @@ import {
 import type { Granularity } from "@/lib/reports/transactionReport";
 import { featureEventLabel } from "@/lib/analytics/featureLabels";
 
+// ─── Nền tảng (analytics_events.platform, 20261019200000) ─────────────────────
+/** "all" = gộp cả hai (RPC nhận NULL). */
+export type AccessPlatform = "all" | "info" | "auction";
+export type EventPlatform = Exclude<AccessPlatform, "all">;
+
+export const ACCESS_PLATFORM_OPTIONS: { key: AccessPlatform; label: string }[] = [
+  { key: "all", label: "Cả hai nền tảng" },
+  { key: "info", label: "Tài Sản Đấu Giá" },
+  { key: "auction", label: "Sàn đấu giá trực tuyến" },
+];
+
+export const EVENT_PLATFORM_LABELS: Record<EventPlatform, string> = {
+  info: "Tài Sản Đấu Giá",
+  auction: "Sàn đấu giá",
+};
+
+/** Tham số _platform của RPC admin_access_report. */
+export const platformParam = (p: AccessPlatform): EventPlatform | undefined => (p === "all" ? undefined : p);
+
 // ─── Shape JSONB trả về từ RPC ───────────────────────────────────────────────
 export interface RawAccessReport {
   timeseries: { bucket: string; visits: number; page_views: number; unique_users: number }[];
-  topPages: { path: string; views: number; unique_users: number }[];
+  /** platform có từ 20261019200000 (cùng path ở hai nền tảng là hai dòng). */
+  topPages: { platform?: EventPlatform; path: string; views: number; unique_users: number }[];
   byFeature: { feature_key: string; count: number; unique_users: number }[];
   byDevice: { device_type: string; count: number }[];
   byProvince: { province: string; count: number }[];
-  funnel: { visitors: number; registrations: number; activations: number; spenders: number };
+  /** Khoá theo nền tảng — xem FUNNEL_STAGES. */
+  funnel: Record<string, number>;
   kpis: { totalVisits: number; totalPageViews: number; uniqueUsers: number; featureEvents: number };
 }
 
@@ -36,6 +57,7 @@ export interface AccessTimeBucket {
   uniqueUsers: number;
 }
 export interface PageStat {
+  platform: EventPlatform;
   path: string;
   views: number;
   uniqueUsers: number;
@@ -113,12 +135,23 @@ const DEVICE_LABELS: Record<string, string> = {
 };
 const deviceLabel = (k: string) => DEVICE_LABELS[k] ?? k;
 
-const FUNNEL_LABELS: { key: keyof RawAccessReport["funnel"]; label: string }[] = [
+// Sàn không có kích hoạt / credit ⇒ phễu riêng tới hồ sơ tham gia (khớp khoá RPC).
+const INFO_FUNNEL = [
   { key: "visitors", label: "Truy cập" },
   { key: "registrations", label: "Đăng ký" },
   { key: "activations", label: "Kích hoạt" },
   { key: "spenders", label: "Tiêu credit" },
 ];
+export const FUNNEL_STAGES: Record<AccessPlatform, { key: string; label: string }[]> = {
+  all: INFO_FUNNEL,
+  info: INFO_FUNNEL,
+  auction: [
+    { key: "visitors", label: "Truy cập" },
+    { key: "registrations", label: "Đăng ký trên sàn" },
+    { key: "dossiers", label: "Nộp hồ sơ" },
+    { key: "paidDossiers", label: "Nộp phí hồ sơ" },
+  ],
+};
 
 const EMPTY: RawAccessReport = {
   timeseries: [],
@@ -126,7 +159,7 @@ const EMPTY: RawAccessReport = {
   byFeature: [],
   byDevice: [],
   byProvince: [],
-  funnel: { visitors: 0, registrations: 0, activations: 0, spenders: 0 },
+  funnel: {},
   kpis: { totalVisits: 0, totalPageViews: 0, uniqueUsers: 0, featureEvents: 0 },
 };
 
@@ -135,6 +168,7 @@ export function formatAccessReport(
   raw: RawAccessReport | null | undefined,
   range: { from: Date; to: Date },
   granularity: Granularity,
+  platform: AccessPlatform = "all",
 ): AccessReport {
   const r = raw ?? EMPTY;
 
@@ -156,6 +190,7 @@ export function formatAccessReport(
   });
 
   const topPages: PageStat[] = (r.topPages ?? []).map((p) => ({
+    platform: p.platform ?? "info",
     path: p.path,
     views: Number(p.views),
     uniqueUsers: Number(p.unique_users),
@@ -185,7 +220,7 @@ export function formatAccessReport(
 
   const top = Number(r.funnel?.visitors ?? 0);
   let prev: number | null = null;
-  const funnel: FunnelStage[] = FUNNEL_LABELS.map(({ key, label }) => {
+  const funnel: FunnelStage[] = FUNNEL_STAGES[platform].map(({ key, label }) => {
     const value = Number(r.funnel?.[key] ?? 0);
     const stage: FunnelStage = {
       key,

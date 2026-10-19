@@ -15,7 +15,7 @@
 import type { Column, Content, TableCell, TDocumentDefinitions } from "pdfmake/interfaces";
 import { MARGIN, themeOf } from "@/lib/personnel/dossier-pdf/theme";
 import { dataTable, fmtDate } from "@/lib/personnel/dossier-pdf/primitives";
-import { tienBangChu } from "@/lib/bidding/minutes-pdf/soThanhChu";
+import { tienBangChu } from "@/lib/auctionCore/soThanhChu";
 import { formatVnd } from "@/lib/advertising/slug";
 import type { SaleBuyerParty, SaleOrgParty, SaleSellerParty } from "@/types/auction-sale-contract";
 import {

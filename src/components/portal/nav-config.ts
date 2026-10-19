@@ -21,6 +21,7 @@ import {
   FileSignature,
   type LucideIcon,
 } from 'lucide-react'
+import { AUCTION_LINKS } from '@/lib/auctionPlatform'
 
 export interface NavItem {
   label: string
@@ -32,7 +33,7 @@ export interface NavItem {
 }
 
 /** Badge số đếm động — PortalSidebar biết lấy số ở hook nào. */
-export type CountBadgeKind = 'yeu-cau-ky-gui' | 'hoi-dap' | 'hop-dong'
+export type CountBadgeKind = 'yeu-cau-ky-gui' | 'hop-dong'
 
 export interface NavSection {
   label: string
@@ -42,6 +43,8 @@ export interface NavSection {
   scoreBadge?: boolean     // show capacity score badge
   module?: string | string[] // mã quyền cho section không có sub-items; mảng = có MỘT là đủ
   countBadge?: CountBadgeKind
+  /** `href` là đường dẫn trên Sàn đấu giá trực tuyến (Phase 5) ⇒ mở bằng `<a>` sang tên miền sàn. */
+  external?: boolean
 }
 
 /**
@@ -104,6 +107,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     // Vòng đời một cuộc đấu giá, đọc từ trên xuống: nhận việc ký gửi → mở phiên
     // → nhận hồ sơ tham gia → hợp đồng (ký gửi với chủ tài sản + mua bán với người trúng).
+    // Phiên & hồ sơ tham gia chạy ở Sàn đấu giá trực tuyến; mã quyền vẫn lọc mục như cũ.
     title: 'Đấu giá',
     sections: [
       {
@@ -116,14 +120,16 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Phiên đấu giá',
         icon: Gavel,
-        href: '/portal/phien-dau-gia',
+        href: AUCTION_LINKS.portalSessions,
         module: 'phien-dau-gia',
+        external: true,
       },
       {
         label: 'Hồ sơ tham gia',
         icon: ClipboardCheck,
-        href: '/portal/ho-so-tham-gia',
+        href: AUCTION_LINKS.portalDossiers,
         module: 'ho-so-tham-gia',
+        external: true,
       },
       {
         label: 'Hợp đồng',
@@ -146,9 +152,9 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: 'Hỏi đáp & Omnichat',
         icon: MessagesSquare,
-        href: '/portal/hoi-dap',
+        href: AUCTION_LINKS.portalQa,
         module: 'hoi-dap',
-        countBadge: 'hoi-dap',
+        external: true,
       },
     ],
   },

@@ -15,7 +15,7 @@ import {
   type FactsSnapshot,
 } from "@/lib/ownerMarketing/campaigns";
 import { renderChannel, suggestDrafts } from "@/lib/ownerMarketing/composer";
-import { stripDiacritics } from "@/lib/outreach/sms";
+import { stripDiacritics } from "@/lib/messaging/sms";
 import { FactsLockedBlock } from "../FactsLockedBlock";
 
 interface CampaignContentSectionProps {

@@ -44,15 +44,8 @@ export async function uploadContractFile(contract: ContractRef, kind: ContractFi
   return path;
 }
 
-export async function signContractFile(
-  path: string,
-  bucket: string = CONTRACT_BUCKET,
-  expiresIn = 3600,
-): Promise<string | null> {
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresIn);
-  if (error) return null;
-  return data?.signedUrl ?? null;
-}
+// URL ký tạm chuyển sang lib (kernel dùng chung với sàn đấu giá) — giữ export cũ.
+export { signContractFile } from "@/lib/consignment/contractFiles";
 
 // ─── Đọc ─────────────────────────────────────────────────────────────────────
 

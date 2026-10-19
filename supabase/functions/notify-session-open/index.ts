@@ -11,7 +11,8 @@
 // Nhà cung cấp email: Resend (RESEND_API_KEY + EMAIL_FROM, vd.
 // "Tài Sản Đấu Giá <no-reply@taisandaugia.vn>"). Thiếu khoá ⇒ chế độ STUB: chỉ
 // trả danh sách sẽ gửi, KHÔNG đặt notified_at (để gửi thật khi có khoá).
-// PUBLIC_SITE_URL dựng link về trang phiên.
+// PUBLIC_SITE_URL dựng link về trang phiên — tên miền Sàn đấu giá trực tuyến (trang
+// phiên ở repo taisanviet từ Phase 5; taisandaugia.vn/sessions/* chỉ còn chuyển hướng).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
   })
   const resendKey = Deno.env.get('RESEND_API_KEY') ?? ''
   const from = Deno.env.get('EMAIL_FROM') ?? ''
-  const siteUrl = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://taisandaugia.vn'
+  const siteUrl = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://taisanviet.vercel.app'
   const stub = !resendKey || !from
 
   const { data, error } = await admin

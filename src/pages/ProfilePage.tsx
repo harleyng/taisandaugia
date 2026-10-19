@@ -17,7 +17,6 @@ import { CompanyTab } from "@/components/profile/tabs/CompanyTab";
 import { MyAssetsTab } from "@/components/profile/tabs/MyAssetsTab";
 import { resolveDisplayName } from "@/lib/displayName";
 import { AuctionContractsTab } from "@/components/profile/tabs/AuctionContractsTab";
-import { MY_CONTRACTS_GROUP_PARAM } from "@/lib/biddingContracts/paths";
 
 const VALID_TABS: ProfileTab[] = [
   "profile",
@@ -51,7 +50,7 @@ const ProfilePage = () => {
   const setActiveTab = (tab: ProfileTab) => {
     const next = new URLSearchParams(searchParams);
     next.delete("from");
-    next.delete(MY_CONTRACTS_GROUP_PARAM);
+    next.delete("nhom"); // nhóm của danh sách hồ sơ đấu giá cũ (link đã phát ra)
     if (tab === "profile") next.delete("tab");
     else next.set("tab", tab);
     setSearchParams(next, { replace: true });

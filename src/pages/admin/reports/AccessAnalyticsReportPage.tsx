@@ -2,6 +2,8 @@ import { useState } from "react";
 import { subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { useAccessAnalytics } from "@/hooks/useAccessAnalytics";
+import { ACCESS_PLATFORM_OPTIONS, type AccessPlatform } from "@/lib/reports/accessAnalytics";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Granularity } from "@/lib/reports/transactionReport";
 import DateRangeGranularityBar, {
   type PresetKey,
@@ -31,11 +33,12 @@ export default function AccessAnalyticsReportPage() {
   const [preset, setPreset] = useState<PresetKey>("30d");
   const [granularity, setGranularity] = useState<Granularity>("day");
   const [calOpen, setCalOpen] = useState(false);
+  const [platform, setPlatform] = useState<AccessPlatform>("all");
 
   const from = range.from ?? subDays(new Date(), 29);
   const to = range.to ?? range.from ?? new Date();
 
-  const { report, isLoading, isFetching } = useAccessAnalytics({ from, to }, granularity);
+  const { report, isLoading, isFetching } = useAccessAnalytics({ from, to }, granularity, platform);
   const loading = isLoading;
 
   const handlePreset = (p: PresetKey) => {
@@ -49,24 +52,39 @@ export default function AccessAnalyticsReportPage() {
       <div>
         <h1 className="text-xl font-bold text-foreground">Phân tích truy cập</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Hành vi sử dụng của người dùng trên sàn: lượt truy cập, tính năng, thiết bị, địa lý & phễu chuyển đổi.{" "}
+          Hành vi sử dụng của người dùng trên Tài Sản Đấu Giá và sàn đấu giá trực tuyến: lượt truy cập, tính năng,
+          thiết bị, địa lý & phễu chuyển đổi.{" "}
           <span className="text-muted-foreground/70">
             Dữ liệu thật tích lũy từ khi bật tracking; giai đoạn trước là dữ liệu mẫu.
           </span>
         </p>
       </div>
 
-      {/* Filter */}
-      <DateRangeGranularityBar
-        range={range}
-        preset={preset}
-        granularity={granularity}
-        onPresetChange={handlePreset}
-        onRangeChange={setRange}
-        onGranularityChange={setGranularity}
-        calOpen={calOpen}
-        onCalOpenChange={setCalOpen}
-      />
+      {/* Filter — nền tảng (analytics_events.platform) + khoảng thời gian */}
+      <div className="space-y-3">
+        <Select value={platform} onValueChange={(v) => setPlatform(v as AccessPlatform)}>
+          <SelectTrigger className="h-9 w-60" aria-label="Nền tảng">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ACCESS_PLATFORM_OPTIONS.map((o) => (
+              <SelectItem key={o.key} value={o.key}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <DateRangeGranularityBar
+          range={range}
+          preset={preset}
+          granularity={granularity}
+          onPresetChange={handlePreset}
+          onRangeChange={setRange}
+          onGranularityChange={setGranularity}
+          calOpen={calOpen}
+          onCalOpenChange={setCalOpen}
+        />
+      </div>
 
       {/* KPIs */}
       <AccessKpiCards kpis={report.kpis} loading={loading} />
@@ -84,7 +102,9 @@ export default function AccessAnalyticsReportPage() {
       <section className="space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Phễu chuyển đổi</h2>
-          <p className="text-xs text-muted-foreground">Từ khách truy cập tới người tiêu credit</p>
+          <p className="text-xs text-muted-foreground">
+            {platform === "auction" ? "Từ khách truy cập sàn tới người nộp phí hồ sơ tham gia" : "Từ khách truy cập tới người tiêu credit"}
+          </p>
         </div>
         <ConversionFunnelChart data={report.funnel} loading={loading} />
       </section>
@@ -95,7 +115,7 @@ export default function AccessAnalyticsReportPage() {
           <h2 className="text-sm font-semibold text-foreground">Tổng truy cập các trang</h2>
           <p className="text-xs text-muted-foreground">Các trang được xem nhiều nhất trên sàn</p>
         </div>
-        <TopPagesTable data={report.topPages} loading={loading} />
+        <TopPagesTable data={report.topPages} loading={loading} showPlatform={platform === "all"} />
       </section>
 
       {/* Phần D — Tính năng */}

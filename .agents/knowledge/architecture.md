@@ -14,6 +14,13 @@
 
 ---
 
+## Platform split (2026-10-18, in progress)
+
+Online auction sessions are moving to a **separate repo + Vercel project** that shares this Supabase project. Plan: `docs/auction-platform-split-plan.md`. Ownership of each route/table/RPC/bucket/cron: `docs/platform-ownership.md`.
+- `supabase/` (migrations + edge functions) lives **only in this repo**, including auction schema changes.
+- Owner/admin SQL that reads auction tables is the **read contract** (manifest §3). Patch it in the same migration that changes those tables.
+- Until Phase 5 cutover the auction code still runs here. Do not add new imports from info code into the auction folders listed in manifest §7.
+
 ## Tech Stack
 
 | Layer | Detail |
@@ -216,6 +223,9 @@ Auth is **real Supabase auth**, centralized so the whole app shares one subscrip
 - `src/components/ProtectedRoute.tsx` — gate: shows a spinner while `loading`, redirects to `/auth` (preserving `location` in `state.from`) when no `session`, else renders `<Outlet/>`.
 - `src/components/AdminRoute.tsx` — currently a **pass-through `<Outlet/>`** (admin gating is a known TODO; do not assume it enforces anything yet).
 - `src/components/auth/AuthDialog.tsx` — multi-step global modal (identifier → email/phone → OTP/password → activation); handles both login and registration. Trigger from anywhere via `useAuthDialog().openAuthDialog(onSuccess?)`.
+- **Two platforms, one account pool (Phase 4, `20261019100000`).** Legal docs + consent are per platform (`legal_documents.platform`; INFO consent on `profiles.terms_*/privacy_*`, auction consent in `user_platform_consents`; `profiles.signup_platform`). Read legal docs ONLY through the hooks in `useLegalDocuments` (RPCs) — direct table reads see `info` rows only, kept for the deployed bundle. `useTermsGate` stamps via `record_legal_consent(APP_PLATFORM)` (server picks the version). `src/lib/appPlatform.ts` is the only file that differs from taisanviet's copy of these kernel files. `/dang-nhap/san-dau-gia` + edge fn `auth-handoff` = "Đăng nhập bằng tài khoản Tài Sản Đấu Giá" on the sàn; its return origin comes only from `auctionUrl()` (env `VITE_AUCTION_APP_URL`, else the constant in `lib/auctionPlatform.ts`).
+- **Auction screens live on taisanviet (Phase 5 cutover, 2026-10-19).** This repo no longer contains sessions / dossiers / check-in / control room / sale-contract detail / Q&A / outreach pages — the `auctionBoundary` lint keeps them out. Link to them ONLY via `@/lib/auctionPlatform` (`auctionUrl`, `AUCTION_LINKS`, `goToAuction`) or `<AuctionLink>`; old in-app paths are caught by `<AuctionRedirect>` routes in `App.tsx`, direct loads by 307s in `vercel.json` (both target `https://taisanviet.vercel.app` — change BOTH when the custom domain lands). `auctionUrl` appends `?mkt=<link id>` when the `mkt_link_id` cookie exists, because cookies don't cross domains; taisanviet's `main.tsx` writes it back (`captureMktAttributionParam`) so dossier → campaign attribution survives. The sale-contract DOMAIN (`lib/saleContracts`, `components/sale-contracts`, `useSaleContracts`, `SaleContractPage`) stays — `/admin/hop-dong/mua-ban/:id` and the owner/portal contract lists use it.
+- **Unified admin sees the sàn read-only (Phase 6, `20261019200000`).** `/admin/phien-dau-gia(/:id)` (module `phien-dau-gia:view`) reads ONLY via `admin_auction_sessions` / `admin_auction_session_detail` — never `.from("auction_*")` in admin code; they are read-contract functions (manifest §3) and return dossier COUNTS, no buyer PII. Pure logic in `lib/auctionMonitor/monitor.ts`. Links out go to PUBLIC sàn pages only (`AUCTION_LINKS.session|sessionRoom|sessionQa`) — the sàn org console is members-only. `analytics_events.platform` (`info`/`auction`) is written by the shared `lib/analytics/track.ts` from `APP_PLATFORM`; `admin_access_report(…, _platform)` NULL = both.
 
 ---
 

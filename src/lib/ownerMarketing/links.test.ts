@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { channelLabel, isTrackingCode, listingTargetPath, MKT_CHANNELS, MKT_CHANNEL_META, readMktAttribution } from "./links";
+import {
+  channelLabel,
+  isTrackingCode,
+  listingTargetPath,
+  MKT_CHANNELS,
+  MKT_CHANNEL_META,
+  readMktAttribution,
+  withMktAttribution,
+} from "./links";
 
 const LINK_ID = "dfcc44f6-9a89-4b3e-b588-3aaf440ec32c";
 
@@ -31,5 +39,18 @@ describe("cookie ghi nhận nguồn", () => {
     expect(readMktAttribution(`a=1; mkt_link_id=${LINK_ID}; b=2`)).toBe(LINK_ID);
     expect(readMktAttribution("mkt_link_id=<script>")).toBeNull();
     expect(readMktAttribution("other=1")).toBeNull();
+  });
+});
+
+describe("mang nguồn sang sàn (?mkt=)", () => {
+  it("gắn vào đường dẫn, giữ query và hash", () => {
+    expect(withMktAttribution("/sessions/s1", LINK_ID)).toBe(`/sessions/s1?mkt=${LINK_ID}`);
+    expect(withMktAttribution("/payment-result?contract=c1", LINK_ID)).toBe(`/payment-result?contract=c1&mkt=${LINK_ID}`);
+    expect(withMktAttribution("/auth/handoff#x", LINK_ID)).toBe(`/auth/handoff?mkt=${LINK_ID}#x`);
+  });
+  it("không có id hợp lệ hoặc đã có ?mkt= ⇒ giữ nguyên", () => {
+    expect(withMktAttribution("/sessions", null)).toBe("/sessions");
+    expect(withMktAttribution("/sessions", "<script>")).toBe("/sessions");
+    expect(withMktAttribution(`/sessions?mkt=${LINK_ID}`, LINK_ID)).toBe(`/sessions?mkt=${LINK_ID}`);
   });
 });

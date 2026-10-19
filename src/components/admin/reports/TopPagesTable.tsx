@@ -1,15 +1,18 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { PageStat } from "@/lib/reports/accessAnalytics";
+import { Badge } from "@/components/ui/badge";
+import { EVENT_PLATFORM_LABELS, type PageStat } from "@/lib/reports/accessAnalytics";
 import ReportCard from "./ReportCard";
 
 interface Props {
   data: PageStat[];
   loading?: boolean;
+  /** Đang xem gộp hai nền tảng ⇒ gắn nhãn nền tảng cho từng trang. */
+  showPlatform?: boolean;
 }
 
 const num = (n: number) => n.toLocaleString("vi-VN");
 
-export default function TopPagesTable({ data, loading }: Props) {
+export default function TopPagesTable({ data, loading, showPlatform }: Props) {
   const empty = !loading && data.length === 0;
   const totalViews = data.reduce((s, d) => s + d.views, 0);
 
@@ -31,8 +34,15 @@ export default function TopPagesTable({ data, loading }: Props) {
         </TableHeader>
         <TableBody>
           {data.map((d) => (
-            <TableRow key={d.path}>
-              <TableCell className="font-medium text-foreground truncate max-w-[220px]">{d.path}</TableCell>
+            <TableRow key={`${d.platform}:${d.path}`}>
+              <TableCell className="font-medium text-foreground truncate max-w-[220px]">
+                {showPlatform && (
+                  <Badge variant={d.platform === "auction" ? "default" : "secondary"} className="mr-2 font-normal">
+                    {EVENT_PLATFORM_LABELS[d.platform]}
+                  </Badge>
+                )}
+                {d.path}
+              </TableCell>
               <TableCell className="text-right tabular-nums font-medium text-foreground">{num(d.views)}</TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">{num(d.uniqueUsers)}</TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download, Loader2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { signContractFile } from "@/hooks/useConsignmentContract";
-import { CONTRACT_BUCKET } from "@/lib/consignment/contractFiles";
+import { CONTRACT_BUCKET, signContractFile } from "@/lib/consignment/contractFiles";
 
 interface ContractFileButtonProps {
   path: string;

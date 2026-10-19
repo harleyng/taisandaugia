@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Download, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { signContractFile } from "@/hooks/useConsignmentContract";
+import { signContractFile } from "@/lib/consignment/contractFiles";
 
 export interface ContractDoc {
   key: string;

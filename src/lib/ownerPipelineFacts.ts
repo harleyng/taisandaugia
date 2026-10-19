@@ -7,7 +7,7 @@
 import { SAME_ROUND_DAYS, dayDiff } from "@/lib/ownerPulse";
 import { isoDayOf } from "@/lib/ownerOutcomeReport";
 import { SESSION_STATUS_LABELS, sessionStatusOf } from "@/lib/listings/sessionStatus";
-import { sessionPhaseOf } from "@/lib/auctionSessions/phase";
+import { sessionPhaseOf } from "@/lib/auctionCore/phase";
 import type { ResolvedAssetOutcome } from "@/lib/ownerOutcomes";
 import type {
   PipelineFacts,

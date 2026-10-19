@@ -32,7 +32,8 @@ import { useIsVerifiedCompany } from "@/hooks/useIsVerifiedCompany";
 import { useCredits } from "@/hooks/useCredits";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { resolveDisplayName } from "@/lib/displayName";
-import { MY_CONTRACTS_PATH } from "@/lib/biddingContracts/paths";
+import { AUCTION_LINKS, goToAuction } from "@/lib/auctionPlatform";
+import { AuctionLink } from "@/components/shared/AuctionLink";
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -95,8 +96,8 @@ export const Header = () => {
           <NavigationMenu className="hidden md:flex">
             <NavigationMenuList>
               <NavigationMenuItem>
-                <Link
-                  to="/sessions"
+                <AuctionLink
+                  to={AUCTION_LINKS.sessions}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     transparent
                       ? "text-white/90 hover:text-white hover:bg-white/10"
@@ -104,7 +105,7 @@ export const Header = () => {
                   }`}
                 >
                   Phiên đấu giá
-                </Link>
+                </AuctionLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <Link
@@ -190,7 +191,7 @@ export const Header = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(MY_CONTRACTS_PATH)}
+                onClick={() => goToAuction(AUCTION_LINKS.myContracts)}
                 className={`hidden lg:inline-flex ${transparent ? "text-white/90 hover:bg-white/10 hover:text-white" : "text-muted-foreground"}`}
               >
                 Hồ sơ đấu giá
@@ -281,7 +282,7 @@ export const Header = () => {
                       <Layers className="mr-3 h-4 w-4" />
                       Tài sản của tôi
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate(MY_CONTRACTS_PATH)} className="px-4 py-2.5 cursor-pointer">
+                    <DropdownMenuItem onClick={() => goToAuction(AUCTION_LINKS.myContracts)} className="px-4 py-2.5 cursor-pointer">
                       <FileSignature className="mr-3 h-4 w-4" />
                       Hồ sơ đấu giá của tôi
                     </DropdownMenuItem>
@@ -349,13 +350,13 @@ export const Header = () => {
                     <Home className="h-5 w-5" />
                     Trang chủ
                   </Link>
-                  <Link
-                    to="/sessions"
+                  <AuctionLink
+                    to={AUCTION_LINKS.sessions}
                     className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
                   >
                     <Gavel className="h-5 w-5" />
                     Phiên đấu giá
-                  </Link>
+                  </AuctionLink>
                   <Link
                     to="/report"
                     className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
@@ -462,13 +463,13 @@ export const Header = () => {
                         <Layers className="h-5 w-5" />
                         Tài sản của tôi
                       </Link>
-                      <Link
-                        to={MY_CONTRACTS_PATH}
+                      <AuctionLink
+                        to={AUCTION_LINKS.myContracts}
                         className="flex items-center gap-3 px-3 py-2.5 text-base font-medium text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors"
                       >
                         <FileSignature className="h-5 w-5" />
                         Hồ sơ đấu giá của tôi
-                      </Link>
+                      </AuctionLink>
                       {isVerifiedCompany && (
                         <Link
                           to="/portal"

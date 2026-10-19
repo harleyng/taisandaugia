@@ -24,6 +24,7 @@ import { writeMktAttribution } from "@/lib/ownerMarketing/links";
 import { sharedPostingPrintPath } from "@/lib/postingShare/message";
 import { SHARED_POSTING_UNAVAILABLE, formatShareDay } from "@/lib/postingShare/status";
 import { sessionCta } from "@/lib/postingShare/view";
+import { goToAuction } from "@/lib/auctionPlatform";
 
 /** Không cho máy tìm kiếm lập chỉ mục — link gửi riêng cho khách của ngân hàng. */
 function useNoIndex() {
@@ -77,7 +78,8 @@ const SharedPostingPage = () => {
   const buyDossier = () => {
     if (!posting?.session) return;
     trackShareEvent(code, "cta_dossier");
-    navigate(posting.session.path);
+    // Trang phiên ở Sàn đấu giá trực tuyến; auctionUrl kèm ?mkt= của link này để hồ sơ gắn đúng nguồn.
+    goToAuction(posting.session.path);
   };
   const followPosting = () => {
     trackShareEvent(code, "cta_follow");

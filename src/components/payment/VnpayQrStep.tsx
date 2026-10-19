@@ -1,6 +1,6 @@
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { CheckoutItem } from "@/hooks/useCheckoutItem";
+import type { CheckoutItem } from "@/types/checkout";
 import type { VnpayMethod } from "./VnpayMethodStep";
 
 const formatVnd = (n: number) => `${n.toLocaleString("vi-VN")}`;

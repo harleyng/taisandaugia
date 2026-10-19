@@ -9,7 +9,7 @@ import { useCredits, CompanyTierKey, OwnerTierKey } from "@/hooks/useCredits";
 import { useAuth } from "@/contexts/AuthContext";
 import { getVariantPackage } from "@/lib/serviceCatalog";
 import { claimPaymentTxn } from "@/lib/credits";
-import { ContractPaymentResult } from "@/components/payment/ContractPaymentResult";
+import { AuctionRedirect } from "@/components/shared/AuctionRedirect";
 import { VrTourPaymentResult } from "@/components/payment/VrTourPaymentResult";
 import { OwnerSubscriptionPaymentResult } from "@/components/payment/OwnerSubscriptionPaymentResult";
 import { AuthenticationPaymentResult } from "@/components/payment/AuthenticationPaymentResult";
@@ -218,7 +218,8 @@ const PaymentResult = () => {
   if (params.get("tdg_order")) return <ValuationPaymentResult />;
   if (params.get("tvdg_order")) return <AuctionConsultPaymentResult />;
   if (params.get("mkt_order")) return <MarketingOrderPaymentResult />;
-  return params.get("contract") ? <ContractPaymentResult /> : <CreditPaymentResult />;
+  // Phí hồ sơ tham gia: kết quả ghi nhận ở Sàn đấu giá trực tuyến (cùng đường dẫn + query).
+  return params.get("contract") ? <AuctionRedirect /> : <CreditPaymentResult />;
 };
 
 export default PaymentResult;

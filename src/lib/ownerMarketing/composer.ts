@@ -10,10 +10,10 @@
 //    (quyết định D4) và nói lý do.
 
 import { categoryLabel } from "@/lib/orgContacts/interestLabel";
-import { excerpt } from "@/lib/outreach/generateOutreach";
-import { shortDate, viDateTime, viRange, vnd, vndAscii } from "@/lib/outreach/format";
-import { AUCTION_FORMAT_TEXT } from "@/lib/outreach/outreachInput";
-import { composeSms, stripDiacritics } from "@/lib/outreach/sms";
+import { excerpt } from "@/lib/messaging/text";
+import { shortDate, viDateTime, viRange, vnd, vndAscii } from "@/lib/messaging/format";
+import { AUCTION_FORMAT_TEXT } from "@/lib/auctionCore/formatLabels";
+import { composeSms, stripDiacritics } from "@/lib/messaging/sms";
 import { type AssetFacts, type CampaignChannel, type CampaignDrafts, DRAFT_LIMITS, type FactsSnapshot } from "./campaigns";
 
 /** Chèn vào chỗ link khi chiến dịch chưa duyệt (chưa có link theo dõi). */

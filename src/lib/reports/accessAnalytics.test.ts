@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 // Phòng khi type-import không được elide hoàn toàn (transactionReport → credits → supabase).
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 
-import { formatAccessReport, type RawAccessReport } from "./accessAnalytics";
+import { formatAccessReport, platformParam, type RawAccessReport } from "./accessAnalytics";
 
 const raw = (over: Partial<RawAccessReport> = {}): RawAccessReport => ({
   timeseries: [],
@@ -79,5 +79,37 @@ describe("formatAccessReport", () => {
     expect(r.timeSeries).toHaveLength(3);
     expect(r.kpis.totalVisits).toBe(0);
     expect(r.funnel).toHaveLength(4);
+  });
+
+  it("uses the dossier funnel for the auction platform", () => {
+    const r = formatAccessReport(
+      raw({ funnel: { visitors: 100, registrations: 20, dossiers: 10, paidDossiers: 8 } }),
+      range,
+      "day",
+      "auction",
+    );
+    expect(r.funnel.map((s) => s.key)).toEqual(["visitors", "registrations", "dossiers", "paidDossiers"]);
+    expect(r.funnel.map((s) => s.value)).toEqual([100, 20, 10, 8]);
+    expect(r.funnel[1].label).toBe("Đăng ký trên sàn");
+    expect(r.funnel[3].pctOfPrev).toBe(80);
+  });
+
+  it("tags top pages with their platform (legacy rows default to info)", () => {
+    const r = formatAccessReport(
+      raw({
+        topPages: [
+          { platform: "auction", path: "/sessions/:id", views: 9, unique_users: 4 },
+          { path: "/listings", views: 5, unique_users: 2 },
+        ],
+      }),
+      range,
+      "day",
+    );
+    expect(r.topPages.map((p) => p.platform)).toEqual(["auction", "info"]);
+  });
+
+  it("maps the 'all' filter to a NULL platform parameter", () => {
+    expect(platformParam("all")).toBeUndefined();
+    expect(platformParam("auction")).toBe("auction");
   });
 });

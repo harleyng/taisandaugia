@@ -2,14 +2,15 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Loader2, Zap, CheckCircle2 } from "lucide-react";
+import { Camera, Loader2, Zap, CheckCircle2, ScanFace } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ProfileBasicSection } from "@/components/profile/sections/ProfileBasicSection";
 import { ProfileIntentSection } from "@/components/profile/sections/ProfileIntentSection";
 import { DepositCard } from "@/components/company-onboarding/DepositCard";
-import { KycProfileCard } from "@/components/ekyc/KycProfileCard";
+import { AuctionPlatformCard } from "@/components/shared/AuctionPlatformCard";
+import { AUCTION_LINKS } from "@/lib/auctionPlatform";
 
 interface Props {
   name: string;
@@ -140,7 +141,14 @@ export const ProfileInfoTab = ({ name, email, avatarUrl, onNameChange, onAvatarC
       </Card>
 
       <ProfileBasicSection initialName={name} onNameChange={onNameChange} />
-      <KycProfileCard />
+      {/* eKYC người mua nằm ở Sàn đấu giá trực tuyến (cùng tài khoản, plan Phase 5). */}
+      <AuctionPlatformCard
+        icon={ScanFace}
+        title="Định danh tại Sàn đấu giá"
+        description="Định danh điện tử (CCCD / VNeID) để mua hồ sơ và tham gia đấu giá được thực hiện trên Sàn đấu giá trực tuyến."
+        cta="Định danh tại sàn đấu giá"
+        to={AUCTION_LINKS.myContracts}
+      />
       <ProfileIntentSection />
     </div>
   );

@@ -1,9 +1,9 @@
 // Phương án tư vấn đấu giá: kiểm hợp lệ (bản TS của _auction_consult_write_proposal trong
 // migration 20260915000040 — sửa luật thì sửa cả hai), quy đổi nháp ⇄ JSON gửi RPC.
 
-import { depositFromPlan } from "@/lib/auctionSessions/deposit";
+import { depositFromPlan } from "@/lib/auctionCore/deposit";
 import { DEPOSIT_LEGAL_RANGE } from "@/constants/quote-plan";
-import { DEFAULT_DURATION_MINUTES } from "@/lib/bidding/controlAccess";
+import { DEFAULT_DURATION_MINUTES } from "@/lib/auctionCore/durations";
 import { PROPOSAL_NOTE_KEYS } from "@/lib/auctionConsult/labels";
 import type {
   AuctionConsultation,

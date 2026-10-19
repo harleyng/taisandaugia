@@ -37,6 +37,7 @@ import {
   BadgeCheck,
   LayoutGrid,
   Percent,
+  Radio,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -133,6 +134,7 @@ const NAV: NavSection[] = [
   {
     title: "Pháp lý & Đấu giá",
     items: [
+      { to: "/admin/phien-dau-gia", label: "Phiên đấu giá", icon: Radio, module: "phien-dau-gia" },
       { to: "/admin/hop-dong", label: "Hợp đồng", icon: FileSignature, module: "hop-dong" },
       { to: "/admin/mau-hop-dong", label: "Mẫu hợp đồng", icon: FileStack, module: "mau-hop-dong" },
       { to: "/admin/phap-ly", label: "Văn bản pháp lý", icon: ScrollText, module: "phap-ly" },

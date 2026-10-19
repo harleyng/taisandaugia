@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,14 +14,36 @@ import { RegisterConsent } from "@/components/auth/RegisterConsent";
 import { LoginConsentNotice } from "@/components/auth/LoginConsentNotice";
 import { TERMS_VERSION } from "@/constants/terms";
 import { useLegalActiveVersions } from "@/hooks/useLegalDocuments";
+import { APP_PLATFORM } from "@/lib/appPlatform";
 import { errorMessage } from "@/utils/errors";
 
 type Step = "identifier" | "login" | "login-phone" | "register-email" | "register-phone-otp" | "register-phone-password" | "activate";
 type InputMode = "email" | "phone";
 
-export const AuthDialog = () => {
+interface AuthDialogProps {
+  /**
+   * Bắt kích hoạt tài khoản (profiles.activated — lần nạp credit đầu) trước khi
+   * vào. Mặc định BẬT (taisandaugia). Sàn đấu giá trực tuyến TẮT: ở đó không có
+   * credit, người mua chưa từng nạp vẫn phải đăng nhập được để mua hồ sơ / trả giá
+   * (docs/auction-platform-split-plan.md — Risks).
+   */
+  requireActivation?: boolean;
+  /**
+   * Lựa chọn đăng nhập bổ sung, hiện dưới nút Google ở bước đầu. Sàn đấu giá đặt
+   * nút "Đăng nhập bằng tài khoản Tài Sản Đấu Giá" (edge fn auth-handoff) ở đây.
+   */
+  extraOptions?: ReactNode;
+}
+
+export const AuthDialog = ({ requireActivation = true, extraOptions }: AuthDialogProps = {}) => {
   const { isOpen, closeAuthDialog, executePendingAction } = useAuthDialog();
   const { toast } = useToast();
+
+  /** Đóng hộp thoại rồi chạy hành động đang chờ (sau đăng nhập / đăng ký). */
+  const finish = () => {
+    closeAuthDialog();
+    setTimeout(() => executePendingAction(), 100);
+  };
 
   const [step, setStep] = useState<Step>("identifier");
   const [inputMode, setInputMode] = useState<InputMode>("email");
@@ -112,19 +134,20 @@ export const AuthDialog = () => {
       if (error) throw error;
 
       // Activation is server-backed (profiles.activated) — persistent + cross-device.
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("activated")
-        .eq("id", data.user?.id ?? "")
-        .maybeSingle();
-      if (!prof?.activated) {
-        setStep("activate");
-        return;
+      if (requireActivation) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("activated")
+          .eq("id", data.user?.id ?? "")
+          .maybeSingle();
+        if (!prof?.activated) {
+          setStep("activate");
+          return;
+        }
       }
 
       toast({ title: "Đăng nhập thành công!" });
-      closeAuthDialog();
-      setTimeout(() => executePendingAction(), 100);
+      finish();
     } catch (err) {
       toast({ title: "Đăng nhập thất bại", description: errorMessage(err), variant: "destructive" });
     } finally {
@@ -155,12 +178,18 @@ export const AuthDialog = () => {
           data: {
             notifications_enabled: emailOptIn,
             terms_accepted: true,
+            signup_platform: APP_PLATFORM,
             terms_version: activeTermsVersion,
             privacy_version: activePrivacyVersion,
           },
         },
       });
       if (error) throw error;
+      if (!requireActivation) {
+        toast({ title: "Tài khoản đã được tạo!" });
+        finish();
+        return;
+      }
       toast({
         title: "Tài khoản đã được tạo!",
         description: "Kích hoạt tài khoản để sử dụng đầy đủ tính năng.",
@@ -205,6 +234,7 @@ export const AuthDialog = () => {
           data: {
             notifications_enabled: emailOptIn,
             terms_accepted: true,
+            signup_platform: APP_PLATFORM,
             terms_version: activeTermsVersion,
             privacy_version: activePrivacyVersion,
           },
@@ -212,7 +242,8 @@ export const AuthDialog = () => {
       });
       if (error) throw error;
       toast({ title: "Tài khoản đã được tạo!" });
-      setStep("activate");
+      if (requireActivation) setStep("activate");
+      else finish();
     } catch (err) {
       toast({ title: "Đăng ký thất bại", description: errorMessage(err), variant: "destructive" });
     } finally {
@@ -317,6 +348,8 @@ export const AuthDialog = () => {
                   </svg>
                   Facebook (Sắp ra mắt)
                 </Button>
+
+                {extraOptions}
               </>
             )}
 
@@ -453,10 +486,7 @@ export const AuthDialog = () => {
         {step === "activate" && (
           <DepositCard
             context="personal"
-            onComplete={() => {
-              closeAuthDialog();
-              setTimeout(() => executePendingAction(), 100);
-            }}
+            onComplete={finish}
             onSkip={async () => {
               await supabase.auth.signOut();
               closeAuthDialog();

@@ -17,6 +17,8 @@ import {
   SESSION_STATUS_ORDER,
   type AuctionSessionStatus,
 } from "@/lib/listings/sessionStatus";
+import { startValueOf } from "@/lib/listings/startValue";
+export { startValueOf };
 
 // ─── Nhãn & taxonomy ─────────────────────────────────────────────────────────
 
@@ -176,26 +178,6 @@ export const COVERAGE_LABELS: { key: keyof RawCoverage; label: string }[] = [
   { key: "verified", label: "Đã xác minh" },
   { key: "featured", label: "Tin nổi bật" },
 ];
-
-/**
- * Giá trị khởi điểm quy đổi ra VND.
- * BẢN SAO của public.listing_start_value() — PER_MONTH trả null vì giá
- * thuê/tháng không phải giá khởi điểm đấu giá, cộng vào tổng sẽ sai.
- */
-export function startValueOf(
-  price: number | string | null | undefined,
-  unit: string | null | undefined,
-  area: number | string | null | undefined,
-): number | null {
-  const p = Number(price ?? 0);
-  if (!Number.isFinite(p) || p <= 0) return null;
-  if (unit === "PER_MONTH") return null;
-  if (unit === "PER_SQM") {
-    const a = Number(area ?? 0);
-    return p * (Number.isFinite(a) && a !== 0 ? a : 1);
-  }
-  return p;
-}
 
 // ─── Shape JSONB trả về từ RPC ───────────────────────────────────────────────
 

@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-10-19 — Admin hợp nhất nhìn sàn đấu giá (split plan Phase 6)
+
+**Context:** sau cutover admin không còn màn nào về phiên; trang công khai của sàn không hiện phiên nháp/đã huỷ, cổng điều hành của tổ chức chỉ cho thành viên; taisanviet ghi chung `analytics_events` nên báo cáo truy cập trộn hai nền tảng mà không tách được.
+**Decision:** mig `20261019200000_admin_auction_monitor.sql`. Giám sát CHỈ ĐỌC `/admin/phien-dau-gia(/:id)` qua 2 RPC SECURITY DEFINER (`admin_auction_sessions`, `admin_auction_session_detail`, quyền module admin `phien-dau-gia:view`) — không đọc thẳng bảng AUC, không trả dữ liệu cá nhân người mua (chỉ số đếm hồ sơ); đây là READ CONTRACT mới (manifest §3). Link sâu sang sàn chỉ tới trang CÔNG KHAI qua `auctionUrl()`, mở tab mới. `analytics_events.platform` DEFAULT `info` (bản đang chạy không gửi cột vẫn đúng); `track.ts` dùng chung gửi `APP_PLATFORM`; `admin_access_report` thêm `_platform` (NULL = gộp như cũ), phễu sàn = đăng ký trên sàn → nộp hồ sơ → nộp phí hồ sơ.
+**Consequences:** không có quyền "admin can thiệp phiên" trên sàn — thao tác vẫn thuộc tổ chức. Migration AUC đổi cột của sessions/items/lot_states/bidding_contracts/sale_contracts phải vá cả 3 hàm trên. Thêm trang mới ở sàn ⇒ kiểm tra `normalizeAuctionPath` không để lộ mã/token trong path.
+
+## 2026-10-19 — Cutover: màn đấu giá rời taisandaugia (split plan Phase 5)
+
+**Context:** Phase 3–4 đã chép mọi màn AUC sang taisanviet; còn 392 file AUC + 10 file `CUTOVER_PENDING` ở đây. taisanviet production lúc này vẫn là bản placeholder Phase 2 và chưa có tên miền riêng ⇒ người dùng chọn "chuẩn bị code, CHƯA ship".
+**Decision:** xoá code AUC (giữ miền hợp đồng mua bán dùng chung). Đường dẫn cũ: `<AuctionRedirect>` trong app + 307 (`permanent: false`, KHÔNG 301 — tên miền còn đổi, 301 bị trình duyệt nhớ vĩnh viễn) trong `vercel.json`, đích `https://taisanviet.vercel.app`; `auctionUrl` mặc định hằng số đó khi chưa đặt env (bỏ `VITE_AUCTION_HANDOFF_URL`). Tab "Hồ sơ đấu giá" / thẻ eKYC ở /profile và tab phiên ở /auction-org/:id thành thẻ dẫn sang sàn; nav cổng tổ chức (phiên, hồ sơ tham gia, hỏi đáp) thành link ngoài, bỏ badge omnichat. Lịch sử tiếp thị của một khách GIỮ ở INFO qua `hooks/useContactOutreachHistory` (read contract mới trên `session_outreach_sends`). `?mkt=` mang link truyền thông sang sàn vì cookie theo tên miền — thiếu nó phễu Truyền thông mất bước "đăng ký".
+**Consequences:** KHÔNG deploy taisandaugia trước khi taisanviet production có Phase 3–4 (mọi link phiên sẽ rơi vào trang placeholder). Đổi tên miền sàn = sửa `DEFAULT_AUCTION_APP_URL` + `vercel.json` + secret `PUBLIC_SITE_URL`, rồi mới cân nhắc 301. Sửa file AUC từ nay CHỈ ở taisanviet.
+
+## 2026-10-19 — Tài khoản hai nền tảng: điều khoản + consent theo nền tảng, đăng nhập liên kết
+
+**Context:** split plan Phase 4 — sàn đấu giá (taisanviet) cần Điều khoản/Chính sách riêng, đăng ký riêng và "Đăng nhập bằng tài khoản Tài Sản Đấu Giá", trên cùng `auth.users`.
+**Decision:** mig `20261019100000_platform_accounts.sql`: `legal_documents.platform`; đọc/ghi trực tiếp bảng (kể cả admin) CHỈ còn thấy `info` — vì bản production đang chạy coi dòng mới nhất mỗi `doc_type` là bản áp dụng, thấy dòng của sàn sẽ đăng xuất hàng loạt; code mới đi qua RPC `legal_active_*` / `admin_*legal*`. Consent INFO giữ trên `profiles` (code cũ đọc), consent sàn ở `user_platform_consents`; `record_legal_consent(p)` đóng dấu phiên bản do SERVER chọn. `profiles.signup_platform` (OAuth = NULL tới lần đăng nhập đầu). Edge fn `auth-handoff` + bảng `auth_handoff_codes` (băm mã + state, 60 s, một lần). Kernel giống hệt 2 repo, khác duy nhất `src/lib/appPlatform.ts`.
+**Consequences:** admin `/admin/phap-ly?platform=auction` soạn văn bản của sàn. Đích chuyển về của handoff chỉ lấy từ env (`VITE_AUCTION_APP_URL` hoặc `VITE_AUCTION_HANDOFF_URL`), không bao giờ từ tham số. Văn bản pháp lý khởi tạo của sàn là bản kỹ thuật soạn — cần pháp chế duyệt.
+
+## 2026-10-18 — Tách sàn đấu giá trực tuyến khỏi nền tảng thông tin
+
+**Context:** chiến lược kinh doanh: phiên đấu giá trực tuyến chạy trên một nền tảng riêng (repo GitHub + project Vercel riêng); taisandaugia là nền tảng thông tin; admin vẫn là một trung tâm vận hành chung.
+**Decision:** chuyển đi cụm điều hành phiên (phiên, hồ sơ tham gia, điểm danh, điều hành, hợp đồng mua bán, hỏi đáp/omnichat, tiếp thị phiên) cùng TOÀN BỘ phía người mua (cả `/sessions/*`). Giữ chung MỘT Supabase project; `supabase/` chỉ nằm ở repo taisandaugia (một lịch sử migration duy nhất). Tài khoản theo cả hai đường: đăng ký riêng trên sàn mới + "Đăng nhập bằng tài khoản Tài Sản Đấu Giá" (cùng `auth.users`, handoff một lần). Kế hoạch ở `docs/auction-platform-split-plan.md`; ai sở hữu bảng/RPC/bucket/cron ghi ở `docs/platform-ownership.md`.
+**Consequences:** migration của sàn đấu giá đổi cột của bảng auction thì phải vá các hàm "read contract" phía chủ tài sản/admin (manifest §3) ngay trong cùng migration. `org_seed_default_roles` từ nay do INFO sở hữu. Code dùng chung được CHÉP sang repo mới (không đóng gói).
+
 ## 2026-10-18 — Đặt giá xuống + bỏ phiếu kín cho phiên đấu giá trực tuyến
 
 **Context:** hai phương thức còn "Sắp ra mắt" (CHECK chỉ nhận `ascending`). Người dùng chốt: đặt giá xuống = đồng hồ tự hạ + giá sàn, người đầu tiên chấp nhận trúng; bỏ phiếu kín = một phiếu/vòng không sửa, tổ chức bắt buộc đặt thời gian, bằng giá ⇒ mở vòng phụ cho những người bằng giá, giá ≥ bước lưới.

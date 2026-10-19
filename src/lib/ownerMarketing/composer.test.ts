@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSmsSafe, SMS_MAX } from "@/lib/outreach/sms";
+import { isSmsSafe, SMS_MAX } from "@/lib/messaging/sms";
 import { EMPTY_DRAFTS, parseFacts, type FactsSnapshot } from "./campaigns";
 import {
   factLines,

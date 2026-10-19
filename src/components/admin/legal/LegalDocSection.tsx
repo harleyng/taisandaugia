@@ -16,14 +16,17 @@ import {
   LEGAL_STATUS_LABEL,
   type LegalVersionStatus,
 } from "@/lib/legalStatus";
+import { legalPublicUrl } from "@/components/admin/legal/legalAdminPaths";
 import {
-  LEGAL_DOC_HREFS,
   LEGAL_DOC_LABELS,
+  LEGAL_PLATFORM_LABELS,
   type LegalDocType,
   type LegalDocument,
+  type LegalPlatform,
 } from "@/types/legal";
 
 interface Props {
+  platform: LegalPlatform;
   docType: LegalDocType;
   versions: LegalDocument[];
   isLoading?: boolean;
@@ -38,25 +41,30 @@ function StatusBadge({ status }: { status: LegalVersionStatus }) {
   return <Badge variant="outline">{LEGAL_STATUS_LABEL.archived}</Badge>;
 }
 
-export function LegalDocSection({ docType, versions, isLoading, onCreate, onView, onClone }: Props) {
+export function LegalDocSection({ platform, docType, versions, isLoading, onCreate, onView, onClone }: Props) {
   const rows = classifyLegalVersions(versions);
   const active = rows.find((r) => r.status === "active") ?? null;
+  const publicUrl = legalPublicUrl(platform, docType);
 
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-foreground">{LEGAL_DOC_LABELS[docType]}</h2>
-            <a
-              href={LEGAL_DOC_HREFS[docType]}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-primary"
-              title="Xem trang công khai"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            <h2 className="text-base font-semibold text-foreground">
+              {LEGAL_DOC_LABELS[docType]} · {LEGAL_PLATFORM_LABELS[platform]}
+            </h2>
+            {publicUrl && (
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary"
+                title="Xem trang công khai"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {active ? (

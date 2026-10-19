@@ -124,6 +124,9 @@ export const MODULE_DEFINITIONS: AdminModuleDef[] = [
   // Nội dung
   // Pháp lý & Đấu giá — hợp đồng (ký gửi / mua bán / dịch vụ) + mẫu hợp đồng.
   // "phap-ly" chuyển từ Nội dung sang đây (mã giữ nguyên).
+  // Giám sát phiên đấu giá trực tuyến (chỉ đọc; thao tác thuộc tổ chức trên sàn taisanviet).
+  // Mã nằm trong RPC admin_auction_sessions / admin_auction_session_detail (20261019200000) — ĐỪNG đổi.
+  { module: "phien-dau-gia", label: "Phiên đấu giá", category: "phap-ly-dau-gia", actions: ["view"] },
   { module: "hop-dong", label: "Hợp đồng", category: "phap-ly-dau-gia", actions: ["view"] },
   { module: "mau-hop-dong", label: "Mẫu hợp đồng", category: "phap-ly-dau-gia", actions: ["view", "create", "delete"] },
   { module: "phap-ly", label: "Văn bản pháp lý", category: "phap-ly-dau-gia", actions: ["view", "create", "update", "delete"] },

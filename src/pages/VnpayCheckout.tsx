@@ -5,15 +5,16 @@ import { Card } from "@/components/ui/card";
 import { VnpayMethodStep, type VnpayMethod } from "@/components/payment/VnpayMethodStep";
 import { VnpayQrStep } from "@/components/payment/VnpayQrStep";
 import { useCheckoutItem } from "@/hooks/useCheckoutItem";
+import { AuctionRedirect } from "@/components/shared/AuctionRedirect";
 
-const VnpayCheckout = () => {
+const VnpayCheckoutPage = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
 
   const returnPath = params.get("return") || "";
   const unlockParam = params.get("unlock") || "";
 
-  // Gói credit (?package=) hoặc hồ sơ tham gia (?contract=) — xem useCheckoutItem.
+  // Gói credit (?package=) và các đơn dịch vụ — xem useCheckoutItem.
   const { loading, item, fallbackPath } = useCheckoutItem(params);
 
   const [step, setStep] = useState<"method" | "qr">("method");
@@ -147,6 +148,12 @@ const VnpayCheckout = () => {
       </main>
     </div>
   );
+};
+
+/** Phí hồ sơ tham gia (?contract=) thanh toán ở Sàn đấu giá trực tuyến — link cũ chuyển sang đó. */
+const VnpayCheckout = () => {
+  const [params] = useSearchParams();
+  return params.get("contract") ? <AuctionRedirect /> : <VnpayCheckoutPage />;
 };
 
 export default VnpayCheckout;

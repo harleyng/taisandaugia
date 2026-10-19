@@ -83,3 +83,34 @@ export function readMktAttribution(cookieString?: string): string | null {
     return null;
   }
 }
+
+// ─── Mang nguồn sang Sàn đấu giá trực tuyến (tên miền khác, plan Phase 5) ─────
+// Cookie theo tên miền ⇒ link INFO → sàn kèm `?mkt=<id>`; sàn ghi lại vào cookie của nó
+// lúc tải trang (captureMktAttributionParam) để hồ sơ tham gia vẫn gắn đúng link.
+
+export const MKT_ATTRIBUTION_PARAM = "mkt";
+
+/** Gắn `?mkt=<id>` vào đường dẫn (trước `#`, giữ query sẵn có). Không có id hợp lệ ⇒ trả nguyên. */
+export function withMktAttribution(path: string, linkId: string | null): string {
+  if (!linkId || !UUID_RE.test(linkId)) return path;
+  const hashAt = path.indexOf("#");
+  const base = hashAt < 0 ? path : path.slice(0, hashAt);
+  const hash = hashAt < 0 ? "" : path.slice(hashAt);
+  const queryAt = base.indexOf("?");
+  if (queryAt >= 0 && new URLSearchParams(base.slice(queryAt + 1)).has(MKT_ATTRIBUTION_PARAM)) return path;
+  return `${base}${queryAt >= 0 ? "&" : "?"}${MKT_ATTRIBUTION_PARAM}=${linkId}${hash}`;
+}
+
+/** Sàn: đọc `?mkt=` của trang vừa mở vào cookie rồi bỏ khỏi thanh địa chỉ. Gọi một lần trước khi render. */
+export function captureMktAttributionParam(): void {
+  try {
+    const url = new URL(window.location.href);
+    const linkId = url.searchParams.get(MKT_ATTRIBUTION_PARAM);
+    if (linkId === null) return;
+    writeMktAttribution(linkId);
+    url.searchParams.delete(MKT_ATTRIBUTION_PARAM);
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    /* chỉ mất ghi nhận nguồn, không chặn người xem */
+  }
+}

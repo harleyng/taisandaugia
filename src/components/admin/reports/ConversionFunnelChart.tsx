@@ -55,7 +55,7 @@ export default function ConversionFunnelChart({ data, loading }: Props) {
   return (
     <ReportCard
       title="Phễu chuyển đổi người dùng"
-      subtitle="Truy cập → Đăng ký → Kích hoạt → Tiêu credit (theo khoảng thời gian đã chọn)"
+      subtitle={`${data.map((d) => d.label).join(" → ")} (theo khoảng thời gian đã chọn)`}
       loading={loading}
       empty={empty}
     >

@@ -16,15 +16,13 @@ import {
   type ContractListRow,
   type OwnerConsignmentContractItem,
 } from "@/lib/contracts/rows";
-import {
-  POSTING_BRIEF_SELECT,
-  postingIdOfRow,
-  toPostingBrief,
-  type PostingBrief,
-  type PostingBriefRow,
-} from "@/lib/contracts/postingBrief";
+import { postingIdOfRow, type PostingBrief } from "@/lib/contracts/postingBrief";
 import type { ConsignmentContract, ContractEvent } from "@/types/consignment-contract";
 import type { RequestOrg } from "@/hooks/useAssetPosting";
+import { usePostingBriefs } from "@/hooks/usePostingBriefs";
+
+// Brief hồ sơ tách sang hook riêng (kernel dùng chung với sàn đấu giá) — giữ export cũ.
+export { usePostingBrief, usePostingBriefs } from "@/hooks/usePostingBriefs";
 
 /**
  * Menu "Hợp đồng" của cổng chủ tài sản: gộp 3 nguồn theo TENANT hiện tại
@@ -102,27 +100,6 @@ export function useOwnerContracts() {
       void services.refetch();
     },
   };
-}
-
-/** Mã HS / loại / nơi / ảnh của nhiều hồ sơ một lượt. RLS chỉ trả hồ sơ người xem đọc được. */
-export function usePostingBriefs(postingIds: readonly string[]): Map<string, PostingBrief> {
-  const { data } = useQuery({
-    queryKey: qk.ownerPostingBriefs(postingIds),
-    enabled: postingIds.length > 0,
-    staleTime: 5 * 60_000,
-    queryFn: async (): Promise<PostingBrief[]> => {
-      const { data, error } = await supabase.from("asset_postings").select(POSTING_BRIEF_SELECT).in("id", [...postingIds]);
-      if (error) throw error;
-      return ((data ?? []) as PostingBriefRow[]).map(toPostingBrief);
-    },
-  });
-  return useMemo(() => new Map((data ?? []).map((b) => [b.id, b])), [data]);
-}
-
-/** Một hồ sơ (trang chi tiết hợp đồng). */
-export function usePostingBrief(postingId: string | null | undefined): PostingBrief | null {
-  const map = usePostingBriefs(postingId ? [postingId] : []);
-  return postingId ? (map.get(postingId) ?? null) : null;
 }
 
 /**

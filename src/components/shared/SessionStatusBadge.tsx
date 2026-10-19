@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { AuctionSessionStatus } from "@/components/AuctionCard";
+import type { AuctionSessionStatus } from "@/lib/listings/sessionStatus";
 
 const STATUS_CONFIG: Record<AuctionSessionStatus, { label: string; className: string }> = {
   registration_open: {

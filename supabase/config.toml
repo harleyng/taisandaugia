@@ -13,6 +13,11 @@ project_id = "vewtnkewyawmkpeymdot"
 [auth.email]
 enable_confirmations = false
 
+# Đăng nhập liên kết sang sàn đấu giá: bước exchange gọi bằng anon (chưa có
+# session); bước create tự kiểm JWT người dùng trong code.
+[functions.auth-handoff]
+verify_jwt = false
+
 # Webhook đối tác quét 3D: không có JWT người dùng, xác thực bằng chữ ký HMAC.
 [functions.scan3d-webhook]
 verify_jwt = false

@@ -6,7 +6,7 @@ import { ContractFileButton } from "@/components/consignment/ContractFileButton"
 import { SALE_BUCKET } from "@/lib/saleContracts/files";
 import { canConfirmHandover, canScheduleHandover, canSetTitleTransfer, hasConfirmedHandover } from "@/lib/saleContracts/stage";
 import { formatDate } from "@/lib/dateUtils";
-import { formatDateTime } from "@/lib/auctionSessions/datetime";
+import { formatDateTime } from "@/lib/auctionCore/datetime";
 import {
   SALE_SIDE_LABELS,
   SALE_TITLE_TRANSFER_LABELS,

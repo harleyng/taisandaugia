@@ -6,7 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLegalDocuments, useLegalVersion } from "@/hooks/useLegalDocuments";
 import { legalVersionStatus, LEGAL_STATUS_LABEL } from "@/lib/legalStatus";
 import { formatDate } from "@/lib/dateUtils";
-import { LEGAL_DOC_HREFS, LEGAL_DOC_LABELS } from "@/types/legal";
+import {
+  adminLegalCreatePath,
+  adminLegalListPath,
+  legalPublicUrl,
+} from "@/components/admin/legal/legalAdminPaths";
+import { LEGAL_DOC_LABELS, LEGAL_PLATFORM_LABELS } from "@/types/legal";
 
 export default function AdminLegalDetail() {
   const { id } = useParams<{ id: string }>();
@@ -35,10 +40,14 @@ export default function AdminLegalDetail() {
     );
   }
 
-  const sameType = (allDocs ?? []).filter((d) => d.doc_type === version.doc_type);
+  const sameType = (allDocs ?? []).filter(
+    (d) => d.platform === version.platform && d.doc_type === version.doc_type,
+  );
   const status = legalVersionStatus(version, sameType);
+  const publicUrl = legalPublicUrl(version.platform, version.doc_type);
 
   const meta = [
+    { label: "Nền tảng", value: LEGAL_PLATFORM_LABELS[version.platform] },
     { label: "Loại văn bản", value: LEGAL_DOC_LABELS[version.doc_type] },
     { label: "Phiên bản", value: version.version },
     { label: "Ngày hiệu lực", value: formatDate(version.effective_date) },
@@ -48,7 +57,7 @@ export default function AdminLegalDetail() {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/admin/phap-ly")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(adminLegalListPath(version.platform))}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex flex-1 items-center gap-2">
@@ -60,18 +69,16 @@ export default function AdminLegalDetail() {
           </Badge>
         </div>
         <div className="flex items-center gap-2">
+          {publicUrl && (
+            <Button variant="outline" size="sm" onClick={() => window.open(publicUrl, "_blank", "noopener")}>
+              <ExternalLink className="mr-1.5 h-4 w-4" />
+              Xem trang công khai
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(LEGAL_DOC_HREFS[version.doc_type], "_blank", "noopener")}
-          >
-            <ExternalLink className="mr-1.5 h-4 w-4" />
-            Xem trang công khai
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/admin/phap-ly/tao?type=${version.doc_type}&from=${version.id}`)}
+            onClick={() => navigate(adminLegalCreatePath(version.platform, version.doc_type, version.id))}
           >
             <Copy className="mr-1.5 h-4 w-4" />
             Nhân bản
@@ -81,7 +88,7 @@ export default function AdminLegalDetail() {
 
       {/* Metadata */}
       <div className="mb-6 rounded-xl border border-border bg-card p-4">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           {meta.map((m) => (
             <div key={m.label}>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">{m.label}</p>

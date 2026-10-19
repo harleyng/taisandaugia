@@ -4,8 +4,8 @@
 
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { flyerHtml } from "@/lib/outreach/printFlyer";
-import { stripDiacritics } from "@/lib/outreach/sms";
+import { flyerHtml } from "@/lib/messaging/printFlyer";
+import { stripDiacritics } from "@/lib/messaging/sms";
 import { CAMPAIGN_CHANNEL_META, type CampaignRow } from "./campaigns";
 import { renderChannel, renderFlyer, type LinkMap } from "./composer";
 import { sharedPostingUrl } from "@/lib/postingShare/message";

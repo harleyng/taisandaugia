@@ -1,6 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useServiceCatalog } from "@/hooks/useServiceCatalog";
-import { useBiddingContract } from "@/hooks/useBiddingContracts";
 import { useVrTourOrder } from "@/hooks/useVrTourOrders";
 import { useAuthenticationOrder } from "@/hooks/useAuthenticationOrders";
 import { useLegalConsultation } from "@/hooks/useLegalConsultations";
@@ -20,16 +19,9 @@ import { OWNER_SUBSCRIPTION_PATH } from "@/lib/ownerSubscription/paths";
 import { formatSubDate } from "@/lib/ownerSubscription/status";
 import { useOwnerMarketingOrder } from "@/hooks/useOwnerMarketingOrders";
 import { isQuoteExpired as isMktQuoteExpired, ownerOrdersHref } from "@/lib/ownerMarketing/orders";
+import type { CheckoutItem } from "@/types/checkout";
 
-/** Thứ đang được thanh toán trên trang VNPay mô phỏng. */
-export interface CheckoutItem {
-  /** Mã hiển thị / nhúng vào QR. */
-  ref: string;
-  label: string;
-  priceVnd: number;
-  /** Tham số nhận diện gửi sang /payment-result (package=… hoặc contract=…). */
-  resultParams: Record<string, string>;
-}
+export type { CheckoutItem };
 
 interface CheckoutState {
   loading: boolean;
@@ -41,8 +33,8 @@ interface CheckoutState {
 /**
  * Ba loại hàng qua cùng một trang thanh toán:
  *   • ?package=<variant_key> — gói credit, giá lấy từ catalog (luồng cũ, giữ nguyên).
- *   • ?contract=<id>        — hồ sơ tham gia; giá là BẢN CHỤP trên hồ sơ, không
- *     đọc lại giá phiên (tổ chức có thể vừa đổi giá trong lúc người mua giữ chỗ).
+ *   (?contract=<id> — phí hồ sơ tham gia — thanh toán ở Sàn đấu giá trực tuyến từ
+ *   Phase 5; VnpayCheckout chuyển cả trang sang đó.)
  *   • ?vr_order=<id>        — đơn VR tour; giá là báo giá trên đơn. Số tiền được gửi
  *     kèm sang /payment-result để server từ chối nếu admin vừa báo giá lại.
  *   • ?gd_order=<id>        — đơn giám định; cùng quy tắc với VR tour.
@@ -57,9 +49,7 @@ interface CheckoutState {
  */
 export function useCheckoutItem(params: URLSearchParams): CheckoutState {
   const packageKey = params.get("package") || "";
-  const contractId = params.get("contract") || "";
   const catalog = useServiceCatalog();
-  const contract = useBiddingContract(contractId || null);
   const vrOrderId = params.get("vr_order") || "";
   const vrOrder = useVrTourOrder(vrOrderId || null);
   const gdOrderId = params.get("gd_order") || "";
@@ -251,25 +241,6 @@ export function useCheckoutItem(params: URLSearchParams): CheckoutState {
         label: `VR tour ${o.code} · ${o.package_name} · ${o.partner_name}`,
         priceVnd: Number(o.quoted_price),
         resultParams: { vr_order: o.id, amount: String(o.quoted_price) },
-      },
-    };
-  }
-
-  if (contractId) {
-    const c = contract.data;
-    const sessionPath = c?.session_id ? `/sessions/${c.session_id}` : "/sessions";
-    if (contract.isLoading) return { loading: true, item: null, fallbackPath: sessionPath };
-    // Đã trả / đã huỷ / không phải của mình (RLS trả null) ⇒ không có gì để trả tiền.
-    if (!c || c.status !== "pending_payment") return { loading: false, item: null, fallbackPath: sessionPath };
-    const sessionCode = c.auction_sessions?.code;
-    return {
-      loading: false,
-      fallbackPath: sessionPath,
-      item: {
-        ref: c.code,
-        label: `Hồ sơ tham gia ${c.code}${sessionCode ? ` · phiên ${sessionCode}` : ""}`,
-        priceVnd: Number(c.fee_amount),
-        resultParams: { contract: c.id },
       },
     };
   }

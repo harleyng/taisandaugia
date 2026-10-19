@@ -14,7 +14,6 @@ import { AuctioneerTeamSection } from "@/components/company/AuctioneerTeamSectio
 import { CompanyListingsTab } from "@/components/company/CompanyListingsTab";
 import { CompanySessionsTab } from "@/components/company/CompanySessionsTab";
 import { useAuctionOrgListings } from "@/hooks/useAuctionOrgListings";
-import { usePublicOrgSessions } from "@/hooks/usePublicAuctionSessions";
 import type { AgentInfoShape } from "@/lib/onboardingTasks";
 import { qk } from "@/lib/queryKeys";
 
@@ -57,7 +56,6 @@ const CompanyDetail = () => {
 
   // Chỉ để đếm số trên nhãn tab — dùng chung cache với nội dung từng tab.
   const { data: listings } = useAuctionOrgListings(id);
-  const { data: sessions } = usePublicOrgSessions(id);
 
   useEffect(() => {
     if (localStorage.getItem("org.claim.banner.dismissed")) return;
@@ -202,14 +200,14 @@ const CompanyDetail = () => {
                   Tài sản{listings ? ` (${listings.length})` : ""}
                 </TabsTrigger>
                 <TabsTrigger value="phien-dau-gia">
-                  Phiên đấu giá{sessions ? ` (${sessions.length})` : ""}
+                  Phiên đấu giá
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="tai-san">
                 <CompanyListingsTab auctionOrgId={id} orgName={org.name} />
               </TabsContent>
               <TabsContent value="phien-dau-gia">
-                <CompanySessionsTab auctionOrgId={id} />
+                <CompanySessionsTab />
               </TabsContent>
             </Tabs>
           </>

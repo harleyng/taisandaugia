@@ -2,7 +2,7 @@
 // tổ chức bấm "Áp dụng" từng trường. Chỉ 3 trường tiền của lô áp dụng được; giá bảo lưu
 // và phương thức không bao giờ ghi vào auction_session_items (bảng công khai).
 
-import { DURATION_PRESETS, isValidDurationMinutes } from "@/lib/bidding/controlAccess";
+import { DURATION_PRESETS, isValidDurationMinutes } from "@/lib/auctionCore/durations";
 import { depositVnd } from "@/lib/auctionConsult/proposal";
 import type { AuctionConsultSuggestion } from "@/types/auctionConsult";
 

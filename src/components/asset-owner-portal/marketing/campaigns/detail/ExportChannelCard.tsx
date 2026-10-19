@@ -2,7 +2,7 @@ import { CheckCircle2, Copy, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/asset-owner-portal/ui/SectionCard";
-import { copyText } from "@/lib/outreach/labels";
+import { copyText } from "@/lib/messaging/clipboard";
 import { formatShareDateTime } from "@/lib/ownerReportShare";
 import { CAMPAIGN_CHANNEL_META, type CampaignChannel } from "@/lib/ownerMarketing/campaigns";
 import type { ChannelText } from "@/lib/ownerMarketing/composer";

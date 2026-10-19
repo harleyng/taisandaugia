@@ -1,24 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { LegalActiveVersions } from "@/types/legal";
+import type { LegalPlatform } from "@/types/legal";
 
 /**
- * Đóng dấu consent phiên bản pháp lý hiện hành lên profile của user.
+ * Đóng dấu consent Điều khoản & Chính sách đang áp dụng CỦA NỀN TẢNG lên tài khoản
+ * đang đăng nhập.
  *
- * Ý nghĩa: "nhấn Đăng nhập = đồng ý Điều khoản & Chính sách phiên bản hiện hành".
- * Được gọi khi có sự kiện SIGNED_IN (email/phone/OAuth). Idempotent — gọi lại với
- * cùng phiên bản không gây hại. Chỉ ghi cho loại đang có phiên bản active.
+ * Ý nghĩa: "nhấn Đăng nhập = đồng ý phiên bản hiện hành". Được gọi khi có sự kiện
+ * SIGNED_IN (email/phone/OAuth/đăng nhập liên kết). Server tự lấy phiên bản đang
+ * áp dụng (client không tự khai được) và chỉ đổi mốc thời gian khi phiên bản đổi
+ * ⇒ gọi lại nhiều lần vô hại. Kèm theo: nhận `signup_platform` cho tài khoản OAuth
+ * mới (chưa có nền tảng đăng ký).
  */
-export async function stampConsent(userId: string, active: LegalActiveVersions) {
-  const now = new Date().toISOString();
-  const patch: Record<string, string> = {};
-  if (active.terms) {
-    patch.terms_version = active.terms;
-    patch.terms_accepted_at = now;
-  }
-  if (active.privacy) {
-    patch.privacy_version = active.privacy;
-    patch.privacy_accepted_at = now;
-  }
-  if (Object.keys(patch).length === 0) return;
-  await supabase.from("profiles").update(patch).eq("id", userId);
+export async function stampConsent(platform: LegalPlatform) {
+  const { error } = await supabase.rpc("record_legal_consent", { p_platform: platform });
+  if (error) console.warn("record_legal_consent", error.message);
 }

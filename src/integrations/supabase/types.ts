@@ -10,32 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -388,6 +363,7 @@ export type Database = {
           mkt_link_id: string | null
           os: string | null
           path: string | null
+          platform: string
           province: string | null
           referrer: string | null
           session_id: string
@@ -404,6 +380,7 @@ export type Database = {
           mkt_link_id?: string | null
           os?: string | null
           path?: string | null
+          platform?: string
           province?: string | null
           referrer?: string | null
           session_id: string
@@ -420,6 +397,7 @@ export type Database = {
           mkt_link_id?: string | null
           os?: string | null
           path?: string | null
+          platform?: string
           province?: string | null
           referrer?: string | null
           session_id?: string
@@ -437,7 +415,7 @@ export type Database = {
             foreignKeyName: "analytics_events_mkt_link_id_fkey"
             columns: ["mkt_link_id"]
             isOneToOne: false
-            referencedRelation: "owner_mkt_links"
+            referencedRelation: "posting_share_links"
             referencedColumns: ["id"]
           },
         ]
@@ -1658,7 +1636,7 @@ export type Database = {
           {
             foreignKeyName: "asset_owner_org_kyc_created_by_fkey"
             columns: ["created_by"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1993,8 +1971,8 @@ export type Database = {
           kind: string
           legal_conclusion: string | null
           legal_summary: string | null
-          partner_name: string | null
           partner_id: string | null
+          partner_name: string | null
           partner_org_id: string | null
           planned_auction_date: string | null
           posting_id: string
@@ -2017,8 +1995,8 @@ export type Database = {
           kind: string
           legal_conclusion?: string | null
           legal_summary?: string | null
-          partner_name?: string | null
           partner_id?: string | null
+          partner_name?: string | null
           partner_org_id?: string | null
           planned_auction_date?: string | null
           posting_id: string
@@ -2041,8 +2019,8 @@ export type Database = {
           kind?: string
           legal_conclusion?: string | null
           legal_summary?: string | null
-          partner_name?: string | null
           partner_id?: string | null
+          partner_name?: string | null
           partner_org_id?: string | null
           planned_auction_date?: string | null
           posting_id?: string
@@ -2055,17 +2033,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "asset_posting_dossier_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "asset_posting_dossier_items_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "owner_partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "asset_posting_dossier_items_posting_id_fkey"
-            columns: ["posting_id"]
-            isOneToOne: false
-            referencedRelation: "asset_postings"
             referencedColumns: ["id"]
           },
           {
@@ -2076,10 +2054,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "asset_posting_dossier_items_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "asset_posting_dossier_items_posting_id_fkey"
+            columns: ["posting_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "asset_postings"
             referencedColumns: ["id"]
           },
           {
@@ -2726,8 +2704,6 @@ export type Database = {
       }
       auction_bidding_contracts: {
         Row: {
-          deposit_proof_path: string | null
-          deposit_reported_at: string | null
           absence_appeal_at: string | null
           absence_appeal_note: string | null
           absence_appeal_path: string | null
@@ -2752,7 +2728,9 @@ export type Database = {
           deposit_amount_received: number | null
           deposit_method: string | null
           deposit_note: string | null
+          deposit_proof_path: string | null
           deposit_received_at: string | null
+          deposit_reported_at: string | null
           deposit_status: string
           deposit_status_changed_at: string | null
           deposit_txn_ref: string | null
@@ -2806,8 +2784,6 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          deposit_proof_path?: string | null
-          deposit_reported_at?: string | null
           absence_appeal_at?: string | null
           absence_appeal_note?: string | null
           absence_appeal_path?: string | null
@@ -2832,7 +2808,9 @@ export type Database = {
           deposit_amount_received?: number | null
           deposit_method?: string | null
           deposit_note?: string | null
+          deposit_proof_path?: string | null
           deposit_received_at?: string | null
+          deposit_reported_at?: string | null
           deposit_status?: string
           deposit_status_changed_at?: string | null
           deposit_txn_ref?: string | null
@@ -2886,8 +2864,6 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          deposit_proof_path?: string | null
-          deposit_reported_at?: string | null
           absence_appeal_at?: string | null
           absence_appeal_note?: string | null
           absence_appeal_path?: string | null
@@ -2912,7 +2888,9 @@ export type Database = {
           deposit_amount_received?: number | null
           deposit_method?: string | null
           deposit_note?: string | null
+          deposit_proof_path?: string | null
           deposit_received_at?: string | null
+          deposit_reported_at?: string | null
           deposit_status?: string
           deposit_status_changed_at?: string | null
           deposit_txn_ref?: string | null
@@ -3262,12 +3240,6 @@ export type Database = {
       }
       auction_lot_states: {
         Row: {
-          price_anchor_amount: number | null
-          price_anchor_at: string | null
-          round_bid_count: number
-          round_no: number
-          tie_amount: number | null
-          tied_bidder_nos: number[] | null
           bid_count: number
           closed_at: string | null
           created_at: string
@@ -3283,21 +3255,21 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_due_at: string | null
           payment_status: string | null
+          price_anchor_amount: number | null
+          price_anchor_at: string | null
           result: string | null
+          round_bid_count: number
+          round_no: number
           session_id: string
           status: string
+          tie_amount: number | null
+          tied_bidder_nos: number[] | null
           updated_at: string
           winner_contract_id: string | null
           winning_amount: number | null
           withdraw_reason: string | null
         }
         Insert: {
-          price_anchor_amount?: number | null
-          price_anchor_at?: string | null
-          round_bid_count?: number
-          round_no?: number
-          tie_amount?: number | null
-          tied_bidder_nos?: number[] | null
           bid_count?: number
           closed_at?: string | null
           created_at?: string
@@ -3313,21 +3285,21 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_due_at?: string | null
           payment_status?: string | null
+          price_anchor_amount?: number | null
+          price_anchor_at?: string | null
           result?: string | null
+          round_bid_count?: number
+          round_no?: number
           session_id: string
           status?: string
+          tie_amount?: number | null
+          tied_bidder_nos?: number[] | null
           updated_at?: string
           winner_contract_id?: string | null
           winning_amount?: number | null
           withdraw_reason?: string | null
         }
         Update: {
-          price_anchor_amount?: number | null
-          price_anchor_at?: string | null
-          round_bid_count?: number
-          round_no?: number
-          tie_amount?: number | null
-          tied_bidder_nos?: number[] | null
           bid_count?: number
           closed_at?: string | null
           created_at?: string
@@ -3343,9 +3315,15 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_due_at?: string | null
           payment_status?: string | null
+          price_anchor_amount?: number | null
+          price_anchor_at?: string | null
           result?: string | null
+          round_bid_count?: number
+          round_no?: number
           session_id?: string
           status?: string
+          tie_amount?: number | null
+          tied_bidder_nos?: number[] | null
           updated_at?: string
           winner_contract_id?: string | null
           winning_amount?: number | null
@@ -3980,13 +3958,13 @@ export type Database = {
       }
       auction_session_items: {
         Row: {
-          floor_price: number | null
           asset_posting_id: string | null
           bid_step: number | null
           category_slug: string | null
           created_at: string
           deposit_amount: number | null
           district: string | null
+          floor_price: number | null
           id: string
           image_url: string | null
           listing_id: string | null
@@ -4001,13 +3979,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          floor_price?: number | null
           asset_posting_id?: string | null
           bid_step?: number | null
           category_slug?: string | null
           created_at?: string
           deposit_amount?: number | null
           district?: string | null
+          floor_price?: number | null
           id?: string
           image_url?: string | null
           listing_id?: string | null
@@ -4022,13 +4000,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          floor_price?: number | null
           asset_posting_id?: string | null
           bid_step?: number | null
           category_slug?: string | null
           created_at?: string
           deposit_amount?: number | null
           district?: string | null
+          floor_price?: number | null
           id?: string
           image_url?: string | null
           listing_id?: string | null
@@ -4113,7 +4091,6 @@ export type Database = {
       }
       auction_sessions: {
         Row: {
-          price_drop_seconds: number
           auction_format: string
           auction_org_id: string | null
           bidding_method: string
@@ -4133,6 +4110,7 @@ export type Database = {
           max_bid_steps: number
           max_registrants: number | null
           organization_id: string
+          price_drop_seconds: number
           province: string | null
           published_at: string | null
           registration_end_at: string | null
@@ -4147,7 +4125,6 @@ export type Database = {
           viewing_start_at: string | null
         }
         Insert: {
-          price_drop_seconds?: number
           auction_format?: string
           auction_org_id?: string | null
           bidding_method?: string
@@ -4167,6 +4144,7 @@ export type Database = {
           max_bid_steps?: number
           max_registrants?: number | null
           organization_id: string
+          price_drop_seconds?: number
           province?: string | null
           published_at?: string | null
           registration_end_at?: string | null
@@ -4181,7 +4159,6 @@ export type Database = {
           viewing_start_at?: string | null
         }
         Update: {
-          price_drop_seconds?: number
           auction_format?: string
           auction_org_id?: string | null
           bidding_method?: string
@@ -4201,6 +4178,7 @@ export type Database = {
           max_bid_steps?: number
           max_registrants?: number | null
           organization_id?: string
+          price_drop_seconds?: number
           province?: string | null
           published_at?: string | null
           registration_end_at?: string | null
@@ -4418,6 +4396,36 @@ export type Database = {
           sort_order?: number
           tagline?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      auth_handoff_codes: {
+        Row: {
+          code_hash: string
+          created_at: string
+          expires_at: string
+          state_hash: string
+          target_platform: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          state_hash: string
+          target_platform: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          state_hash?: string
+          target_platform?: string
+          used_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -5347,41 +5355,6 @@ export type Database = {
         }
         Relationships: []
       }
-      craft_village_publications: {
-        Row: {
-          asset_posting_id: string
-          created_at: string
-          is_published: boolean
-          published_at: string | null
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          asset_posting_id: string
-          created_at?: string
-          is_published?: boolean
-          published_at?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          asset_posting_id?: string
-          created_at?: string
-          is_published?: boolean
-          published_at?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "craft_village_publications_asset_posting_id_fkey"
-            columns: ["asset_posting_id"]
-            isOneToOne: true
-            referencedRelation: "asset_postings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       craft_village_profiles: {
         Row: {
           cover_posting_id: string | null
@@ -5438,6 +5411,41 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: true
             referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      craft_village_publications: {
+        Row: {
+          asset_posting_id: string
+          created_at: string
+          is_published: boolean
+          published_at: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          asset_posting_id: string
+          created_at?: string
+          is_published?: boolean
+          published_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          asset_posting_id?: string
+          created_at?: string
+          is_published?: boolean
+          published_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "craft_village_publications_asset_posting_id_fkey"
+            columns: ["asset_posting_id"]
+            isOneToOne: true
+            referencedRelation: "asset_postings"
             referencedColumns: ["id"]
           },
         ]
@@ -5679,6 +5687,7 @@ export type Database = {
           doc_type: string
           effective_date: string
           id: string
+          platform: string
           updated_at: string
           version: string
         }
@@ -5689,6 +5698,7 @@ export type Database = {
           doc_type: string
           effective_date: string
           id?: string
+          platform?: string
           updated_at?: string
           version: string
         }
@@ -5699,6 +5709,7 @@ export type Database = {
           doc_type?: string
           effective_date?: string
           id?: string
+          platform?: string
           updated_at?: string
           version?: string
         }
@@ -8535,6 +8546,69 @@ export type Database = {
           },
         ]
       }
+      owner_audit_log: {
+        Row: {
+          action: string
+          actor: string | null
+          actor_kind: string
+          actor_label: string
+          branch_id: string | null
+          changes: Json
+          created_at: string
+          entity_id: string | null
+          entity_label: string | null
+          entity_type: string | null
+          id: number
+          last_at: string
+          meta: Json
+          module: string | null
+          path: string | null
+          search_text: string
+          subject_user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          actor_kind: string
+          actor_label: string
+          branch_id?: string | null
+          changes?: Json
+          created_at?: string
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type?: string | null
+          id?: never
+          last_at?: string
+          meta?: Json
+          module?: string | null
+          path?: string | null
+          search_text?: string
+          subject_user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          actor_kind?: string
+          actor_label?: string
+          branch_id?: string | null
+          changes?: Json
+          created_at?: string
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type?: string | null
+          id?: never
+          last_at?: string
+          meta?: Json
+          module?: string | null
+          path?: string | null
+          search_text?: string
+          subject_user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
       owner_cash_events: {
         Row: {
           amount: number
@@ -8661,57 +8735,6 @@ export type Database = {
           },
         ]
       }
-      owner_partners: {
-        Row: {
-          auction_org_id: string | null
-          created_at: string
-          created_by: string
-          id: string
-          kind: string
-          name: string
-          name_key: string
-          user_id: string | null
-          workspace_id: string | null
-        }
-        Insert: {
-          auction_org_id?: string | null
-          created_at?: string
-          created_by?: string
-          id?: string
-          kind: string
-          name: string
-          name_key?: string
-          user_id?: string | null
-          workspace_id?: string | null
-        }
-        Update: {
-          auction_org_id?: string | null
-          created_at?: string
-          created_by?: string
-          id?: string
-          kind?: string
-          name?: string
-          name_key?: string
-          user_id?: string | null
-          workspace_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "owner_partners_auction_org_id_fkey"
-            columns: ["auction_org_id"]
-            isOneToOne: false
-            referencedRelation: "auction_organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "owner_partners_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "asset_owner_workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       owner_mkt_campaigns: {
         Row: {
           approved_at: string | null
@@ -8727,11 +8750,11 @@ export type Database = {
           facts_snapshot: Json
           id: string
           listing_ids: string[]
-          posting_ids: string[]
           mode: string
           name: string
           notes: string | null
           opened_count: number
+          posting_ids: string[]
           recipient_count: number | null
           rejected_at: string | null
           rejected_by: string | null
@@ -8762,11 +8785,11 @@ export type Database = {
           facts_snapshot?: Json
           id?: string
           listing_ids?: string[]
-          posting_ids?: string[]
           mode?: string
           name: string
           notes?: string | null
           opened_count?: number
+          posting_ids?: string[]
           recipient_count?: number | null
           rejected_at?: string | null
           rejected_by?: string | null
@@ -8797,11 +8820,11 @@ export type Database = {
           facts_snapshot?: Json
           id?: string
           listing_ids?: string[]
-          posting_ids?: string[]
           mode?: string
           name?: string
           notes?: string | null
           opened_count?: number
+          posting_ids?: string[]
           recipient_count?: number | null
           rejected_at?: string | null
           rejected_by?: string | null
@@ -8916,7 +8939,7 @@ export type Database = {
           branch_id?: string | null
           campaign_id?: string | null
           channel: string
-          code?: string
+          code: string
           created_at?: string
           created_by?: string | null
           hit_count?: number
@@ -8946,17 +8969,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "owner_mkt_links_campaign_fk"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "owner_mkt_campaigns"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "owner_mkt_links_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "workspace_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_mkt_links_campaign_fk"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "owner_mkt_campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -9011,8 +9034,8 @@ export type Database = {
           paid_by: string | null
           payment_method: string | null
           payment_txn_ref: string | null
-          post_url: string | null
           post_metrics: Json | null
+          post_url: string | null
           pricing: string
           quote_expires_at: string | null
           quote_note: string | null
@@ -9061,8 +9084,8 @@ export type Database = {
           paid_by?: string | null
           payment_method?: string | null
           payment_txn_ref?: string | null
-          post_url?: string | null
           post_metrics?: Json | null
+          post_url?: string | null
           pricing: string
           quote_expires_at?: string | null
           quote_note?: string | null
@@ -9111,8 +9134,8 @@ export type Database = {
           paid_by?: string | null
           payment_method?: string | null
           payment_txn_ref?: string | null
-          post_url?: string | null
           post_metrics?: Json | null
+          post_url?: string | null
           pricing?: string
           quote_expires_at?: string | null
           quote_note?: string | null
@@ -9241,6 +9264,71 @@ export type Database = {
           },
           {
             foreignKeyName: "owner_mkt_orders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "asset_owner_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_partners: {
+        Row: {
+          auction_org_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          name: string
+          name_key: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          auction_org_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind: string
+          name: string
+          name_key: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          auction_org_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          name?: string
+          name_key?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_partners_auction_org_id_fkey"
+            columns: ["auction_org_id"]
+            isOneToOne: false
+            referencedRelation: "auction_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_partners_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_partners_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_partners_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "asset_owner_workspaces"
@@ -9580,45 +9668,84 @@ export type Database = {
         }
         Relationships: []
       }
-      owner_subscription_entitlements: {
+      owner_subscription_benefit_usage: {
         Row: {
-          cycle: string | null
-          created_at: string
-          quota: number | null
-          sort_order: number
-          subscription_id: string
           benefit_key: string
+          period_start: string
+          subscription_id: string
+          updated_at: string
+          used: number
         }
         Insert: {
-          cycle?: string | null
-          created_at?: string
-          quota?: number | null
-          sort_order?: number
-          subscription_id: string
           benefit_key: string
+          period_start: string
+          subscription_id: string
+          updated_at?: string
+          used: number
         }
         Update: {
-          cycle?: string | null
-          created_at?: string
-          quota?: number | null
-          sort_order?: number
-          subscription_id?: string
           benefit_key?: string
+          period_start?: string
+          subscription_id?: string
+          updated_at?: string
+          used?: number
         }
         Relationships: [
           {
-            foreignKeyName: "owner_subscription_entitlements_subscription_id_fkey"
+            foreignKeyName: "owner_sub_benefit_usage_benefit_fkey"
+            columns: ["benefit_key"]
+            isOneToOne: false
+            referencedRelation: "owner_sub_benefits"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "owner_subscription_benefit_usage_subscription_id_fkey"
             columns: ["subscription_id"]
             isOneToOne: false
             referencedRelation: "owner_subscriptions"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      owner_subscription_entitlements: {
+        Row: {
+          benefit_key: string
+          created_at: string
+          cycle: string | null
+          quota: number | null
+          sort_order: number
+          subscription_id: string
+        }
+        Insert: {
+          benefit_key: string
+          created_at?: string
+          cycle?: string | null
+          quota?: number | null
+          sort_order?: number
+          subscription_id: string
+        }
+        Update: {
+          benefit_key?: string
+          created_at?: string
+          cycle?: string | null
+          quota?: number | null
+          sort_order?: number
+          subscription_id?: string
+        }
+        Relationships: [
           {
             foreignKeyName: "owner_sub_ent_benefit_fkey"
             columns: ["benefit_key"]
             isOneToOne: false
             referencedRelation: "owner_sub_benefits"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "owner_subscription_entitlements_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscriptions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -9659,40 +9786,40 @@ export type Database = {
       }
       owner_subscription_plan_entitlements: {
         Row: {
+          benefit_key: string
           cycle: string | null
+          plan_id: string
           quota: number | null
           sort_order: number
-          plan_id: string
-          benefit_key: string
         }
         Insert: {
+          benefit_key: string
           cycle?: string | null
+          plan_id: string
           quota?: number | null
           sort_order?: number
-          plan_id: string
-          benefit_key: string
         }
         Update: {
+          benefit_key?: string
           cycle?: string | null
+          plan_id?: string
           quota?: number | null
           sort_order?: number
-          plan_id?: string
-          benefit_key?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "owner_subscription_plan_entitlements_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "owner_subscription_plans"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "owner_sub_plan_ent_benefit_fkey"
             columns: ["benefit_key"]
             isOneToOne: false
             referencedRelation: "owner_sub_benefits"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "owner_subscription_plan_entitlements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "owner_subscription_plans"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -10631,6 +10758,9 @@ export type Database = {
       }
       posting_share_links: {
         Row: {
+          branch_id: string | null
+          campaign_id: string | null
+          channel: string
           code: string
           created_at: string
           created_by: string | null
@@ -10642,6 +10772,8 @@ export type Database = {
           id: string
           label: string
           last_viewed_at: string | null
+          legacy_code: string | null
+          listing_id: string | null
           posting_id: string | null
           revoked_at: string | null
           sender_name: string | null
@@ -10654,13 +10786,11 @@ export type Database = {
           updated_at: string
           view_count: number
           workspace_id: string | null
-          branch_id: string | null
-          campaign_id: string | null
-          channel: string
-          legacy_code: string | null
-          listing_id: string | null
         }
         Insert: {
+          branch_id?: string | null
+          campaign_id?: string | null
+          channel?: string
           code: string
           created_at?: string
           created_by?: string | null
@@ -10672,6 +10802,8 @@ export type Database = {
           id?: string
           label: string
           last_viewed_at?: string | null
+          legacy_code?: string | null
+          listing_id?: string | null
           posting_id?: string | null
           revoked_at?: string | null
           sender_name?: string | null
@@ -10684,13 +10816,11 @@ export type Database = {
           updated_at?: string
           view_count?: number
           workspace_id?: string | null
+        }
+        Update: {
           branch_id?: string | null
           campaign_id?: string | null
           channel?: string
-          legacy_code?: string | null
-          listing_id?: string | null
-        }
-        Update: {
           code?: string
           created_at?: string
           created_by?: string | null
@@ -10702,6 +10832,8 @@ export type Database = {
           id?: string
           label?: string
           last_viewed_at?: string | null
+          legacy_code?: string | null
+          listing_id?: string | null
           posting_id?: string | null
           revoked_at?: string | null
           sender_name?: string | null
@@ -10714,13 +10846,22 @@ export type Database = {
           updated_at?: string
           view_count?: number
           workspace_id?: string | null
-          branch_id?: string | null
-          campaign_id?: string | null
-          channel?: string
-          legacy_code?: string | null
-          listing_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "posting_share_links_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posting_share_links_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "owner_mkt_campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "posting_share_links_created_by_fkey"
             columns: ["created_by"]
@@ -10729,10 +10870,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "posting_share_links_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "posting_share_links_posting_id_fkey"
             columns: ["posting_id"]
             isOneToOne: false
             referencedRelation: "asset_postings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posting_share_links_sender_user_id_fkey"
+            columns: ["sender_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -10760,6 +10915,7 @@ export type Database = {
           privacy_accepted_at: string | null
           privacy_version: string | null
           rejection_reason: string | null
+          signup_platform: string | null
           status: string
           terms_accepted_at: string | null
           terms_version: string | null
@@ -10780,6 +10936,7 @@ export type Database = {
           privacy_accepted_at?: string | null
           privacy_version?: string | null
           rejection_reason?: string | null
+          signup_platform?: string | null
           status?: string
           terms_accepted_at?: string | null
           terms_version?: string | null
@@ -10800,6 +10957,7 @@ export type Database = {
           privacy_accepted_at?: string | null
           privacy_version?: string | null
           rejection_reason?: string | null
+          signup_platform?: string | null
           status?: string
           terms_accepted_at?: string | null
           terms_version?: string | null
@@ -11104,6 +11262,44 @@ export type Database = {
           },
         ]
       }
+      session_open_watchers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          last_error: string | null
+          notified_at: string | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          last_error?: string | null
+          notified_at?: string | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          last_error?: string | null
+          notified_at?: string | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_open_watchers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "auction_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_outreach_channels: {
         Row: {
           created_at: string
@@ -11323,6 +11519,41 @@ export type Database = {
           },
         ]
       }
+      session_outreach_segments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          criteria: Json
+          id: string
+          name: string
+          pack_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          criteria: Json
+          id?: string
+          name: string
+          pack_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          criteria?: Json
+          id?: string
+          name?: string
+          pack_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_outreach_segments_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "session_outreach_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_outreach_sends: {
         Row: {
           channel: string | null
@@ -11386,41 +11617,6 @@ export type Database = {
           },
           {
             foreignKeyName: "session_outreach_sends_pack_id_fkey"
-            columns: ["pack_id"]
-            isOneToOne: false
-            referencedRelation: "session_outreach_packs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      session_outreach_segments: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          criteria: Json
-          id: string
-          name: string
-          pack_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          criteria: Json
-          id?: string
-          name: string
-          pack_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          criteria?: Json
-          id?: string
-          name?: string
-          pack_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "session_outreach_segments_pack_id_fkey"
             columns: ["pack_id"]
             isOneToOne: false
             referencedRelation: "session_outreach_packs"
@@ -12043,6 +12239,42 @@ export type Database = {
           },
         ]
       }
+      user_platform_consents: {
+        Row: {
+          created_at: string
+          marketing_opt_in: boolean
+          platform: string
+          privacy_accepted_at: string | null
+          privacy_version: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          marketing_opt_in?: boolean
+          platform: string
+          privacy_accepted_at?: string | null
+          privacy_version?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          marketing_opt_in?: boolean
+          platform?: string
+          privacy_accepted_at?: string | null
+          privacy_version?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_report_unlocks: {
         Row: {
           created_at: string
@@ -12262,6 +12494,95 @@ export type Database = {
         Returns: undefined
       }
       _bidding_ctx_clear: { Args: never; Returns: undefined }
+      _bidding_parties_from_payload: {
+        Args: { _payload: Json; _uid: string }
+        Returns: {
+          absence_appeal_at: string | null
+          absence_appeal_note: string | null
+          absence_appeal_path: string | null
+          absence_excused_at: string | null
+          absence_excused_by: string | null
+          absence_note: string | null
+          absent_at: string | null
+          address: string
+          bidder_no: number | null
+          bidder_no_assigned_at: string | null
+          buyer_kind: string
+          cancelled_at: string | null
+          checked_in_at: string | null
+          checked_in_by: string | null
+          checkin_attendee: string | null
+          checkin_channel: string | null
+          checkin_note: string | null
+          checkin_token: string
+          code: string
+          created_at: string
+          date_of_birth: string | null
+          deposit_amount_received: number | null
+          deposit_method: string | null
+          deposit_note: string | null
+          deposit_proof_path: string | null
+          deposit_received_at: string | null
+          deposit_reported_at: string | null
+          deposit_status: string
+          deposit_status_changed_at: string | null
+          deposit_txn_ref: string | null
+          deposit_updated_by: string | null
+          email: string
+          fee_amount: number
+          full_name: string
+          gender: string | null
+          has_proxy: boolean
+          hold_expires_at: string | null
+          id: string
+          id_back_path: string | null
+          id_edited_fields: string[]
+          id_front_path: string | null
+          id_number: string
+          id_read_method: string | null
+          id_type: string
+          identity_source: string
+          mkt_link_id: string | null
+          order_id: string | null
+          org_address: string | null
+          org_name: string | null
+          org_reg_doc_path: string | null
+          org_tax_code: string | null
+          organization_id: string
+          paid_at: string | null
+          payment_txn_ref: string | null
+          phone: string
+          poa_doc_path: string | null
+          proxy_address: string | null
+          proxy_date_of_birth: string | null
+          proxy_full_name: string | null
+          proxy_gender: string | null
+          proxy_id_back_path: string | null
+          proxy_id_edited_fields: string[]
+          proxy_id_front_path: string | null
+          proxy_id_number: string | null
+          proxy_id_read_method: string | null
+          proxy_id_type: string | null
+          proxy_phone: string | null
+          refund_txn_ref: string | null
+          refunded_at: string | null
+          resubmitted_at: string | null
+          review_note: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          session_id: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "auction_bidding_contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       _bidding_rpc_active: { Args: never; Returns: boolean }
       _buyer_kyc_path_ok: {
         Args: { _path: string; _uid: string }
@@ -12282,8 +12603,36 @@ export type Database = {
         Args: { _at: string; _channel: string; _contract_id: string }
         Returns: string
       }
+      _checkin_contract_json: {
+        Args: {
+          _c: Database["public"]["Tables"]["auction_bidding_contracts"]["Row"]
+        }
+        Returns: Json
+      }
       _checkin_window_json: { Args: { _session_id: string }; Returns: Json }
       _close_lot: { Args: { _at: string; _lot_id: string }; Returns: boolean }
+      _close_sealed_round: { Args: { _lot_id: string }; Returns: boolean }
+      _contract_deposit_due: { Args: { _contract_id: string }; Returns: number }
+      _contract_lot_ok: {
+        Args: { _contract_id: string; _item_id: string }
+        Returns: boolean
+      }
+      _craft_asset_visible: { Args: { _posting_id: string }; Returns: boolean }
+      _descending_price: {
+        Args: {
+          _at: string
+          _drop: number
+          _floor: number
+          _st: Database["public"]["Tables"]["auction_lot_states"]["Row"]
+          _step: number
+        }
+        Returns: number
+      }
+      _dossier_trust_compute: { Args: { p_posting_id: string }; Returns: Json }
+      _is_craft_village_workspace: {
+        Args: { _workspace_id: string }
+        Returns: boolean
+      }
       _jsonb_text_array: { Args: { _j: Json }; Returns: string[] }
       _kyc_check_identity: {
         Args: {
@@ -12307,6 +12656,10 @@ export type Database = {
         Returns: string
       }
       _legal_consult_service_id: { Args: never; Returns: string }
+      _lot_after_open: {
+        Args: { _lot_id: string; _now: string }
+        Returns: undefined
+      }
       _lot_event: {
         Args: {
           _kind: string
@@ -12317,6 +12670,25 @@ export type Database = {
         Returns: undefined
       }
       _lot_lock: { Args: { _lot_id: string }; Returns: undefined }
+      _lot_open_ends: {
+        Args: { _default: string; _lot_id: string; _now: string }
+        Returns: string
+      }
+      _lot_open_reject: {
+        Args: { _duration_seconds: number; _lot_id: string }
+        Returns: string
+      }
+      _owner_mkt_order_charge: {
+        Args: {
+          p_cost: number
+          p_description: string
+          p_ref: string
+          p_uid: string
+          p_variant_key: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
       _owner_sub_apply_term: {
         Args: {
           p_actor: string
@@ -12344,7 +12716,9 @@ export type Database = {
         }
         Returns: Json
       }
+      _owner_sub_ent_json: { Args: { p_sub_id: string }; Returns: Json }
       _owner_sub_lines: { Args: { p_sub_id: string }; Returns: Json }
+      _owner_sub_lines_upgrade: { Args: { p_lines: Json }; Returns: Json }
       _owner_sub_order: {
         Args: {
           p_actor: string
@@ -12356,6 +12730,65 @@ export type Database = {
         }
         Returns: string
       }
+      _owner_sub_plan_apply: {
+        Args: {
+          p_actor: string
+          p_amount: number
+          p_effect: string
+          p_method: string
+          p_months: number
+          p_note: string
+          p_order_id: string
+          p_paid_on: string
+          p_plan_id: string
+          p_source: string
+          p_start: string
+          p_sub: Database["public"]["Tables"]["owner_subscriptions"]["Row"]
+          p_txn_ref: string
+        }
+        Returns: Json
+      }
+      _owner_sub_plan_ensure: {
+        Args: {
+          p_actor: string
+          p_amount: number
+          p_months: number
+          p_plan_id: string
+          p_source: string
+          p_workspace_id: string
+        }
+        Returns: {
+          cancel_reason: string | null
+          cancelled_at: string | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          ends_on: string | null
+          id: string
+          note: string | null
+          overage_mode: string
+          pending_from: string | null
+          pending_months: number | null
+          pending_plan_id: string | null
+          pending_price_vnd: number | null
+          pending_snapshot: Json | null
+          plan_id: string | null
+          plan_name: string
+          price_vnd: number
+          starts_on: string | null
+          status: string
+          term_months: number
+          updated_at: string
+          updated_by: string | null
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "owner_subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       _owner_sub_plan_eval: {
         Args: {
           p_months: number
@@ -12366,6 +12799,20 @@ export type Database = {
         Returns: Json
       }
       _owner_sub_plan_snapshot: { Args: { p_plan_id: string }; Returns: Json }
+      _owner_sub_plan_unavailable: {
+        Args: { p_plan_id: string; p_workspace_id: string }
+        Returns: string
+      }
+      _owner_sub_plan_write: {
+        Args: {
+          p: Json
+          p_package_id: string
+          p_plan_id: string
+          p_sort_order: number
+          p_uid: string
+        }
+        Returns: Json
+      }
       _owner_sub_reverse: {
         Args: { p_note: string; p_usage_id: string }
         Returns: undefined
@@ -12415,6 +12862,10 @@ export type Database = {
           status: string
           user_id: string
         }[]
+      }
+      _set_contract_lots: {
+        Args: { _contract_id: string; _lots: Json; _session_id: string }
+        Returns: undefined
       }
       _settle_auction_consult: {
         Args: {
@@ -12467,6 +12918,15 @@ export type Database = {
         }
         Returns: Json
       }
+      _settle_valuation_order: {
+        Args: {
+          _expected_amount: number
+          _order_id: string
+          _txn_ref: string
+          _uid: string
+        }
+        Returns: Json
+      }
       _settle_vr_tour_order: {
         Args: {
           _expected_amount: number
@@ -12476,6 +12936,7 @@ export type Database = {
         }
         Returns: Json
       }
+      _valuation_service_id: { Args: never; Returns: string }
       _vr_tour_service_id: { Args: never; Returns: string }
       accept_descending_price: {
         Args: { _amount: number; _lot_id: string; _nonce: string }
@@ -12510,10 +12971,47 @@ export type Database = {
         Returns: string
       }
       admin_access_report: {
-        Args: { _from: string; _granularity?: string; _to: string }
+        Args: {
+          _from: string
+          _granularity?: string
+          _platform?: string
+          _to: string
+        }
         Returns: Json
       }
       admin_attach_vr_tour: { Args: { _order_id: string }; Returns: Json }
+      admin_auction_session_detail: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
+      admin_auction_sessions: {
+        Args: { _limit?: number }
+        Returns: {
+          auction_format: string
+          bidding_method: string
+          cancelled_reason: string
+          checked_in_count: number
+          closed_lot_count: number
+          code: string
+          created_at: string
+          dossier_count: number
+          ends_at: string
+          finalized_at: string
+          id: string
+          live_lot_count: number
+          lot_count: number
+          org_name: string
+          paid_dossier_count: number
+          province: string
+          published_at: string
+          registration_end_at: string
+          sale_contract_count: number
+          sold_lot_count: number
+          starts_at: string
+          status: string
+          title: string
+        }[]
+      }
       admin_cancel_auction_consult: {
         Args: { _consultation_id: string; _reason: string }
         Returns: Json
@@ -12524,6 +13022,10 @@ export type Database = {
       }
       admin_cancel_legal_consult: {
         Args: { _consultation_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_cancel_valuation: {
+        Args: { _order_id: string; _reason: string }
         Returns: Json
       }
       admin_cancel_vr_tour: {
@@ -12546,6 +13048,19 @@ export type Database = {
       }
       admin_complete_legal_consult: {
         Args: { _consultation_id: string; _items: Json; _summary: string }
+        Returns: Json
+      }
+      admin_complete_valuation: {
+        Args: {
+          _certificate_no: string
+          _certificate_path: string
+          _method: string
+          _order_id: string
+          _summary: string
+          _valid_until: string
+          _valuation_date: string
+          _value: number
+        }
         Returns: Json
       }
       admin_contract_list: {
@@ -12582,6 +13097,33 @@ export type Database = {
         Returns: Json
       }
       admin_cpd_report_filters: { Args: never; Returns: Json }
+      admin_create_legal_version: {
+        Args: {
+          p_changelog?: string
+          p_content?: string
+          p_doc_type: string
+          p_effective_date: string
+          p_platform: string
+          p_version: string
+        }
+        Returns: {
+          changelog: string | null
+          content: string | null
+          created_at: string
+          doc_type: string
+          effective_date: string
+          id: string
+          platform: string
+          updated_at: string
+          version: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "legal_documents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_delete_prospect_group: {
         Args: { p_group_id: string }
         Returns: Json
@@ -12603,6 +13145,46 @@ export type Database = {
         Returns: boolean
       }
       admin_is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      admin_legal_document: {
+        Args: { p_id: string }
+        Returns: {
+          changelog: string | null
+          content: string | null
+          created_at: string
+          doc_type: string
+          effective_date: string
+          id: string
+          platform: string
+          updated_at: string
+          version: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "legal_documents"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      admin_legal_documents: {
+        Args: { p_platform?: string }
+        Returns: {
+          changelog: string | null
+          content: string | null
+          created_at: string
+          doc_type: string
+          effective_date: string
+          id: string
+          platform: string
+          updated_at: string
+          version: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "legal_documents"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_list_seller_authentication_restrictions: {
         Args: never
         Returns: {
@@ -12613,37 +13195,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      admin_mkt_order_cancel: {
-        Args: { p_order_id: string; p_reason: string }
-        Returns: Json
-      }
-      admin_mkt_order_complete: {
-        Args: { p_note: string; p_order_id: string; p_post_url: string }
-        Returns: Json
-      }
-      admin_mkt_order_link: {
-        Args: { p_kind: string; p_order_id: string; p_target: string }
-        Returns: Json
-      }
-      admin_mkt_order_quote: {
-        Args: {
-          p_note: string
-          p_order_id: string
-          p_price: number
-          p_valid_days: number
-        }
-        Returns: Json
-      }
-      admin_mkt_order_set_post_metrics: {
-        Args: {
-          p_clicks: number
-          p_engagements: number
-          p_order_id: string
-          p_reach: number
-        }
-        Returns: Json
-      }
-      admin_mkt_order_start: { Args: { p_order_id: string }; Returns: Json }
       admin_listings_report: {
         Args: {
           _from: string
@@ -12688,6 +13239,49 @@ export type Database = {
           id: string
         }[]
       }
+      admin_mkt_order_cancel: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_mkt_order_complete: {
+        Args: { p_note: string; p_order_id: string; p_post_url: string }
+        Returns: Json
+      }
+      admin_mkt_order_link: {
+        Args: { p_kind: string; p_order_id: string; p_target: string }
+        Returns: Json
+      }
+      admin_mkt_order_quote: {
+        Args: {
+          p_note: string
+          p_order_id: string
+          p_price: number
+          p_valid_days: number
+        }
+        Returns: Json
+      }
+      admin_mkt_order_set_post_metrics: {
+        Args: {
+          p_clicks: number
+          p_engagements: number
+          p_order_id: string
+          p_reach: number
+        }
+        Returns: Json
+      }
+      admin_mkt_order_start: { Args: { p_order_id: string }; Returns: Json }
+      admin_owner_sub_package_save: {
+        Args: {
+          p_description: string
+          p_is_active: boolean
+          p_name: string
+          p_package_id: string
+          p_plans: Json
+          p_term_ids: string[]
+          p_workspace_ids: string[]
+        }
+        Returns: Json
+      }
       admin_owner_sub_plan_activate: {
         Args: {
           p_amount_vnd: number
@@ -12701,18 +13295,6 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_owner_sub_package_save: {
-        Args: {
-          p_description: string
-          p_is_active: boolean
-          p_name: string
-          p_package_id: string
-          p_plans: Json
-          p_term_ids: string[]
-          p_workspace_ids: string[]
-        }
-        Returns: Json
-      }
       admin_owner_sub_plan_save: {
         Args: { p_package_id: string; p_plan: Json; p_plan_id: string }
         Returns: Json
@@ -12721,7 +13303,10 @@ export type Database = {
         Args: { p_reason: string; p_status: string; p_sub_id: string }
         Returns: Json
       }
-      admin_owner_sub_term_delete: { Args: { p_term_id: string }; Returns: Json }
+      admin_owner_sub_term_delete: {
+        Args: { p_term_id: string }
+        Returns: Json
+      }
       admin_owner_sub_term_save: {
         Args: {
           p_discount_pct: number
@@ -12816,21 +13401,14 @@ export type Database = {
         }
         Returns: Json
       }
-      _valuation_service_id: { Args: never; Returns: string }
-      admin_cancel_valuation: {
-        Args: { _order_id: string; _reason: string }
-        Returns: Json
-      }
-      admin_complete_valuation: {
+      admin_quote_legal_consult: {
         Args: {
-          _certificate_no: string
-          _certificate_path: string
-          _method: string
-          _order_id: string
-          _summary: string
-          _valid_until: string
-          _valuation_date: string
-          _value: number
+          _consultation_id: string
+          _expert_name: string
+          _note: string
+          _price: number
+          _supplier_id: string
+          _valid_days?: number
         }
         Returns: Json
       }
@@ -12839,131 +13417,6 @@ export type Database = {
           _expert_name: string
           _note: string
           _order_id: string
-          _price: number
-          _supplier_id: string
-          _valid_days?: number
-        }
-        Returns: Json
-      }
-      admin_start_valuation: { Args: { _order_id: string }; Returns: Json }
-      auction_contract_review_event_visible: {
-        Args: { _contract_id: string }
-        Returns: boolean
-      }
-      auction_session_checkin_summary: {
-        Args: { _session_id: string }
-        Returns: Json
-      }
-      buyer_kyc_path_referenced: { Args: { _name: string }; Returns: boolean }
-      can_read_buyer_kyc_object: { Args: { _name: string }; Returns: boolean }
-      close_due_rosters: { Args: never; Returns: number }
-      close_session_roster: { Args: { _session_id: string }; Returns: Json }
-      buyer_report_deposit: {
-        Args: { _contract_id: string; _proof_path?: string }
-        Returns: Json
-      }
-      buyer_submit_absence_appeal: {
-        Args: { _contract_id: string; _note: string; _proof_path?: string }
-        Returns: Json
-      }
-      buyer_undo_deposit_report: {
-        Args: { _contract_id: string }
-        Returns: undefined
-      }
-      my_contract_deposit_info: {
-        Args: { _contract_id: string }
-        Returns: Json
-      }
-      org_check_in: {
-        Args: { _attendee?: string; _contract_id: string; _note?: string }
-        Returns: Json
-      }
-      org_checkin_lookup: {
-        Args: { _query: string; _session_id: string }
-        Returns: Json
-      }
-      org_close_roster_now: { Args: { _session_id: string }; Returns: Json }
-      org_excuse_absence: {
-        Args: { _contract_id: string; _note: string }
-        Returns: Json
-      }
-      org_open_tie_round: {
-        Args: { _duration_seconds: number; _lot_id: string }
-        Returns: Json
-      }
-      org_review_bidding_contract: {
-        Args: { _contract_id: string; _decision: string; _note?: string }
-        Returns: Json
-      }
-      owner_cancel_valuation: { Args: { _order_id: string }; Returns: Json }
-      owner_request_valuation: {
-        Args: {
-          _note: string
-          _posting_id: string
-          _purpose: string
-          _site_address: string
-        }
-        Returns: Json
-      }
-      pay_valuation_order: {
-        Args: { _expected_amount: number; _order_id: string; _txn_ref: string }
-        Returns: Json
-      }
-      request_checkin_otp: { Args: { _contract_id: string }; Returns: Json }
-      resubmit_bidding_contract: {
-        Args: { _contract_id: string; _payload: Json }
-        Returns: Json
-      }
-      save_id_photo_identity: {
-        Args: {
-          _address: string
-          _date_of_birth: string
-          _edited_fields?: string[]
-          _full_name: string
-          _gender?: string
-          _id_back_path?: string
-          _id_front_path: string
-          _id_issued_on?: string
-          _id_number: string
-          _id_type: string
-          _read_method?: string
-        }
-        Returns: undefined
-      }
-      sealed_round_revealed: {
-        Args: { _lot_id: string; _round_no: number }
-        Returns: boolean
-      }
-      self_check_in: {
-        Args: { _attendee?: string; _code: string; _contract_id: string }
-        Returns: Json
-      }
-      valuation_cert_readable: { Args: { _name: string }; Returns: boolean }
-      submit_sealed_bid: {
-        Args: { _amount: number; _lot_id: string; _nonce: string }
-        Returns: Json
-      }
-      valuation_package: {
-        Args: never
-        Returns: {
-          from_price: number
-          name: string
-          variant_id: string
-          variant_key: string
-        }[]
-      }
-      valuation_partners: {
-        Args: never
-        Returns: {
-          name: string
-          supplier_id: string
-        }[]
-      }
-      admin_quote_legal_consult: {
-        Args: {
-          _consultation_id: string
-          _expert_name: string
-          _note: string
           _price: number
           _supplier_id: string
           _valid_days?: number
@@ -13052,6 +13505,7 @@ export type Database = {
         Args: { _consultation_id: string }
         Returns: Json
       }
+      admin_start_valuation: { Args: { _order_id: string }; Returns: Json }
       admin_sync_prospect_leads: { Args: { p_kind?: string }; Returns: Json }
       admin_unwin_opportunity: {
         Args: { _opportunity_id: string }
@@ -13092,14 +13546,6 @@ export type Database = {
         Args: { p_posting_id: string }
         Returns: Json
       }
-      asset_postings_dossier_levels: {
-        Args: { p_posting_ids: string[] }
-        Returns: {
-          level: string
-          posting_id: string
-          score: number
-        }[]
-      }
       asset_posting_selection_locked: {
         Args: { _posting_id: string }
         Returns: boolean
@@ -13107,6 +13553,14 @@ export type Database = {
       asset_posting_verification_level: {
         Args: { _posting_id: string }
         Returns: number
+      }
+      asset_postings_dossier_levels: {
+        Args: { p_posting_ids: string[] }
+        Returns: {
+          level: string
+          posting_id: string
+          score: number
+        }[]
       }
       attach_asset_3d_model: {
         Args: {
@@ -13134,6 +13588,10 @@ export type Database = {
           name: string
           supplier_id: string
         }[]
+      }
+      auction_contract_review_event_visible: {
+        Args: { _contract_id: string }
+        Returns: boolean
       }
       auction_deposit_event_visible: {
         Args: { _contract_id: string; _session_id: string }
@@ -13175,6 +13633,10 @@ export type Database = {
         Args: { _session_id: string }
         Returns: boolean
       }
+      auction_session_checkin_summary: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
       auction_session_contract_summary: {
         Args: { _session_id: string }
         Returns: Json
@@ -13190,6 +13652,19 @@ export type Database = {
       authentication_cert_readable: {
         Args: { _name: string }
         Returns: boolean
+      }
+      buyer_kyc_path_referenced: { Args: { _name: string }; Returns: boolean }
+      buyer_report_deposit: {
+        Args: { _contract_id: string; _proof_path?: string }
+        Returns: Json
+      }
+      buyer_submit_absence_appeal: {
+        Args: { _contract_id: string; _note: string; _proof_path?: string }
+        Returns: Json
+      }
+      buyer_undo_deposit_report: {
+        Args: { _contract_id: string }
+        Returns: undefined
       }
       can_access_org_capacity: { Args: { _org_id: string }; Returns: boolean }
       can_access_org_documents: { Args: { _org_id: string }; Returns: boolean }
@@ -13226,6 +13701,7 @@ export type Database = {
         Args: { _name: string }
         Returns: boolean
       }
+      can_read_buyer_kyc_object: { Args: { _name: string }; Returns: boolean }
       can_read_consignment_contract_file: {
         Args: { _name: string }
         Returns: boolean
@@ -13278,6 +13754,7 @@ export type Database = {
           topics: string[]
         }[]
       }
+      case_document_is_public: { Args: { _name: string }; Returns: boolean }
       case_document_object_org: { Args: { _name: string }; Returns: string }
       case_qa_apply_proposal: {
         Args: { _allow_auto: boolean; _inbound_id: string; _proposal: Json }
@@ -13301,6 +13778,8 @@ export type Database = {
         Returns: boolean
       }
       close_due_lots: { Args: never; Returns: Json }
+      close_due_rosters: { Args: never; Returns: number }
+      close_session_roster: { Args: { _session_id: string }; Returns: Json }
       consignment_asset_snapshot: {
         Args: { _posting_id: string }
         Returns: Json
@@ -13392,6 +13871,18 @@ export type Database = {
         }
         Returns: Json
       }
+      create_posting_share_link: {
+        Args: {
+          p_expires_in_days: number
+          p_label: string
+          p_posting_id: string
+          p_sender_user_id?: string
+          p_show_exact_address: boolean
+          p_show_price: boolean
+          p_show_sender_contact: boolean
+        }
+        Returns: Json
+      }
       create_share_link: {
         Args: {
           p_channel: string
@@ -13404,18 +13895,6 @@ export type Database = {
           p_show_price: boolean
           p_show_sender_contact: boolean
           p_workspace_id: string
-        }
-        Returns: Json
-      }
-      create_posting_share_link: {
-        Args: {
-          p_expires_in_days: number
-          p_label: string
-          p_posting_id: string
-          p_show_exact_address: boolean
-          p_show_price: boolean
-          p_sender_user_id?: string
-          p_show_sender_contact: boolean
         }
         Returns: Json
       }
@@ -13451,12 +13930,12 @@ export type Database = {
         }[]
       }
       get_shared_owner_report: { Args: { p_token: string }; Returns: Json }
-      get_shared_posting_dossier_trust: {
-        Args: { p_code: string }
-        Returns: Json
-      }
       get_shared_posting: {
         Args: { p_code: string; p_device?: string; p_visitor_id: string }
+        Returns: Json
+      }
+      get_shared_posting_dossier_trust: {
+        Args: { p_code: string }
         Returns: Json
       }
       get_user_email: { Args: { _user_id: string }; Returns: string }
@@ -13471,6 +13950,34 @@ export type Database = {
       is_org_member: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
+      }
+      legal_active_document: {
+        Args: { p_doc_type: string; p_platform: string }
+        Returns: {
+          changelog: string | null
+          content: string | null
+          created_at: string
+          doc_type: string
+          effective_date: string
+          id: string
+          platform: string
+          updated_at: string
+          version: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "legal_documents"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      legal_active_versions: {
+        Args: { p_platform: string }
+        Returns: {
+          doc_type: string
+          effective_date: string
+          version: string
+        }[]
       }
       legal_consult_package: {
         Args: never
@@ -13563,6 +14070,17 @@ export type Database = {
           state: string
         }[]
       }
+      my_contract_deposit_info: {
+        Args: { _contract_id: string }
+        Returns: Json
+      }
+      my_legal_consent: {
+        Args: { p_platform: string }
+        Returns: {
+          privacy_version: string
+          terms_version: string
+        }[]
+      }
       next_asset_posting_code: { Args: never; Returns: string }
       normalize_org_name: { Args: { p_name: string }; Returns: string }
       normalize_province: { Args: { _name: string }; Returns: string }
@@ -13608,10 +14126,19 @@ export type Database = {
           status: string
         }[]
       }
+      org_check_in: {
+        Args: { _attendee?: string; _contract_id: string; _note?: string }
+        Returns: Json
+      }
       org_check_invite_email: {
         Args: { _email: string; _org_id: string }
         Returns: Json
       }
+      org_checkin_lookup: {
+        Args: { _query: string; _session_id: string }
+        Returns: Json
+      }
+      org_close_roster_now: { Args: { _session_id: string }; Returns: Json }
       org_confirm_winner_payment: {
         Args: { _lot_id: string; _paid: boolean }
         Returns: Json
@@ -13667,6 +14194,10 @@ export type Database = {
         Args: { _organization_id: string }
         Returns: boolean
       }
+      org_excuse_absence: {
+        Args: { _contract_id: string; _note: string }
+        Returns: Json
+      }
       org_finalize_session: { Args: { _session_id: string }; Returns: Json }
       org_has_permission: {
         Args: { _action: string; _module: string; _org_id: string }
@@ -13692,6 +14223,10 @@ export type Database = {
       org_new_invite_token: { Args: never; Returns: string }
       org_open_lot: {
         Args: { _duration_seconds?: number; _lot_id: string }
+        Returns: Json
+      }
+      org_open_tie_round: {
+        Args: { _duration_seconds: number; _lot_id: string }
         Returns: Json
       }
       org_pause_lot: {
@@ -13730,6 +14265,10 @@ export type Database = {
       }
       org_reverse_sale_payment: {
         Args: { _payment_id: string; _reason: string }
+        Returns: Json
+      }
+      org_review_bidding_contract: {
+        Args: { _contract_id: string; _decision: string; _note?: string }
         Returns: Json
       }
       org_sale_contract_counts: {
@@ -13888,7 +14427,12 @@ export type Database = {
       }
       outcome_reason_is_legal: { Args: { p_reason: string }; Returns: boolean }
       outreach_add_channel: {
-        Args: { _kind: string; _name: string; _pack_id: string; _target?: string }
+        Args: {
+          _kind: string
+          _name: string
+          _pack_id: string
+          _target?: string
+        }
         Returns: string
       }
       outreach_add_segment: {
@@ -13904,6 +14448,39 @@ export type Database = {
           _pack_id: string
         }
         Returns: number
+      }
+      outreach_contacts_pack: {
+        Args: { _pack_id: string }
+        Returns: {
+          case_file: Json
+          created_at: string
+          created_by: string | null
+          generated_at: string | null
+          generator_label: string | null
+          greetings: Json
+          id: string
+          input_signature: string | null
+          notice_template_version: string
+          organization_id: string
+          post_edited: boolean
+          post_options: Json
+          post_text: string
+          post_written_at: string | null
+          session_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "session_outreach_packs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      outreach_criteria_contacts: {
+        Args: { _criteria: Json; _org: string }
+        Returns: {
+          contact_id: string
+        }[]
       }
       outreach_edit_field: {
         Args: { _key: string; _pack_id: string; _value: string }
@@ -13940,13 +14517,24 @@ export type Database = {
         Returns: boolean
       }
       outreach_save_greeting: {
-        Args: { _body: string; _pack_id: string; _subject: string; _via: string }
+        Args: {
+          _body: string
+          _pack_id: string
+          _subject: string
+          _via: string
+        }
         Returns: boolean
       }
       outreach_save_post: {
-        Args: { _generated?: boolean; _options?: Json; _pack_id: string; _text: string }
+        Args: {
+          _generated?: boolean
+          _options?: Json
+          _pack_id: string
+          _text: string
+        }
         Returns: boolean
       }
+      outreach_seed_channels: { Args: { _pack_id: string }; Returns: undefined }
       outreach_segment_estimate: {
         Args: { _criteria: Json; _pack_id: string }
         Returns: number
@@ -13972,6 +14560,32 @@ export type Database = {
         Args: { _channel_id: string; _patch: Json }
         Returns: boolean
       }
+      outreach_writable_channel: {
+        Args: { _channel_id: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          custom_body: string
+          custom_cta: string
+          custom_head: string
+          id: string
+          kind: string
+          name: string
+          own_content: boolean
+          pack_id: string
+          post_options: Json | null
+          scheduled_at: string | null
+          sort_order: number
+          target: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "session_outreach_channels"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       outreach_writable_pack: {
         Args: { _pack_id: string }
         Returns: {
@@ -13985,6 +14599,10 @@ export type Database = {
           input_signature: string | null
           notice_template_version: string
           organization_id: string
+          post_edited: boolean
+          post_options: Json
+          post_text: string
+          post_written_at: string | null
           session_id: string
           updated_at: string
         }
@@ -14031,6 +14649,26 @@ export type Database = {
           sources: Json
         }[]
       }
+      owner_audit_actor: {
+        Args: { p_subject: string; p_uid: string; p_ws: string }
+        Returns: {
+          kind: string
+          label: string
+        }[]
+      }
+      owner_audit_compact: { Args: { v: Json }; Returns: Json }
+      owner_audit_context: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          can_export: boolean
+          is_owner: boolean
+          level: string
+          modules: string[]
+          scope: string[]
+        }[]
+      }
+      owner_audit_diff: { Args: { p_new: Json; p_old: Json }; Returns: Json }
+      owner_audit_enrich: { Args: { p_changes: Json }; Returns: Json }
       owner_audit_list: {
         Args: {
           p_filters?: Json
@@ -14040,7 +14678,63 @@ export type Database = {
         }
         Returns: Json
       }
+      owner_audit_merge_changes: {
+        Args: { p_next: Json; p_prev: Json }
+        Returns: Json
+      }
+      owner_audit_name_of: {
+        Args: { p_id: string; p_key: string }
+        Returns: {
+          name: string
+        }[]
+      }
+      owner_audit_period_label: {
+        Args: { p_start: string; p_type: string }
+        Returns: string
+      }
+      owner_audit_rows: {
+        Args: {
+          p_filters: Json
+          p_is_owner: boolean
+          p_level: string
+          p_modules: string[]
+          p_scope: string[]
+          p_uid: string
+          p_workspace_id: string
+        }
+        Returns: {
+          action: string
+          actor: string | null
+          actor_kind: string
+          actor_label: string
+          branch_id: string | null
+          changes: Json
+          created_at: string
+          entity_id: string | null
+          entity_label: string | null
+          entity_type: string | null
+          id: number
+          last_at: string
+          meta: Json
+          module: string | null
+          path: string | null
+          search_text: string
+          subject_user_id: string | null
+          workspace_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "owner_audit_log"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       owner_audit_scope: { Args: { p_workspace_id: string }; Returns: Json }
+      owner_audit_skip_key: { Args: { k: string }; Returns: boolean }
+      owner_audit_take_perm_change: {
+        Args: { p_role_id: string }
+        Returns: Json
+      }
       owner_audit_track: {
         Args: {
           p_action: string
@@ -14052,6 +14746,22 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: Json
+      }
+      owner_audit_write: {
+        Args: {
+          p_action: string
+          p_branch: string
+          p_changes: Json
+          p_entity_id: string
+          p_entity_type: string
+          p_label: string
+          p_meta: Json
+          p_module: string
+          p_path: string
+          p_subject: string
+          p_ws: string
+        }
+        Returns: undefined
       }
       owner_benchmark_metric: {
         Args: {
@@ -14092,6 +14802,7 @@ export type Database = {
         Args: { _consultation_id: string }
         Returns: Json
       }
+      owner_cancel_valuation: { Args: { _order_id: string }; Returns: Json }
       owner_cancel_vr_tour: { Args: { _order_id: string }; Returns: Json }
       owner_cash_event_ok: {
         Args: { p_action: string; p_outcome_id: string }
@@ -14128,10 +14839,7 @@ export type Database = {
           quoted_count: number
         }[]
       }
-      owner_craft_map_state: {
-        Args: { _posting_id: string }
-        Returns: Json
-      }
+      owner_craft_map_state: { Args: { _posting_id: string }; Returns: Json }
       owner_craft_village_profile: {
         Args: { _workspace_id: string }
         Returns: Json
@@ -14172,7 +14880,56 @@ export type Database = {
         Args: { p_campaign_id: string; p_note: string }
         Returns: Json
       }
+      owner_mkt_assets_reason: {
+        Args: {
+          p_listing_ids: string[]
+          p_posting_ids: string[]
+          p_workspace_id: string
+        }
+        Returns: string
+      }
+      owner_mkt_build_facts: {
+        Args: { p_listing_ids: string[]; p_posting_ids: string[] }
+        Returns: Json
+      }
+      owner_mkt_campaign_series: {
+        Args: {
+          p_campaign_id: string
+          p_device: string
+          p_from: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      owner_mkt_can: {
+        Args: {
+          p_action: string
+          p_listing_ids: string[]
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
+      owner_mkt_can_assets: {
+        Args: {
+          p_action: string
+          p_listing_ids: string[]
+          p_posting_ids: string[]
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
+      owner_mkt_checker_reason: {
+        Args: {
+          p_c: Database["public"]["Tables"]["owner_mkt_campaigns"]["Row"]
+        }
+        Returns: string
+      }
       owner_mkt_delete: { Args: { p_campaign_id: string }; Returns: Json }
+      owner_mkt_drafts_check: {
+        Args: { p_channels: string[]; p_complete: boolean; p_drafts: Json }
+        Returns: string
+      }
+      owner_mkt_featured_days: { Args: never; Returns: number }
       owner_mkt_funnel: {
         Args: {
           p_listing_id?: string
@@ -14182,6 +14939,34 @@ export type Database = {
         }
         Returns: Json
       }
+      owner_mkt_funnel_core: {
+        Args: {
+          p_branch_id: string
+          p_from: string
+          p_listing_id: string
+          p_to: string
+          p_viewer_scope: boolean
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      owner_mkt_listing_facts: { Args: { p_listing_id: string }; Returns: Json }
+      owner_mkt_listing_scope: {
+        Args: { p_listing_ids: string[]; p_workspace_id: string }
+        Returns: {
+          branch_id: string
+          listing_id: string
+        }[]
+      }
+      owner_mkt_log: {
+        Args: {
+          p_action: string
+          p_campaign: Database["public"]["Tables"]["owner_mkt_campaigns"]["Row"]
+          p_detail: Json
+          p_note: string
+        }
+        Returns: undefined
+      }
       owner_mkt_log_export: {
         Args: { p_campaign_id: string; p_kind: string }
         Returns: Json
@@ -14190,6 +14975,7 @@ export type Database = {
         Args: { p_campaign_id: string; p_channel: string; p_note: string }
         Returns: Json
       }
+      owner_mkt_new_link_code: { Args: never; Returns: string }
       owner_mkt_order_benefit_key: {
         Args: { p_variant_key: string }
         Returns: string
@@ -14211,12 +14997,20 @@ export type Database = {
       owner_mkt_order_impact: { Args: { p_order_id: string }; Returns: Json }
       owner_mkt_order_results: { Args: { p_order_id: string }; Returns: Json }
       owner_mkt_order_variant_keys: { Args: never; Returns: string[] }
-      owner_mkt_preview_facts: {
-        Args: { p_listing_ids: string[]; p_posting_ids: string[]; p_workspace_id: string }
-        Returns: Json
+      owner_mkt_posting_facts: { Args: { p_posting_id: string }; Returns: Json }
+      owner_mkt_posting_scope: {
+        Args: { p_posting_ids: string[]; p_workspace_id: string }
+        Returns: {
+          branch_id: string
+          posting_id: string
+        }[]
       }
-      owner_mkt_campaign_series: {
-        Args: { p_campaign_id: string; p_device: string; p_from: string; p_to: string }
+      owner_mkt_preview_facts: {
+        Args: {
+          p_listing_ids: string[]
+          p_posting_ids: string[]
+          p_workspace_id: string
+        }
         Returns: Json
       }
       owner_mkt_reject: {
@@ -14241,6 +15035,9 @@ export type Database = {
         Args: { p_code: string; p_device: string; p_session_id: string }
         Returns: Json
       }
+      owner_mkt_try_num: { Args: { p: string }; Returns: number }
+      owner_mkt_try_ts: { Args: { p: string }; Returns: string }
+      owner_mkt_uniq: { Args: { p_ids: string[] }; Returns: string[] }
       owner_outcome_disagrees: {
         Args: {
           d1: string
@@ -14324,20 +15121,30 @@ export type Database = {
           title_key: string
         }[]
       }
-      owner_posting_can:
-        | { Args: { p_action: string; p_posting_id: string }; Returns: boolean }
-        | {
-            Args: { p_action: string; p_module: string; p_posting_id: string }
-            Returns: boolean
-          }
       owner_partner_ensure: {
         Args: {
           p_auction_org_id?: string
           p_kind: string
           p_name: string
-          p_workspace_id: string | null
+          p_workspace_id: string
         }
-        Returns: Database["public"]["Tables"]["owner_partners"]["Row"]
+        Returns: {
+          auction_org_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          name: string
+          name_key: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "owner_partners"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       owner_partner_scorecard: {
         Args: { p_workspace_id: string }
@@ -14358,6 +15165,12 @@ export type Database = {
           unsold_2plus_rate: number
         }[]
       }
+      owner_posting_can:
+        | { Args: { p_action: string; p_posting_id: string }; Returns: boolean }
+        | {
+            Args: { p_action: string; p_module: string; p_posting_id: string }
+            Returns: boolean
+          }
       owner_posting_file_owner_ok: {
         Args: {
           p_creator: string
@@ -14390,14 +15203,8 @@ export type Database = {
             }
             Returns: boolean
           }
-      owner_posting_share_links: { Args: { p_posting_id: string }; Returns: Json }
-      owner_share_link_detail: { Args: { p_link_id: string }; Returns: Json }
-      owner_share_link_series: {
-        Args: { p_device: string; p_from: string; p_link_id: string; p_to: string }
-        Returns: Json
-      }
-      owner_share_links: {
-        Args: { p_campaign_id?: string; p_workspace_id: string }
+      owner_posting_share_links: {
+        Args: { p_posting_id: string }
         Returns: Json
       }
       owner_report_new_share_token: { Args: never; Returns: string }
@@ -14442,6 +15249,15 @@ export type Database = {
       }
       owner_request_legal_consult: {
         Args: { _doc_paths: string[]; _note: string; _posting_id: string }
+        Returns: Json
+      }
+      owner_request_valuation: {
+        Args: {
+          _note: string
+          _posting_id: string
+          _purpose: string
+          _site_address: string
+        }
         Returns: Json
       }
       owner_request_vr_tour: {
@@ -14517,15 +15333,29 @@ export type Database = {
       }
       owner_set_craft_village_profile: {
         Args: {
-          _cover_posting_id: string | null
-          _intro: string | null
+          _cover_posting_id: string
+          _intro: string
           _latitude: number
           _longitude: number
           _product: string
-          _province: string | null
+          _province: string
           _published: boolean
           _workspace_id: string
         }
+        Returns: Json
+      }
+      owner_share_link_detail: { Args: { p_link_id: string }; Returns: Json }
+      owner_share_link_series: {
+        Args: {
+          p_device: string
+          p_from: string
+          p_link_id: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      owner_share_links: {
+        Args: { p_campaign_id?: string; p_workspace_id: string }
         Returns: Json
       }
       owner_share_report: {
@@ -14543,20 +15373,24 @@ export type Database = {
         Args: { p_discount_pct: number; p_monthly: number; p_months: number }
         Returns: number
       }
-      owner_sub_plan_visible: {
-        Args: { p_is_active: boolean; p_plan_id: string }
-        Returns: boolean
-      }
       owner_sub_plan_quote: {
         Args: { p_months: number; p_plan_id: string; p_workspace_id: string }
         Returns: Json
       }
-      owner_sub_workspace_package: {
-        Args: { p_workspace_id: string }
-        Returns: string
+      owner_sub_plan_visible: {
+        Args: { p_is_active: boolean; p_plan_id: string }
+        Returns: boolean
       }
       owner_sub_term_end: {
         Args: { p_months: number; p_start: string }
+        Returns: string
+      }
+      owner_sub_window: {
+        Args: { p_cycle: string; p_on?: string; p_sub_id: string }
+        Returns: unknown
+      }
+      owner_sub_workspace_package: {
+        Args: { p_workspace_id: string }
         Returns: string
       }
       owner_submit_authentication_shipment: {
@@ -14799,7 +15633,11 @@ export type Database = {
         Returns: Json
       }
       pay_owner_mkt_order: {
-        Args: { p_expected_amount: number; p_order_id: string; p_txn_ref: string }
+        Args: {
+          p_expected_amount: number
+          p_order_id: string
+          p_txn_ref: string
+        }
         Returns: Json
       }
       pay_owner_sub_plan: {
@@ -14816,22 +15654,93 @@ export type Database = {
         Args: { p_expected_amount: number; p_sub_id: string; p_txn_ref: string }
         Returns: Json
       }
+      pay_valuation_order: {
+        Args: { _expected_amount: number; _order_id: string; _txn_ref: string }
+        Returns: Json
+      }
       pay_vr_tour_order: {
         Args: { _expected_amount: number; _order_id: string; _txn_ref: string }
         Returns: Json
       }
       personnel_folder_org: { Args: { _name: string }; Returns: string }
-      posting_share_senders: { Args: { p_posting_id: string }; Returns: Json }
-      share_link_senders: {
-        Args: { p_posting_id: string; p_workspace_id: string }
-        Returns: Json
-      }
       place_bid: {
         Args: { _amount: number; _lot_id: string; _nonce: string }
         Returns: Json
       }
       posting_authentication_state: {
         Args: { _posting_id: string }
+        Returns: Json
+      }
+      posting_dossier_evidence_ok: {
+        Args: { _action: string; _name: string }
+        Returns: boolean
+      }
+      posting_share_device: { Args: { p: string }; Returns: string }
+      posting_share_is_member: {
+        Args: { l: Database["public"]["Tables"]["posting_share_links"]["Row"] }
+        Returns: boolean
+      }
+      posting_share_link_json: {
+        Args: {
+          l: Database["public"]["Tables"]["posting_share_links"]["Row"]
+          p_with_code: boolean
+        }
+        Returns: Json
+      }
+      posting_share_listing_live: {
+        Args: { l: Database["public"]["Tables"]["posting_share_links"]["Row"] }
+        Returns: boolean
+      }
+      posting_share_listing_payload: {
+        Args: {
+          l: Database["public"]["Tables"]["posting_share_links"]["Row"]
+          li: Database["public"]["Tables"]["listings"]["Row"]
+        }
+        Returns: Json
+      }
+      posting_share_listing_session: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
+      posting_share_new_code: { Args: never; Returns: string }
+      posting_share_payload: {
+        Args: {
+          l: Database["public"]["Tables"]["posting_share_links"]["Row"]
+          p: Database["public"]["Tables"]["asset_postings"]["Row"]
+        }
+        Returns: Json
+      }
+      posting_share_posting_live: {
+        Args: { p: Database["public"]["Tables"]["asset_postings"]["Row"] }
+        Returns: boolean
+      }
+      posting_share_public_keys: { Args: never; Returns: string[] }
+      posting_share_sender_json: {
+        Args: { l: Database["public"]["Tables"]["posting_share_links"]["Row"] }
+        Returns: Json
+      }
+      posting_share_sender_ok: {
+        Args: {
+          p: Database["public"]["Tables"]["asset_postings"]["Row"]
+          p_user: string
+        }
+        Returns: boolean
+      }
+      posting_share_senders: { Args: { p_posting_id: string }; Returns: Json }
+      posting_share_session: { Args: { p_posting_id: string }; Returns: Json }
+      posting_share_validate: {
+        Args: {
+          p: Database["public"]["Tables"]["asset_postings"]["Row"]
+          p_days: number
+          p_label: string
+          p_sender_user_id: string
+          p_show_sender_contact: boolean
+        }
+        Returns: string
+      }
+      profile_contact_phone: { Args: { p_agent_info: Json }; Returns: string }
+      public_auction_org_stats: {
+        Args: { _auction_org_id: string }
         Returns: Json
       }
       public_authentication_packages: {
@@ -14855,13 +15764,13 @@ export type Database = {
         Args: never
         Returns: {
           assets: Json
-          cover_image: string | null
+          cover_image: string
           has_vr: boolean
-          intro: string | null
+          intro: string
           latitude: number
           longitude: number
           product: string
-          province: string | null
+          province: string
           published_at: string
           village_name: string
           workspace_id: string
@@ -14881,6 +15790,18 @@ export type Database = {
           total_auctions: number
           total_winning_value: number
           years_of_experience: number
+        }[]
+      }
+      public_session_documents: {
+        Args: { _session_id: string }
+        Returns: {
+          doc_type: string
+          id: string
+          issued_at: string
+          mime_type: string
+          size_bytes: number
+          storage_path: string
+          title: string
         }[]
       }
       public_session_lot_3d_models: {
@@ -14911,6 +15832,14 @@ export type Database = {
           vr_url: string
         }[]
       }
+      public_session_seat_counts: {
+        Args: { _session_ids: string[] }
+        Returns: {
+          held_count: number
+          paid_count: number
+          session_id: string
+        }[]
+      }
       public_vr_tour_packages: {
         Args: never
         Returns: {
@@ -14928,6 +15857,8 @@ export type Database = {
           supplier_id: string
         }[]
       }
+      record_legal_consent: { Args: { p_platform: string }; Returns: undefined }
+      request_checkin_otp: { Args: { _contract_id: string }; Returns: Json }
       request_tool_service: {
         Args: { _note?: string; _provider_id: string }
         Returns: Json
@@ -14963,11 +15894,15 @@ export type Database = {
           line_id: string
         }[]
       }
+      resolve_legacy_share_link: { Args: { p_code: string }; Returns: Json }
+      resubmit_bidding_contract: {
+        Args: { _contract_id: string; _payload: Json }
+        Returns: Json
+      }
       revoke_org_invite: {
         Args: { _membership_id: string }
         Returns: undefined
       }
-      resolve_legacy_share_link: { Args: { p_code: string }; Returns: Json }
       revoke_posting_share_link: { Args: { p_link_id: string }; Returns: Json }
       revoke_share_link: { Args: { p_link_id: string }; Returns: Json }
       rotate_org_invite: {
@@ -15079,6 +16014,22 @@ export type Database = {
       }
       sale_path_uuid: { Args: { _name: string; _seg: number }; Returns: string }
       sale_seller_snapshot: { Args: { _lot_id: string }; Returns: Json }
+      save_id_photo_identity: {
+        Args: {
+          _address: string
+          _date_of_birth: string
+          _edited_fields?: string[]
+          _full_name: string
+          _gender?: string
+          _id_back_path?: string
+          _id_front_path: string
+          _id_issued_on?: string
+          _id_number: string
+          _id_type: string
+          _read_method?: string
+        }
+        Returns: undefined
+      }
       save_vneid_identity: {
         Args: {
           _address: string
@@ -15090,13 +16041,120 @@ export type Database = {
         }
         Returns: undefined
       }
+      sealed_round_revealed: {
+        Args: { _lot_id: string; _round_no: number }
+        Returns: boolean
+      }
+      self_check_in: {
+        Args: { _attendee?: string; _code: string; _contract_id: string }
+        Returns: Json
+      }
       server_now: { Args: never; Returns: string }
       service_contract_detail: { Args: { _contract_id: string }; Returns: Json }
       service_kind_admin_module: { Args: { _kind: string }; Returns: string }
       service_kind_label: { Args: { _kind: string }; Returns: string }
+      share_link_can: {
+        Args: {
+          p_action: string
+          p_branch_id: string
+          p_posting_id: string
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
+      share_link_channel_ok: { Args: { p: string }; Returns: boolean }
+      share_link_insert: {
+        Args: {
+          p_branch_id: string
+          p_campaign_id: string
+          p_channel: string
+          p_created_by: string
+          p_expires_at: string
+          p_label: string
+          p_listing_id: string
+          p_posting_id: string
+          p_sender_user_id: string
+          p_show_exact_address: boolean
+          p_show_price: boolean
+          p_show_sender_contact: boolean
+          p_workspace_id: string
+        }
+        Returns: {
+          branch_id: string | null
+          campaign_id: string | null
+          channel: string
+          code: string
+          created_at: string
+          created_by: string | null
+          cta_call_count: number
+          cta_dossier_count: number
+          cta_follow_count: number
+          cta_pdf_count: number
+          expires_at: string | null
+          id: string
+          label: string
+          last_viewed_at: string | null
+          legacy_code: string | null
+          listing_id: string | null
+          posting_id: string | null
+          revoked_at: string | null
+          sender_name: string | null
+          sender_phone: string | null
+          sender_user_id: string | null
+          show_exact_address: boolean
+          show_price: boolean
+          show_sender_contact: boolean
+          unique_view_count: number
+          updated_at: string
+          view_count: number
+          workspace_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "posting_share_links"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      share_link_sender_ok: {
+        Args: { p_owner_user: string; p_user: string; p_workspace_id: string }
+        Returns: boolean
+      }
+      share_link_senders: {
+        Args: { p_posting_id: string; p_workspace_id: string }
+        Returns: Json
+      }
+      share_link_series_core: {
+        Args: {
+          p_device: string
+          p_from: string
+          p_link_ids: string[]
+          p_to: string
+        }
+        Returns: Json
+      }
+      share_link_series_range: {
+        Args: { p_from: string; p_start: string; p_to: string }
+        Returns: string[]
+      }
+      share_link_validate: {
+        Args: {
+          p_days: number
+          p_label: string
+          p_owner_user: string
+          p_sender_user_id: string
+          p_show_sender_contact: boolean
+          p_workspace_id: string
+        }
+        Returns: string
+      }
       start_asset_3d_scan: { Args: { _posting_id: string }; Returns: Json }
       start_bidding_contract: {
         Args: { _payload: Json; _session_id: string }
+        Returns: Json
+      }
+      submit_sealed_bid: {
+        Args: { _amount: number; _lot_id: string; _nonce: string }
         Returns: Json
       }
       suggest_org_aliases: { Args: { p_name: string }; Returns: Json }
@@ -15118,6 +16176,19 @@ export type Database = {
         Args: { _id: string; _password: string }
         Returns: string
       }
+      update_posting_share_link: {
+        Args: {
+          p_change_expiry: boolean
+          p_expires_in_days: number
+          p_label: string
+          p_link_id: string
+          p_sender_user_id?: string
+          p_show_exact_address: boolean
+          p_show_price: boolean
+          p_show_sender_contact: boolean
+        }
+        Returns: Json
+      }
       update_share_link: {
         Args: {
           p_change_expiry: boolean
@@ -15132,19 +16203,6 @@ export type Database = {
         }
         Returns: Json
       }
-      update_posting_share_link: {
-        Args: {
-          p_change_expiry: boolean
-          p_expires_in_days: number
-          p_label: string
-          p_link_id: string
-          p_show_exact_address: boolean
-          p_show_price: boolean
-          p_sender_user_id?: string
-          p_show_sender_contact: boolean
-        }
-        Returns: Json
-      }
       user_in_auction_org: {
         Args: { _auction_org_id: string }
         Returns: boolean
@@ -15154,7 +16212,28 @@ export type Database = {
         Args: { _user1_id: string; _user2_id: string }
         Returns: boolean
       }
+      valuation_cert_readable: { Args: { _name: string }; Returns: boolean }
+      valuation_package: {
+        Args: never
+        Returns: {
+          from_price: number
+          name: string
+          variant_id: string
+          variant_key: string
+        }[]
+      }
+      valuation_partners: {
+        Args: never
+        Returns: {
+          name: string
+          supplier_id: string
+        }[]
+      }
       vn_today: { Args: never; Returns: string }
+      watch_session_open: {
+        Args: { _email: string; _session_id: string }
+        Returns: Json
+      }
       withdraw_bid: { Args: { _bid_id: string }; Returns: Json }
     }
     Enums: {
@@ -15292,9 +16371,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: ["USER", "ADMIN"],

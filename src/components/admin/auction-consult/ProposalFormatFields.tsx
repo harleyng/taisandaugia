@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DURATION_PRESETS } from "@/lib/bidding/controlAccess";
+import { DURATION_PRESETS } from "@/lib/auctionCore/durations";
 import { BIDDING_METHOD_LABELS } from "@/lib/auctionConsult/labels";
 import { AUCTION_FORMAT_LABELS, type AuctionFormat } from "@/types/asset-posting";
 import type { ConsultBiddingMethod, ProposalDraft } from "@/types/auctionConsult";

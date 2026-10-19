@@ -9,7 +9,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { useCreateLegalVersion, useLegalVersion } from "@/hooks/useLegalDocuments";
-import { LEGAL_DOC_LABELS, type LegalDocType } from "@/types/legal";
+import {
+  adminLegalListPath,
+  parseLegalPlatform,
+} from "@/components/admin/legal/legalAdminPaths";
+import { LEGAL_DOC_LABELS, LEGAL_PLATFORM_LABELS, type LegalDocType } from "@/types/legal";
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -23,6 +27,7 @@ export default function AdminLegalEditor() {
   const typeParam = params.get("type");
   const docType: LegalDocType = typeParam === "privacy" ? "privacy" : "terms";
   const cloneFrom = params.get("from") ?? undefined;
+  const platform = parseLegalPlatform(params.get("platform"));
 
   const { data: source, isLoading: loadingSource } = useLegalVersion(cloneFrom);
 
@@ -48,6 +53,7 @@ export default function AdminLegalEditor() {
     if (!effectiveDate) return toast.error("Vui lòng chọn ngày hiệu lực");
     try {
       const row = await create.mutateAsync({
+        platform,
         doc_type: docType,
         version: v,
         effective_date: effectiveDate,
@@ -78,12 +84,14 @@ export default function AdminLegalEditor() {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/admin/phap-ly")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(adminLegalListPath(platform))}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-foreground">{title}</h1>
-          <p className="text-sm text-muted-foreground">{LEGAL_DOC_LABELS[docType]}</p>
+          <p className="text-sm text-muted-foreground">
+            {LEGAL_DOC_LABELS[docType]} · {LEGAL_PLATFORM_LABELS[platform]}
+          </p>
         </div>
         <Button size="sm" disabled={create.isPending} onClick={handleSave}>
           <Save className="mr-1.5 h-4 w-4" />
@@ -145,7 +153,8 @@ export default function AdminLegalEditor() {
             {willBeActive ? (
               <span>
                 Ngày hiệu lực ≤ hôm nay: phiên bản áp dụng ngay và{" "}
-                <strong>buộc người dùng đã đồng ý phiên bản cũ đăng nhập lại</strong> để đồng ý.
+                <strong>buộc người dùng {LEGAL_PLATFORM_LABELS[platform]} đã đồng ý phiên bản cũ đăng nhập lại</strong>{" "}
+                để đồng ý.
               </span>
             ) : (
               <span>

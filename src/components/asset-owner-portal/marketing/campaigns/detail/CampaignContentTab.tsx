@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/asset-owner-portal/ui/SectionCard";
 import { useCampaignFactsPreview, useLogCampaignExport } from "@/hooks/useOwnerMarketingCampaigns";
 import type { PostingShareLink } from "@/lib/postingShare/types";
-import { printFlyer } from "@/lib/outreach/printFlyer";
+import { printFlyer } from "@/lib/messaging/printFlyer";
 import { hasTrackingLinks, isExportableStatus, type CampaignChannel, type CampaignRow } from "@/lib/ownerMarketing/campaigns";
 import { factsDiffer, renderChannel, renderFlyer } from "@/lib/ownerMarketing/composer";
 import { downloadMediaKit, linkMapsByChannel } from "@/lib/ownerMarketing/mediaKit";

@@ -8,7 +8,7 @@ import { SALE_BUCKET } from "@/lib/saleContracts/files";
 import { allocateFifo, netPaidOf, payableOf } from "@/lib/saleContracts/money";
 import { formatVnd } from "@/lib/advertising/slug";
 import { formatDate } from "@/lib/dateUtils";
-import { formatDateTime } from "@/lib/auctionSessions/datetime";
+import { formatDateTime } from "@/lib/auctionCore/datetime";
 import {
   SALE_PAYMENT_METHOD_LABELS,
   type SaleContract,

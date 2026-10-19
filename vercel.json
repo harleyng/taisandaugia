@@ -1,4 +1,20 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/sessions", "destination": "https://taisanviet.vercel.app/sessions", "permanent": false },
+    { "source": "/sessions/:path*", "destination": "https://taisanviet.vercel.app/sessions/:path*", "permanent": false },
+    { "source": "/ho-so-cua-toi", "destination": "https://taisanviet.vercel.app/ho-so-cua-toi", "permanent": false },
+    { "source": "/ho-so-cua-toi/:path*", "destination": "https://taisanviet.vercel.app/ho-so-cua-toi/:path*", "permanent": false },
+    { "source": "/hop-dong-mua-ban/:id", "destination": "https://taisanviet.vercel.app/hop-dong-mua-ban/:id", "permanent": false },
+    { "source": "/portal/phien-dau-gia", "destination": "https://taisanviet.vercel.app/portal/phien-dau-gia", "permanent": false },
+    { "source": "/portal/phien-dau-gia/:path*", "destination": "https://taisanviet.vercel.app/portal/phien-dau-gia/:path*", "permanent": false },
+    { "source": "/portal/ho-so-tham-gia", "destination": "https://taisanviet.vercel.app/portal/ho-so-tham-gia", "permanent": false },
+    { "source": "/portal/ho-so-tham-gia/:path*", "destination": "https://taisanviet.vercel.app/portal/ho-so-tham-gia/:path*", "permanent": false },
+    { "source": "/portal/hoi-dap", "destination": "https://taisanviet.vercel.app/portal/hoi-dap", "permanent": false },
+    { "source": "/portal/hop-dong/mua-ban/:id", "destination": "https://taisanviet.vercel.app/portal/hop-dong/mua-ban/:id", "permanent": false },
+    { "source": "/portal/hop-dong-mua-ban/:id", "destination": "https://taisanviet.vercel.app/portal/hop-dong/mua-ban/:id", "permanent": false },
+    { "source": "/chu-tai-san/hop-dong/mua-ban/:id", "destination": "https://taisanviet.vercel.app/chu-tai-san/hop-dong/mua-ban/:id", "permanent": false },
+    { "source": "/chu-tai-san/hop-dong-mua-ban/:id", "destination": "https://taisanviet.vercel.app/chu-tai-san/hop-dong/mua-ban/:id", "permanent": false }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

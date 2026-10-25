@@ -24,7 +24,8 @@ import {
   serviceSummary,
   serviceTerms,
 } from "@/lib/contracts/serviceView";
-import { SERVICE_CONTRACT_LABELS, serviceOrderOwnerPath } from "@/lib/serviceContracts";
+import { SERVICE_CONTRACT_LABELS, serviceCheckoutPath, serviceOrderOwnerPath } from "@/lib/serviceContracts";
+import { useAuth } from "@/contexts/AuthContext";
 import { serviceTemplateType } from "@/lib/contracts/templates/schema";
 import { ownerPostingPath } from "@/lib/vrTour/paths";
 
@@ -36,6 +37,7 @@ import { ownerPostingPath } from "@/lib/vrTour/paths";
 export default function OwnerServiceContractPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { userId } = useAuth();
   const { data, isLoading, error } = useServiceContractDetail(id);
   const brief = usePostingBrief(data?.contract.asset_posting_id);
   const [downloading, setDownloading] = useState(false);
@@ -69,6 +71,11 @@ export default function OwnerServiceContractPage() {
   const stage = serviceStageOfDetail(data);
   const next = serviceNextStep(data);
   const orderPath = serviceOrderOwnerPath(c.service_kind, c.asset_posting_id);
+  // Hợp đồng đã giao kết ⇒ đi thẳng VNPay. Chỉ người gửi yêu cầu (= người đồng ý) trả được;
+  // báo giá hết hạn thì về thẻ đơn để thấy thông báo.
+  const expired = !!c.terms.quote_expires_at && new Date(c.terms.quote_expires_at) < new Date();
+  const canPayHere = c.accepted_by === userId && !expired;
+  const payPath = canPayHere ? serviceCheckoutPath(c.service_kind, c.order_id, c.asset_posting_id) : orderPath;
   const onDownload = async () => {
     setDownloading(true);
     try {
@@ -103,7 +110,7 @@ export default function OwnerServiceContractPage() {
               terms={serviceTerms(data)}
               actions={
                 stage === "awaiting_payment" ? (
-                  <Button className="gap-1.5" onClick={() => navigate(orderPath)}>
+                  <Button className="gap-1.5" onClick={() => navigate(payPath)}>
                     <CreditCard className="h-4 w-4" strokeWidth={1.75} aria-hidden />
                     Thanh toán
                   </Button>

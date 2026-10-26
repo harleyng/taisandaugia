@@ -1,0 +1,896 @@
+{
+  "finalized_at": "2026-10-04T08:28:28.465272+00:00",
+  "marketing": {
+    "attribution_days": 30,
+    "by_asset": [
+      {
+        "asset_code": "5EED1B01",
+        "branch_name": "Chi nhánh Quận 7",
+        "clicks": 645,
+        "links": 5,
+        "listing_id": "5eed1b01-0000-4000-8000-000000000001",
+        "opened": 0,
+        "orders": 1,
+        "outcome": null,
+        "outcome_date": null,
+        "participants": null,
+        "price": null,
+        "registrations": 4,
+        "registrations_unattributed": 3,
+        "saves": 6,
+        "saves_unattributed": 2,
+        "sent": 4820,
+        "starting_price": null,
+        "title": "Nhà phố 1 trệt 3 lầu 100 m² – mặt tiền Huỳnh Tấn Phát, Quận 7, TP.HCM",
+        "visitors": 519
+      },
+      {
+        "asset_code": "5EED2B01",
+        "branch_name": "Chi nhánh Quận 7",
+        "clicks": 335,
+        "links": 5,
+        "listing_id": "5eed2b01-0000-4000-8000-000000000002",
+        "opened": 0,
+        "orders": 1,
+        "outcome": "sold",
+        "outcome_date": "2026-09-24",
+        "participants": 5,
+        "price": 4480000000,
+        "registrations": 0,
+        "registrations_unattributed": 0,
+        "saves": 4,
+        "saves_unattributed": 1,
+        "sent": 0,
+        "starting_price": 4150000000.0,
+        "title": "Căn hộ 2PN 76 m² – Sunrise City, Nguyễn Hữu Thọ, Quận 7, TP.HCM",
+        "visitors": 261
+      },
+      {
+        "asset_code": "5EED3B01",
+        "branch_name": "Chi nhánh Quận 7",
+        "clicks": 137,
+        "links": 3,
+        "listing_id": "5eed3b01-0000-4000-8000-000000000003",
+        "opened": 0,
+        "orders": 1,
+        "outcome": null,
+        "outcome_date": null,
+        "participants": null,
+        "price": null,
+        "registrations": 0,
+        "registrations_unattributed": 0,
+        "saves": 0,
+        "saves_unattributed": 1,
+        "sent": 2140,
+        "starting_price": null,
+        "title": "Đất ở 100 m² – KDC Phú Mỹ, Phường Phú Mỹ, Quận 7, TP.HCM",
+        "visitors": 120
+      },
+      {
+        "asset_code": "5EED4B01",
+        "branch_name": "Chi nhánh Quận 7",
+        "clicks": 112,
+        "links": 6,
+        "listing_id": "5eed4b01-0000-4000-8000-000000000004",
+        "opened": 0,
+        "orders": 0,
+        "outcome": null,
+        "outcome_date": null,
+        "participants": null,
+        "price": null,
+        "registrations": 0,
+        "registrations_unattributed": 0,
+        "saves": 0,
+        "saves_unattributed": 0,
+        "sent": 0,
+        "starting_price": null,
+        "title": "Shophouse 7 × 18 m – khu Hưng Phước, Phú Mỹ Hưng, Quận 7, TP.HCM",
+        "visitors": 94
+      },
+      {
+        "asset_code": "5EED5B01",
+        "branch_name": "Chi nhánh Quận 7",
+        "clicks": 81,
+        "links": 4,
+        "listing_id": "5eed5b01-0000-4000-8000-000000000005",
+        "opened": 0,
+        "orders": 0,
+        "outcome": null,
+        "outcome_date": null,
+        "participants": null,
+        "price": null,
+        "registrations": 0,
+        "registrations_unattributed": 0,
+        "saves": 0,
+        "saves_unattributed": 0,
+        "sent": 0,
+        "starting_price": null,
+        "title": "Sàn văn phòng 180 m² – đường Nguyễn Lương Bằng, Quận 7, TP.HCM",
+        "visitors": 68
+      }
+    ],
+    "by_channel": [
+      {
+        "clicks": 482,
+        "items": 7,
+        "key": "zalo",
+        "kind": "link",
+        "opened": 0,
+        "registrations": 2,
+        "saves": 6,
+        "sent": 0,
+        "visitors": 364
+      },
+      {
+        "clicks": 239,
+        "items": 2,
+        "key": "bank_app",
+        "kind": "link",
+        "opened": 0,
+        "registrations": 1,
+        "saves": 2,
+        "sent": 0,
+        "visitors": 176
+      },
+      {
+        "clicks": 218,
+        "items": 6,
+        "key": "facebook",
+        "kind": "link",
+        "opened": 0,
+        "registrations": 1,
+        "saves": 1,
+        "sent": 0,
+        "visitors": 190
+      },
+      {
+        "clicks": 197,
+        "items": 7,
+        "key": "email",
+        "kind": "link",
+        "opened": 0,
+        "registrations": 0,
+        "saves": 1,
+        "sent": 0,
+        "visitors": 161
+      },
+      {
+        "clicks": 41,
+        "items": 1,
+        "key": "sms",
+        "kind": "link",
+        "opened": 0,
+        "registrations": 0,
+        "saves": 0,
+        "sent": 0,
+        "visitors": 38
+      },
+      {
+        "clicks": 96,
+        "items": 1,
+        "key": "mkt_banner_owner",
+        "kind": "platform",
+        "opened": 0,
+        "registrations": 0,
+        "saves": 0,
+        "sent": 4820,
+        "visitors": 96
+      },
+      {
+        "clicks": 37,
+        "items": 1,
+        "key": "mkt_full_owner",
+        "kind": "platform",
+        "opened": 0,
+        "registrations": 0,
+        "saves": 0,
+        "sent": 2140,
+        "visitors": 37
+      },
+      {
+        "clicks": 0,
+        "items": 1,
+        "key": "mkt_social_owner",
+        "kind": "platform",
+        "opened": 0,
+        "registrations": 0,
+        "saves": 0,
+        "sent": 0,
+        "visitors": 0
+      }
+    ],
+    "by_source": [
+      {
+        "clicks": 938,
+        "items": 21,
+        "key": "self_serve",
+        "opened": 0,
+        "registrations": 3,
+        "saves": 8,
+        "sent": 0,
+        "visitors": 753
+      },
+      {
+        "clicks": 133,
+        "items": 3,
+        "key": "platform",
+        "opened": 0,
+        "registrations": 0,
+        "saves": 0,
+        "sent": 6960,
+        "visitors": 133
+      },
+      {
+        "clicks": 239,
+        "items": 2,
+        "key": "own_links",
+        "opened": 0,
+        "registrations": 1,
+        "saves": 2,
+        "sent": 0,
+        "visitors": 176
+      }
+    ],
+    "period": {
+      "from": "2026-09-01",
+      "to": "2026-09-30"
+    },
+    "totals": {
+      "assets": 5,
+      "clicks": 1310,
+      "links": 23,
+      "opened": 0,
+      "orders": 3,
+      "outcomes": 1,
+      "participants": 5,
+      "priced_sold_value": 4480000000,
+      "priced_starting_value": 4150000000.0,
+      "registrations": 4,
+      "saves": 10,
+      "sent": 6960,
+      "sold": 1,
+      "sold_value": 4480000000,
+      "visitors": 1062
+    },
+    "unattributed": {
+      "registrations": 3,
+      "saves": 4
+    }
+  },
+  "meta": {
+    "as_of": "2026-10-04",
+    "generated_at": "2026-10-04T08:28:28.465272+00:00",
+    "period": {
+      "end": "2026-09-30",
+      "start": "2026-09-01",
+      "type": "month"
+    },
+    "scope": {
+      "branch_name": null,
+      "kind": "unit"
+    },
+    "unit_name": "ngân hàng"
+  },
+  "money": {
+    "awaiting": 76928000000,
+    "by_label": [
+      {
+        "awaiting": 28450000000,
+        "collected": 0,
+        "count": 1,
+        "label": "platform"
+      },
+      {
+        "awaiting": 48478000000,
+        "collected": 40237000000,
+        "count": 7,
+        "label": "self_reported"
+      }
+    ],
+    "carry_over": {
+      "awaiting": 58840000000,
+      "count": 4
+    },
+    "collected": 40237000000,
+    "defaulted": {
+      "count": 0,
+      "value": 0
+    },
+    "estimated": 0,
+    "items": [
+      {
+        "asset_code": null,
+        "awaiting": 41600000000,
+        "branch_name": "BIDV – Chi nhánh Hà Nội",
+        "confidence_label": "self_reported",
+        "date": "2026-09-22",
+        "paid_amount": 10400000000,
+        "payment_status": "partial",
+        "price": 52000000000,
+        "title": "Biệt thự 250 m² – KĐT Ciputra, Tây Hồ, Hà Nội"
+      },
+      {
+        "asset_code": "9CD80E46",
+        "awaiting": 28450000000,
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "confidence_label": "platform",
+        "date": "2026-09-13",
+        "paid_amount": null,
+        "payment_status": "pending",
+        "price": 28450000000,
+        "title": "Nhà phố 449.6m² tại Đống Đa, Hà Nội"
+      },
+      {
+        "asset_code": "5EED2B01",
+        "awaiting": 3650000000,
+        "branch_name": "Chi nhánh Quận 7",
+        "confidence_label": "self_reported",
+        "date": "2026-09-24",
+        "paid_amount": 830000000,
+        "payment_status": "partial",
+        "price": 4480000000,
+        "title": "Căn hộ 2PN 76 m² – Sunrise City, Nguyễn Hữu Thọ, Quận 7, TP.HCM"
+      },
+      {
+        "asset_code": null,
+        "awaiting": 3228000000,
+        "branch_name": "BIDV – Chi nhánh Hà Nội",
+        "confidence_label": "self_reported",
+        "date": "2026-09-18",
+        "paid_amount": 722000000,
+        "payment_status": "partial",
+        "price": 3950000000,
+        "title": "Căn hộ 2PN 86 m² – Times City T8, Hai Bà Trưng, Hà Nội"
+      }
+    ],
+    "recorded": 40237000000,
+    "sold_count": 8
+  },
+  "notes": {
+    "officer": null,
+    "plan": null
+  },
+  "people": {
+    "finalized_by": "Nguyễn Hoàng Long",
+    "prepared_by": "Nguyễn Hoàng Long"
+  },
+  "plan": {
+    "next_period": {
+      "end": "2026-10-31",
+      "start": "2026-10-01",
+      "type": "month"
+    },
+    "next_targets": [
+      {
+        "branch_name": null,
+        "scope": "unit",
+        "target_amount": 50000000000,
+        "target_count": 3
+      }
+    ],
+    "scheduled": [
+      {
+        "asset_code": "5EED0008",
+        "branch_name": "BIDV – Chi nhánh Hà Nội",
+        "date": "2026-10-06",
+        "is_stuck": false,
+        "org_name": "Trung tâm Dịch vụ Đấu giá Tài sản Hà Nội",
+        "source": "listing",
+        "starting_price": 6100000000.0,
+        "title": "Căn hộ 3PN 98 m² – Imperia Garden, Thanh Xuân, Hà Nội"
+      },
+      {
+        "asset_code": "5EED3B01",
+        "branch_name": "Chi nhánh Quận 7",
+        "date": "2026-10-08",
+        "is_stuck": false,
+        "org_name": "Công ty Đấu giá Hợp danh Miền Nam",
+        "source": "listing",
+        "starting_price": 8900000000.0,
+        "title": "Đất ở 100 m² – KDC Phú Mỹ, Phường Phú Mỹ, Quận 7, TP.HCM"
+      },
+      {
+        "asset_code": "5EED0008",
+        "branch_name": "Vietcombank – Chi nhánh TP.HCM",
+        "date": "2026-10-08",
+        "is_stuck": false,
+        "org_name": "Trung tâm Dịch vụ Đấu giá Tài sản TP. Hồ Chí Minh",
+        "source": "listing",
+        "starting_price": 19500000000.0,
+        "title": "Shophouse 120 m² – Lakeview City, TP. Thủ Đức, TP.HCM"
+      },
+      {
+        "asset_code": "AFCE62AA",
+        "branch_name": "VietinBank – Chi nhánh Đà Nẵng",
+        "date": "2026-10-14",
+        "is_stuck": true,
+        "org_name": "Công ty Đấu giá Hợp danh Miền Nam",
+        "source": "listing",
+        "starting_price": 46788508052.0,
+        "title": "Nhà phố 428.9m² tại Trung tâm, Đồng Nai"
+      },
+      {
+        "asset_code": "5EED4B01",
+        "branch_name": "Chi nhánh Quận 7",
+        "date": "2026-10-21",
+        "is_stuck": false,
+        "org_name": "Trung tâm Dịch vụ Đấu giá Tài sản TP. Hồ Chí Minh",
+        "source": "listing",
+        "starting_price": 31500000000.0,
+        "title": "Shophouse 7 × 18 m – khu Hưng Phước, Phú Mỹ Hưng, Quận 7, TP.HCM"
+      },
+      {
+        "asset_code": "82796F86",
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "date": "2026-10-22",
+        "is_stuck": true,
+        "org_name": "Công ty Đấu giá Hợp danh Đông Dương",
+        "source": "listing",
+        "starting_price": 36054723587.0,
+        "title": "Kho bãi 84.4m² tại Trung tâm, Quảng Ninh"
+      }
+    ],
+    "stuck_unscheduled": 12
+  },
+  "results": {
+    "by_label": [
+      {
+        "count": 2,
+        "label": "platform",
+        "sold": 1,
+        "sold_value": 28450000000
+      },
+      {
+        "count": 8,
+        "label": "self_reported",
+        "sold": 7,
+        "sold_value": 88715000000
+      }
+    ],
+    "items": [
+      {
+        "asset_code": "5EED2B01",
+        "branch_name": "Chi nhánh Quận 7",
+        "category": "can-ho",
+        "confidence_label": "self_reported",
+        "date": "2026-09-24",
+        "has_conflict": false,
+        "org_name": "Trung tâm Dịch vụ Đấu giá Tài sản TP. Hồ Chí Minh",
+        "outcome": "sold",
+        "payment_status": "partial",
+        "price": 4480000000,
+        "round_no": 1,
+        "starting_price": 4150000000.0,
+        "title": "Căn hộ 2PN 76 m² – Sunrise City, Nguyễn Hữu Thọ, Quận 7, TP.HCM"
+      },
+      {
+        "asset_code": null,
+        "branch_name": "BIDV – Chi nhánh Hà Nội",
+        "category": "nha-pho",
+        "confidence_label": "self_reported",
+        "date": "2026-09-22",
+        "has_conflict": false,
+        "org_name": "Trung tâm Dịch vụ Đấu giá Tài sản Hà Nội",
+        "outcome": "sold",
+        "payment_status": "partial",
+        "price": 52000000000,
+        "round_no": 1,
+        "starting_price": 49500000000,
+        "title": "Biệt thự 250 m² – KĐT Ciputra, Tây Hồ, Hà Nội"
+      },
+      {
+        "asset_code": null,
+        "branch_name": "BIDV – Chi nhánh Hà Nội",
+        "category": "can-ho",
+        "confidence_label": "self_reported",
+        "date": "2026-09-18",
+        "has_conflict": false,
+        "org_name": "Trung tâm Dịch vụ Đấu giá Tài sản Hà Nội",
+        "outcome": "sold",
+        "payment_status": "partial",
+        "price": 3950000000,
+        "round_no": 2,
+        "starting_price": 3610000000,
+        "title": "Căn hộ 2PN 86 m² – Times City T8, Hai Bà Trưng, Hà Nội"
+      },
+      {
+        "asset_code": null,
+        "branch_name": "Vietcombank – Chi nhánh TP.HCM",
+        "category": "o-to",
+        "confidence_label": "self_reported",
+        "date": "2026-09-16",
+        "has_conflict": false,
+        "org_name": "Trung tâm Dịch vụ Đấu giá Tài sản TP. Hồ Chí Minh",
+        "outcome": "sold",
+        "payment_status": "paid",
+        "price": 1720000000,
+        "round_no": 1,
+        "starting_price": 1550000000,
+        "title": "Ô tô Mercedes-Benz GLC 300 4Matic 2022 – TSBĐ khoản vay cá nhân"
+      },
+      {
+        "asset_code": "A4C9B5C3",
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "category": "dat-o",
+        "confidence_label": "platform",
+        "date": "2026-09-13",
+        "has_conflict": false,
+        "org_name": "Công ty Đấu giá Hợp danh Bảo Tín",
+        "outcome": "withdrawn",
+        "payment_status": null,
+        "price": null,
+        "round_no": null,
+        "starting_price": 6400759928.0,
+        "title": "Đất thổ cư 88.5m² tại Trung tâm, Đồng Nai"
+      },
+      {
+        "asset_code": "9CD80E46",
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "category": "nha-pho",
+        "confidence_label": "platform",
+        "date": "2026-09-13",
+        "has_conflict": false,
+        "org_name": "Công ty Đấu giá Hợp danh Bảo Tín",
+        "outcome": "sold",
+        "payment_status": "pending",
+        "price": 28450000000,
+        "round_no": null,
+        "starting_price": 28469978549.0,
+        "title": "Nhà phố 449.6m² tại Đống Đa, Hà Nội"
+      },
+      {
+        "asset_code": null,
+        "branch_name": "BIDV – Chi nhánh Hà Nội",
+        "category": "nha-pho",
+        "confidence_label": "self_reported",
+        "date": "2026-09-10",
+        "has_conflict": false,
+        "org_name": "Trung tâm Dịch vụ Đấu giá Tài sản Hà Nội",
+        "outcome": "sold",
+        "payment_status": "paid",
+        "price": 16800000000,
+        "round_no": 1,
+        "starting_price": 15900000000,
+        "title": "Nhà phố 5 tầng 78 m² – phố Kim Mã, Ba Đình, Hà Nội"
+      },
+      {
+        "asset_code": null,
+        "branch_name": "VietinBank – Chi nhánh Đà Nẵng",
+        "category": "dat-o",
+        "confidence_label": "self_reported",
+        "date": "2026-09-08",
+        "has_conflict": false,
+        "org_name": "Công ty Đấu giá Hợp danh Việt Nam",
+        "outcome": "withdrawn",
+        "payment_status": null,
+        "price": null,
+        "round_no": 1,
+        "starting_price": 12600000000,
+        "title": "Lô đất 420 m² – phường Hoà Hải, Ngũ Hành Sơn, Đà Nẵng"
+      },
+      {
+        "asset_code": null,
+        "branch_name": "VietinBank – Chi nhánh Đà Nẵng",
+        "category": "o-to",
+        "confidence_label": "self_reported",
+        "date": "2026-09-05",
+        "has_conflict": false,
+        "org_name": "Công ty Đấu giá Hợp danh Việt Nam",
+        "outcome": "sold",
+        "payment_status": "paid",
+        "price": 865000000,
+        "round_no": 1,
+        "starting_price": 780000000,
+        "title": "Ô tô Toyota Camry 2.5Q 2021 – TSBĐ khoản vay cá nhân"
+      },
+      {
+        "asset_code": null,
+        "branch_name": "Vietcombank – Chi nhánh TP.HCM",
+        "category": "dat-o",
+        "confidence_label": "self_reported",
+        "date": "2026-09-03",
+        "has_conflict": false,
+        "org_name": "Trung tâm Dịch vụ Đấu giá Tài sản TP. Hồ Chí Minh",
+        "outcome": "sold",
+        "payment_status": "paid",
+        "price": 8900000000,
+        "round_no": 1,
+        "starting_price": 8400000000,
+        "title": "Quyền sử dụng đất 1.200 m² – xã Tân Thông Hội, Củ Chi, TP.HCM"
+      }
+    ],
+    "totals": {
+      "conflicts": 0,
+      "defaulted": 0,
+      "sold": 8,
+      "sold_value": 117165000000,
+      "sold_without_price": 0,
+      "success_rate": 80,
+      "total": 10,
+      "unsold": 0,
+      "voided": 2
+    }
+  },
+  "stuck": {
+    "count": 15,
+    "items": [
+      {
+        "age_days": 620,
+        "asset_code": null,
+        "branch_name": "VietinBank – Chi nhánh Đà Nẵng",
+        "confidence_label": "self_reported",
+        "first_date": "2025-01-22",
+        "last_date": "2025-01-22",
+        "last_outcome": "unsold",
+        "next_date": null,
+        "rounds": 1,
+        "starting_price": 28000000000,
+        "title": "Nhà hàng 2 tầng 450 m² – đường Bạch Đằng, Hải Châu, Đà Nẵng"
+      },
+      {
+        "age_days": 565,
+        "asset_code": null,
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "confidence_label": "self_reported",
+        "first_date": "2025-03-18",
+        "last_date": "2025-03-18",
+        "last_outcome": "postponed",
+        "next_date": null,
+        "rounds": 1,
+        "starting_price": 19500000000,
+        "title": "Nhà xưởng 2.200 m² – KCN Mỹ Phước 2, Bến Cát, Bình Dương"
+      },
+      {
+        "age_days": 501,
+        "asset_code": null,
+        "branch_name": "VietinBank – Chi nhánh Đà Nẵng",
+        "confidence_label": "self_reported",
+        "first_date": "2025-05-21",
+        "last_date": "2025-11-18",
+        "last_outcome": "unsold",
+        "next_date": null,
+        "rounds": 2,
+        "starting_price": 68400000000,
+        "title": "Khách sạn 9 tầng – đường Hà Bổng, Sơn Trà, Đà Nẵng"
+      },
+      {
+        "age_days": 495,
+        "asset_code": null,
+        "branch_name": "Vietcombank – Chi nhánh TP.HCM",
+        "confidence_label": "self_reported",
+        "first_date": "2025-05-27",
+        "last_date": "2025-05-27",
+        "last_outcome": "unsold",
+        "next_date": null,
+        "rounds": 1,
+        "starting_price": 3900000000,
+        "title": "Căn hộ 2PN 70 m² – The Sun Avenue, TP. Thủ Đức, TP.HCM"
+      },
+      {
+        "age_days": 417,
+        "asset_code": null,
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "confidence_label": "self_reported",
+        "first_date": "2025-08-13",
+        "last_date": "2025-08-13",
+        "last_outcome": "unsold",
+        "next_date": null,
+        "rounds": 1,
+        "starting_price": 95000000000,
+        "title": "Nhà máy chế biến gỗ 8.500 m² – KCN Tân Uyên, Bình Dương"
+      },
+      {
+        "age_days": 389,
+        "asset_code": null,
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "confidence_label": "self_reported",
+        "first_date": "2025-09-10",
+        "last_date": "2025-09-10",
+        "last_outcome": "unsold",
+        "next_date": null,
+        "rounds": 1,
+        "starting_price": 41000000000,
+        "title": "Kho lạnh 3.500 m² – KCN Mỹ Phước 3, Bến Cát, Bình Dương"
+      },
+      {
+        "age_days": 384,
+        "asset_code": null,
+        "branch_name": "Vietcombank – Chi nhánh TP.HCM",
+        "confidence_label": "self_reported",
+        "first_date": "2025-09-15",
+        "last_date": "2025-09-15",
+        "last_outcome": "postponed",
+        "next_date": null,
+        "rounds": 1,
+        "starting_price": 11500000000,
+        "title": "Căn hộ 3PN 120 m² – Estella Heights, TP. Thủ Đức, TP.HCM"
+      },
+      {
+        "age_days": 287,
+        "asset_code": "AFCE62AA",
+        "branch_name": "VietinBank – Chi nhánh Đà Nẵng",
+        "confidence_label": "self_reported",
+        "first_date": "2025-12-21",
+        "last_date": "2025-12-21",
+        "last_outcome": "unsold",
+        "next_date": "2026-10-14",
+        "rounds": 1,
+        "starting_price": 46788508052.0,
+        "title": "Nhà phố 428.9m² tại Trung tâm, Đồng Nai"
+      },
+      {
+        "age_days": 269,
+        "asset_code": "82935486",
+        "branch_name": "VietinBank – Chi nhánh Đà Nẵng",
+        "confidence_label": null,
+        "first_date": "2026-01-08",
+        "last_date": null,
+        "last_outcome": null,
+        "next_date": null,
+        "rounds": 3,
+        "starting_price": 23043040303.0,
+        "title": "Kho xưởng 146.1m² tại Hai Bà Trưng, Hà Nội"
+      },
+      {
+        "age_days": 269,
+        "asset_code": "A7147CE1",
+        "branch_name": "Vietcombank – Chi nhánh TP.HCM",
+        "confidence_label": "self_reported",
+        "first_date": "2026-01-08",
+        "last_date": "2026-05-18",
+        "last_outcome": "unsold",
+        "next_date": null,
+        "rounds": 3,
+        "starting_price": 4129981076.0,
+        "title": "Kho xưởng 168.8m² tại Trung tâm, Cần Thơ"
+      },
+      {
+        "age_days": 269,
+        "asset_code": "ED725441",
+        "branch_name": "VietinBank – Chi nhánh Đà Nẵng",
+        "confidence_label": null,
+        "first_date": "2026-01-08",
+        "last_date": null,
+        "last_outcome": null,
+        "next_date": null,
+        "rounds": 3,
+        "starting_price": 33437970886.0,
+        "title": "Nhà mặt ngõ 319.6m² tại Trung tâm, Bình Dương"
+      },
+      {
+        "age_days": 241,
+        "asset_code": "CC7115FC",
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "confidence_label": null,
+        "first_date": "2026-02-05",
+        "last_date": null,
+        "last_outcome": null,
+        "next_date": null,
+        "rounds": 1,
+        "starting_price": 3764737579.0,
+        "title": "Căn hộ 416.7m² tại Trung tâm, Hải Phòng"
+      },
+      {
+        "age_days": 236,
+        "asset_code": "82796F86",
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "confidence_label": "self_reported",
+        "first_date": "2026-02-10",
+        "last_date": "2026-07-27",
+        "last_outcome": "postponed",
+        "next_date": "2026-10-22",
+        "rounds": 1,
+        "starting_price": 36054723587.0,
+        "title": "Kho bãi 84.4m² tại Trung tâm, Quảng Ninh"
+      },
+      {
+        "age_days": 172,
+        "asset_code": null,
+        "branch_name": "ACB – Chi nhánh Bình Dương",
+        "confidence_label": "self_reported",
+        "first_date": "2026-04-15",
+        "last_date": "2026-08-18",
+        "last_outcome": "unsold",
+        "next_date": null,
+        "rounds": 3,
+        "starting_price": 52345000000,
+        "title": "Nhà xưởng 3.200 m² – KCN Sóng Thần 2, Dĩ An, Bình Dương"
+      },
+      {
+        "age_days": 93,
+        "asset_code": "5EED1B01",
+        "branch_name": "Chi nhánh Quận 7",
+        "confidence_label": "self_reported",
+        "first_date": "2026-07-03",
+        "last_date": "2026-08-26",
+        "last_outcome": "unsold",
+        "next_date": "2026-12-18",
+        "rounds": 2,
+        "starting_price": 12600000000.0,
+        "title": "Nhà phố 1 trệt 3 lầu 100 m² – mặt tiền Huỳnh Tấn Phát, Quận 7, TP.HCM"
+      }
+    ],
+    "rule": {
+      "max_days": 90,
+      "min_rounds": 3
+    }
+  },
+  "targets": [
+    {
+      "amount_pct": 67,
+      "amount_remaining": 19763000000,
+      "awaiting": 76928000000,
+      "branch_name": null,
+      "collected": 40237000000,
+      "count_pct": 200,
+      "count_remaining": 0,
+      "estimated": 0,
+      "recorded": 40237000000,
+      "scope": "unit",
+      "sold_count": 8,
+      "target_amount": 60000000000,
+      "target_count": 4
+    },
+    {
+      "amount_pct": 0,
+      "amount_remaining": 20000000000,
+      "awaiting": 28450000000,
+      "branch_name": "ACB – Chi nhánh Bình Dương",
+      "collected": 0,
+      "count_pct": 100,
+      "count_remaining": 0,
+      "estimated": 0,
+      "recorded": 0,
+      "scope": "branch",
+      "sold_count": 1,
+      "target_amount": 20000000000,
+      "target_count": 1
+    },
+    {
+      "amount_pct": 111,
+      "amount_remaining": 0,
+      "awaiting": 44828000000,
+      "branch_name": "BIDV – Chi nhánh Hà Nội",
+      "collected": 27922000000,
+      "count_pct": 150,
+      "count_remaining": 0,
+      "estimated": 0,
+      "recorded": 27922000000,
+      "scope": "branch",
+      "sold_count": 3,
+      "target_amount": 25000000000,
+      "target_count": 2
+    },
+    {
+      "amount_pct": 70,
+      "amount_remaining": 4380000000,
+      "awaiting": 0,
+      "branch_name": "Vietcombank – Chi nhánh TP.HCM",
+      "collected": 10620000000,
+      "count_pct": 100,
+      "count_remaining": 0,
+      "estimated": 0,
+      "recorded": 10620000000,
+      "scope": "branch",
+      "sold_count": 2,
+      "target_amount": 15000000000,
+      "target_count": 2
+    },
+    {
+      "amount_pct": 17,
+      "amount_remaining": 4135000000,
+      "awaiting": 0,
+      "branch_name": "VietinBank – Chi nhánh Đà Nẵng",
+      "collected": 865000000,
+      "count_pct": 100,
+      "count_remaining": 0,
+      "estimated": 0,
+      "recorded": 865000000,
+      "scope": "branch",
+      "sold_count": 1,
+      "target_amount": 5000000000,
+      "target_count": 1
+    }
+  ],
+  "version": 1
+}

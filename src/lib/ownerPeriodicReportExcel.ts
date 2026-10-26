@@ -1,5 +1,6 @@
 // Xuất Excel cho báo cáo định kỳ (docs/owner-control-tower-plan.md Phase 10).
-// Cùng cấu trúc với trang in: "Tổng quan" (các phần của §A5 + Hiệu quả truyền thông) + 5 sheet chi tiết.
+// Cùng cấu trúc với trang in: "Tổng quan" (các phần của §A5 + Hiệu quả truyền thông) + 5 sheet chi tiết,
+// cộng sheet "Kế hoạch đấu giá" khi payload là v2 (Phase 8).
 // Tiền là SỐ (định dạng #,##0 — nhóm nghìn bằng dấu phẩy) để trụ sở cộng / lọc được;
 // mọi dòng mang cột "Nguồn" (§A3). Không có cột id nào.
 
@@ -13,6 +14,13 @@ import {
   reportTitle,
   type ReportPayload,
 } from "@/lib/ownerPeriodicReport";
+import { PLAN_ITEM_HEALTH_LABELS } from "@/lib/auctionPlan/health";
+import { AUCTION_PLAN_KIND_LABELS, AUCTION_PLAN_STEP_LABELS } from "@/lib/auctionPlan/types";
+import {
+  planAttentionReason,
+  planExecutionUnitLabel,
+  planMonthLabel,
+} from "@/lib/ownerReportPlanExecution";
 import {
   assetPriceRatioPct,
   FUNNEL_SOURCE_LABEL,
@@ -23,6 +31,12 @@ import {
 } from "@/lib/ownerMarketing/funnel";
 
 export const REPORT_SHEETS = ["Tổng quan", "Kết quả phiên", "Tiền thu", "Tồn đọng", "Kế hoạch kỳ tới", "Truyền thông"] as const;
+
+/**
+ * Sheet của payload v2 (Phase 8) — CHỈ có khi báo cáo mang phần "Thực hiện kế hoạch đấu giá".
+ * Báo cáo chốt ở v1 xuất ra đúng 6 sheet như trước, không thêm sheet rỗng.
+ */
+export const REPORT_PLAN_SHEET = "Kế hoạch đấu giá";
 
 type Cell = string | number | null;
 
@@ -224,6 +238,63 @@ function summarySheet(p: ReportPayload, status: "draft" | "final"): XLSX.WorkShe
   b.field("Tài sản tồn đọng chưa có lịch đấu lại", plan.stuckUnscheduled);
   b.field("Kế hoạch của đơn vị", p.notes.plan ?? "");
 
+  // Phần của payload v2 — không đánh số: 1–7 đã đóng băng trong các báo cáo v1 đã chốt.
+  const pe = p.planExecution;
+  if (pe) {
+    b.section("Thực hiện kế hoạch đấu giá");
+    if (!pe.plans.length) {
+      b.field("Ghi chú", "Phạm vi này chưa có kế hoạch đấu giá nào được duyệt cho năm của kỳ báo cáo");
+    } else {
+      const t = pe.totals;
+      b.field("Số kế hoạch đã duyệt", t.plans);
+      b.field("Tài sản trong danh mục", t.itemCount);
+      b.field("Tài sản theo kế hoạch trong kỳ", t.plannedCount);
+      b.field("Giá trị khởi điểm theo kế hoạch (₫)", money(t.plannedStartValue), true);
+      b.field("Tài sản đã đưa ra đấu giá", t.offeredCount);
+      b.field("Tài sản đấu thành", t.soldCount);
+      b.field("Tỷ lệ hoàn thành (%)", t.donePct);
+      b.field("Giá khởi điểm thực tế (₫)", money(t.actualStartValue), true);
+      b.field("Tổng giá trúng (₫)", money(t.winningTotal), true);
+      b.field("Đã thu (₫)", money(t.collected), true);
+      b.field("Chờ thu (₫)", money(t.awaiting), true);
+      b.field("Tài sản trễ kế hoạch", t.lateCount);
+      b.field("Tài sản nguy cơ trễ", t.atRiskCount);
+      b.field("Tài sản không thành, chờ đấu lại", t.failedRetryCount);
+      b.field("Tài sản đã dời tháng dự kiến", t.movedCount);
+      b.field("Tình trạng tài sản tính đến ngày", day(pe.asOf));
+      b.table(
+        [
+          { label: "Đơn vị / kế hoạch" },
+          { label: "Loại" },
+          { label: "Quyết định phê duyệt" },
+          { label: "Kế hoạch (tài sản)" },
+          { label: "Đưa ra đấu giá" },
+          { label: "Đấu thành" },
+          { label: "Tỷ lệ hoàn thành (%)" },
+          { label: "Giá trị khởi điểm KH (₫)", money: true },
+          { label: "Tổng giá trúng (₫)", money: true },
+          { label: "Đã thu (₫)", money: true },
+          { label: "Trễ" },
+          { label: "Nguy cơ trễ" },
+        ],
+        pe.plans.map((pl) => [
+          planExecutionUnitLabel(pl),
+          pl.kind ? AUCTION_PLAN_KIND_LABELS[pl.kind] : "",
+          [pl.approvalDocNo ?? "", pl.approvalDocDate ? day(pl.approvalDocDate) : ""].filter(Boolean).join(" · "),
+          pl.metrics.plannedCount,
+          pl.metrics.offeredCount,
+          pl.metrics.soldCount,
+          pl.metrics.donePct,
+          money(pl.metrics.plannedStartValue),
+          money(pl.metrics.winningTotal),
+          money(pl.metrics.collected),
+          pl.lateCount,
+          pl.atRiskCount,
+        ]),
+      );
+    }
+  }
+
   b.section("6. Hiệu quả truyền thông");
   const mk = p.marketing;
   if (!mk) {
@@ -419,6 +490,63 @@ export function buildReportWorkbook(p: ReportPayload, status: "draft" | "final")
     ),
     REPORT_SHEETS[5],
   );
+
+  // Sheet của payload v2: một dòng cho mỗi tài sản trễ / nguy cơ trễ / đã dời tháng dự kiến.
+  const pe = p.planExecution;
+  if (pe) {
+    const rows: Cell[][] = pe.plans.flatMap((pl) => {
+      const unit = planExecutionUnitLabel(pl);
+      const shown = new Set(pl.attention.map((i) => i.itemCode));
+      return [
+        ...pl.attention.map((i) => [
+          unit,
+          i.itemCode ?? "",
+          i.title ?? "",
+          i.health ? PLAN_ITEM_HEALTH_LABELS[i.health] : "",
+          planMonthLabel(i.baselineMonth),
+          planMonthLabel(i.forecastMonth),
+          `${i.stepsDone}/${i.stepsTotal}`,
+          i.overdueStep ? AUCTION_PLAN_STEP_LABELS[i.overdueStep] : "",
+          day(i.overdueStepDate),
+          planAttentionReason(i),
+        ]),
+        // Tài sản dời tháng mà KHÔNG trễ / nguy cơ trễ (đã có ở trên thì không lặp lại).
+        ...pl.forecastMoves
+          .filter((i) => !shown.has(i.itemCode))
+          .map((i) => [
+            unit,
+            i.itemCode ?? "",
+            i.title ?? "",
+            i.health ? PLAN_ITEM_HEALTH_LABELS[i.health] : "",
+            planMonthLabel(i.baselineMonth),
+            planMonthLabel(i.forecastMonth),
+            "",
+            "",
+            "",
+            i.reason ?? "Chưa khai lý do",
+          ]),
+      ] as Cell[][];
+    });
+    XLSX.utils.book_append_sheet(
+      wb,
+      tableSheet(
+        [
+          { label: "Đơn vị / kế hoạch", width: 28 },
+          { label: "Mã tài sản", width: 12 },
+          { label: "Tài sản", width: 44 },
+          { label: "Tình trạng", width: 22 },
+          { label: "Tháng bản mốc", width: 14 },
+          { label: "Dự kiến mới", width: 14 },
+          { label: "Mốc đã xong", width: 12 },
+          { label: "Mốc đang quá hạn", width: 32 },
+          { label: "Hạn của mốc", width: 14 },
+          { label: "Lý do", width: 54 },
+        ],
+        rows,
+      ),
+      REPORT_PLAN_SHEET,
+    );
+  }
 
   return wb;
 }

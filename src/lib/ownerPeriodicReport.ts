@@ -26,6 +26,7 @@ import {
 } from "@/lib/ownerTargets";
 import { ownerCanIn, type OwnerWsAccessCtx } from "@/lib/ownerWorkspace/roles";
 import { mapMarketingFunnel, type MarketingFunnel } from "@/lib/ownerMarketing/funnel";
+import { mapReportPlanExecution, type ReportPlanExecution } from "@/lib/ownerReportPlanExecution";
 
 // ─── Bản ghi báo cáo ─────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ export function isPeriodOver(type: TargetPeriodType, start: string, today: strin
   return today > periodEndOf(type, start);
 }
 
-// ─── Payload (version 1) ─────────────────────────────────────────────────────
+// ─── Payload (version 1 + 2) ─────────────────────────────────────────────────────
 
 export type ReportScopeKind = "unit" | "branch";
 
@@ -324,6 +325,12 @@ export interface ReportPayload {
    * chốt trước khi có phần này.
    */
   marketing: MarketingFunnel | null;
+  /**
+   * "Thực hiện kế hoạch đấu giá" (payload v2, Phase 8 của docs/owner-auction-planning-plan.md).
+   * null = payload v1 — báo cáo chốt trước phần này ⇒ KHÔNG hiện, để bản đã chốt hiển thị
+   * y nguyên như lúc chốt.
+   */
+  planExecution: ReportPlanExecution | null;
   /** Bản nháp: ghép từ cột của bản ghi. Đã chốt: đóng băng trong payload. */
   notes: ReportNotes;
   people: ReportPeople;
@@ -548,6 +555,7 @@ export function mapReportPayload(raw: unknown): ReportPayload | null {
     stuck: mapStuck(p.stuck),
     plan: mapPlan(p.plan),
     marketing: mapMarketingFunnel(p.marketing),
+    planExecution: mapReportPlanExecution(p.plan_execution),
     notes: { officer: str(notes.officer), plan: str(notes.plan) },
     people: { preparedBy: str(people.prepared_by), finalizedBy: str(people.finalized_by) },
     finalizedAt: str(p.finalized_at),

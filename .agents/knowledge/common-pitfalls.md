@@ -4,6 +4,20 @@
 
 ---
 
+## Thêm một phần vào báo cáo định kỳ: SỐ THỨ TỰ của các phần cũ là hợp đồng với bản đã chốt
+
+- **Đánh số lại là một thay đổi hiển thị của báo cáo ĐÃ CHỐT.** Tiêu đề thẻ mang số ngay trong chuỗi ("6. Hiệu quả truyền thông"). `owner_report_snapshots` đóng băng payload nhưng KHÔNG đóng băng renderer ⇒ chèn một phần có số vào giữa làm mọi báo cáo v1 cũ hiển thị khác lúc chốt, và **không test nào đỏ** nếu không có ảnh chụp. Phần mới của v2 vì thế không mang số, và sheet Excel mới chỉ xuất hiện với v2.
+- **Chụp ảnh "trước" TRƯỚC khi sửa dòng mã đầu tiên**, bằng payload THẬT lấy từ `owner_report_snapshots.payload` của một báo cáo đã chốt. Đừng `git stash` để lấy bản "trước" khi có phiên khác đang viết cùng checkout.
+- **Phần mới mà trông cậy `owner_report_strip_private` để che bí mật thì hớ.** Quy tắc của nó là `id`, `_ids?$`, `^winner`, `evidence` — khoá `approval_doc_urls` hay `doc_link` ĐI QUA sạch. Cách đúng: đừng ghi URL ra payload, rồi kiểm bằng `curl` THẬT bằng khoá anon, quét ĐỆ QUY cả khoá lẫn GIÁ TRỊ (`https?://`, dạng UUID).
+- **Quét JSON đệ quy bằng CTE tự viết rất dễ sai:** `jsonb_each` nằm trong `FROM` nên chạy TRƯỚC `WHERE jsonb_typeof(...)='object'` ⇒ `cannot call jsonb_each on a non-object`. Dùng `jsonb_path_query(j, '$.**')` rồi mới `jsonb_each` trên node là object.
+
+## 2026-10-26 — Hai cái tên che mất cái khác: cột OUT của plpgsql, và `Map` của lucide
+
+Cả hai bắt được khi dựng roll-up tỉnh (`auction_plan_rollup`), cả hai đều **không** báo ở chỗ mình gõ sai.
+
+- **Tên cột `RETURNS TABLE` là BIẾN plpgsql trong suốt thân hàm.** Một CTE có cột trùng tên (`assigned_revenue`, `planned_count`, `plan_status`…) thì `sum(assigned_revenue)` trả `ERROR: column reference "assigned_revenue" is ambiguous` — lỗi nêu TÊN CỘT chứ không nêu CTE nào, và với hàm 38 cột thì có cả tá ứng viên. Cách chữa trong repo này: **đặt tên CTE khác hẳn** (`a_rev`, `m_planned`, `p_status`…) rồi `SELECT` tường minh ở câu cuối — như `auction_plan_period_metrics` đã làm với `cnt` / `val` / `offered`. (`#variable_conflict use_column` cũng chạy nhưng đổi cách giải tên cho CẢ hàm, nên dễ che một lỗi khác.) Lượt chạy thử `BEGIN; \i file; …; ROLLBACK;` bắt đúng lỗi này — đừng bỏ bước đó vì "chỉ thêm một hàm đọc".
+- **`import { Map } from 'lucide-react'` che mất `Map` của JavaScript.** `new Map(...)` trong cùng file thì TypeScript báo `TS7009: 'new' expression, whose target lacks a construct signature` và `TS2345: … not assignable to 'Omit<LucideProps,"ref">'` — hai thông điệp không hề nhắc tới cái import. Icon trùng tên builtin (`Map`, `Set`, `Date`, `Image`, `Text`, `Option`) phải import có bí danh: `Map as MapIcon`.
+
 ## 2026-10-26 — Mở một RPC cho `anon`: hai thứ dễ tưởng là an toàn mà không phải
 
 - **`RETURNS TABLE` + `CASE WHEN … THEN giá END` KHÔNG phải là "ẩn giá".** Phản hồi vẫn có khoá `"expected_start_value": null` — tiêu chí nghiệm thu "không có giá trong phản hồi mạng" thì vẫn đọc được là có cột giá, chỉ chưa điền. Muốn khoá VẮNG MẶT HẲN thì trả `SETOF JSONB` + `jsonb_strip_nulls` (xem `get_public_plan_items`).

@@ -182,6 +182,9 @@ const OwnerTargetFormPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetFo
 const OwnerAuctionPlansPage = lazy(() => import("./pages/chu-tai-san/OwnerAuctionPlansPage"));
 const OwnerAuctionPlanDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerAuctionPlanDetailPage"));
 const OwnerPlanOperationsPage = lazy(() => import("./pages/chu-tai-san/OwnerPlanOperationsPage"));
+const OwnerPlanProvincePage = lazy(() => import("./pages/chu-tai-san/OwnerPlanProvincePage"));
+const OwnerPlanCyclePage = lazy(() => import("./pages/chu-tai-san/OwnerPlanCyclePage"));
+const OwnerPlanProvincePrintPage = lazy(() => import("./pages/chu-tai-san/OwnerPlanProvincePrintPage"));
 const OwnerPeriodicReportsPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportsPage"));
 const OwnerPeriodicReportDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportDetailPage"));
 const OwnerAuctionPlanPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerAuctionPlanPrintPage"));
@@ -399,6 +402,9 @@ const App = () => (
                   <Route path="ke-hoach" element={<OwnerAuctionPlansPage />} />
                   {/* "van-hanh" phải đứng TRƯỚC "ke-hoach/:id", nếu không nó khớp vào :id. */}
                   <Route path="ke-hoach/van-hanh" element={<OwnerPlanOperationsPage />} />
+                  {/* Màn CẤP TỈNH (Phase 7): cũng phải đứng trước "ke-hoach/:id". */}
+                  <Route path="ke-hoach/toan-tinh" element={<OwnerPlanProvincePage />} />
+                  <Route path="ke-hoach/dot/:cycleId" element={<OwnerPlanCyclePage />} />
                   <Route path="ke-hoach/:id" element={<OwnerAuctionPlanDetailPage />} />
                   <Route path="bao-cao-dinh-ky" element={<OwnerPeriodicReportsPage />} />
                   <Route path="bao-cao-dinh-ky/:id" element={<OwnerPeriodicReportDetailPage />} />
@@ -432,6 +438,8 @@ const App = () => (
                   <Route path="hop-dong/dich-vu/:id" element={<OwnerServiceContractPage />} />
                   <Route path="hop-dong-mua-ban" element={<Navigate to="/chu-tai-san/hop-dong?loai=mua-ban" replace />} />
                 </Route>
+                {/* Bản in A4 NGANG tổng hợp toàn tỉnh — đứng TRƯỚC "ke-hoach/:id/in" */}
+                <Route path="ke-hoach/toan-tinh/in" element={<OwnerPlanProvincePrintPage />} />
                 {/* Trang in A4 NGANG của kế hoạch đấu giá (biểu mẫu chính thức) — không sidebar / topbar */}
                 <Route path="ke-hoach/:id/in" element={<OwnerAuctionPlanPrintPage />} />
                 {/* Trang in A4 của báo cáo định kỳ — không sidebar / topbar */}

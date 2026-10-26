@@ -1,0 +1,309 @@
+{
+  "as_of": "2026-10-26",
+  "period": {
+    "end": "2026-12-31",
+    "start": "2026-01-01",
+    "type": "year"
+  },
+  "plans": [
+    {
+      "admin_unit_code": "07210",
+      "approval_doc_date": "2025-12-28",
+      "approval_doc_no": "QĐ-1202/QĐ-UBND",
+      "at_risk_count": 1,
+      "attention": [
+        {
+          "baseline_month": "2026-08-01",
+          "exec_note": null,
+          "forecast_month": null,
+          "forecast_reason": null,
+          "health": "late",
+          "item_code": "KH26-002",
+          "overdue_step": "plan_approved",
+          "overdue_step_date": "2026-05-09",
+          "overdue_step_note": null,
+          "steps_done": 2,
+          "steps_total": 10,
+          "title": "Khu dân cư Bắc Giang — lô B"
+        },
+        {
+          "baseline_month": "2026-12-01",
+          "exec_note": null,
+          "forecast_month": "2027-03-01",
+          "forecast_reason": "Chờ phê duyệt giá khởi điểm, dự kiến lùi một quý.",
+          "health": "at_risk",
+          "item_code": "KH26-004",
+          "overdue_step": "start_price",
+          "overdue_step_date": "2026-08-27",
+          "overdue_step_note": null,
+          "steps_done": 0,
+          "steps_total": 10,
+          "title": "Khu tái định cư Dĩnh Kế — phần còn lại"
+        }
+      ],
+      "baseline_version": 1,
+      "branch_name": "Phường Bắc Giang",
+      "failed_retry_count": 0,
+      "forecast_moves": [
+        {
+          "baseline_month": "2026-12-01",
+          "forecast_month": "2027-03-01",
+          "health": "at_risk",
+          "item_code": "KH26-004",
+          "reason": "Chờ phê duyệt giá khởi điểm, dự kiến lùi một quý.",
+          "title": "Khu tái định cư Dĩnh Kế — phần còn lại"
+        }
+      ],
+      "item_count": 5,
+      "kind": "annual",
+      "late_count": 1,
+      "metrics": {
+        "actual_start_value": 46080000000,
+        "awaiting": 0,
+        "collected": 54374400000,
+        "done_pct": 25,
+        "estimated": 0,
+        "offered_count": 1,
+        "planned_count": 4,
+        "planned_start_value": 86660000000,
+        "recorded": 54374400000,
+        "sold_count": 1,
+        "winning_total": 54374400000
+      },
+      "moved_count": 1,
+      "plan_year": 2026,
+      "status": "approved",
+      "title": "Kế hoạch đấu giá QSDĐ năm 2026 · Phường Bắc Giang",
+      "unit_name": "Phường Bắc Giang"
+    },
+    {
+      "admin_unit_code": "07339",
+      "approval_doc_date": "2025-12-28",
+      "approval_doc_no": "QĐ-1204/QĐ-UBND",
+      "at_risk_count": 1,
+      "attention": [
+        {
+          "baseline_month": "2026-05-01",
+          "exec_note": null,
+          "forecast_month": null,
+          "forecast_reason": null,
+          "health": "late",
+          "item_code": "KH26-001",
+          "overdue_step": "plan_approved",
+          "overdue_step_date": "2026-02-06",
+          "overdue_step_note": null,
+          "steps_done": 2,
+          "steps_total": 10,
+          "title": "Khu dân cư Tân Yên — lô E"
+        },
+        {
+          "baseline_month": "2026-12-01",
+          "exec_note": null,
+          "forecast_month": "2027-03-01",
+          "forecast_reason": "Chờ phê duyệt giá khởi điểm, dự kiến lùi một quý.",
+          "health": "at_risk",
+          "item_code": "KH26-004",
+          "overdue_step": "start_price",
+          "overdue_step_date": "2026-08-27",
+          "overdue_step_note": null,
+          "steps_done": 0,
+          "steps_total": 10,
+          "title": "Đất ở Quang Tiến"
+        }
+      ],
+      "baseline_version": 1,
+      "branch_name": "Xã Tân Yên",
+      "failed_retry_count": 0,
+      "forecast_moves": [
+        {
+          "baseline_month": "2026-12-01",
+          "forecast_month": "2027-03-01",
+          "health": "at_risk",
+          "item_code": "KH26-004",
+          "reason": "Chờ phê duyệt giá khởi điểm, dự kiến lùi một quý.",
+          "title": "Đất ở Quang Tiến"
+        }
+      ],
+      "item_count": 4,
+      "kind": "annual",
+      "late_count": 1,
+      "metrics": {
+        "actual_start_value": 8400000000,
+        "awaiting": 0,
+        "collected": 9912000000,
+        "done_pct": 25,
+        "estimated": 0,
+        "offered_count": 1,
+        "planned_count": 4,
+        "planned_start_value": 39860000000,
+        "recorded": 9912000000,
+        "sold_count": 1,
+        "winning_total": 9912000000
+      },
+      "moved_count": 1,
+      "plan_year": 2026,
+      "status": "approved",
+      "title": "Kế hoạch đấu giá QSDĐ năm 2026 · Xã Tân Yên",
+      "unit_name": "Xã Tân Yên"
+    },
+    {
+      "admin_unit_code": "07777",
+      "approval_doc_date": "2025-12-28",
+      "approval_doc_no": "QĐ-1203/QĐ-UBND",
+      "at_risk_count": 1,
+      "attention": [
+        {
+          "baseline_month": "2026-05-01",
+          "exec_note": null,
+          "forecast_month": null,
+          "forecast_reason": null,
+          "health": "late",
+          "item_code": "KH26-001",
+          "overdue_step": "plan_approved",
+          "overdue_step_date": "2026-02-06",
+          "overdue_step_note": null,
+          "steps_done": 2,
+          "steps_total": 10,
+          "title": "Khu dân cư Việt Yên — lô C"
+        },
+        {
+          "baseline_month": "2026-12-01",
+          "exec_note": null,
+          "forecast_month": "2027-03-01",
+          "forecast_reason": "Chờ phê duyệt giá khởi điểm, dự kiến lùi một quý.",
+          "health": "at_risk",
+          "item_code": "KH26-005",
+          "overdue_step": "start_price",
+          "overdue_step_date": "2026-08-27",
+          "overdue_step_note": null,
+          "steps_done": 0,
+          "steps_total": 10,
+          "title": "Khu đấu giá Nếnh — đợt 2"
+        }
+      ],
+      "baseline_version": 1,
+      "branch_name": "Phường Việt Yên",
+      "failed_retry_count": 1,
+      "forecast_moves": [
+        {
+          "baseline_month": "2026-12-01",
+          "forecast_month": "2027-03-01",
+          "health": "at_risk",
+          "item_code": "KH26-005",
+          "reason": "Chờ phê duyệt giá khởi điểm, dự kiến lùi một quý.",
+          "title": "Khu đấu giá Nếnh — đợt 2"
+        }
+      ],
+      "item_count": 6,
+      "kind": "annual",
+      "late_count": 1,
+      "metrics": {
+        "actual_start_value": 41940000000,
+        "awaiting": 0,
+        "collected": 27682800000,
+        "done_pct": 16,
+        "estimated": 0,
+        "offered_count": 2,
+        "planned_count": 6,
+        "planned_start_value": 138610000000,
+        "recorded": 27682800000,
+        "sold_count": 1,
+        "winning_total": 27682800000
+      },
+      "moved_count": 1,
+      "plan_year": 2026,
+      "status": "approved",
+      "title": "Kế hoạch đấu giá QSDĐ năm 2026 · Phường Việt Yên",
+      "unit_name": "Phường Việt Yên"
+    },
+    {
+      "admin_unit_code": "09169",
+      "approval_doc_date": "2025-12-28",
+      "approval_doc_no": "QĐ-1201/QĐ-UBND",
+      "at_risk_count": 1,
+      "attention": [
+        {
+          "baseline_month": "2026-05-01",
+          "exec_note": null,
+          "forecast_month": null,
+          "forecast_reason": null,
+          "health": "late",
+          "item_code": "KH26-002",
+          "overdue_step": "plan_approved",
+          "overdue_step_date": "2026-02-06",
+          "overdue_step_note": null,
+          "steps_done": 2,
+          "steps_total": 10,
+          "title": "Khu dân cư mới Vũ Ninh — lô LK2"
+        },
+        {
+          "baseline_month": "2026-12-01",
+          "exec_note": null,
+          "forecast_month": "2027-03-01",
+          "forecast_reason": "Chờ phê duyệt giá khởi điểm, dự kiến lùi một quý.",
+          "health": "at_risk",
+          "item_code": "KH26-005",
+          "overdue_step": "start_price",
+          "overdue_step_date": "2026-08-27",
+          "overdue_step_note": null,
+          "steps_done": 0,
+          "steps_total": 10,
+          "title": "Khu đấu giá Đồng Mạ — đợt 2"
+        }
+      ],
+      "baseline_version": 1,
+      "branch_name": "Phường Vũ Ninh",
+      "failed_retry_count": 1,
+      "forecast_moves": [
+        {
+          "baseline_month": "2026-12-01",
+          "forecast_month": "2027-03-01",
+          "health": "at_risk",
+          "item_code": "KH26-005",
+          "reason": "Chờ phê duyệt giá khởi điểm, dự kiến lùi một quý.",
+          "title": "Khu đấu giá Đồng Mạ — đợt 2"
+        }
+      ],
+      "item_count": 5,
+      "kind": "annual",
+      "late_count": 1,
+      "metrics": {
+        "actual_start_value": 34135500000,
+        "awaiting": 0,
+        "collected": 31718400000,
+        "done_pct": 20,
+        "estimated": 0,
+        "offered_count": 2,
+        "planned_count": 5,
+        "planned_start_value": 94355500000,
+        "recorded": 31718400000,
+        "sold_count": 1,
+        "winning_total": 31718400000
+      },
+      "moved_count": 1,
+      "plan_year": 2026,
+      "status": "approved",
+      "title": "Kế hoạch đấu giá QSDĐ năm 2026 · Phường Vũ Ninh",
+      "unit_name": "Phường Vũ Ninh"
+    }
+  ],
+  "totals": {
+    "actual_start_value": 130555500000,
+    "at_risk_count": 4,
+    "awaiting": 0,
+    "collected": 123687600000,
+    "done_pct": 21,
+    "estimated": 0,
+    "failed_retry_count": 2,
+    "item_count": 20,
+    "late_count": 4,
+    "moved_count": 4,
+    "offered_count": 6,
+    "planned_count": 19,
+    "planned_start_value": 359485500000,
+    "plans": 4,
+    "recorded": 123687600000,
+    "sold_count": 4,
+    "winning_total": 123687600000
+  }
+}

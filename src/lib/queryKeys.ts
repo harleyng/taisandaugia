@@ -473,6 +473,28 @@ export const qk = {
   /** Tài sản của một kỳ kèm sức khoẻ, cả Trạm (RPC auction_plan_month_items) — Phase 6. */
   auctionPlanMonthItems: (workspaceId?: string | null, from?: string | null, to?: string | null) =>
     ["auction-plans", workspaceId, "month-items", from, to] as const,
+  /** Tổng hợp "Toàn tỉnh" (RPC auction_plan_rollup) — Phase 7. DƯỚI auction-plans
+   *  theo Trạm: một lần invalidate kế hoạch làm mới cả bảng tỉnh. */
+  auctionPlanRollup: (
+    workspaceId?: string | null,
+    planYear?: number | null,
+    periodKey?: string | null,
+  ) => ["auction-plans", workspaceId, "rollup", planYear, periodKey] as const,
+  /** Danh mục hợp nhất toàn tỉnh của một năm (RPC auction_plan_consolidated) — Phase 7. */
+  auctionPlanConsolidated: (workspaceId?: string | null, planYear?: number | null) =>
+    ["auction-plans", workspaceId, "consolidated", planYear] as const,
+  /** Các xã chọn được khi mở đợt (RPC auction_plan_cycle_candidates) — Phase 7. */
+  auctionPlanCycleCandidates: (workspaceId?: string | null) =>
+    ["auction-plans", workspaceId, "cycle-candidates"] as const,
+  /** MỌI đợt lập kế hoạch của Trạm tỉnh (gồm đợt đã đóng) + đơn vị trong đợt — Phase 7. */
+  auctionPlanAllCycles: (workspaceId?: string | null) =>
+    ["auction-plans", workspaceId, "all-cycles"] as const,
+  /** Bảng theo dõi MỘT đợt (RPC auction_plan_cycle_board) — Phase 7. */
+  auctionPlanCycleBoard: (cycleId?: string | null) =>
+    ["auction-plan-cycle", cycleId, "board"] as const,
+  /** Người xem mở được màn cấp tỉnh (RPC auction_plan_province_ok) — Phase 7. */
+  auctionPlanProvinceOk: (workspaceId?: string | null) =>
+    ["auction-plan-province-ok", workspaceId] as const,
   /** Danh sách báo cáo định kỳ của không gian (bảng owner_report_snapshots) — Phase 10. */
   ownerReports: (workspaceId?: string | null) => ["owner-reports", workspaceId] as const,
   /** MỘT báo cáo, tra theo id (quyền xét theo không gian của chính báo cáo, không theo

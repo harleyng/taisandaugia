@@ -6,6 +6,7 @@ import {
   activeOwnerNavChild,
   isInOwnerNavItem,
   visibleOwnerNavGroups,
+  withProvincePlanItems,
   withCraftVillageItems,
   type OwnerCountBadgeKind,
   type OwnerNavItem,
@@ -17,6 +18,7 @@ import { useOwnerPulse } from '@/hooks/useOwnerPulse'
 import { useCraftVillageProfile } from '@/hooks/useCraftVillages'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
 import { usePendingLinkRequestCount } from '@/hooks/useOwnerWorkspaceLinks'
+import { useAuctionPlanProvinceOk } from '@/hooks/useAuctionPlanProvince'
 import { useOverduePlanStepCount } from '@/hooks/useAuctionPlanPeriod'
 import { useOwnerPortalName } from '@/hooks/useOwnerPortalName'
 import { OwnerWorkspaceSwitcher } from './OwnerWorkspaceSwitcher'
@@ -39,10 +41,18 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
   // "Hồ sơ làng nghề" chỉ cho Trạm loại Làng nghề (RPC trả eligible).
   const { data: craftVillage } = useCraftVillageProfile(isPersonal ? null : workspaceId)
   const isCraftVillage = craftVillage?.eligible === true
+  // "Toàn tỉnh" chỉ của cấp tỉnh — SERVER quyết (auction_plan_province_ok), nên
+  // cán bộ xã không thấy mục, và nếu mở bằng link thì trang tự nói "ngoài phạm vi".
+  const { data: provincePlanOk } = useAuctionPlanProvinceOk(
+    isPersonal ? null : can('ke-hoach', 'view') ? workspaceId : null,
+  )
   const navGroups = useMemo(() => {
-    const groups = withCraftVillageItems(OWNER_NAV_GROUPS, isCraftVillage)
+    const groups = withProvincePlanItems(
+      withCraftVillageItems(OWNER_NAV_GROUPS, isCraftVillage),
+      provincePlanOk === true,
+    )
     return wsLoading || isPersonal || !workspaceId ? groups : visibleOwnerNavGroups(groups, (m) => can(m, 'view'))
-  }, [wsLoading, isPersonal, workspaceId, can, isCraftVillage])
+  }, [wsLoading, isPersonal, workspaceId, can, isCraftVillage, provincePlanOk])
   // Liên kết: yêu cầu của trụ sở chờ người có quyền Liên kết của chi nhánh trả lời (Phase 14).
   const { data: linkRequestCount = 0 } = usePendingLinkRequestCount(workspaceId, can('lien-ket', 'update'))
   // Thu tiền: tài sản đã bán còn chờ thu — cùng danh sách dòng "Chờ thu tiền" trên Tổng quan.

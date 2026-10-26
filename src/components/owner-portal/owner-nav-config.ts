@@ -25,6 +25,7 @@ import {
   Store,
   CalendarRange,
   ListChecks,
+  Map,
   type LucideIcon,
 } from 'lucide-react'
 import type { OwnerModule } from '@/lib/ownerWorkspace/permissions'
@@ -56,6 +57,12 @@ export interface OwnerNavItem {
   module?: OwnerModule | readonly OwnerModule[]
   /** Chỉ hiện khi Trạm đang chọn là tổ chức loại Làng nghề (craft_village). */
   craftVillageOnly?: boolean
+  /**
+   * Chỉ hiện với CẤP TỈNH — người mở được màn tổng hợp toàn tỉnh
+   * (`auction_plan_province_ok`: có quyền Duyệt kế hoạch, hoặc thành viên không bị
+   * giới hạn chi nhánh). Cán bộ xã không thấy mục này, và RPC cũng từ chối họ.
+   */
+  provinceOnly?: boolean
   /**
    * Mục con = các tab của trang (href dạng `<href>?tab=<giá trị>`); mục cha khi đó chỉ
    * xổ/thu, không tự điều hướng. Mục con thừa quyền của mục cha.
@@ -123,6 +130,14 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
         href: '/chu-tai-san/ke-hoach/van-hanh',
         countBadge: 'auction-plan-due',
         module: 'ke-hoach',
+      },
+      {
+        // Bảng tổng hợp của cấp tỉnh (Phase 7, §A6) — cán bộ xã không thấy mục này.
+        label: 'Toàn tỉnh',
+        icon: Map,
+        href: '/chu-tai-san/ke-hoach/toan-tinh',
+        module: 'ke-hoach',
+        provinceOnly: true,
       },
     ],
   },
@@ -242,6 +257,12 @@ export function withCraftVillageItems(groups: readonly OwnerNavGroup[], isCraftV
   return groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.craftVillageOnly) }))
 }
 
+/** Bỏ mục chỉ dành cho cấp tỉnh khi người xem không mở được màn toàn tỉnh. */
+export function withProvincePlanItems(groups: readonly OwnerNavGroup[], isProvince: boolean): OwnerNavGroup[] {
+  if (isProvince) return [...groups]
+  return groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.provinceOnly) }))
+}
+
 /** Bỏ mục mà vai trò không có quyền "Xem"; nhóm rỗng thì bỏ cả nhóm. */
 export function visibleOwnerNavGroups(
   groups: readonly OwnerNavGroup[],
@@ -287,6 +308,7 @@ export function ownerModulesForPath(pathname: string): readonly OwnerModule[] | 
   // một bản ghi thì KHÔNG nằm ở đây — nó tự xét quyền theo không gian của bản ghi.
   const SUB_PATHS: Record<string, readonly OwnerModule[]> = {
     'ke-hoach/van-hanh': ['ke-hoach'],
+    'ke-hoach/toan-tinh': ['ke-hoach'],
   }
   const sub = SUB_PATHS[[first, ...rest].join('/')]
   if (sub) return sub

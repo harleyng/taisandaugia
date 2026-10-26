@@ -17,6 +17,24 @@ export const OWNER_PLAN_OPS_HREF = `${OWNER_PLANS_HREF}/van-hanh`;
 export const ownerPlanOpsHref = (periodKey?: string) =>
   periodKey ? `${OWNER_PLAN_OPS_HREF}?ky=${periodKey}` : OWNER_PLAN_OPS_HREF;
 
+/** "Toàn tỉnh" (Phase 7) — bảng tổng hợp mọi xã, chỉ cấp tỉnh mở được (A6). */
+export const OWNER_PLAN_PROVINCE_HREF = `${OWNER_PLANS_HREF}/toan-tinh`;
+
+export const ownerPlanProvinceHref = (planYear?: number, periodKey?: string) => {
+  const q = new URLSearchParams();
+  if (planYear) q.set("nam", String(planYear));
+  if (periodKey) q.set("ky", periodKey);
+  const s = q.toString();
+  return s ? `${OWNER_PLAN_PROVINCE_HREF}?${s}` : OWNER_PLAN_PROVINCE_HREF;
+};
+
+/** Bản in tổng hợp toàn tỉnh — ngoài OwnerPortalLayout, như `ke-hoach/:id/in`. */
+export const ownerPlanProvincePrintHref = (planYear: number) =>
+  `${OWNER_PLAN_PROVINCE_HREF}/in?nam=${planYear}`;
+
+/** Chi tiết một đợt lập kế hoạch (A6). */
+export const ownerPlanCycleHref = (cycleId: string) => `${OWNER_PLANS_HREF}/dot/${cycleId}`;
+
 /** Tab của trang chi tiết (`?tab=`). Thứ tự đúng bằng A6. */
 export const PLAN_TABS = ["danh-muc", "tien-do", "theo-ky", "phe-duyet"] as const;
 

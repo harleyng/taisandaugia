@@ -30,3 +30,16 @@ Máy cũng **không có `Xcode.app`** để chuyển `DEVELOPER_DIR` sang. Muố
 Mã nguồn **chưa từng được biên dịch lần nào**, vì vậy coi như *chưa kiểm chứng*: chắc chắn còn lỗi biên dịch chưa lộ ra. Giữ lại vì ý tưởng và cấu trúc (manifest JSON → AVAssetWriter, phụ đề vẽ bằng AppKit để đúng dấu tiếng Việt) vẫn dùng lại được.
 
 Hiện tại video được dựng ở hội thoại Chat/Cowork riêng — xem `BRIEF-cowork.md`.
+
+---
+
+## Dữ liệu demo cho buổi quay
+
+| Tệp | Việc |
+|---|---|
+| `../seed-plan-demo-polish.sql` | Giãn ngày các mốc chưa xong (huy hiệu 72 → **8**) và tạo **1 kế hoạch bổ sung NHÁP** để quay trọn chuỗi Trình → Trả lại → Mở lại → Duyệt. Chỉ chạy trên Trạm `is_demo`, chạy lại được. |
+| `make_import_fixture.py` | Sinh tệp Excel mẫu cho cảnh 4. |
+| `mau-nhap-ke-hoach-demo.xlsx` | 20 dòng / 2 dòng sai → "Ghi 18 · 2 dòng chưa ghi". Đã kiểm bằng chính `classifyPlanItemRows` của sản phẩm. |
+
+Nhạc nền `bed.wav` **không** nằm trong repo (17 MB) — sinh lại bằng
+`python3 make_music.py bed.wav 100`.

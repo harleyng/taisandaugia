@@ -74,7 +74,7 @@ Cột **"Nhấn mạnh"** là vùng cần làm nổi + là tâm của cú zoom n
 |:-:|---|---|---|---|--:|
 | 1 | Thẻ mở đầu | **Kế hoạch đấu giá** | Xã · Phường · Tỉnh — một mô hình, hai cấp | — (thẻ chữ, tĩnh) | 3,5 |
 | 2 | Danh sách kế hoạch | Mỗi đơn vị một danh mục tài sản đấu giá cho cả năm | Trình trước 15/12 · cán bộ xã chỉ thấy xã mình | bảng thông báo deadline của tỉnh | 5,5 |
-| 3 | Tab Danh mục tài sản | Đúng bảy cột của biểu mẫu quen dùng — không phải học lại | 19 thửa · 359 tỷ đồng dự kiến | hàng tiêu đề bảy cột | 5 |
+| 3 | Tab Danh mục tài sản | Đúng bảy cột của biểu mẫu quen dùng — không phải học lại | Kế hoạch bổ sung · 3 thửa đã nhập tay | hàng tiêu đề bảy cột | 5 |
 | 4 | Nhập từ Excel | Kế hoạch cũ trong Excel nhập thẳng vào, dòng sai được chỉ rõ | Ghi 18 · 2 dòng chưa ghi | dòng tổng kết “Ghi 18 · 2 dòng chưa ghi” | 5 |
 | 5 | Trình kế hoạch | Trình lên tỉnh, kèm tổng theo từng quý |  | nút chính “Trình kế hoạch” | 4 |
 | 6 | Tỉnh trả lại | Tỉnh trả lại kèm góp ý — xã thấy ngay vì sao |  | ô góp ý của tỉnh | 4 |
@@ -84,14 +84,32 @@ Cột **"Nhấn mạnh"** là vùng cần làm nổi + là tâm của cú zoom n
 | 10 | Lưới 12 tháng | Một lưới 12 tháng: viền là kế hoạch, nền là dự kiến mới, đỏ là đã trễ | 4 trễ · 4 nguy cơ trễ · 4 đã đấu thành | chú giải + 2–3 ô đỏ trong lưới | 6 |
 | 11 | Danh sách mốc | Mười mốc cho mỗi thửa, từ pháp lý đến giao đất |  | danh sách 10 mốc trong side sheet | 5 |
 | 12 | Nhãn “Sàn xác nhận” | Mốc nào sàn tự biết thì sàn tự tích — cán bộ không khai lại | Ký hợp đồng dịch vụ đấu giá · 20/05 | đúng cái nhãn “Sàn xác nhận” | 5,5 |
-| 13 | Tab Theo kỳ | Kế hoạch so thực tế cho bất kỳ tháng, quý hay năm | Đã thu 123,6 tỷ / 180 tỷ chỉ tiêu | con số “đã thu 123,6 tỷ / 180 tỷ” | 6 |
+| 13 | Tab Theo kỳ | Kế hoạch so thực tế cho bất kỳ tháng, quý hay năm | lấy số theo ảnh chụp của kế hoạch đang mở | con số “đã thu 123,6 tỷ / 180 tỷ” | 6 |
 | 14 | Vận hành tháng | Tháng này cần làm gì — đánh dấu xong ngay trên thẻ việc |  | thẻ việc + nút “Đánh dấu xong” | 5 |
 | 15 | Báo cáo định kỳ ⟨P8⟩ | Báo cáo tháng gửi tỉnh tự có phần tiến độ kế hoạch | Không phải gõ lại từ đầu | mục “Tiến độ kế hoạch” trong báo cáo | 5 |
-| 16 | Toàn tỉnh ⟨P7⟩ | Tỉnh thấy cả tỉnh: xã nào đã trình, xã nào đang trễ | 4 xã · 13 tài sản sắp đấu giá | cột “% hoàn thành” của bảng 4 xã | 6 |
+| 16 | Toàn tỉnh ⟨P7⟩ | Tỉnh thấy cả tỉnh: xã nào đã trình, xã nào đang trễ | 4 xã · đã thu 123,6 tỷ / giao 225 tỷ | cột “% hoàn thành” của bảng 4 xã | 6 |
 | 17 | Khởi tạo tỉnh ⟨P9⟩ | Mở tỉnh mới: mỗi xã một chi nhánh, mời bằng đường dẫn | Cả tỉnh dựng xong trong vài phút | danh sách xã vừa tạo | 5,5 |
-| 18 | Sắp đấu giá — trang công khai ⟨P10⟩ | Danh mục đã duyệt công khai để người mua theo dõi | Chỉ hiện quý · không hiện giá | thẻ một lô + nút “Theo dõi” | 5,5 |
+| 18 | Sắp đấu giá — trang công khai ⟨P10⟩ | Danh mục đã duyệt công khai để người mua theo dõi | 13 tài sản · chỉ hiện quý, không hiện giá | thẻ một lô + nút “Theo dõi” | 5,5 |
 | 19 | Trang in | In ra đúng biểu mẫu để trình — ô chữ ký để trống |  | khối chữ ký để trống ở cuối trang | 4,5 |
 | 20 | Thẻ kết | **Lập một lần. Theo dõi cả năm.** | Tài Sản Đấu Giá | — (thẻ chữ, tĩnh) | 4 |
+
+## 5b. Dữ liệu demo đã được chỉnh cho buổi quay (26/10/2026)
+
+Đã chạy `scripts/seed-plan-demo-polish.sql` trên Trạm demo, nên lúc quay sẽ thấy:
+
+| | |
+|---|---|
+| Kế hoạch | **4 kế hoạch năm ĐÃ DUYỆT** + **1 kế hoạch bổ sung NHÁP** (Phường Vũ Ninh, 3 thửa, gắn đợt bổ sung đang mở) |
+| Sức khoẻ tài sản | đủ **sáu** trạng thái: đúng tiến độ 5 · nguy cơ trễ 4 · trễ 4 · đã đấu thành 4 · chờ đấu lại 2 · đã bỏ 1 |
+| Huy hiệu "Vận hành tháng" | **8** (trước khi chỉnh là 72 — đọc không tin được) |
+| Việc đến hạn 14 ngày tới | 15 |
+| Toàn tỉnh năm 2026 | 4 xã · dự kiến 437,2 tỷ · đã thu **123,6 tỷ** / giao **225 tỷ** |
+| Trang công khai | **13** tài sản |
+| Tệp Excel cho cảnh 4 | `scripts/video-demo/mau-nhap-ke-hoach-demo.xlsx` — 20 dòng, **đúng 2 dòng sai** (dòng 6 thiếu tên lô, dòng 13 diện tích ghi bằng chữ). Đã chạy thử bằng chính bộ đọc của sản phẩm: **hợp lệ 18 · lỗi 2** ⇒ màn xem trước hiện đúng "Ghi 18 · 2 dòng chưa ghi" như kịch bản |
+
+**Kế hoạch bổ sung nháp là để quay trọn chuỗi** Trình → Tỉnh trả lại → Mở lại → Trình lại → Ghi nhận phê duyệt (cảnh 5–8). Bốn kế hoạch năm đều đã duyệt nên không dùng được cho chuỗi đó.
+
+⚠️ Quay chuỗi này **làm đổi dữ liệu thật** của Trạm demo (thêm một bản mốc). Trạm là `is_demo` nên không sao, nhưng kế hoạch đã duyệt **không xoá được**, nên coi như một chiều.
 
 ## 6. Ba điều KHÔNG được nói (quan trọng)
 
@@ -105,3 +123,4 @@ Cột **"Nhấn mạnh"** là vùng cần làm nổi + là tâm của cú zoom n
 - Mỗi phụ đề **≤ 12 từ** để đọc kịp; số liệu đẩy xuống dòng nhỏ.
 - Nói **lợi ích của người dùng**, không đọc tên nút ("không ai phải gửi lại file qua email", chứ không phải "bấm nút Mở lại để sửa").
 - Giữ nguyên dấu tiếng Việt; kiểm lại các chữ dễ lỗi phông: **ộ ữ ậ ỵ ẩ ồ**.
+- **Số trong "Dòng số liệu nhỏ" phải khớp ĐÚNG với ảnh chụp.** Nếu lệch thì sửa theo ảnh, đừng theo brief — dữ liệu demo có thể đã đổi từ lúc viết brief. Thà bỏ hẳn dòng số còn hơn hiện một con số không có trên màn hình.

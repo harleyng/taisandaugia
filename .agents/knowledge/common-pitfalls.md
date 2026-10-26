@@ -4,6 +4,41 @@
 
 ---
 
+## 2026-10-26 — Mở một RPC cho `anon`: hai thứ dễ tưởng là an toàn mà không phải
+
+- **`RETURNS TABLE` + `CASE WHEN … THEN giá END` KHÔNG phải là "ẩn giá".** Phản hồi vẫn có khoá `"expected_start_value": null` — tiêu chí nghiệm thu "không có giá trong phản hồi mạng" thì vẫn đọc được là có cột giá, chỉ chưa điền. Muốn khoá VẮNG MẶT HẲN thì trả `SETOF JSONB` + `jsonb_strip_nulls` (xem `get_public_plan_items`).
+- **Mã công khai BĂM TỪ id nội bộ vẫn rò một bit.** `sha256(item_id)` không dò ngược được, nhưng ai đoán được một id thì XÁC NHẬN được ngay. Dùng `replace(gen_random_uuid()::text,'-','')` làm `DEFAULT` của một cột riêng: không suy ra từ gì cả, nên không xác nhận được gì cả. `ADD COLUMN … DEFAULT <hàm VOLATILE>` cho mỗi dòng cũ một giá trị RIÊNG (Postgres viết lại bảng) và là DDL nên **không bắn trigger dòng** ⇒ không làm rác `owner_audit_log`.
+- Kiểm chứng sau khi áp, đừng tin đọc code: `has_function_privilege('anon', '<fn>(...)','execute')` và một lượt `curl` REST thật bằng khoá anon. PostgREST trả **404 `PGRST202`** (chứ không phải 403) cho hàm mà vai hiện tại không có EXECUTE — "không tìm thấy" ở đây nghĩa là "đã chặn đúng", đừng tưởng là chưa deploy.
+
+## 2026-10-26 — ĐÃ VÁ: `owner_outcomes_overview` từng KHÔNG thấy kết quả gắn `asset_posting_id`
+
+**Nay đã sửa** (quyết định D8, mig `20261026150000`): `owner_outcomes_overview_core` có nhánh thứ ba `p:<hồ sơ>`. Giữ mục này vì bài học không nằm ở cái bug.
+
+Bug cũ: hàm khoá dòng theo `listing_id` hoặc `title_key`, và nhánh ngoài sàn lọc `o.listing_id IS NULL AND o.asset_posting_id IS NULL`, nên một `owner_asset_outcomes` ghi cho HỒ SƠ SỐ HOÁ rơi khỏi **cả hai** nhánh — RPC trả 0 dòng, **không báo lỗi**. Trạm demo kế hoạch đấu giá có 6 kết quả kiểu đó và `owner_outcomes_overview(ws)` trả rỗng.
+
+Ba bài học còn giá trị:
+- **Tài liệu nói "khớp theo `asset_posting_id` hoặc `listing_id`" là nói Ý ĐỊNH, không phải nói một cột có thật.** Trước khi dựa vào một câu trong kế hoạch, chạy hàm đó trên dữ liệu thật và ĐẾM dòng.
+- **Một nhánh `WHERE` không ai đi qua thì không có test nào đỏ.** Trước D8, toàn sản phẩm có 0 kết quả chỉ-mang-hồ-sơ ⇒ lỗi tồn tại từ đầu mà mọi màn vẫn đúng. Khi một pha mới bắt đầu sinh ra loại dữ liệu đó, lỗi mới lộ.
+- **Đừng chữa bằng bộ phân giải RIÊNG.** Phase 5 phải tự dựng `auction_plan_item_outcomes` và việc đó lập tức tạo HAI định nghĩa "kết quả của một tài sản" ⇒ cùng một kỳ đọc 4 đấu thành ở tab này và 0 ở trang Chỉ tiêu. Cách đúng là mở bộ hợp nhất rồi biến bộ phân giải thành lớp mỏng.
+
+## 2026-10-26 — Đổi một hàm ĐÃ SHIP mà nhiều màn đọc: ảnh chụp trước/sau, và cẩn thận `now()` trong payload
+
+Khi mở `owner_outcomes_overview_core` (Chỉ tiêu, Kết quả phiên, Dòng tiền, Báo cáo định kỳ, Phễu, Benchmark đều đọc):
+- **Bắt đầu từ `pg_get_functiondef` của bản ĐANG CHẠY, chụp ngay lúc áp** — không từ file migration cũ (bẫy 01/10 làm rơi `so-hoa:share`).
+- **`md5` của `owner_build_report_payload` KHÔNG ổn định giữa hai lần gọi**: `meta.generated_at` là `now()`. Ảnh chụp trước/sau sẽ "khác nhau" ở cả 4 Trạm và trông như hồi quy. Phải `jsonb_set(j,'{meta,generated_at}','"X"')` trước khi băm.
+- **Phép so trước/sau phải nằm NGOÀI giao dịch bị rollback.** Dựng bản cũ trong `BEGIN … ROLLBACK` rồi INSERT kết quả vào temp table thì các dòng đó cũng bị rollback ⇒ bảng so sánh rỗng mà không có lỗi nào. Chạy HAI lượt psql riêng (một lượt khôi phục bản cũ rồi SELECT in ra trong cùng giao dịch, một lượt với bản mới) rồi `diff` hai file.
+- Hàm gác quyền (`owner_cash_flow`, `owner_build_report_payload`) gọi bằng `postgres` vẫn ném `not_authorized`: chúng đọc `auth.uid()`. Không cần `SET ROLE` — chỉ cần `set_config('request.jwt.claims', '{"sub":"<uid>","role":"authenticated"}', …)`.
+
+## 2026-10-26 — Trigger "giữ giá trị cũ" phải có cờ RIÊNG, không dùng chung cờ của nhật ký
+
+`auction_plan_item_steps_platform_wins` trả `done_on` về ngày của sàn khi có người tự khai đè lên. Hàm đồng bộ `auction_plan_sync_platform_steps` cũng ghi đúng cột đó, nên nó phải tự tránh trigger — nhưng nếu dùng lại cờ `auction_plan.rpc` (cờ mà trigger nhật ký kiểm để BỎ QUA) thì việc đồng bộ biến mất khỏi `owner_audit_log`. Dùng cờ thứ hai `auction_plan.platform_sync`: trigger "giữ giá trị" tránh, trigger nhật ký vẫn ghi. Bài học chung: một cờ giao dịch = một ý nghĩa, đừng ghép hai luật vào một cờ.
+
+## 2026-10-26 — Lịch sử kế hoạch đấu giá: `owner_audit_list` lọc được bản ghi, nhưng TẦNG XEM vẫn do quyền `nhat-ky:view`
+
+- `owner_audit_rows` nhận thêm `entity_type` / `entity_id` / `actions` trong `p_filters` (không chỉ `q` / `kind` / `modules`) ⇒ lấy nhật ký của MỘT bản ghi không cần truy vấn riêng vào `owner_audit_log`. Đừng viết select mới — luật "ai xem được gì" nằm trong `owner_audit_context`.
+- Nhưng vai trò KHÔNG có `nhat-ky:view` ⇒ `level = 'mine'`: người đó chỉ thấy dòng do CHÍNH MÌNH làm. Cán bộ xã mở tab "Phê duyệt & lịch sử" sẽ KHÔNG thấy dòng trả lại / phê duyệt của cấp trên. Vì thế mọi mốc quan trọng phải đọc được từ chính bản ghi (`plan.review_comment`, `auction_plan_baselines`), nhật ký chỉ là lớp bổ sung.
+- `AUDIT_ENTITY_LABELS` / `FIELD_LABELS` / `STATUS_LABELS` trong `src/lib/ownerAudit.ts` là bản dịch TAY: bảng mới mà quên thêm thì nhật ký hiện `auction_plans`, `returned`, `baseline_version` nguyên dạng mã — không có lỗi biên dịch nào nhắc.
+
 ## 2026-10-01 — Hồ sơ online (M0): 3 cái bẫy
 
 - **Trình duyệt trong app Zalo có chữ "Zalo" trong User-Agent** — y như bot xem trước link của Zalo. Middleware OG mà trả trang rút gọn chỉ có thẻ meta thì người thật mở trong Zalo sẽ thấy trang trắng. `middleware.ts` trả index.html đã chèn thẻ, nên nhận nhầm vẫn chạy SPA.
@@ -418,3 +453,8 @@ Trang gửi `X-Frame-Options: SAMEORIGIN` / `frame-ancestors` ⇒ iframe chỉ h
 ## Hàm danh mục dùng chung bị 2 migration song song ghi đè nhau
 `owner_ws_permission_catalog()` / `owner_ws_default_role_permissions()` là MỘT hàm `CREATE OR REPLACE`: hai phiên cùng thêm quyền từ bản cũ ⇒ bản áp sau làm rơi quyền của bản kia (01/10: M1 làm mất `so-hoa:share`, vá bằng `20261001230000`). Self-check đếm số dòng của chính migration vẫn qua. Trước khi thay hàm dùng chung: đọc bản ĐANG CHẠY (`pg_get_functiondef`) ngay lúc áp, và self-check "không còn dòng quyền ngoài danh mục". Cùng bẫy với file mới: kiểm file chưa tồn tại trước khi Write (phiên khác có thể vừa tạo — `src/lib/brand.ts`).
 
+## Lời mời Trạm do admin sàn đứng tên sẽ bị từ chối lúc NHẬN
+`owner_ws_accept_invite` kiểm `owner_ws_user_has(ws, invited_by, 'thanh-vien', 'create')` tại thời điểm nhận, không phải lúc gửi. Admin sàn không phải thành viên Trạm ⇒ lời mời ghi `invited_by = auth.uid()` của admin trả `{ok:false, reason:'revoked'}` khi cán bộ bấm link, trông như link hỏng. Công cụ của sàn phải mời THAY đơn vị: `invited_by = asset_owner_workspaces.owner_user_id` (xem `admin_province_bulk_invite`). Đừng nới cổng nhận lời mời để chữa.
+
+## `owner_asset_outcomes.paid_amount` / `paid_at` / `payment_status` KHÔNG ghi được, kể cả trong migration
+`owner_asset_outcomes_money` RAISE khi `pg_trigger_depth() = 1` nếu câu lệnh có `paid_amount` / `paid_at` / `auction_fee` — ba cột đó SUY RA từ `owner_cash_events`, và `payment_status` cũng được trigger tính lại. Seed muốn một phiên "đã thu đủ" thì ghi kết quả `outcome='sold'` (không kèm tiền) rồi thêm một dòng `owner_cash_events` `kind='payment'`; `kind='payment'` chỉ ghi được cho phiên `sold` và `occurred_on` không được ở tương lai.

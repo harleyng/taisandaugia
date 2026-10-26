@@ -1,3 +1,10 @@
+// ⚠️ Địa chỉ 3 cấp TRƯỚC sáp nhập (tỉnh → quận/huyện → phường/xã), 3 tỉnh, KHÔNG
+// có mã chính thức. Giữ nguyên để các form địa chỉ cũ (wizard số hoá…) không vỡ.
+//
+// MÃ MỚI KHÔNG NẰM Ở ĐÂY. Từ 01/07/2025 bộ máy địa phương còn hai cấp
+// (tỉnh → xã/phường/đặc khu, NQ 202/2025/QH15); danh mục có MÃ CHÍNH THỨC nằm ở
+// bảng `public.admin_units` — xem `src/lib/adminUnits.ts`, hook `useAdminUnits`
+// và `<AdminUnitPicker>`. Code MỚI cần đơn vị hành chính thì dùng bộ đó.
 export const vietnamProvinces = [
   {
     name: "TP. Hồ Chí Minh",

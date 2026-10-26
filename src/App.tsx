@@ -81,6 +81,9 @@ const AdminOwnerSubscriptionDetail = lazy(() => import("./pages/admin/owner-subs
 const AdminOwnerSubPlansPage = lazy(() => import("./pages/admin/owner-subscriptions/AdminOwnerSubPlansPage"));
 const AdminSubPackagePage = lazy(() => import("./pages/admin/owner-subscriptions/AdminSubPackagePage"));
 const AdminSubTermsPage = lazy(() => import("./pages/admin/owner-subscriptions/AdminSubTermsPage"));
+const AdminProvinceRolloutPage = lazy(
+  () => import("./pages/admin/province-rollout/AdminProvinceRolloutPage"),
+);
 const AdminPartnersPage = lazy(() => import("./pages/admin/partners/AdminPartnersPage"));
 const AdminAuctionToolsPage = lazy(() => import("./pages/admin/auction-tools/AdminAuctionToolsPage"));
 const AdminLegalDocsPage = lazy(() => import("./pages/admin/legal/AdminLegalDocsPage"));
@@ -176,8 +179,12 @@ const OwnerCollectionsPage = lazy(() => import("./pages/chu-tai-san/OwnerCollect
 const OwnerTargetsPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetsPage"));
 const OwnerTargetDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetDetailPage"));
 const OwnerTargetFormPage = lazy(() => import("./pages/chu-tai-san/OwnerTargetFormPage"));
+const OwnerAuctionPlansPage = lazy(() => import("./pages/chu-tai-san/OwnerAuctionPlansPage"));
+const OwnerAuctionPlanDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerAuctionPlanDetailPage"));
+const OwnerPlanOperationsPage = lazy(() => import("./pages/chu-tai-san/OwnerPlanOperationsPage"));
 const OwnerPeriodicReportsPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportsPage"));
 const OwnerPeriodicReportDetailPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportDetailPage"));
+const OwnerAuctionPlanPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerAuctionPlanPrintPage"));
 const OwnerPeriodicReportPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerPeriodicReportPrintPage"));
 const OwnerPostingPrintPage = lazy(() => import("./pages/chu-tai-san/OwnerPostingPrintPage"));
 const OwnerContractsPage = lazy(() => import("./pages/chu-tai-san/OwnerContractsPage"));
@@ -388,6 +395,11 @@ const App = () => (
                   <Route path="chi-tieu/moi" element={<OwnerTargetFormPage />} />
                   <Route path="chi-tieu/:id" element={<OwnerTargetDetailPage />} />
                   <Route path="chi-tieu/:id/sua" element={<OwnerTargetFormPage />} />
+                  {/* Kế hoạch đấu giá: danh mục tài sản của đơn vị theo năm, trình cấp trên phê duyệt */}
+                  <Route path="ke-hoach" element={<OwnerAuctionPlansPage />} />
+                  {/* "van-hanh" phải đứng TRƯỚC "ke-hoach/:id", nếu không nó khớp vào :id. */}
+                  <Route path="ke-hoach/van-hanh" element={<OwnerPlanOperationsPage />} />
+                  <Route path="ke-hoach/:id" element={<OwnerAuctionPlanDetailPage />} />
                   <Route path="bao-cao-dinh-ky" element={<OwnerPeriodicReportsPage />} />
                   <Route path="bao-cao-dinh-ky/:id" element={<OwnerPeriodicReportDetailPage />} />
                   {/* Cổng KYC chủ tài sản ở layout: danh sách + chi tiết hồ sơ dùng chung,
@@ -420,6 +432,8 @@ const App = () => (
                   <Route path="hop-dong/dich-vu/:id" element={<OwnerServiceContractPage />} />
                   <Route path="hop-dong-mua-ban" element={<Navigate to="/chu-tai-san/hop-dong?loai=mua-ban" replace />} />
                 </Route>
+                {/* Trang in A4 NGANG của kế hoạch đấu giá (biểu mẫu chính thức) — không sidebar / topbar */}
+                <Route path="ke-hoach/:id/in" element={<OwnerAuctionPlanPrintPage />} />
                 {/* Trang in A4 của báo cáo định kỳ — không sidebar / topbar */}
                 <Route path="bao-cao-dinh-ky/:id/in" element={<OwnerPeriodicReportPrintPage />} />
                 {/* Trang in / lưu PDF hồ sơ số hoá — không sidebar / topbar */}
@@ -704,6 +718,8 @@ const App = () => (
                   <Route path="goi-thue-bao/danh-muc/:packageId" element={<AdminPermissionRoute module="goi-thue-bao"><AdminSubPackagePage /></AdminPermissionRoute>} />
                   <Route path="goi-thue-bao/ky-mua" element={<AdminPermissionRoute module="goi-thue-bao"><AdminSubTermsPage /></AdminPermissionRoute>} />
                   <Route path="goi-thue-bao/ap-dung" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionsPage /></AdminPermissionRoute>} />
+                  {/* Khởi tạo tỉnh — công cụ triển khai (Phase 9 của docs/owner-auction-planning-plan.md). */}
+                  <Route path="goi-thue-bao/khoi-tao-tinh" element={<AdminPermissionRoute module="goi-thue-bao" action="create"><AdminProvinceRolloutPage /></AdminPermissionRoute>} />
                   <Route path="goi-thue-bao/ap-dung/:workspaceId" element={<AdminPermissionRoute module="goi-thue-bao"><AdminOwnerSubscriptionDetail /></AdminPermissionRoute>} />
                   <Route path="goi-thue-bao/:workspaceId" element={<RedirectOwnerSubscriptionId />} />
                   <Route path="doi-tac-tren-san" element={<AdminPartnersPage />} />

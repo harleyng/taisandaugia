@@ -17,6 +17,7 @@ import { useOwnerPulse } from '@/hooks/useOwnerPulse'
 import { useCraftVillageProfile } from '@/hooks/useCraftVillages'
 import { useOwnerWorkspace } from '@/hooks/useOwnerWorkspace'
 import { usePendingLinkRequestCount } from '@/hooks/useOwnerWorkspaceLinks'
+import { useOverduePlanStepCount } from '@/hooks/useAuctionPlanPeriod'
 import { useOwnerPortalName } from '@/hooks/useOwnerPortalName'
 import { OwnerWorkspaceSwitcher } from './OwnerWorkspaceSwitcher'
 import { OwnerPortalAccountMenu } from './OwnerPortalAccountMenu'
@@ -48,6 +49,9 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
   const awaitingPaymentCount = useOwnerPulse().awaitingPayment.length
   // Tài sản: tin sàn tìm thấy chờ xác nhận (tab "Sàn tìm thấy").
   const { data: foundClaimCount = 0 } = usePendingClaimCount(workspaceId)
+  // Kế hoạch đấu giá: mốc công việc ĐÃ QUÁ HẠN — cùng RPC với trang "Vận hành
+  // tháng" (SECURITY INVOKER ⇒ RLS theo chi nhánh), nên số ở nav và ở trang khớp.
+  const overduePlanStepCount = useOverduePlanStepCount(workspaceId, can('ke-hoach', 'view'))
 
   // Mục có mục con (Truyền thông): mở sẵn khi đang ở trong trang của nó, và tự mở lại
   // mỗi lần đi vào từ chỗ khác (link trên Tổng quan…); người dùng vẫn thu lại được.
@@ -73,7 +77,9 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
               ? awaitingPaymentCount
               : kind === 'owner-found-claims'
                 ? foundClaimCount
-                : 0
+                : kind === 'auction-plan-due'
+                  ? overduePlanStepCount
+                  : 0
 
   const badgeLabel = (kind: OwnerCountBadgeKind | undefined, count: number) =>
     kind === 'owner-link-requests'
@@ -84,7 +90,9 @@ export function OwnerPortalSidebar({ onNavigate }: Props) {
             ? `${count} hợp đồng cần bạn xử lý`
             : kind === 'owner-found-claims'
               ? `${count} tin sàn tìm thấy chờ bạn xác nhận`
-              : `${count} hồ sơ cần bạn xử lý`
+              : kind === 'auction-plan-due'
+                ? `${count} mốc công việc của kế hoạch đã quá hạn`
+                : `${count} hồ sơ cần bạn xử lý`
 
   const itemClass = (active: boolean) =>
     cn(

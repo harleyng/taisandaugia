@@ -17,18 +17,19 @@ import {
 // Phải khớp owner_ws_permission_catalog() / owner_ws_default_role_permissions()
 // (migration 20260927170000 — self-check ở đó: 41 / 28 / 14; 20261001100000 thêm so-hoa:share ⇒ 42 / 29 / 14;
 // 20261001214152 thêm truyen-thong, 20261001230000 gộp cả hai ⇒ 48 / 32 / 15;
-// 20261002120000 thêm nhat-ky (view, share) — KHÔNG vào vai trò mặc định ⇒ 50 / 32 / 15).
+// 20261002120000 thêm nhat-ky (view, share) — KHÔNG vào vai trò mặc định ⇒ 50 / 32 / 15;
+// 20261026110000 thêm ke-hoach ×6 (kèm thao tác MỚI 'approve', chỉ Trưởng đơn vị) ⇒ 56 / 37 / 16).
 describe("danh mục quyền", () => {
-  it("50 quyền, mọi module đều có 'Xem' và không trùng mã", () => {
-    expect(OWNER_TOTAL_PERMISSIONS).toBe(50);
-    expect(countOwnerMatrix(fullOwnerMatrix())).toBe(50);
+  it("56 quyền, mọi module đều có 'Xem' và không trùng mã", () => {
+    expect(OWNER_TOTAL_PERMISSIONS).toBe(56);
+    expect(countOwnerMatrix(fullOwnerMatrix())).toBe(56);
     expect(new Set(OWNER_MODULE_DEFINITIONS.map((d) => d.module)).size).toBe(OWNER_MODULE_DEFINITIONS.length);
     for (const d of OWNER_MODULE_DEFINITIONS) expect(d.actions[0]).toBe("view");
   });
 
-  it("vai trò mặc định: Cán bộ 32 quyền = quyền 'staff' cũ + chia sẻ hồ sơ + truyền thông (xem/tạo/sửa); Người xem 15", () => {
-    expect(countOwnerMatrix(STAFF_DEFAULT_MATRIX)).toBe(32);
-    expect(countOwnerMatrix(VIEWER_DEFAULT_MATRIX)).toBe(15);
+  it("vai trò mặc định: Cán bộ 37 quyền (thêm kế hoạch trừ Duyệt); Người xem 16", () => {
+    expect(countOwnerMatrix(STAFF_DEFAULT_MATRIX)).toBe(37);
+    expect(countOwnerMatrix(VIEWER_DEFAULT_MATRIX)).toBe(16);
     // Nhật ký của mọi người không nằm trong vai trò mặc định — Trưởng đơn vị tự cấp.
     expect(VIEWER_DEFAULT_MATRIX["nhat-ky"]).toBeUndefined();
     expect(STAFF_DEFAULT_MATRIX["nhat-ky"]).toBeUndefined();
@@ -38,6 +39,10 @@ describe("danh mục quyền", () => {
     expect(STAFF_DEFAULT_MATRIX["thanh-vien"]).toEqual(["view"]);
     // Truyền thông: Cán bộ soạn được, nhưng Duyệt / Gửi / Xoá là của Trưởng đơn vị (B7).
     expect(STAFF_DEFAULT_MATRIX["truyen-thong"]).toEqual(["view", "create", "update"]);
+    // Kế hoạch đấu giá: Cán bộ lập và TRÌNH, nhưng "Duyệt" là của cấp trên (A7).
+    expect(STAFF_DEFAULT_MATRIX["ke-hoach"]).toContain("finalize");
+    expect(STAFF_DEFAULT_MATRIX["ke-hoach"]).not.toContain("approve");
+    expect(VIEWER_DEFAULT_MATRIX["ke-hoach"]).toEqual(["view"]);
     expect(ownerMatrixSubset(STAFF_DEFAULT_MATRIX, fullOwnerMatrix())).toBe(true);
   });
 

@@ -2,7 +2,8 @@
 //
 // BẢN SAO phía client của owner_ws_permission_catalog() + owner_ws_default_role_permissions()
 // (migration 20260927170000; so-hoa:share thêm ở 20261001100000; truyen-thong ở 20261001214152,
-// bản gộp 20261001230000; nhat-ky ở 20261002120000). Đổi ở SQL thì đổi cả ở đây — đọc bản ĐANG CHẠY (pg_get_functiondef)
+// bản gộp 20261001230000; nhat-ky ở 20261002120000; ke-hoach + thao tác MỚI "approve" ở
+// 20261026110000). Đổi ở SQL thì đổi cả ở đây — đọc bản ĐANG CHẠY (pg_get_functiondef)
 // trước khi thay hàm danh mục. permissions.test.ts giữ
 // số lượng khớp. Mã module là KHOÁ LƯU TRONG DB (owner_ws_role_permissions, RLS, RPC):
 // không đổi tên.
@@ -10,12 +11,16 @@
 // Quyền GHI do DB chặn theo đúng ma trận này (owner_ws_has / owner_ws_has_in). "Xem"
 // chỉ ẩn/hiện menu và trang — ở DB mọi thành viên vẫn đọc được số liệu của Trạm.
 
-export type OwnerAction = "view" | "create" | "update" | "delete" | "finalize" | "share";
+// "approve" là thao tác mới nhất (20261026110000, kế hoạch đấu giá): quyền của
+// CẤP TRÊN — mở/đóng đợt, giao chỉ tiêu, trả lại và ghi nhận phê duyệt. Người bị
+// giới hạn chi nhánh không bao giờ có "approve" hiệu lực (DB: auction_plan_can_approve).
+export type OwnerAction = "view" | "create" | "update" | "delete" | "finalize" | "share" | "approve";
 
 export type OwnerCategory = "dieu-hanh" | "tac-nghiep" | "phan-tich" | "thiet-lap";
 
 export type OwnerModule =
   | "chi-tieu"
+  | "ke-hoach"
   | "tai-san"
   | "ket-qua"
   | "so-hoa"
@@ -53,6 +58,7 @@ export const OWNER_ACTION_LABELS: Record<OwnerAction, string> = {
   delete: "Xoá",
   finalize: "Chốt",
   share: "Chia sẻ",
+  approve: "Phê duyệt",
 };
 
 export const OWNER_CATEGORY_LABELS: Record<OwnerCategory, string> = {
@@ -66,6 +72,14 @@ export const OWNER_CATEGORY_ORDER: OwnerCategory[] = ["dieu-hanh", "tac-nghiep",
 
 export const OWNER_MODULE_DEFINITIONS: OwnerModuleDef[] = [
   { module: "chi-tieu", label: "Chỉ tiêu", category: "dieu-hanh", actions: ["view", "create", "update", "delete"] },
+  {
+    module: "ke-hoach",
+    label: "Kế hoạch đấu giá",
+    category: "dieu-hanh",
+    actions: ["view", "create", "update", "delete", "finalize", "approve"],
+    actionLabels: { finalize: "Trình", approve: "Duyệt & giao chỉ tiêu" },
+    hint: "Lập danh mục tài sản đưa ra đấu giá theo năm và trình cấp trên. Duyệt = mở đợt, giao chỉ tiêu, trả lại / ghi nhận phê duyệt — chỉ người KHÔNG bị giới hạn chi nhánh.",
+  },
   {
     module: "tai-san",
     label: "Tài sản",
@@ -253,6 +267,7 @@ export const HQ_VIEW_MATRIX: OwnerPermissionMatrix = Object.fromEntries(
 /** Bản sao owner_ws_default_role_permissions('STAFF') — chỉ để test/đối chiếu. */
 export const STAFF_DEFAULT_MATRIX: OwnerPermissionMatrix = {
   "chi-tieu": ["view"],
+  "ke-hoach": ["view", "create", "update", "delete", "finalize"],
   "tai-san": ["view", "update"],
   "ket-qua": ["view", "update", "delete"],
   "so-hoa": ["view", "create", "update", "share"],

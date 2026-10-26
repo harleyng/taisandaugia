@@ -428,6 +428,51 @@ export const qk = {
     ["owner-outcome-payments", workspaceId] as const,
   /** Chỉ tiêu của không gian (bảng owner_workspace_targets) — Phase 9. */
   ownerTargets: (workspaceId?: string | null) => ["owner-targets", workspaceId] as const,
+  /** Kế hoạch đấu giá của đơn vị (bảng auction_plans) — Phase 3 của
+   *  docs/owner-auction-planning-plan.md. Mọi năm nằm trong MỘT key: danh sách
+   *  nhỏ (vài kế hoạch mỗi năm) và trang danh sách cần đếm cả các năm trước. */
+  auctionPlans: (workspaceId?: string | null) => ["auction-plans", workspaceId] as const,
+  /** Tổng hợp tài sản của các kế hoạch trong MỘT năm (ô theo quý ở trang danh sách).
+   *  Nằm DƯỚI auctionPlans nên mọi thao tác trên kế hoạch làm mới luôn các ô đó. */
+  auctionPlanYearItems: (workspaceId?: string | null, planYear?: number | null) =>
+    ["auction-plans", workspaceId, "year-items", planYear] as const,
+  /** MỘT kế hoạch, tra theo id — quyền xét theo không gian CỦA KẾ HOẠCH (mở từ link),
+   *  không theo không gian đang chọn ⇒ không nằm dưới auctionPlans. */
+  auctionPlan: (planId?: string | null) => ["auction-plan", planId] as const,
+  /** Danh mục tài sản của một kế hoạch — DƯỚI auctionPlan nên invalidate kế hoạch là đủ. */
+  auctionPlanItems: (planId?: string | null) => ["auction-plan", planId, "items"] as const,
+  /** Hồ sơ số hoá của MỘT Trạm (bộ chọn "Liên kết hồ sơ số hoá" — không theo không gian đang chọn). */
+  ownerWorkspacePostings: (workspaceId?: string | null) => ["owner-workspace-postings", workspaceId] as const,
+  /** Tin đăng đã nhận của Trạm (asset_owner_claims ⋈ listings) — bộ chọn "Liên kết tin đăng". */
+  ownerClaimedListings: (workspaceId?: string | null) => ["owner-claimed-listings", workspaceId] as const,
+  /** MỘT tài sản của kế hoạch, tra theo id (wizard số hoá mở từ link `?tu-ke-hoach=`). */
+  auctionPlanItem: (itemId?: string | null) => ["auction-plan-item", itemId] as const,
+  /** Mốc công việc của mọi tài sản trong một kế hoạch (auction_plan_item_steps) — Phase 5. */
+  auctionPlanItemSteps: (planId?: string | null) => ["auction-plan", planId, "item-steps"] as const,
+  /** Kết quả phiên THỰC TẾ của từng tài sản (RPC auction_plan_item_outcomes) — Phase 5. */
+  auctionPlanItemOutcomes: (planId?: string | null) => ["auction-plan", planId, "item-outcomes"] as const,
+  /** Mốc sàn tự xác nhận được nhưng chưa ghi (RPC auction_plan_platform_steps) — Phase 5. */
+  auctionPlanPlatformSteps: (planId?: string | null) => ["auction-plan", planId, "platform-steps"] as const,
+  /** Các bản mốc đã đóng băng của một kế hoạch (auction_plan_baselines) — Phase 4. */
+  auctionPlanBaselines: (planId?: string | null) => ["auction-plan", planId, "baselines"] as const,
+  /** Thay đổi so với bản mốc mới nhất (RPC auction_plan_baseline_diff) — Phase 4. */
+  auctionPlanBaselineDiff: (planId?: string | null) => ["auction-plan", planId, "baseline-diff"] as const,
+  /** Nhật ký chuyển bước của một kế hoạch (owner_audit_list lọc theo bản ghi) — Phase 4. */
+  auctionPlanHistory: (planId?: string | null) => ["auction-plan", planId, "history"] as const,
+  /** Người xem có phải cấp trên của kế hoạch này (RPC auction_plan_reviewer_ok) — Phase 4. */
+  auctionPlanReviewerOk: (planId?: string | null) => ["auction-plan", planId, "reviewer-ok"] as const,
+  /** Người xem có quyền Duyệt kế hoạch trong Trạm này (RPC auction_plan_can_approve) — Phase 4. */
+  auctionPlanCanApprove: (workspaceId?: string | null) => ["auction-plan-can-approve", workspaceId] as const,
+  /** Đợt lập kế hoạch đang mở + đơn vị trong đợt (bảng chỉ đọc với client). */
+  auctionPlanCycles: (workspaceId?: string | null) => ["auction-plan-cycles", workspaceId] as const,
+  /** Mốc công việc đến hạn / quá hạn của CẢ TRẠM (RPC auction_plan_due_steps) — Phase 6.
+   *  Nằm DƯỚI auction-plans (theo Trạm) nên mọi thao tác trên kế hoạch làm mới luôn
+   *  trang "Vận hành tháng" và số đếm nav. */
+  auctionPlanDueSteps: (workspaceId?: string | null, through?: string | null) =>
+    ["auction-plans", workspaceId, "due-steps", through] as const,
+  /** Tài sản của một kỳ kèm sức khoẻ, cả Trạm (RPC auction_plan_month_items) — Phase 6. */
+  auctionPlanMonthItems: (workspaceId?: string | null, from?: string | null, to?: string | null) =>
+    ["auction-plans", workspaceId, "month-items", from, to] as const,
   /** Danh sách báo cáo định kỳ của không gian (bảng owner_report_snapshots) — Phase 10. */
   ownerReports: (workspaceId?: string | null) => ["owner-reports", workspaceId] as const,
   /** MỘT báo cáo, tra theo id (quyền xét theo không gian của chính báo cáo, không theo

@@ -179,6 +179,10 @@ export const AUDIT_ENTITY_LABELS: Record<string, string> = {
   owner_mkt_links: "Link theo dõi",
   owner_report_snapshots: "Báo cáo định kỳ",
   owner_workspace_targets: "Chỉ tiêu",
+  auction_plans: "Kế hoạch đấu giá",
+  auction_plan_items: "Tài sản trong kế hoạch",
+  auction_plan_item_steps: "Mốc công việc",
+  auction_plan_cycles: "Đợt lập kế hoạch",
   owner_workspace_target_criteria: "Tiêu chí chỉ tiêu",
   workspace_branches: "Chi nhánh",
   asset_owner_workspaces: "Thông tin đơn vị",
@@ -328,6 +332,27 @@ const FIELD_LABELS: Record<string, string> = {
   auth_verdict: "Kết luận giám định",
   legal_conclusion: "Kết luận pháp lý",
   count: "Số lượng",
+  baseline_version: "Bản mốc",
+  approval_doc_no: "Số quyết định",
+  approval_doc_date: "Ngày quyết định",
+  approval_doc_urls: "Tệp quyết định",
+  review_comment: "Góp ý của cấp trên",
+  legal_basis: "Căn cứ pháp lý",
+  plan_year: "Năm kế hoạch",
+  item_code: "Mã tài sản",
+  lot_labels: "Số lô",
+  area_m2: "Diện tích (m²)",
+  unit_start_price: "Giá khởi điểm (đồng/m²)",
+  expected_start_value: "Giá trị khởi điểm dự kiến",
+  planned_month: "Tháng dự kiến",
+  planned_method: "Hình thức đấu giá dự kiến",
+  allocation_form: "Hình thức giao đất",
+  executing_unit: "Đơn vị thực hiện",
+  exec_status: "Trong kế hoạch",
+  forecast_month: "Dự kiến mới",
+  forecast_reason: "Lý do dời",
+  planned_date: "Hạn dự kiến",
+  done_on: "Ngày hoàn thành",
   permissions_added: "Quyền được thêm",
   permissions_removed: "Quyền bị gỡ",
 };
@@ -365,6 +390,9 @@ const STATUS_LABELS: Record<string, string> = {
   inactive: "Ngừng",
   removed: "Đã gỡ",
   finalized: "Đã chốt",
+  returned: "Bị trả lại",
+  adjusting: "Đang điều chỉnh",
+  closed: "Đã đóng",
   cancelled: "Đã huỷ",
   completed: "Hoàn tất",
   quoted: "Đã báo giá",
@@ -605,6 +633,13 @@ export function auditEntityHref(entry: AuditEntry): string | null {
       return id ? `${BASE}/bao-cao-dinh-ky/${id}` : null;
     case "owner_workspace_targets":
       return id ? `${BASE}/chi-tieu/${id}` : null;
+    case "auction_plans":
+      return id ? `${BASE}/ke-hoach/${id}` : null;
+    case "auction_plan_items":
+    case "auction_plan_item_steps":
+      return typeof entry.meta?.plan_id === "string" ? `${BASE}/ke-hoach/${entry.meta.plan_id}` : `${BASE}/ke-hoach`;
+    case "auction_plan_cycles":
+      return `${BASE}/ke-hoach`;
     case "owner_workspace_target_criteria":
       return typeof entry.meta?.target_id === "string" ? `${BASE}/chi-tieu/${entry.meta.target_id}` : null;
     case "owner_ws_roles":
@@ -658,6 +693,7 @@ const MODULE_BY_SEGMENT: Record<string, OwnerModule> = {
   "doi-tac": "phan-tich",
   "dong-tien": "dong-tien",
   "bao-cao-dinh-ky": "bao-cao-dinh-ky",
+  "ke-hoach": "ke-hoach",
   "chi-nhanh-amc": "chi-nhanh",
   "lang-nghe": "chi-nhanh",
   "thanh-vien": "thanh-vien",
@@ -676,6 +712,7 @@ const ENTITY_BY_SEGMENT: Record<string, string> = {
   "dang-tai-san": "asset_postings",
   "ky-gui-dau-gia": "asset_postings",
   "bao-cao-dinh-ky": "owner_report_snapshots",
+  "ke-hoach": "auction_plans",
   "chi-tieu": "owner_workspace_targets",
   "vai-tro": "owner_ws_roles",
 };

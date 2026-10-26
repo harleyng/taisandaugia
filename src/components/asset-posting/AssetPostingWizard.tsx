@@ -48,6 +48,14 @@ interface AssetPostingWizardProps {
   onDone?: () => void;
   /** Thoát giữa chừng, quay về danh sách. */
   onCancel?: () => void;
+  /**
+   * Giá trị ĐIỀN TRƯỚC cho hồ sơ MỚI (ví dụ "Tạo hồ sơ số hoá từ mục này" của
+   * kế hoạch đấu giá). Chỉ là giá trị đầu của form — luật kiểm tra của wizard
+   * KHÔNG đổi, người dùng vẫn phải điền đủ các trường bắt buộc.
+   */
+  prefill?: Partial<WizardValues>;
+  /** Hồ sơ vừa được lưu (nháp hoặc hoàn tất) — dùng để liên kết ngược về nơi gọi. */
+  onPostingSaved?: (postingId: string) => void;
 }
 
 /**
@@ -56,7 +64,7 @@ interface AssetPostingWizardProps {
  * Lớp phủ `fixed inset-0` phải ĐỤC (bg-muted) để che hẳn sidebar + topbar của Cổng chủ
  * tài sản — luồng số hoá là màn tập trung, không menu.
  */
-export function AssetPostingWizard({ postingId = null, onDone, onCancel }: AssetPostingWizardProps) {
+export function AssetPostingWizard({ postingId = null, onDone, onCancel, prefill, onPostingSaved }: AssetPostingWizardProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [shown, setShown] = useState<Record<number, boolean>>({});
@@ -68,7 +76,12 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   const [savingExit, setSavingExit] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
 
-  const form = useForm<WizardValues>({ resolver: zodResolver(wizardSchema), mode: "onTouched", defaultValues: wizardDefaults });
+  const form = useForm<WizardValues>({
+    resolver: zodResolver(wizardSchema),
+    mode: "onTouched",
+    // `prefill` CHỈ là giá trị đầu — không nới lỏng bất kỳ yêu cầu nào của wizard.
+    defaultValues: prefill ? { ...wizardDefaults, ...prefill } : wizardDefaults,
+  });
   const f = form.watch();
 
   // Nạp bản nháp một lần khi mở lại (không có bước này thì "Lưu nháp" là bẫy) — chờ cả
@@ -88,6 +101,10 @@ export function AssetPostingWizard({ postingId = null, onDone, onCancel }: Asset
   // Id hồ sơ đã có trong DB: nháp mở lại, HOẶC bản vừa lưu (tự lưu / "Thêm 3D"…). Mọi
   // lần lưu sau phải UPDATE dòng này. State thuần để "Số hoá tài sản khác" xoá được.
   const [savedId, setSavedId] = useState<string | null>(postingId);
+  // Nơi gọi (kế hoạch đấu giá) cần id hồ sơ để liên kết ngay khi có bản nháp đầu tiên.
+  useEffect(() => {
+    if (savedId) onPostingSaved?.(savedId);
+  }, [savedId, onPostingSaved]);
   const autosave = useDraftAutosave(
     form,
     savedId,

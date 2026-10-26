@@ -35,6 +35,7 @@ import {
   type BranchInput,
 } from "@/hooks/useWorkspaceBranches";
 import { BranchImportDialog } from "@/components/owner-branches/BranchImportDialog";
+import { BranchEditDialog } from "@/components/owner-branches/BranchEditDialog";
 import { WorkspaceAliasPanel } from "@/components/owner-branches/WorkspaceAliasPanel";
 import { BranchEntityScopePanel } from "@/components/owner-branches/BranchEntityScopePanel";
 
@@ -601,107 +602,6 @@ const BranchCreateDialog = ({ open, onOpenChange, onSave, isProcessing }: Branch
           <Button onClick={handleSave} disabled={!displayName.trim() || isProcessing}>
             {isProcessing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Thêm
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// ─── BranchEditDialog ─────────────────────────────────────────────────────────
-
-interface BranchEditDialogProps {
-  branch: WorkspaceBranch;
-  onSave: (patch: BranchPatch) => void;
-  onClose: () => void;
-  isProcessing: boolean;
-}
-
-const BranchEditDialog = ({ branch, onSave, onClose, isProcessing }: BranchEditDialogProps) => {
-  const [displayName, setDisplayName] = useState(branch.display_name ?? "");
-  const [phone, setPhone] = useState(branch.contact_phone ?? "");
-  const [email, setEmail] = useState(branch.contact_email ?? "");
-  const [notes, setNotes] = useState(branch.notes ?? "");
-
-  const handleSave = () => {
-    onSave({
-      display_name: displayName.trim() || null,
-      contact_phone: phone.trim() || null,
-      contact_email: email.trim() || null,
-      notes: notes.trim() || null,
-    });
-  };
-
-  return (
-    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Chỉnh sửa chi nhánh</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          {branch.asset_owner_name && (
-            <div className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-              Dữ liệu gốc: <span className="font-medium text-foreground">{branch.asset_owner_name}</span>
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <Label className="flex items-center gap-1.5">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              Tên hiển thị
-            </Label>
-            <Input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder={branch.asset_owner_name ?? "Tên chi nhánh..."}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-              Số điện thoại
-            </Label>
-            <Input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="0901 234 567"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-              Email
-            </Label>
-            <Input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="chinhanh@congty.vn"
-              type="email"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="flex items-center gap-1.5">
-              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-              Ghi chú
-            </Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ghi chú nội bộ về chi nhánh này..."
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isProcessing}>Huỷ</Button>
-          <Button onClick={handleSave} disabled={isProcessing}>
-            {isProcessing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            Lưu
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -116,6 +116,18 @@ Buyer demand-tracking (nhu cầu). Paywalled matches.
 | `DemandPaywallDialog.tsx` | Gate for matched-demand reveal |
 | `DemandEmptyMatch.tsx` / `DemandUpsellBanner.tsx` | Empty state + upsell |
 
+## public-plan — `src/components/public-plan/`
+
+Mặt CÔNG KHAI của kế hoạch đấu giá (Phase 10) — mục "Sắp đấu giá theo kế hoạch" ở `/listings?view=ke-hoach`. Khác hẳn `demand/`: ở đây Theo dõi là MIỄN PHÍ, theo từng lô, không có credit.
+
+| Component | Purpose |
+|---|---|
+| `PlannedAuctionsSection.tsx` | Cả mục: chọn tỉnh (chỉ tỉnh ĐANG công khai) → lọc xã → nhóm theo QUÝ |
+| `PlannedAuctionCard.tsx` | Một lô dự kiến; giá chỉ hiện khi đơn vị bật công tắc giá |
+| `PlanFollowButton.tsx` | "Theo dõi" — khách chưa đăng nhập thì mở `AuthDialog` rồi theo dõi tiếp |
+
+Data: `src/hooks/usePublicPlanItems.ts` (3 RPC cấp cho `anon` + mutation Theo dõi chỉ cho `authenticated`). Pure lib + vitest: `src/lib/publicPlanItems.ts` — **danh sách trắng các trường công khai**, không mở rộng ở client mà không mở ở RPC trước.
+
 ## onboarding — `src/components/onboarding/`
 
 First-run reward tasks (credit incentives). Pairs with `HomepageRewardBanner`.
@@ -202,7 +214,7 @@ Danh sách ký gửi: `pages/chu-tai-san/OwnerConsignmentsPage.tsx` + `hooks/use
 | Folder | Components |
 |---|---|
 | `asset-owner-management/` | `ClaimsTable.tsx` — admin/owner view of asset claims |
-| `owner-branches/` | `BranchImportDialog.tsx` — bulk-import owner branches |
+| `owner-branches/` | `BranchImportDialog.tsx` — bulk-import owner branches · `BranchEditDialog.tsx` — sửa chi nhánh (tên, liên hệ, **Đơn vị hành chính** = `admin_unit_code`, ghi chú); tách khỏi `OwnerBranchesPage` 2026-10-26 |
 
 ---
 
@@ -263,7 +275,12 @@ Admin console (gated by `AdminRoute`). Components: `AdminLayout`, `RichTextEdito
 - `ContractClausesView` `{ templateType, clauses, hideKeys?, showParty? }` — renders a template's slots in schema order (dialog, contract page, admin template detail).
 
 ## shared — `src/components/shared/`
-Small cross-cutting primitives — **reuse before making your own:** `InfoBox`, `InfoCardShell`, `SectionLabel`, `SessionStatusBadge`, `CopyTextButton`, `AuctionOrgPicker`.
+Small cross-cutting primitives — **reuse before making your own:** `InfoBox`, `InfoCardShell`, `SectionLabel`, `SessionStatusBadge`, `CopyTextButton`, `AuctionOrgPicker`, `AdminUnitPicker`.
+- `AdminUnitPicker` (2026-10-26) là bộ chọn **đơn vị hành chính 2025**: tỉnh/thành phố → xã/phường/đặc khu,
+  tìm không phân biệt dấu và khớp cả tên TRƯỚC sáp nhập ("Bắc Giang" → "Tỉnh Bắc Ninh").
+  - `value` là MÃ ĐVHC; `level="province"` để lưu mã tỉnh thay vì mã xã. Đổi tỉnh sẽ xoá mã xã đang chọn.
+  - Dữ liệu từ `useAdminUnits` / `useAdminUnit` (`src/hooks/useAdminUnits.ts`) trên bảng `admin_units` —
+    **không** dùng `vietnam-locations.ts` (địa chỉ 3 cấp cũ).
 - `AuctionOrgPicker` is a combobox over `auction_organizations`, moved here from `admin/suppliers` in Phase 8.
   - `accountedToggle` (default on) shows "Chỉ tổ chức đã có tài khoản".
   - The directory data comes from `useAuctionOrgDirectory` (`src/hooks/useAuctionOrgDirectory.ts`).
@@ -285,6 +302,7 @@ Small cross-cutting primitives — **reuse before making your own:** `InfoBox`, 
 | `useOwnerWorkspace.ts` | **The** way to find the owner workspace:<br>• `useOwnerWorkspace()` → `{ workspaceId, workspace, role, accessVia ('member' | 'hq' | null), branchScope, memberships, can(action), canWriteClaim, selectWorkspace, isPersonal, hasPersonalTenant, tenantKey, canWritePosting(p), canCreatePosting }` (tenant = workspace or "Cá nhân"; `workspaceId` is null on Cá nhân)<br>• `useOwnerWorkspaceMemberships()` — direct memberships, then linked branch Trạm of workspaces I own (`accessVia:'hq'`, role `viewer`, `memberId` null)<br>• `useClaimWriteAccess()` → `{ canWriteClaim(claim), canConfirmAll }`<br>Never query `.eq("owner_user_id")`. |
 | `useOwnerWorkspaceMembers.ts` / `useOwnerInviteAccept.ts` | Members (RPC list), invites, branch options; invite / update / remove / revoke mutations through `owner_ws_*` RPCs + `assertOwnerWsRpcOk`; invite preview + accept. |
 | `useGeneralInfo.ts` / `useInfrastructure.ts` / `useTaxRecords.ts` / `useCapacityProfile.ts` / `useApplication.ts` / `useIsVerifiedCompany.ts` / `useWorkspaceBranches.tsx` | Company capability portal |
+| `useAdminUnits.ts` | Danh mục ĐVHC 2025 (`admin_units`): `useAdminUnits(provinceCode?)` → 34 tỉnh hoặc các xã/phường của một tỉnh · `useAdminUnit(code)` → một đơn vị (suy tỉnh cha của mã xã). `staleTime: Infinity`, đọc được cả khi chưa đăng nhập. Helper thuần ở `src/lib/adminUnits.ts` |
 | `useDocuments.ts` / `useFolders.ts` | Document cabinet (Storage + metadata) |
 | `useDemandSubscription.tsx` / `useCompanyViewTracker.tsx` / `useNotificationSettings.tsx` / `useOnboardingTasks.tsx` / `useArticles.ts` | Demand, tracking, notifications, rewards, CMS |
 | `useAutoSave.ts` / `use-mobile.tsx` / `use-toast.ts` | Autosave, mobile breakpoint, toast (shadcn) |
@@ -298,3 +316,19 @@ Small cross-cutting primitives — **reuse before making your own:** `InfoBox`, 
 | `src/components/asset-posting/postingAccess.ts` | `PostingAccessProvider` / `usePostingCanWrite()`. Set by `AssetPostingDetail` from `canWritePosting(posting)`; the default `true` covers the wizard. The action blocks shared with the wizard (3D, VR, giám định, tư vấn, quotes, contract) hide their write buttons through it. |
 | `BranchSelect` in `src/components/asset-posting/info/StepInfo.tsx` | "Chi nhánh" select for the wizard (step 2). Hidden on Cá nhân or when the workspace has no branches. Required and scope-limited for scoped staff. |
 | `usePostingPartyAddress(postingId)` / `useUpdateOwnerAddress(postingId)` (`useConsignmentContract.ts`) | Bên A address of ONE posting (RPC `owner_posting_party_address`). Edits go to the personal KYC or to the workspace's org KYC. Replaces the old `useOwnerKycAddress`. |
+
+### Khởi tạo tỉnh (admin, Phase 9)
+| Component | Path | Ghi chú |
+|---|---|---|
+| `AdminProvinceRolloutPage` | `src/pages/admin/province-rollout/` | danh sách tỉnh đã khởi tạo + chi tiết |
+| `ProvinceRolloutDialog` | `src/components/admin/province-rollout/` | chọn tỉnh (`AdminUnitPicker level="province"`) + nhiều xã; cũng dùng để BỔ SUNG xã cho tỉnh đã có (`preset`) |
+| `CommuneMultiSelect` | `src/components/admin/province-rollout/` | chọn NHIỀU xã của một tỉnh, tìm không dấu + theo tên trước sáp nhập, "Chọn tất cả" chỉ lấy phần ĐANG hiện |
+| `BulkInviteDialog` | `src/components/admin/province-rollout/` | CSV `email, mã xã, vai trò` → danh sách link lời mời để copy |
+| `ProvinceDetailPanel` | `src/components/admin/province-rollout/` | bảng xã (thành viên / lời mời / kế hoạch) + lời mời đang chờ |
+| `parseInviteCsv` | `src/lib/provinceRollout/csv.ts` | hàm thuần, có vitest |
+| `inviteUrl` | `src/lib/provinceRollout/links.ts` | `/loi-moi-chu-tai-san/:token` |
+
+### Kế hoạch đấu giá (owner portal, Phase 3–5)
+| Nhóm | Ghi chú |
+|---|---|
+| `auction-plan/` | Phase 3 "Kế hoạch đấu giá" — pages `OwnerAuctionPlansPage` / `OwnerAuctionPlanDetailPage` ở `src/pages/chu-tai-san/` (`/chu-tai-san/ke-hoach`, `…/:id`).<br>• List: `PlanYearSummary` (L1 `HeroFigure`), `PlanCycleBanner` (đợt lập kế hoạch của tỉnh — CHỈ ĐỌC), `PlanListActions` (L2 `ActionCard`s; P4 thêm thẻ của người duyệt vào đây), `PlanQuarterTiles` (L3), `PlanCard` (thẻ-dòng, `<button>` + `navigate`), `PlanPastYears` (L4), `PlanStatusChip`, `PlanCrumb`, `CreatePlanDialog` (trùng kế hoạch năm / chưa gắn ĐVHC ⇒ cảnh báo + khoá Lưu).<br>• `editor/`: `PlanDetailHeader` (viên trạng thái + 3 `StatTile` + MỘT nút chính theo `planNextAction`), `PlanItemsTab`, `PlanItemsTable` (bảy cột biểu mẫu; bảng ≥ lg, thẻ-dòng bên dưới), `PlanItemDialog` + `PlanItemFields` + `planItemSchema.ts` (RHF + Zod, chỉ trường MỐC, khoá khi đã trình), `PlanNumberInput` (tách nhóm nghìn bằng dấu phẩy ngay khi gõ), `PlanItemsImportDialog` + `PlanItemsImportPreview`, `CarryForwardDialog`, `SubmitPlanDialog`, `DeletePlanItemDialog`. (`PlanTabComingSoon` đã XOÁ ở P6 — cả bốn tab đã có thật.)<br>• `approval/` (P4): `PlanApprovalTab` (tab "Phê duyệt & lịch sử"), `PlanReviewActions` (nút của cấp trên / của đơn vị lập ở ĐẦU TRANG, tự hỏi `auction_plan_reviewer_ok`), `ReturnPlanDialog`, `RecordApprovalDialog` (số + ngày + tải tệp lên bucket private TRƯỚC khi gọi RPC), `StartAdjustmentDialog`, `PlanBaselinesCard` (bản mốc + diff giữa hai bản + tệp mở bằng `createSignedUrl`), `PlanHistoryTimeline` (dòng thời gian từ `owner_audit_list`), `PlanDiffSummary` ("Thêm 3 · Bỏ 1 · Dời quý 2", dùng chung với `SubmitPlanDialog`).<br>• `progress/` (P5): `PlanProgressTab` (tab "Tiến độ" — chú giải + lưới + bộ lọc sức khoẻ + nút "Đồng bộ từ dữ liệu sàn"), `PlanGridLegend` (LUÔN hiện trên lưới), `PlanMonthGrid` (12 tháng, cuộn ngang, cột đầu dính; luật vẽ ô ở `lib/auctionPlan/grid.ts`), `PlanHealthChip` (dùng cả trong `PlanItemsTable`), `PlanItemSheet` (ngăn chi tiết), `PlanStepChecklist`, `PlanStepSourceBadge` ("Sàn xác nhận" / "Có tài liệu" / "Tự khai"), `PlanStepDoneDialog`, `PlanForecastDialog` ("Dời dự kiến"), `PlanLinkDialog` (dùng CHUNG cho hồ sơ số hoá và tin đăng), `PlanItemLinksCard`, `PlanItemExecCard`.<br>• `public/` (P10): `PlanPublicCard` (thẻ "Công khai danh mục dự kiến" trong tab "Phê duyệt & lịch sử" — HAI công tắc tách nhau, công tắc giá mặc định TẮT và khoá tới khi danh mục được công khai), `PlanItemFollowLine` ("12 người đang theo dõi tài sản này" trong `PlanItemSheet` — chỉ SỐ ĐẾM).<br>• `period/` (P6): `PlanPeriodTab` (tab "Theo kỳ" — bộ chọn kỳ `?ky=`, L1 `HeroFigure`, nút "Tạo chỉ tiêu từ kế hoạch"), `PlanPeriodStats` (4 `StatTile` của bảng A5), `PlanPeriodChart` (Recharts: kế hoạch = `--primary`, thực tế = TÍM `hsl(262 60% 55%)`, kèm bảng `sr-only`), `PlanPeriodItemsTable` (L4), `GeneratePlanTargetsDialog` (sinh chỉ tiêu quý qua `owner_save_target`; quý đã có chỉ tiêu KHÔNG tích sẵn), `PlanDueStepList` + `PlanMonthItemList` (`ActionCard` của trang "Vận hành tháng"), `MoveForecastDialog` ("Dời dự kiến" khi chỉ có id, không có cả bản ghi kế hoạch). Trang `OwnerPlanOperationsPage` (`/chu-tai-san/ke-hoach/van-hanh?ky=2026-11`, nav "Vận hành tháng" + badge `auction-plan-due`).<br>• `print/` (P4): `PlanPrintSheet` + `PlanPrintTable` — A4 NGANG theo biểu mẫu chính thức, trang `OwnerAuctionPlanPrintPage` (`/chu-tai-san/ke-hoach/:id/in`, NGOÀI `OwnerPortalLayout`). P7 dùng lại cho bản in tổng hợp.<br>Data: `src/hooks/useAuctionPlans.ts`, `useAuctionPlan.ts`, `useAuctionPlanCarryForward.ts`, `useAuctionPlanApproval.ts`, `useAuctionPlanProgress.ts` (P5: mốc, kết quả thực tế, sức khoẻ, đồng bộ mốc của sàn, payload RIÊNG cho trường thực hiện), `usePlanLinkOptions.ts` (bộ chọn hồ sơ / tin đăng theo Trạm CỦA KẾ HOẠCH), `usePlanItemPosting.ts` ("Tạo hồ sơ số hoá từ mục này"), `useAuctionPlanPublic.ts` (P10: tình trạng công khai, bật/tắt qua RPC, số người theo dõi từng tài sản), `useAuctionPlanPeriod.ts` (P6: `usePlanPeriod` dùng LẠI cache của P4/P5, `usePlanDueSteps` / `useOverduePlanStepCount` / `usePlanMonthBoard`, `useMarkDueStepDone`, `useMovePlanItemForecast`, `useGeneratePlanTargets`). **Mọi truy vấn ép `(supabase as any)`**, payload dựng tường minh theo quyền cột. Pure libs `src/lib/auctionPlan/`: `types.ts` (P2), `totals.ts`, `cycles.ts`, `itemsImport.ts`, `rpc.ts`, `routes.ts`, `diff.ts` (bản sao của `auction_plan_baseline_diff`), `history.ts`, `print.ts`, `health.ts` (P5 — bản sao của `auction_plan_item_health`, cặp nhân bản SQL↔TS thứ 5, có `health.parity.test.ts`), `steps.ts` (nhãn nguồn + tiến độ mốc), `grid.ts` (dấu hiệu ô của lưới 12 tháng), `period.ts` (P6 — bản sao của `auction_plan_period_metrics`, cặp nhân bản SQL↔TS thứ 6, có `period.test.ts` + `period.parity.test.ts` 68 cặp). |

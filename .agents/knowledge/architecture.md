@@ -257,6 +257,7 @@ npx supabase gen types typescript --project-id bcusbpkfnydqcvxxjvew > src/integr
 | `organization_memberships` | User ↔ org + `role_id` (the row IS the role assignment) + `PENDING_INVITE` |
 | `user_credits` | Per-user balance (PK = user_id) |
 | `credit_transactions` | Append-only ledger of every credit change |
+| `admin_units` | **Danh mục ĐVHC 2025** — sổ gốc DUY NHẤT của mã đơn vị hành chính (xem mục riêng bên dưới) |
 | `user_asset_unlocks` | **Permanent** asset unlocks |
 | `user_company_unlocks` | **Time-limited** company access (tier + expires_at) |
 | `user_owner_unlocks` | **Time-limited** owner access (tier + expires_at) |
@@ -308,11 +309,40 @@ mức hoa hồng theo từng dịch vụ**. Một đối tác → nhiều hợp 
 - UI: `/admin/doi-tac/:id` (`AdminSupplierDetail`) + `components/admin/suppliers/contracts/*` +
   `hooks/useSupplierContracts.ts`. Dùng lại module quyền `nha-cung-cap`, **không** đẻ mã mới.
 
+### Đơn vị hành chính 2025 — `admin_units` (`20261026100000` + seed `…100100`)
+
+**Sổ gốc DUY NHẤT của mã ĐVHC.** Từ 01/07/2025 địa phương còn **hai cấp** (NQ 202/2025/QH15):
+`province` (34: 28 `tinh` + 6 `thanh_pho`) → `commune` (3.321: 2.621 `xa` + 687 `phuong` + 13 `dac_khu`).
+Không còn cấp huyện. `code` là mã chính thức (tỉnh 2 chữ số, xã 5 chữ số) — **không ai tự đặt mã hay
+tên**: nguồn là `docs/admin-units/` và seed được sinh lại bằng `scripts/gen-admin-units-seed.py`.
+
+- `normalized_name` là cột **GENERATED** từ `public.normalize_admin_name(name)` (IMMUTABLE: bỏ dấu + bỏ
+  tiền tố tỉnh/thành phố/xã/phường/đặc khu/thị xã/thị trấn). Sửa hàm ⇒ phải `UPDATE admin_units SET name = name`
+  để tính lại giá trị đã lưu (cùng bẫy với `org_contact_interests.province_keys`).
+- `legacy_names` = tên TRƯỚC sáp nhập ánh xạ về đây. Cấp tỉnh: 63 → 34 theo Điều 1 NQ 202/2025/QH15
+  (+ "Thừa Thiên Huế" → Thành phố Huế theo NQ 175/2024/QH15). Cấp xã để trống ở v1.
+- **RLS:** `admin_units_public_read` cho `anon` + `authenticated` (danh mục công khai, bộ chọn dùng cả ở
+  trang ẩn danh); ghi chỉ `has_role(auth.uid(),'ADMIN')`. INSERT/UPDATE/DELETE đã REVOKE khỏi `anon`.
+  Sáp nhập mới ⇒ đặt `is_active = false`, **không xoá dòng** (mọi FK là `ON DELETE RESTRICT`).
+- **`admin_unit_resolve(p_province, p_ward)` là CHỈ ĐỌC** — so khớp văn bản tự do (tên hiện hành trước,
+  rồi `legacy_names`, trong phạm vi tỉnh đã giải) và trả mã **cụ thể nhất**: mã xã khi khớp đúng một đơn
+  vị, mã tỉnh khi thiếu/không khớp/**khớp nhiều** (10 cặp tên xã trùng nhau sau chuẩn hoá), NULL khi
+  không giải được tỉnh. Nó **không bao giờ ghi** vào `asset_postings` — địa chỉ cũ ở đó là 3 cấp và được
+  giữ nguyên. Suy cấp từ mã bằng `adminUnitLevelOfCode()`.
+- `asset_owner_workspaces.admin_unit_code` (mã tỉnh của Trạm cấp tỉnh) và `workspace_branches.admin_unit_code`
+  (mã xã của chi nhánh) — nullable, FK RESTRICT, ghi vẫn gác bằng `chi-nhanh:update` của RLS sẵn có
+  (`asset_owner_workspaces` chỉ GRANT UPDATE theo CỘT ⇒ cột mới phải được cấp tường minh).
+- **FE:** `src/lib/adminUnits.ts` (kiểu + nhãn, thuần, có vitest) · `useAdminUnits(provinceCode?)` /
+  `useAdminUnit(code)` (`staleTime: Infinity`) · `<AdminUnitPicker>`. `src/constants/vietnam-locations.ts`
+  là địa chỉ 3 cấp CŨ, **không** dùng cho mã ĐVHC trong code mới.
+
 ### RLS convention
 
 Every credit/unlock table has one **`"own rows"`** policy: `USING (auth.uid() = user_id)`. Never expose credit/unlock data cross-user. New per-user tables follow the same pattern.
 
 **Admin back-office tables** are the deliberate exception: `marketing_campaigns` + `campaign_recipients` use one **`admin_all`** policy `USING (public.has_role(auth.uid(),'ADMIN'::app_role))` (not `own rows`) because the data is platform-owned, not user-owned. When an admin feature must read across other users' RLS-protected tables (e.g. `user_credits` for credit-balance targeting), do it through a **`SECURITY DEFINER` RPC that guards with `has_role(...ADMIN)` and `RAISE`s otherwise** (see `resolve_campaign_audience` / `count_campaign_audience` in `20260711000001_marketing_campaigns.sql`) — never widen the underlying tables' policies. `GRANT EXECUTE ... TO authenticated`; the internal `has_role` check is the real boundary.
+
+- **Khởi tạo tỉnh** `/admin/goi-thue-bao/khoi-tao-tinh` (`src/pages/admin/province-rollout/AdminProvinceRolloutPage.tsx`) — công cụ triển khai hình A của kế hoạch đấu giá: `AdminPermissionRoute module="goi-thue-bao" action="create"`, dữ liệu qua `src/hooks/useProvinceRollout.ts` → RPC `admin_province_rollout` / `admin_province_bulk_invite` / `admin_province_list` / `admin_province_units` / `admin_province_invites`. Query key `["admin-province-rollout", …]` nằm TẠI hook (đọc và invalidate cùng một file). Tab thứ 4 của `SubAdminHeader` (`section="rollout"`).
 
 ### Admin RBAC — "Quản trị" module (`/admin/quan-tri/*`)
 Granular per-module admin permissions layered ON TOP of the binary `user_roles.ADMIN` gate (which still gates `/admin`). Do NOT confuse with `organization_roles` (auction-company RBAC) — these are prefixed `admin_`. Tables (`20260713000010_admin_rbac.sql`): `admin_roles` (name/`code` unique/`is_system`), `admin_role_permissions(role_id,module,action)`, `admin_role_assignments(user_id,role_id)`. **Permission catalog lives in code** — `src/lib/adminPermissions.ts` (modules grouped by nav category × actions `view/create/update/delete/approve/export`); DB stores only granted `(module,action)` rows. Effective perms = union across assigned roles, OR all-allowed if assigned the seeded `SUPER_ADMIN` `is_system` role (short-circuit by `code`). **New SECURITY-DEFINER helpers mirroring `has_role`**: `admin_has_permission(_module,_action)` + `admin_is_super_admin(_uid)` — use these in RLS/RPC for anything gated by a specific admin permission. RLS on the 3 tables: SELECT open to any ADMIN; writes gated `admin_has_permission('vai-tro',*)` (roles/perms) or `('tai-khoan','update')` (assignments); matrix replaced atomically via RPC `admin_set_role_permissions(role_id,jsonb)`; trigger `admin_roles_protect_system` blocks deleting/renaming `is_system` roles. **Frontend**: `useAdminPermissions()` (→ `{isSuperAdmin,matrix,ready}`), `useHasAdminPermission(module,action)`, and route guard `AdminPermissionRoute` (`src/components/admin/`); `AdminLayout` NAV items carry a `module` and are filtered by `view` perm. **Scope caveat:** enforcement is currently **UI + new-tables-RLS only** — the EXISTING admin modules still use the coarse ADMIN gate at the DB level; per-module DB enforcement is a follow-up. "Xóa" an admin = revoke (`useRevokeAdmin`: delete assignments + `user_roles` ADMIN), keeping the login.

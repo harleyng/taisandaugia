@@ -2,12 +2,14 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-export type SubAdminSection = "subs" | "catalog" | "terms";
+export type SubAdminSection = "subs" | "catalog" | "terms" | "rollout";
 
 const TABS: { key: SubAdminSection; label: string; to: string }[] = [
   { key: "subs", label: "Trạm đăng ký", to: "/admin/goi-thue-bao/ap-dung" },
   { key: "catalog", label: "Danh mục gói", to: "/admin/goi-thue-bao/danh-muc" },
   { key: "terms", label: "Kỳ mua & chiết khấu", to: "/admin/goi-thue-bao/ky-mua" },
+  // Công cụ triển khai một tỉnh (Phase 9 của docs/owner-auction-planning-plan.md).
+  { key: "rollout", label: "Khởi tạo tỉnh", to: "/admin/goi-thue-bao/khoi-tao-tinh" },
 ];
 
 interface Props {

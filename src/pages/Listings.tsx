@@ -5,7 +5,19 @@ import { AuctionQuickFilters } from "@/components/AuctionQuickFilters";
 import { AuctionFilterDialog } from "@/components/AuctionFilterDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Map, Search, Megaphone, Loader2, LogIn, FileText, Coins, Building2, RefreshCw } from "lucide-react";
+import {
+  Map,
+  Search,
+  Megaphone,
+  Loader2,
+  LogIn,
+  FileText,
+  Coins,
+  Building2,
+  RefreshCw,
+  CalendarRange,
+  Gavel,
+} from "lucide-react";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useAuctionListings, getSessionStatus } from "@/hooks/useAuctionListings";
 import { caNumber, caRecordArray, caString } from "@/types/listing";
@@ -28,8 +40,12 @@ import { DemandEmptyMatch } from "@/components/demand/DemandEmptyMatch";
 import { DemandStatusBadge } from "@/components/demand/DemandStatusBadge";
 import { qk } from "@/lib/queryKeys";
 import { isFeaturedNow } from "@/lib/listings/featured";
+import { PlannedAuctionsSection } from "@/components/public-plan/PlannedAuctionsSection";
 
 type SortMode = "newest" | "price-asc" | "price-desc" | "upcoming";
+
+/** `?view=ke-hoach` — xem danh mục dự kiến theo kế hoạch thay vì lưới tin đấu giá. */
+const PLAN_VIEW = "ke-hoach";
 
 const ITEMS_PER_PAGE = 30;
 const GUEST_VISIBLE_ITEMS = 11;
@@ -61,8 +77,19 @@ const CtaCard = () => (
 );
 
 const Listings = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get("category") || searchParams.get("sub") || "";
+  // Hai cách xem cùng một nhu cầu "tìm tài sản": tin đang mở đấu giá, và danh
+  // mục DỰ KIẾN theo kế hoạch đã duyệt của các xã/phường (Phase 10 của
+  // docs/owner-auction-planning-plan.md). Danh mục dự kiến chưa phải tin đăng
+  // (chưa có giá chính thức, chưa có phiên) nên KHÔNG trộn vào lưới tin.
+  const planView = searchParams.get("view") === PLAN_VIEW;
+  const setView = (next: boolean) => {
+    const params = new URLSearchParams(searchParams);
+    if (next) params.set("view", PLAN_VIEW);
+    else params.delete("view");
+    setSearchParams(params, { replace: true });
+  };
 
   const { data: listings, isLoading } = useAuctionListings();
   const listingIds = useMemo(() => (listings || []).map((l) => l.id), [listings]);
@@ -296,6 +323,30 @@ const Listings = () => {
           </div>
         </div>
 
+        {/* Hai cách xem: tin đang mở đấu giá | danh mục dự kiến theo kế hoạch */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Button
+            variant={planView ? "outline" : "default"}
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setView(false)}
+          >
+            <Gavel className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+            Đang mở đấu giá
+          </Button>
+          <Button
+            variant={planView ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setView(true)}
+          >
+            <CalendarRange className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+            Sắp đấu giá theo kế hoạch
+          </Button>
+        </div>
+
+        {planView ? <PlannedAuctionsSection /> : (
+        <>
         {/* Search Stats Bar */}
         {!isLoading && (
           <div className="grid grid-cols-3 gap-3 mb-4 border border-border rounded-xl bg-card p-4">
@@ -472,6 +523,8 @@ const Listings = () => {
               Đặt lại bộ lọc
             </Button>
           </div>
+        )}
+        </>
         )}
       </main>
 

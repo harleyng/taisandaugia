@@ -13,5 +13,15 @@ export const WIZARD_POSTING_PARAM = "ho-so";
 export const ownerPostingWizardPath = (postingId: string) =>
   `${OWNER_POSTINGS_PATH}?${WIZARD_POSTING_PARAM}=${encodeURIComponent(postingId)}`;
 
+/**
+ * Tham số mở wizard TẠO MỚI, điền trước từ một mục của kế hoạch đấu giá
+ * ("Tạo hồ sơ số hoá từ mục này", Phase 5). Wizard chỉ nhận GIÁ TRỊ ĐẦU —
+ * luật kiểm tra của wizard KHÔNG đổi.
+ */
+export const WIZARD_PLAN_ITEM_PARAM = "tu-ke-hoach";
+
+export const ownerPostingFromPlanItemPath = (planItemId: string) =>
+  `${OWNER_POSTINGS_PATH}?${WIZARD_PLAN_ITEM_PARAM}=${encodeURIComponent(planItemId)}`;
+
 /** Trang in / lưu PDF của một hồ sơ (ngoài layout cổng). */
 export const ownerPostingPrintPath = (postingId: string) => `${OWNER_POSTINGS_PATH}/${encodeURIComponent(postingId)}/in`;

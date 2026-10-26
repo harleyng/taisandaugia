@@ -23,6 +23,8 @@ import {
   Link2,
   BarChart3,
   Store,
+  CalendarRange,
+  ListChecks,
   type LucideIcon,
 } from 'lucide-react'
 import type { OwnerModule } from '@/lib/ownerWorkspace/permissions'
@@ -40,6 +42,7 @@ export type OwnerCountBadgeKind =
   | 'owner-link-requests'
   | 'owner-found-claims'
   | 'owner-awaiting-payment'
+  | 'auction-plan-due'
 
 export interface OwnerNavItem {
   label: string
@@ -104,6 +107,23 @@ export const OWNER_NAV_GROUPS: OwnerNavGroup[] = [
         module: 'tai-san',
       },
       { label: 'Kết quả phiên', icon: Gavel, href: '/chu-tai-san/ket-qua', module: 'ket-qua' },
+      {
+        // Kế hoạch đấu giá năm của đơn vị (xã / phường lập & trình, cấp tỉnh duyệt) —
+        // docs/owner-auction-planning-plan.md §A6.
+        label: 'Kế hoạch đấu giá',
+        icon: CalendarRange,
+        href: '/chu-tai-san/ke-hoach',
+        module: 'ke-hoach',
+      },
+      {
+        // Việc của THÁNG trên mọi kế hoạch của đơn vị (Phase 6, §A6). Số đếm = mốc
+        // công việc ĐÃ QUÁ HẠN trong phạm vi người dùng đọc được.
+        label: 'Vận hành tháng',
+        icon: ListChecks,
+        href: '/chu-tai-san/ke-hoach/van-hanh',
+        countBadge: 'auction-plan-due',
+        module: 'ke-hoach',
+      },
     ],
   },
   {
@@ -263,10 +283,18 @@ export function ownerModulesForPath(pathname: string): readonly OwnerModule[] | 
     'vai-tro': ['vai-tro'],
   }
   if (PER_WORKSPACE[first]) return PER_WORKSPACE[first]
+  // Trang con CÓ module riêng (gác quyền như trang danh sách). Trang chi tiết của
+  // một bản ghi thì KHÔNG nằm ở đây — nó tự xét quyền theo không gian của bản ghi.
+  const SUB_PATHS: Record<string, readonly OwnerModule[]> = {
+    'ke-hoach/van-hanh': ['ke-hoach'],
+  }
+  const sub = SUB_PATHS[[first, ...rest].join('/')]
+  if (sub) return sub
   if (rest.length > 0) return null
   const LIST: Record<string, readonly OwnerModule[]> = {
     'tai-san': ['tai-san'],
     'ket-qua': ['ket-qua'],
+    'ke-hoach': ['ke-hoach'],
     'dang-tai-san': ['so-hoa'],
     'ky-gui-dau-gia': ['ky-gui'],
     'hop-dong': CONTRACT_MODULES,

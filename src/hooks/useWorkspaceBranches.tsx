@@ -13,6 +13,8 @@ export interface WorkspaceBranch {
   contact_phone: string | null;
   contact_email: string | null;
   notes: string | null;
+  /** Mã ĐVHC 2025 của chi nhánh (xem src/lib/adminUnits.ts). NULL = chưa gắn. */
+  admin_unit_code: string | null;
   is_active: boolean;
   is_amc: boolean;
   created_at: string;
@@ -28,7 +30,7 @@ export interface BranchMetrics {
   upcoming_auctions: number;
 }
 
-export type BranchPatch = Partial<Pick<WorkspaceBranch, "display_name" | "contact_phone" | "contact_email" | "notes" | "is_active" | "is_amc">>;
+export type BranchPatch = Partial<Pick<WorkspaceBranch, "display_name" | "contact_phone" | "contact_email" | "notes" | "admin_unit_code" | "is_active" | "is_amc">>;
 
 export interface BranchInput {
   display_name: string;
